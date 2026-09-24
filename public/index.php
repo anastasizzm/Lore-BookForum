@@ -2,15 +2,22 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
-
 $config = require __DIR__ . '/../config/settings.php';
 
 use App\Lib\Settings;
+use App\Http\View;
+use App\Http\Router;
+use App\Http\Request;
+use App\Http\Response;
+use App\Http\HttpException;
+use App\Kernel;
+
 $settings = new Settings($config);
 View::configure($settings);
 
 $router = new Router();
-require __DIR__ . '/../config/routes.php';
+$routeLoader = require __DIR__ . '/../config/routes.php';
+$routeLoader($router);
 
 try {
     $request = Request::fromGlobals();
