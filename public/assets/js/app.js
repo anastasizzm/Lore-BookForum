@@ -16,11 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ===== Бургер-меню и Сайдбар =====
-  const burger = document.querySelector('[data-burger]') || document.querySelector('.burger');
-  const overlay = document.querySelector('[data-sidebar-overlay]');
-  const sidebar = document.querySelector('[data-sidebar]');
+  // ===== Бургер-меню (Делегирование событий) =====
   const body = document.body;
+  const overlay = document.querySelector('.sidebar-overlay');
+  const sidebar = document.querySelector('[data-sidebar]');
 
   function closeMenu() {
     body.classList.remove('is-menu-open');
@@ -30,27 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
     body.classList.add('is-menu-open');
   }
 
-  // Клик по бургеру — только открывает меню
-  if (burger) {
-    burger.addEventListener('click', function (e) {
+  // Вешаем клик на весь документ, но отлавливаем именно клик по бургеру
+  document.addEventListener('click', function (e) {
+    const burgerTarget = e.target.closest('.burger, [data-burger]');
+    if (burgerTarget) {
+      e.preventDefault();
       e.stopPropagation();
       openMenu();
-    });
-  }
+    }
+  });
 
-  // Клик по серой зоне (overlay) — закрывает меню
+  // Закрытие по клику на оверлей
   if (overlay) {
     overlay.addEventListener('click', closeMenu);
   }
 
-  // Клик по любой ссылке внутри сайдбара — закрывает меню (на мобилках)
+  // Закрытие при клике на ссылки в сайдбаре
   if (sidebar) {
     sidebar.querySelectorAll('a').forEach(function (link) {
       link.addEventListener('click', closeMenu);
     });
   }
 
-  // Закрытие по нажатию клавиши Escape
+  // Закрытие по Escape
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       closeMenu();

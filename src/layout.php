@@ -12,6 +12,7 @@ $pageActions = $pageActions ?? '';
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>
 
+  <!-- Кнопка бургер на своем привычном месте -->
   <button type="button" class="burger" data-burger aria-label="Меню">
     <span></span>
     <span></span>

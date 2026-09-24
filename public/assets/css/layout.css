@@ -6,7 +6,7 @@ body.is-menu-open {
   overflow: hidden;
 }
 
-/* ===== Sidebar (desktop) ===== */
+/* ===== Sidebar (Desktop - узкое состояние) ===== */
 .sidebar {
   position: fixed;
   top: 0;
@@ -15,8 +15,8 @@ body.is-menu-open {
   width: var(--sidebar-width, 72px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: var(--space-4) 12px;
+  align-items: center; /* Центрирование по горизонтали */
+  padding: 24px 0;     /* Верхний и нижний отступ */
   background: var(--color-surface, #fff);
   border-right: 1px solid var(--color-border, #e2e8f0);
   z-index: 40;
@@ -24,34 +24,34 @@ body.is-menu-open {
   box-sizing: border-box;
 }
 
-.sidebar-avatar-wrap {
-  margin: 10px 0 24px 0;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: center; /* Центрирование иконок */
+  gap: 16px;           /* Отступ между иконками */
   width: 100%;
 }
 
+/* Базовый стиль кнопок в закрытом (узком) состоянии: без фона */
 .nav-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* Центрируем иконку внутри */
   width: 48px;
   height: 48px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: 16px;
   color: var(--color-text-muted, #5876A6);
   text-decoration: none;
+  background: transparent; /* Без фона по умолчанию! */
   transition: background 0.15s;
 }
 
-/* На десктопе текст скрыт, видны только иконки */
+/* Фон появляется ТОЛЬКО при наведении */
+.nav-item:hover {
+  background: var(--color-overlay, #f1f5f9);
+}
+
+/* Скрываем текст на десктопе */
 .nav-text {
   display: none;
 }
@@ -62,12 +62,16 @@ body.is-menu-open {
   justify-content: center;
 }
 
-.nav-item:hover {
-  background: var(--color-overlay, #f1f5f9);
-}
-
-.nav-item.active {
-  background: var(--color-overlay, #f1f5f9);
+/* Увеличенная иконка профиля вверху на десктопе */
+.sidebar-avatar-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef2f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px; /* Воздушный отступ после профиля до ленты */
 }
 
 .sidebar-bottom {
@@ -112,46 +116,9 @@ body.is-menu-open {
   width: 100%;
 }
 
-/* ===== Burger Button (Только для открытия меню на мобильных) ===== */
+/* ===== Burger Button (По умолчанию скрыт на десктопе) ===== */
 .burger {
-  display: none;
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  z-index: 50;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: opacity 0.25s ease, visibility 0.25s ease;
-}
-
-.burger span {
-  display: block;
-  width: 18px;
-  height: 2px;
-  background: #1e293b;
-  border-radius: 2px;
-}
-
-@media (max-width: 768px) {
-  .burger {
-    display: flex;
-  }
-}
-
-body.is-menu-open .burger {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+  display: none !important;
 }
 
 /* ===== Overlay ===== */
@@ -170,74 +137,135 @@ body.is-menu-open .sidebar-overlay {
   opacity: 1;
 }
 
-/* ===== Responsive (Мобильная версия) ===== */
+/* ===== Responsive (Мобильная версия / Открытое состояние) ===== */
 @media (max-width: 768px) {
+  /* Сайдбар по умолчанию скрыт слева */
   .sidebar {
     transform: translateX(-100%);
-    width: 260px; /* Ширина как на вашем макете */
-    align-items: stretch;
-    padding: 32px 16px 24px 16px;
+    width: 260px !important;
+    align-items: center !important;
+    padding: 32px 16px 24px 16px !important;
   }
 
-  .sidebar-avatar-wrap {
-    justify-content: flex-start;
-    padding-left: 12px;
+  /* Когда меню открыто — сайдбар выезжает */
+  body.is-menu-open .sidebar {
+    transform: translateX(0) !important;
   }
 
   .sidebar-nav {
-    align-items: stretch;
-    gap: 12px;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
   }
 
-  /* Превращаем иконки в полноценные широкие кнопки с текстом */
-  .nav-item {
-    width: 100%;
-    height: 52px;
-    justify-content: flex-start;
-    padding: 0 16px;
-    gap: 16px;
-    border-radius: 20px;
-    background: #f8fafc;
+  /* 1. Мобильная аватарка профиля (круглая, по центру) */
+  .sidebar .mobile-profile-btn {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px !important;
+    border-radius: 50% !important;
+    background: #eef2f7 !important;
+    margin: 10px auto 16px auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
   }
 
-  /* Показываем текст на мобилках */
-  .nav-text {
-    display: inline-block;
+  .sidebar .mobile-profile-btn .nav-text {
+    display: none !important;
+  }
+
+  /* 2. Мобильные широкие кнопки (Feed, Library, Saved) */
+  .sidebar .mobile-nav-btn {
+    width: 220px !important;
+    height: 52px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 0 20px !important;
+    gap: 16px !important;
+    border-radius: 20px !important;
+    background: #f8fafc !important;
+  }
+
+  .sidebar .mobile-nav-btn:hover {
+    background: #e2e8f0 !important;
+  }
+
+  .sidebar .mobile-nav-btn .nav-text {
+    display: inline-block !important;
     font-weight: 500;
     font-size: 16px;
     color: #1e293b;
   }
 
-  .sidebar-bottom {
-    justify-content: stretch;
-  }
-
-  .sidebar-bottom .nav-item {
-    width: 100%;
-  }
-
-  body.is-menu-open .sidebar {
-    transform: translateX(0);
-  }
-
-  .burger {
+  .sidebar .mobile-nav-btn .nav-icon {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
   }
 
+  /* 3. Нижняя кнопка More */
+  .sidebar .sidebar-bottom {
+    display: flex;
+    justify-content: center;
+    width: 100% !important;
+  }
+
+  .sidebar .sidebar-bottom .mobile-nav-btn {
+    width: 220px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Отступы контента на мобилках */
   .content {
     margin-left: 0 !important;
-    padding: 70px 16px 24px 16px !important;
+    padding: 24px 16px !important;
     min-height: 100vh;
   }
 
-  .content__inner {
-    max-width: 100% !important;
-    margin: 0 auto;
-    width: 100%;
+  /* Строка с бургером и заголовком "For you" */
+  .page-header-row {
+    display: flex;
+    align-items: center;
+    gap: 14px; /* Отступ между кнопкой и текстом */
   }
 
-  .feed-panel {
-    padding: 16px !important;
-    border-radius: 20px !important;
+  /* Включаем отображение бургера строго внутри хедера */
+  .page-header .burger {
+    display: flex !important;
+    position: static !important;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0 !important;
+  }
+
+  .page-header .burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #1e293b;
+    border-radius: 2px;
+  }
+
+  /* Чуть компактнее заголовок на мобилках */
+  .page-header__title {
+    font-size: 2.2rem !important;
+    margin: 0;
   }
 }
