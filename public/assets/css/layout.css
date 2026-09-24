@@ -1,0 +1,243 @@
+body {
+  min-height: 100vh;
+}
+
+body.is-menu-open {
+  overflow: hidden;
+}
+
+/* ===== Sidebar (desktop) ===== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width, 72px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) 12px;
+  background: var(--color-surface, #fff);
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  z-index: 40;
+  transition: transform 0.25s ease;
+  box-sizing: border-box;
+}
+
+.sidebar-avatar-wrap {
+  margin: 10px 0 24px 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md, 12px);
+  color: var(--color-text-muted, #5876A6);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+/* На десктопе текст скрыт, видны только иконки */
+.nav-text {
+  display: none;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-item:hover {
+  background: var(--color-overlay, #f1f5f9);
+}
+
+.nav-item.active {
+  background: var(--color-overlay, #f1f5f9);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ===== Content ===== */
+.content {
+  margin-left: var(--sidebar-width, 72px);
+  padding: 19px 46px 40px 46px !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.content__inner {
+  max-width: 100% !important;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== Page Header ===== */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 13px;
+  margin-bottom: 19px;
+}
+
+.page-header__title {
+  font-size: 2.75rem !important;
+  font-weight: 700 !important;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.page-header__actions {
+  width: 100%;
+}
+
+/* ===== Burger Button (Только для открытия меню на мобильных) ===== */
+.burger {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  z-index: 50;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.burger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #1e293b;
+  border-radius: 2px;
+}
+
+@media (max-width: 768px) {
+  .burger {
+    display: flex;
+  }
+}
+
+body.is-menu-open .burger {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ===== Overlay ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 35;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+body.is-menu-open .sidebar-overlay {
+  display: block;
+  opacity: 1;
+}
+
+/* ===== Responsive (Мобильная версия) ===== */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px; /* Ширина как на вашем макете */
+    align-items: stretch;
+    padding: 32px 16px 24px 16px;
+  }
+
+  .sidebar-avatar-wrap {
+    justify-content: flex-start;
+    padding-left: 12px;
+  }
+
+  .sidebar-nav {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  /* Превращаем иконки в полноценные широкие кнопки с текстом */
+  .nav-item {
+    width: 100%;
+    height: 52px;
+    justify-content: flex-start;
+    padding: 0 16px;
+    gap: 16px;
+    border-radius: 20px;
+    background: #f8fafc;
+  }
+
+  /* Показываем текст на мобилках */
+  .nav-text {
+    display: inline-block;
+    font-weight: 500;
+    font-size: 16px;
+    color: #1e293b;
+  }
+
+  .sidebar-bottom {
+    justify-content: stretch;
+  }
+
+  .sidebar-bottom .nav-item {
+    width: 100%;
+  }
+
+  body.is-menu-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .burger {
+    display: flex;
+  }
+
+  .content {
+    margin-left: 0 !important;
+    padding: 70px 16px 24px 16px !important;
+    min-height: 100vh;
+  }
+
+  .content__inner {
+    max-width: 100% !important;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .feed-panel {
+    padding: 16px !important;
+    border-radius: 20px !important;
+  }
+}

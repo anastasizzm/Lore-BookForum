@@ -1,0 +1,431 @@
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-body);
+  transition: opacity 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.btn--secondary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn:active {
+  opacity: 0.7;
+}
+
+.btn__icon {
+  display: inline-flex;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 18px;
+  transition: background 0.15s;
+}
+
+.btn-icon:hover {
+  background: var(--color-overlay);
+}
+
+/* ============================================
+   INPUTS
+   ============================================ */
+.input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: #ffffff; /* Белый фон, как в фигме */
+  border: 1px solid var(--color-border);
+}
+
+.input--search {
+  border-radius: 23px; /* Точно как в Figma */
+  padding: 12px 20px;
+  height: 54px; /* Высота из Figma */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04); /* Мягкая тень, если требуется */
+}
+
+.input__field {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 16px;
+  min-width: 0;
+}
+
+.input__field::placeholder {
+  color: var(--color-text-muted);
+}
+
+/*.input--comment {
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  align-items: flex-start;
+}
+
+.input__icon {
+  color: var(--color-text-muted);
+  display: inline-flex;
+  font-size: 16px;
+}*/
+
+
+/* ============================================
+   AVATAR
+   ============================================ */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-overlay);
+  color: var(--color-text);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar--sm {
+  width: 32px;
+  height: 32px;
+  font-size: var(--fs-small);
+}
+
+.avatar--md {
+  width: 44px;
+  height: 44px;
+  font-size: var(--fs-body);
+}
+
+.avatar--lg {
+  width: 72px;
+  height: 72px;
+  font-size: var(--fs-h2);
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================
+   TAGS (interaction)
+   ============================================ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.tag__icon {
+  display: inline-flex;
+  font-size: 18px;          
+  line-height: 1;
+}
+
+.tag__value {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   CARDS — base
+   ============================================ */
+.card-base {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+/* ============================================
+   CARD — Book (vertical)
+   ============================================ */
+.card-book {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-book__cover {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+  background: var(--color-overlay);
+}
+
+.card-book__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-book__title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  margin-bottom: var(--space-1);
+}
+
+.card-book__author {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.card-book__tags {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* ============================================
+   CARD — Feed (обновленный вариант под макет 2)
+   ============================================ */
+.card-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 23px;
+  padding: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.03);
+}
+
+.card-feed__book-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-feed__book-thumb {
+  width: 32px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.card-feed__book-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-feed__body-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 16px;
+  border-left: 2px solid #e2e8f0;
+  margin-left: 16px;
+}
+
+.card-feed__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-feed__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.card-feed__text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #334155;
+  margin: 0;
+}
+
+.card-feed__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.card-feed__tags {
+  display: flex;
+  gap: 16px;
+}
+
+.card-feed__date {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.feed-panel {
+  background: #f8fafc; /* Чуть светлый или белый фон панели */
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  padding: 24px;
+}
+
+/* ============================================
+   INFO BOX
+   ============================================ */
+.info-box__title {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  margin-bottom: var(--space-3);
+}
+
+.info-box__body {
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  line-height: var(--lh-normal);
+}
+
+/* ============================================
+   TABS / PILLS
+   ============================================ */
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tabs--filled .tab {
+  background: var(--color-overlay);
+}
+
+.tabs--filled .tab.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.tabs--outline .tab {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.tabs--outline .tab.is-active {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+/* ============================================
+   DROPDOWN
+   ============================================ */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+}
+
+.dropdown__arrow {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.dropdown__menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  list-style: none;
+  margin: 0;
+  display: none;
+  box-shadow: var(--shadow-card);
+  z-index: 30;
+}
+
+.dropdown.is-open .dropdown__menu {
+  display: block;
+}
+
+.dropdown__item {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+}
+
+.dropdown__item:hover {
+  background: var(--color-overlay);
+}
+
+/* ============================================
+   GRID (для карточек книг)
+   ============================================ */
+.grid-books {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .grid-books {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ============================================
+   STACK — вертикальные списки карточек
+   ============================================ */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
