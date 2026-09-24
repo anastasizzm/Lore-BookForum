@@ -36,7 +36,13 @@ dbmate up
 if [ "$(psql_q -c "SELECT to_regclass('public.app_bootstrap') IS NULL")" = "t" ]; then
   if [ -f /storage/db/init.sql ]; then
     log "First start - running init.sql"
+    : "${ADMIN_USERNAME:?ADMIN_USERNAME is required for the first start}"
+    : "${ADMIN_EMAIL:?ADMIN_EMAIL is required for the first start}"
+    : "${ADMIN_PASS_HASH:?ADMIN_PASS_HASH is required for the first start}"
     psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 --single-transaction \
+      -v admin_username="$ADMIN_USERNAME" \
+      -v admin_email="$ADMIN_EMAIL" \
+      -v admin_pass_hash="$ADMIN_PASS_HASH" \
       -f /storage/db/init.sql \
       -c "CREATE TABLE public.app_bootstrap (initialized_at timestamptz NOT NULL DEFAULT now()); INSERT INTO public.app_bootstrap DEFAULT VALUES;"
   else
