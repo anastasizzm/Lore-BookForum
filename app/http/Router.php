@@ -7,6 +7,7 @@ use App\Http\HttpException;
 use App\Http\Request;
 use App\Http\Response;
 use App\Lib\Route;
+use App\Lib\Container;
 use RuntimeException;
 
 final class Router
@@ -55,6 +56,8 @@ final class Router
         }
     }
 
+    public function __construct(private Container $container) {}
+
     /**
      * Match the request against stored routes.
      *
@@ -93,7 +96,8 @@ final class Router
 
         if (is_array($handler)) {
             [$class, $method] = $handler;
-            $result = (new $class())->$method($request, ...array_values($params));
+            $controller = $this->container->get($class);
+            $result = $controller->$method($request, ...array_values($params));
         } else {
             $result = $handler($request, ...array_values($params));
         }

@@ -1,44 +1,31 @@
 <?php
-declare(strinct_types=1);
+declare(strict_types=1);
 
 namespace App\Middleware;
 
 use App\Lib\CsrfManager;
 use App\Http\HttpException;
+use App\Http\Middleware;
+use App\Http\Request;
+use App\Http\Response;
+use App\Constants;
 
 final class CsrfMiddleware implements Middleware
 {
-    public const CSRF_ATTR = 'csrf';
-
-    /** Methods that change state and must be protected. */
-    private const PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
-
     public function handle(Request $request, callable $next): Response
     {
-        if (!in_array($request->method, self::PROTECTED_METHODS, true)) {
+        if (!in_array($request->method, Constants::PROTECTED_METHODS, true)) {
             return $next($request);
         }
         
-        $expected = $request->attribute(CSRF_ATTR);
+        $expected = $request->getAttribute(Constants::CSRF_ATTR);
 
         if (is_string($expected) && CsrfManager::verify($request, $expected)){
             return $next($request);
         }
             
-        return $this->reject($request);
-    }
-
-    private function reject(Request $request): Response
-    {
-        $accept = $request->getHeader('accept', '');
-
-        if (is_string($accept) && str_contains($accept, 'application/json')) {
-            return Response::json(['errors' => ['CSRF token mismatch']], 419);
-        }
-
-        return Response::html(
-            '<h1>419 — CSRF token mismatch</h1><p>Please reload the page and try again.</p>',
-            419
-        );
+        return $request->isApi()
+            ? Response::json(['errors' => ['CSRF token mismatch']], 419)
+            : Response::html('<h1>CSRF token mismatch</h1><p>Please reload the page and try again.</p>', 419);
     }
 }

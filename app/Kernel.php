@@ -6,16 +6,23 @@ namespace App;
 use App\Http\HttpException;
 use App\Lib\Settings;
 use App\Http\Router;
+use App\Lib\Container;
 use App\Http\Pipeline;
 use App\Http\Request;
 use App\Http\Response;
 
 final class Kernel
 {
+    private Settings $settings;
+
     public function __construct(
         private Router $router,
-        private Settings $settings
-    ) {}
+        private Container $container
+    ) 
+    {
+        $this->settings = $container->get(Settings::class);
+        if ($this->settings === null) throw new \RuntimeException('Miss Settings instance');
+    }
 
     public function handle(Request $request): Response
     {
@@ -31,7 +38,7 @@ final class Kernel
 
         foreach ($this->settings->middleware as $middlewareClass) {
             if (class_exists($middlewareClass)) {
-                $pipeline->through(new $middlewareClass());
+                $pipeline->through($this->container->get($middlewareClass));
             } else {
                 throw new \RuntimeException("Middleware class not found: {$middlewareClass}");
             }

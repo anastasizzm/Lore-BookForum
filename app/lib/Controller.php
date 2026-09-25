@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Http\Response;
-use App\Lib\View;
+use View;
 
 abstract class Controller
 {

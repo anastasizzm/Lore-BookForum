@@ -141,7 +141,7 @@ final class View
 
         if ($this->currentLayout !== null) {
             $layout = $this->currentLayout;
-            $this->currentLayout = null; // prevent layout loops
+            $this->currentLayout = null;
 
             $content = $this->capture(
                 $this->resolve($layout, 'layouts', 'layout'),
