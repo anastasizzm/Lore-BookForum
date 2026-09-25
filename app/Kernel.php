@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Http\HttpException;
 use App\Lib\Settings;
 use App\Http\Router;
 use App\Http\Pipeline;
@@ -18,8 +19,15 @@ final class Kernel
 
     public function handle(Request $request): Response
     {
-        $destination = fn(Request $req) => $this->router->dispatch($req);
-        $pipeline = new Pipeline($destination);
+        $match = $this->router->match($request);
+        if ($match === null) {
+            throw new HttpException('Not Found', 404);
+        }
+
+        [$route, $params] = $match;
+
+        $endpoint = fn(Request $req) => $this->router->execute($route, $req, $params);
+        $pipeline = new Pipeline();
 
         foreach ($this->settings->middleware as $middlewareClass) {
             if (class_exists($middlewareClass)) {
@@ -29,6 +37,6 @@ final class Kernel
             }
         }
 
-        return $pipeline->then($request);
+        return $pipeline->process($request, $route, $endpoint);
     }
 }

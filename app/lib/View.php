@@ -3,92 +3,198 @@ declare(strict_types=1);
 
 namespace App\Lib;
 
-use App\Lib\Settings;
 use RuntimeException;
+use Throwable;
 
 final class View
 {
+    // ---- long-lived, engine-wide state ----
+    private static ?Settings $engineSettings = null;
+    /** @var array<string, mixed> */
     private static array $globals = [];
-    private static array $blocks = [];
-    private static ?string $currentLayout = null;
-    private static ?Settings $settings = null;
+
+    // ---- per-render state ----
+    /** @var array<string, string> */
+    private array $blocks = [];
+    private ?string $currentLayout = null;
+    /** @var array<string, string> */
+    private array $pathCache = [];
+
+    private function __construct(
+        private Settings $settings,
+    ) {}
+
+    // ---------- static bootstrap API ----------
 
     public static function configure(Settings $settings): void
     {
-        self::$settings = $settings;
+        foreach (
+            [$settings->pagesPath, $settings->layoutsPath, $settings->partialsPath]
+            as $path
+        ) {
+            if (!is_dir($path)) {
+                throw new RuntimeException("View path does not exist: $path");
+            }
+        }
+
+        self::$engineSettings = $settings;
     }
 
-    public static function share(string $key, mixed $value): void { self::$globals[$key] = $value; }
+    public static function share(string $key, mixed $value): void
+    {
+        self::$globals[$key] = $value;
+    }
 
     public static function render(string $page, array $data = []): string
     {
-        if (self::$settings === null) {
-            throw new RuntimeException("View engine not configured.");
+        if (self::$engineSettings === null) {
+            throw new RuntimeException(
+                'View engine not configured. Call View::configure() first.'
+            );
         }
 
-        self::$blocks = [];
-        self::$currentLayout = null;
+        return (new self(self::$engineSettings))->renderPage($page, $data);
+    }
 
-        $pageFile = self::$settings->pagesPath . $page . '.php';
-        
-        if (!is_file($pageFile)) {
-            throw new RuntimeException("View not found: $pageFile");
+    /** For long-running servers (RoadRunner, Swoole, FrankenPHP). */
+    public static function reset(): void
+    {
+        self::$engineSettings = null;
+        self::$globals = [];
+    }
+
+    // ---------- template API (called as $view->...) ----------
+
+    public function extends(string $layout): void
+    {
+        $this->currentLayout = $layout;
+    }
+
+    public function include(string $partial, array $data = []): void
+    {
+        echo $this->capture(
+            $this->resolve($partial, 'partials', 'partial'),
+            $data
+        );
+    }
+
+    /** Same as include() but returns instead of echoing. */
+    public function partial(string $partial, array $data = []): string
+    {
+        return $this->capture(
+            $this->resolve($partial, 'partials', 'partial'),
+            $data
+        );
+    }
+
+    /** Returns block content. Use <?= $view->block('name') ?> in layouts. */
+    public function block(string $name): string
+    {
+        return $this->blocks[$name] ?? '';
+    }
+
+    public function startBlock(string $name): void
+    {
+        ob_start();
+    }
+
+    public function endBlock(string $name): void
+    {
+        $this->blocks[$name] = (string) ob_get_clean();
+    }
+
+    public function setBlock(string $name, string $content): void
+    {
+        $this->blocks[$name] = $content;
+    }
+
+    public function e(?string $value): string
+    {
+        return htmlspecialchars(
+            (string) $value,
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8'
+        );
+    }
+
+    public function csrfField(): string
+    {
+        $token = (string) (self::$globals['csrfToken'] ?? '');
+
+        if ($token === '') {
+            return '';
         }
 
-        $content = self::capture($pageFile, $data);
+        return '<input type="hidden" name="'
+            . CsrfManager::FIELD
+            . '" value="' . $this->e($token) . '">';
+        }
 
-        if (self::$currentLayout) {
-            $layoutFile = self::$settings->layoutsPath . self::$currentLayout . '.php';
-            return self::capture($layoutFile, $data);
+    // ---------- internals ----------
+
+    private function renderPage(string $page, array $data): string
+    {
+        $content = $this->capture(
+            $this->resolve($page, 'pages', 'page'),
+            $data
+        );
+
+        if ($this->currentLayout !== null) {
+            $layout = $this->currentLayout;
+            $this->currentLayout = null; // prevent layout loops
+
+            $content = $this->capture(
+                $this->resolve($layout, 'layouts', 'layout'),
+                $data
+            );
         }
 
         return $content;
     }
 
-    // --- Template Tags ---
-
-    public static function extends(string $layout): void { self::$currentLayout = $layout; }
-
-    public static function include(string $partial, array $data = []): void
+    private function capture(string $file, array $vars): string
     {
-        $path = self::$settings->partialsPath . $partial . '.php';
-        echo self::capture($path, $data);
-    }
+        $view = $this;
 
-    public static function block(string $name, ?string $content = null): void
-    {
-        if ($content !== null) {
-            self::$blocks[$name] = $content;
-        } else {
-            echo self::$blocks[$name] ?? '';
-        }
-    }
-
-    public static function startBlock(string $name): void { ob_start(); }
-
-    public static function endBlock(string $name): void 
-    { 
-        self::$blocks[$name] = ob_get_clean(); 
-    }
-
-    // --- Core Logic ---
-
-    private static function capture(string $file, array $vars): string
-    {
         extract($vars + self::$globals, EXTR_SKIP);
+
         ob_start();
-        require $file;
+        try {
+            require $file;
+        } catch (Throwable $e) {
+            ob_end_clean();
+            throw $e;
+        }
+
         return (string) ob_get_clean();
     }
 
-    public static function escape(?string $value): string
+    private function resolve(string $name, string $type, string $label): string
     {
-        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
+        // Block traversal: "../", "..\", "/..", etc.
+        if (preg_match('#(^|[\\\\/])\.\.([\\\\/]|$)#', $name)) {
+            throw new RuntimeException("Invalid $label name: $name");
+        }
 
-    public static function csrfField(): string
-    {
-        $token = \App\Lib\CsrfManager::getToken();
-        return '<input type="hidden" name="_token" value="' . $token . '">';
+        $cacheKey = "$type:$name";
+        if (isset($this->pathCache[$cacheKey])) {
+            return $this->pathCache[$cacheKey];
+        }
+
+        $base = match ($type) {
+            'pages'    => $this->settings->pagesPath,
+            'layouts'  => $this->settings->layoutsPath,
+            'partials' => $this->settings->partialsPath,
+            default    => throw new RuntimeException("Unknown view type: $type"),
+        };
+
+        $file = rtrim($base, '/\\') . DIRECTORY_SEPARATOR
+              . str_replace('/', DIRECTORY_SEPARATOR, $name) . '.php';
+
+        if (!is_file($file)) {
+            throw new RuntimeException("$label not found: $name ($file)");
+        }
+
+        return $this->pathCache[$cacheKey] = $file;
     }
 }

@@ -81,17 +81,17 @@ final class Request
         return $this->body()[$key] ?? $this->query[$key] ?? $default;
     }
 
-    public function query(string $key, mixed $default = null): mixed
+    public function getQuery(string $key, mixed $default = null): mixed
     {
         return $this->query[$key] ?? $default;
     }
 
-    public function header(string $name, ?string $default = null): ?string
+    public function getHeader(string $name, ?string $default = null): ?string
     {
         return $this->headers[strtolower($name)] ?? $default;
     }
 
-    public function cookie(string $name, ?string $default = null): ?string
+    public function getCookie(string $name, ?string $default = null): ?string
     {
         return $this->cookies[$name] ?? $default;
     }
@@ -116,7 +116,7 @@ final class Request
         $this->attributes[$key] = $value;
     }
 
-    public function attribute(string $key, mixed $default = null): mixed
+    public function getAttribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;
     }
