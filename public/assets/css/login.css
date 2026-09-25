@@ -1,0 +1,89 @@
+/* ---------------- login page ---------------- */
+
+.page--login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-3);
+  /* tiled book pattern exported from Figma */
+  background-image: url("../img/bg-pattern.avif");
+  background-repeat: repeat;
+  background-size: 330px auto; /* the tile has 4 books; this gives ~2 per 330px like the mockup */
+}
+
+.login-card {
+  width: 100%;
+  max-width: 368px;
+  padding: var(--space-5);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+}
+
+.login-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.login-card__logo {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  background-color: var(--color-white);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(44, 66, 112, 0.25);
+}
+
+.login-card__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.login-card__title {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.login-form .form-field + .form-field {
+  margin-top: var(--space-2);
+}
+
+.login-form .btn {
+  margin-top: var(--space-4);
+}
+
+.login-form__links {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* ---------------- mobile ---------------- */
+
+@media (max-width: 600px) {
+  .page--login {
+    background-size: 200px auto;
+  }
+
+  .login-card {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .login-card__header {
+    flex-direction: column;
+    margin-bottom: var(--space-4);
+    text-align: center;
+  }
+
+  .login-card__logo {
+    width: 72px;
+    height: 72px;
+  }
+}
