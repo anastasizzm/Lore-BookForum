@@ -1,30 +1,100 @@
-/* Design tokens. Values are estimated from Figma; replace with exact ones. */
 :root {
-  /* color */
-  --color-bg: #ffffff;
-  --color-surface: #f1f3fa;
-  --color-surface-border: #d9def0;
-  --color-field-bg: #f5f6fb;
-  --color-field-border: #dde1ef;
-  --color-text: #2c4270;
-  --color-text-muted: #6f7c99;
-  --color-primary: #5f78a8;
-  --color-primary-hover: #4d6594;
-  --color-on-primary: #ffffff;
-  --color-error: #e5484d;
+  /* ============================================
+     ОСНОВНАЯ ПАЛИТРА (источник истины — 2й фронт)
+     ============================================ */
+  --main-text-color: #29466F;
+  --interaction-text-color: #2F405D;
+  --interaction-color: #6F84A5;
+  --button-color-dark: #D6E0EF;
+  --border-card-color: #D6E0EF;
+  --color-accent: #5876A6;
 
-  /* typography */
-  --font-family: "Inter", "Segoe UI", Arial, sans-serif;
-  --font-size-sm: 0.8125rem;
-  --font-size-md: 1rem;
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  --color-bg-main: #F3F6FB;
+  --color-bg-secondary: #E8EEF7;
+  --color-bg-gray: #EFEFEF;
+
+  --color-blue-light: #5876A6;
+  --color-blue-medium: #536D91;
+  --color-blue-dark: #445B7B;
+  --color-surface: #FFFFFF;
+  --color-border: #D6E0EF;
+
+  /* Отсутствовал в исходном файле, но используется в component.css
+     (.btn-icon:hover, .avatar, .tag, .dropdown__item:hover) — добавлен */
+  --color-overlay: var(--color-bg-secondary);
+
+  /* Новый токен — нужен для состояний ошибки формы (login.css/component.css) */
+  --color-error: #E5484D;
+
+  /* ШРИФТЫ И РАЗМЕРЫ */
+  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --font-size-h1: 2.75rem;
+  --font-size-h2: 1.25rem;
+  --font-size-body: 0.875rem;
+  --font-size-small: 0.75rem;
+  /* Заголовок логин-карточки — отдельный размер, между h2 и h1 */
   --font-size-title: 1.75rem;
 
-  /* shape and spacing */
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 1rem;
-  --space-4: 1.5rem;
-  --space-5: 2rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Не было в исходном файле, но используется в component.css (.info-box__body) */
+  --lh-normal: 1.5;
+
+  /* Радиусы скругления */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-pill: 999px;
+  --radius-lg: 23px;
+
+  /* Тени */
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Переходы */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+
+  /* Отступы */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  /* Отсутствовал, нужен для login-card (padding var(--space-5)) */
+  --space-5: 32px;
+
+  /* ============================================
+     ГРУПА СОВМЕСТИМОСТИ
+     Алиасы под имена, которые использует login.css/
+     base.css/component.css первого фронта. Значения
+     ссылаются на основную палитру выше — так меняется
+     всё в одном месте, без правки самих файлов первого фронта.
+     ============================================ */
+  --font-family: var(--font-family-base);
+  --font-size-sm: var(--font-size-small);
+  --font-size-md: var(--font-size-body);
+
+  --color-text: var(--main-text-color);
+  --color-text-muted: var(--interaction-color);
+  --color-bg: var(--color-bg-main);
+
+  --color-primary: var(--color-accent);
+  --color-primary-hover: var(--color-blue-dark);
+  --color-primary-text: var(--color-white);
+  --color-on-primary: var(--color-white);
+
+  --color-field-bg: var(--color-bg-secondary);
+  --color-field-border: var(--color-border);
+  --color-surface-border: var(--color-border);
+
+  --fw-medium: var(--font-weight-medium);
+  --fs-body: var(--font-size-body);
+  --fs-small: var(--font-size-small);
+  --fs-h2: var(--font-size-h2);
 }

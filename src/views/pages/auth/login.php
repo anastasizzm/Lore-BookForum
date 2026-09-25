@@ -39,7 +39,7 @@
         <p class="form-field__error" id="loginPasswordError" aria-live="polite"></p>
       </div>
 
-      <button class="button button--primary" type="submit">Sign in</button>
+      <button class="btn btn--primary" type="submit">Sign in</button>
 
       <div class="login-form__links">
         <a class="link" href="/forgot-password">Forgot password?</a>
