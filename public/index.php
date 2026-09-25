@@ -1,70 +1,28 @@
 <?php
-$active = 'for-you';
-$pageTitle = 'For you';
+declare(strict_types=1);
 
-// Собираем поиск
-ob_start();
-$type = 'search';
-$name = 'q';
-$placeholder = 'Search';
-$value = '';
-include __DIR__ . '/../src/components/input.php';
-$pageActions = ob_get_clean();
+require __DIR__ . '/../vendor/autoload.php';
+$config = require __DIR__ . '/../config/settings.php';
 
-ob_start();
-?>
-<?php include __DIR__ . '/../src/partials/page-header.php'; ?>
+use App\Lib\Settings;
+use App\Lib\View;
+use App\Http\Router;
+use App\Http\Request;
+use App\Http\Response;
+use App\Http\HttpException;
+use App\Kernel;
 
-<!-- Лента: карточки -->
-<div class="feed-panel">
-  <div class="stack">
+$settings = new Settings($config);
+View::configure($settings);
 
-    <?php
-    // Пост 1
-    $bookCover = 'https://placehold.co/80x112?text=Book';
-    $bookTitle = 'Name of book';
-    $bookAuthor = 'Author'; // Если в card-book нужен автор
-    $userInitials = 'UN';
-    $userAvatar = null;
-    $userName = 'username';
-    $text = 'some text about life and many more things some text about life and many more things some text about life and many more things some text about life and many more things some text about life and many more things.';
-    $likes = 0; // или сколько нужно
-    $comments = 0;
-    $date = '10.09.2026';
-    include __DIR__ . '/../src/components/card-feed.php';
-    ?>
+$router = new Router();
+$routeLoader = require __DIR__ . '/../config/routes.php';
+$routeLoader($router);
 
-    <?php
-    // Пост 2
-    $bookCover = 'https://placehold.co/80x112?text=Book';
-    $bookTitle = 'Name of book';
-    $bookAuthor = 'Author';
-    $userInitials = 'ST';
-    $userName = 'sername';
-    $text = 'some text about life and many more things some text about life and many more things some text about life and many more things some text about life and many more things.';
-    $likes = 0;
-    $comments = 0;
-    $date = '10.09.2026';
-    include __DIR__ . '/../src/components/card-feed.php';
-    ?>
-
-    <?php
-    // Пост 3
-    $bookCover = 'https://placehold.co/80x112?text=Book';
-    $bookTitle = 'Name of book';
-    $bookAuthor = 'Author';
-    $userInitials = 'ST';
-    $userName = 'sername';
-    $text = 'some text about life and many more things some text about life and many more things some text about life and many more things some text about life and many more things.';
-    $likes = 0;
-    $comments = 0;
-    $date = '10.09.2026';
-    include __DIR__ . '/../src/components/card-feed.php';
-    ?>
-
-  </div>
-</div>
-
-<?php
-$content = ob_get_clean();
-include __DIR__ . '/../src/layout.php';
+try {
+    $request = Request::fromGlobals();
+    $kernel = new Kernel($router, $settings);
+    $kernel->handle($request)->send($request->method);
+} catch (HttpException $e) {
+    Response::json(['error' => $e->getMessage()], $e->getStatus())->send();
+}
