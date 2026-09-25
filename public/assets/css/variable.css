@@ -97,4 +97,8 @@
   --fs-body: var(--font-size-body);
   --fs-small: var(--font-size-small);
   --fs-h2: var(--font-size-h2);
+
+  *, *::before, *::after {
+  box-sizing: border-box;
+}
 }

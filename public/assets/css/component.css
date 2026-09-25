@@ -52,7 +52,7 @@
 }
 
 /* ============================================
-   FORM FIELD (для форм с валидацией: логин, регистрация)
+   FORM FIELD
    ============================================ */
 .form-field__input {
   width: 100%;
@@ -99,7 +99,7 @@
 }
 
 /* ============================================
-   INPUTS (поисковая строка / общий инпут)
+   INPUTS
    ============================================ */
 .input {
   display: flex;
@@ -154,23 +154,9 @@
   flex-shrink: 0;
 }
 
-.avatar--sm {
-  width: 32px;
-  height: 32px;
-  font-size: var(--fs-small);
-}
-
-.avatar--md {
-  width: 44px;
-  height: 44px;
-  font-size: var(--fs-body);
-}
-
-.avatar--lg {
-  width: 72px;
-  height: 72px;
-  font-size: var(--fs-h2);
-}
+.avatar--sm { width: 32px; height: 32px; font-size: var(--fs-small); }
+.avatar--md { width: 44px; height: 44px; font-size: var(--fs-body); }
+.avatar--lg { width: 72px; height: 72px; font-size: var(--fs-h2); }
 
 .avatar img {
   width: 100%;
@@ -179,7 +165,7 @@
 }
 
 /* ============================================
-   TAGS (interaction)
+   TAGS
    ============================================ */
 .tag {
   display: inline-flex;
@@ -201,7 +187,7 @@
 }
 
 /* ============================================
-   CARDS — base
+   CARD — base
    ============================================ */
 .card-base {
   background: var(--color-surface);
@@ -212,7 +198,7 @@
 }
 
 /* ============================================
-   CARD — Book (vertical)
+   CARD — Book
    ============================================ */
 .card-book {
   display: flex;
@@ -367,6 +353,8 @@
   font-weight: var(--fw-medium);
   color: var(--color-text-muted);
   transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  line-height: 1;
 }
 
 .tabs--filled .tab {
@@ -389,6 +377,99 @@
 }
 
 /* ============================================
+   TABS — segmented (со скользящим индикатором)
+   ============================================ */
+.tabs--segmented {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: 3px;
+  background: var(--color-overlay);
+  border-radius: var(--radius-pill);
+  --indicator-x: 0px;
+  --indicator-w: 0px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Белый ползунок */
+.tabs--segmented::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: var(--indicator-w);
+  height: calc(100% - 6px);
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  transform: translateX(var(--indicator-x));
+  transition: transform 0.3s cubic-bezier(.4, 0, .2, 1),
+              width    0.3s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Пока JS впервые позиционирует ползунок — без анимации */
+.tabs--segmented.is-initializing::before {
+  transition: none;
+}
+
+.tabs--segmented .tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 28px;              /* ← уменьшили с 40px */
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: var(--fw-regular);
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.tabs--segmented .tab:hover {
+  color: var(--color-text);
+}
+
+.tabs--segmented .tab.is-active {
+  color: var(--color-primary);
+  font-weight: var(--fw-medium);
+  background: transparent;    /* белый фон даёт ::before */
+  box-shadow: none;
+}
+
+/* Иконка внутри таба */
+.tab__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.tab__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============================================
    DROPDOWN
    ============================================ */
 .dropdown {
@@ -406,6 +487,7 @@
   background: var(--color-surface);
   font-size: var(--fs-small);
   color: var(--color-text);
+  cursor: pointer;
 }
 
 .dropdown__arrow {
@@ -445,50 +527,54 @@
   background: var(--color-overlay);
 }
 
+.dropdown__item.is-active {
+  background: var(--color-overlay);
+  color: var(--color-text);
+  font-weight: var(--fw-medium);
+}
+
 /* ============================================
-   GRID (для карточек книг)
+   GRID — BOOKS (чистый, без конфликтов)
    ============================================ */
 .grid-books {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-4);
 }
 
+@media (min-width: 480px) {
+  .grid-books { grid-template-columns: repeat(3, 1fr); }
+}
+
 @media (min-width: 768px) {
-  .grid-books {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  .grid-books { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (min-width: 1024px) {
-  .grid-books {
-    grid-template-columns: repeat(5, 1fr);
-  }
+  .grid-books { grid-template-columns: repeat(5, 1fr); }
 }
 
 @media (min-width: 1280px) {
   .grid-books {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--space-3);
   }
 }
 
 @media (min-width: 1440px) {
-  .grid-books {
-    grid-template-columns: repeat(7, 1fr);
-  }
+  .grid-books { grid-template-columns: repeat(8, 1fr); }
 }
 
 @media (min-width: 1680px) {
-  .grid-books {
-    grid-template-columns: repeat(8, 1fr);
-  }
+  .grid-books { grid-template-columns: repeat(9, 1fr); }
 }
 
-@media (min-width: 1280px) {
-  .grid-books {
-    gap: var(--space-3);
-  }
+@media (min-width: 1920px) {
+  .grid-books { grid-template-columns: repeat(10, 1fr); }
+}
 
+/* Уменьшение карточки на широких экранах */
+@media (min-width: 1280px) {
   .card-book__cover {
     margin-bottom: var(--space-2);
   }
@@ -499,7 +585,6 @@
 
   .card-book__author {
     font-size: 12px;
-    margin-bottom: var(--space-2);
   }
 
   .card-book__tags {
@@ -514,10 +599,305 @@
 }
 
 /* ============================================
-   STACK — вертикальные списки карточек
+   STACK
    ============================================ */
 .stack {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* ============================================
+   FILTER — TOGGLE
+   ============================================ */
+.filter-toggle {
+  width: 44px;
+  height: 44px;
+}
+
+.filter-toggle.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+}
+
+/* ============================================
+   FILTER — PANEL (универсальная)
+   ============================================ */
+.filter-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);   /* было 12px 16px — стало 8px 12px */
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-card);
+}
+
+.filter-panel[hidden] { display: none; }
+
+.filter-panel__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.filter-panel__row > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+.filter-panel__row .tab {
+  height: 40px;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.filter-panel__row[hidden] { display: none; }
+
+.filter-panel__row .dropdown {
+  display: inline-flex;
+}
+
+.filter-panel__row .dropdown__trigger {
+  height: 40px;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.filter-input {
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  outline: none;
+}
+
+.filter-input:focus-visible {
+  border-color: var(--color-primary);
+}
+
+.filter-reset {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-reset:hover {
+  background: var(--color-overlay);
+  color: var(--color-text);
+}
+
+.filter-panel__row .filter-input {
+  height: 40px;
+  padding: 0 var(--space-4);
+  line-height: 40px;
+}
+
+.filter-panel__row .filter-reset {
+  height: 40px;
+  padding: 0 var(--space-4);
+  line-height: 1;
+}
+
+.filter-panel__row .filter-reset {
+  margin-left: auto;
+}
+
+/* ============================================
+   FILTER PANEL — выравнивание всех контролов
+   ============================================ */
+.filter-panel__row > * {
+  box-sizing: border-box;
+}
+
+.filter-panel__row .tabs,
+.filter-panel__row .dropdown,
+.filter-panel__row .filter-input,
+.filter-panel__row .filter-reset {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filter-panel__row .tab,
+.filter-panel__row .dropdown__trigger,
+.filter-panel__row .filter-input,
+.filter-panel__row .filter-reset {
+  height: 40px;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* ============================================
+   FILTER PANEL — адаптив
+   ============================================ */
+
+/* Планшет / средний экран — разрешаем нормальный перенос */
+@media (max-width: 1024px) {
+  .filter-panel__row {
+    align-items: flex-start;
+  }
+
+  /* Reset больше не липнет вправо в одиночку */
+  .filter-panel__row .filter-reset {
+    margin-left: 0;
+  }
+}
+
+/* Узкий экран — всё в столбик, аккуратно */
+@media (max-width: 768px) {
+  .filter-panel {
+    padding: var(--space-2);
+  }
+
+  .filter-panel__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  /* Сегмент-контролы — на всю ширину, сегменты растягиваются поровну */
+  .filter-panel__row .tabs--segmented {
+    display: flex;
+    width: 100%;
+  }
+
+  .filter-panel__row .tabs--segmented .tab {
+    flex: 1 1 0;
+  }
+
+  /* Дропдауны — на всю ширину */
+  .filter-panel__row .dropdown {
+    display: block;
+    width: 100%;
+  }
+
+  .filter-panel__row .dropdown__trigger {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Инпут и reset — на всю ширину */
+  .filter-panel__row .filter-input,
+  .filter-panel__row .filter-reset {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-panel__row .filter-reset {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .filter-panel__row .tabs--segmented {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .filter-panel__row .tabs--segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-panel__row .tabs--segmented .tab {
+    flex: 0 0 auto;
+    padding: 0 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .filter-panel__row .tabs--segmented .tab__icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ============================================
+   BOOKS PANEL — подложка под карточки
+   ============================================ */
+.books-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+.books-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.books-panel__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.books-panel__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-overlay);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.books-panel__title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.books-panel__meta {
+  margin: 2px 0 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* Адаптив шапки панели */
+@media (max-width: 640px) {
+  .books-panel {
+    padding: var(--space-3);
+  }
+
+  .books-panel__head {
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .books-panel__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+
+  .books-panel__title {
+    font-size: var(--fs-h3);
+  }
 }
