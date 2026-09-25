@@ -18,7 +18,7 @@ final class Settings
         $this->layoutsPath  = $data['views_dir']['layouts'];
         $this->partialsPath = $data['views_dir']['partials'];
         $this->debug        = $data['debug'] ?? false;
-        $this->$middleware  = $data['middleware'] ?? [];
-        $this->$dbUrl       = $data['database_url'];
+        $this->middleware  = $data['middleware'] ?? [];
+        $this->dbUrl       = $data['database_url'];
     }
 }

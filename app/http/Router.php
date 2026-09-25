@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Http\HttpException;
+use App\Http\Request;
+use App\Http\Response;
+use RuntimeException;
+
 final class Router
 {
     /** @var array<string, array<int, array{regex: string, handler: callable|array}>> */

@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use JsonException;
+use App\Http\HttpException;
+
 final class Request
 {
     private ?array $bodyCache = null;

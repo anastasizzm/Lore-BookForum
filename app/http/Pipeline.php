@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Http\Middleware;
+use App\Http\Request;
+use App\Http\Response;
+
 final class Pipeline
 {
     /** @var Middleware[] */

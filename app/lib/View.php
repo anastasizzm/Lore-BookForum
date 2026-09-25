@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Lib;
 
+use App\Lib\Settings;
+use RuntimeException;
+
 final class View
 {
     private static array $globals = [];
@@ -81,5 +84,11 @@ final class View
     public static function escape(?string $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    public static function csrfField(): string
+    {
+        $token = \App\Lib\CsrfManager::getToken();
+        return '<input type="hidden" name="_token" value="' . $token . '">';
     }
 }

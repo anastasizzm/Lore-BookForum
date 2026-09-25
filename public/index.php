@@ -5,7 +5,7 @@ require __DIR__ . '/../vendor/autoload.php';
 $config = require __DIR__ . '/../config/settings.php';
 
 use App\Lib\Settings;
-use App\Http\View;
+use App\Lib\View;
 use App\Http\Router;
 use App\Http\Request;
 use App\Http\Response;

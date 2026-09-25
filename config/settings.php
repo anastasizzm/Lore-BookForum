@@ -1,17 +1,18 @@
 <?php
-declare(strict_types=1);
+
+$baseDir = realpath(__DIR__ . '/..'); 
 
 return [
     'debug' => true,
     'middleware' => [],
     'views_dir' => [
-        'pages' => __DIR__ . '/../src/views/pages/',
-        'layouts' => __DIR__ . '/../src/layouts',
-        'partials' => __DIR__ . '/../src/partials/'
+        'pages' => $baseDir . '/src/views/pages/',
+        'layouts' => $baseDir . '/src/layouts',
+        'partials' => $baseDir . '/src/partials/'
     ],
     'app' => [
         'namespace' => 'App',
-        'path' => __DIR__ . '/../app/'
+        'path' => $baseDir . '/app/'
     ],
     'database_url' => $_ENV['DATABASE_URL'] ?? ''
 ];
