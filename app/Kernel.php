@@ -21,16 +21,14 @@ final class Kernel
         $destination = fn(Request $req) => $this->router->dispatch($req);
         $pipeline = new Pipeline($destination);
 
-        $middlewareInstances = [];
         foreach ($this->settings->middleware as $middlewareClass) {
             if (class_exists($middlewareClass)) {
-                $middlewareInstances[] = new $middlewareClass();
+                $pipeline->through(new $middlewareClass());
             } else {
                 throw new \RuntimeException("Middleware class not found: {$middlewareClass}");
             }
         }
 
-        $pipeline->through(...$middlewareInstances);
         return $pipeline->then($request);
     }
 }

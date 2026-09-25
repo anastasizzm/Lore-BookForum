@@ -22,7 +22,7 @@ $routeLoader($router);
 try {
     $request = Request::fromGlobals();
     $kernel = new Kernel($router, $settings);
-    $kernel->handle($request)->send();
+    $kernel->handle($request)->send($request->method);
 } catch (HttpException $e) {
     Response::json(['error' => $e->getMessage()], $e->getStatus())->send();
 }

@@ -14,9 +14,12 @@ final class Pipeline
 
     public function __construct(private $destination) {}
 
-    public function through(Middleware ...$middleware): self
+    public function through(Middleware ...$middlewares): self
     {
-        $this->middleware = $middleware;
+        foreach($middlewares as $middleware)
+        {
+            $this->middleware[] = $middleware;
+        }
         return $this;
     }
 
