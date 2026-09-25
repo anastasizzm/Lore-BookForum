@@ -9,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -32,14 +32,18 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASS_HASH: ${ADMIN_PASS_HASH:-}
+      SEED_TEST_DATA: ${SEED_TEST_DATA:-false}
       DBMATE_MIGRATIONS_DIR: /migrations   # container path; the host path is mounted below
       DBMATE_SCHEMA_FILE: /storage/db/schema.sql
-      # Don't rewrite schema.sql after each `up` (mounts are read-only anyway)
       DBMATE_NO_DUMP_SCHEMA: "true"
     volumes:
       - ${DBMATE_MIGRATIONS_DIR:?set DBMATE_MIGRATIONS_DIR in .env}:/migrations:ro  # migrations folder (host path)
       - ./storage/db:/storage/db:ro    # schema.sql, init.sql, migrate.sh
-    entrypoint: ["/bin/sh", "/storage/db/migrate.sh"]
+    # Strips Windows CRLF line endings from the script before running it
+    entrypoint:
+      - /bin/sh
+      - -c
+      - tr -d '\r' < /storage/db/migrate.sh > /tmp/migrate.sh && exec /bin/sh /tmp/migrate.sh
 
 volumes:
   pgdata:

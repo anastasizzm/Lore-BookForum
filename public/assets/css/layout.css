@@ -1,0 +1,271 @@
+body {
+  min-height: 100vh;
+}
+
+body.is-menu-open {
+  overflow: hidden;
+}
+
+/* ===== Sidebar (Desktop - узкое состояние) ===== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width, 72px);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Центрирование по горизонтали */
+  padding: 24px 0;     /* Верхний и нижний отступ */
+  background: var(--color-surface, #fff);
+  border-right: 1px solid var(--color-border, #e2e8f0);
+  z-index: 40;
+  transition: transform 0.25s ease;
+  box-sizing: border-box;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Центрирование иконок */
+  gap: 16px;           /* Отступ между иконками */
+  width: 100%;
+}
+
+/* Базовый стиль кнопок в закрытом (узком) состоянии: без фона */
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Центрируем иконку внутри */
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  color: var(--color-text-muted, #5876A6);
+  text-decoration: none;
+  background: transparent; /* Без фона по умолчанию! */
+  transition: background 0.15s;
+}
+
+/* Фон появляется ТОЛЬКО при наведении */
+.nav-item:hover {
+  background: var(--color-overlay, #f1f5f9);
+}
+
+/* Скрываем текст на десктопе */
+.nav-text {
+  display: none;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Увеличенная иконка профиля вверху на десктопе */
+.sidebar-avatar-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef2f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px; /* Воздушный отступ после профиля до ленты */
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ===== Content ===== */
+.content {
+  margin-left: var(--sidebar-width, 72px);
+  padding: 19px 46px 40px 46px !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.content__inner {
+  max-width: 100% !important;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ===== Page Header ===== */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 13px;
+  margin-bottom: 19px;
+}
+
+.page-header__title {
+  font-size: 2.75rem !important;
+  font-weight: 700 !important;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.page-header__actions {
+  width: 100%;
+}
+
+/* ===== Burger Button (По умолчанию скрыт на десктопе) ===== */
+.burger {
+  display: none !important;
+}
+
+/* ===== Overlay ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 35;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+body.is-menu-open .sidebar-overlay {
+  display: block;
+  opacity: 1;
+}
+
+/* ===== Responsive (Мобильная версия / Открытое состояние) ===== */
+@media (max-width: 768px) {
+  /* Сайдбар по умолчанию скрыт слева */
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px !important;
+    align-items: center !important;
+    padding: 32px 16px 24px 16px !important;
+  }
+
+  /* Когда меню открыто — сайдбар выезжает */
+  body.is-menu-open .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-nav {
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  /* 1. Мобильная аватарка профиля (круглая, по центру) */
+  .sidebar .mobile-profile-btn {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px !important;
+    border-radius: 50% !important;
+    background: #eef2f7 !important;
+    margin: 10px auto 16px auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+
+  .sidebar .mobile-profile-btn .nav-text {
+    display: none !important;
+  }
+
+  /* 2. Мобильные широкие кнопки (Feed, Library, Saved) */
+  .sidebar .mobile-nav-btn {
+    width: 220px !important;
+    height: 52px !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 0 20px !important;
+    gap: 16px !important;
+    border-radius: 20px !important;
+    background: #f8fafc !important;
+  }
+
+  .sidebar .mobile-nav-btn:hover {
+    background: #e2e8f0 !important;
+  }
+
+  .sidebar .mobile-nav-btn .nav-text {
+    display: inline-block !important;
+    font-weight: 500;
+    font-size: 16px;
+    color: #1e293b;
+  }
+
+  .sidebar .mobile-nav-btn .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+  }
+
+  /* 3. Нижняя кнопка More */
+  .sidebar .sidebar-bottom {
+    display: flex;
+    justify-content: center;
+    width: 100% !important;
+  }
+
+  .sidebar .sidebar-bottom .mobile-nav-btn {
+    width: 220px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Отступы контента на мобилках */
+  .content {
+    margin-left: 0 !important;
+    padding: 24px 16px !important;
+    min-height: 100vh;
+  }
+
+  /* Строка с бургером и заголовком "For you" */
+  .page-header-row {
+    display: flex;
+    align-items: center;
+    gap: 14px; /* Отступ между кнопкой и текстом */
+  }
+
+  /* Включаем отображение бургера строго внутри хедера */
+  .page-header .burger {
+    display: flex !important;
+    position: static !important;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0 !important;
+  }
+
+  .page-header .burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #1e293b;
+    border-radius: 2px;
+  }
+
+  /* Чуть компактнее заголовок на мобилках */
+  .page-header__title {
+    font-size: 2.2rem !important;
+    margin: 0;
+  }
+}
