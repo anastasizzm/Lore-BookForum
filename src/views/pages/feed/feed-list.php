@@ -1,12 +1,33 @@
-<?php
-/**
- * Шаблон ленты «For you».
- * Только разметка карточек. Подключается из public/index.php.
- * Здесь же позже будут реальные данные из БД.
- */
+<?php $view->extends('main'); ?>
 
-// Временный массив заглушек — потом заменим на данные из БД
-$posts = [
+<?php $view->setBlock('selectedTab', 'for-you'); ?>
+
+<?php $view->startBlock('title'); ?>
+For you — Book App
+<?php $view->endBlock('title'); ?>
+
+<?php $view->startBlock('content'); ?>
+
+<?php
+// Собираем HTML поиска и передаём его в page-header как параметр
+ob_start();
+$view->include('input', [
+    'type'        => 'search',
+    'name'        => 'q',
+    'placeholder' => 'Search',
+    'value'       => '',
+]);
+$searchHtml = ob_get_clean();
+
+$view->include('page-header', [
+    'title'   => 'For you',
+    'actions' => $searchHtml,
+]);
+?>
+
+<?php
+// Заглушки — потом заменим на данные из контроллера ($posts придёт из бэка)
+$posts = $posts ?? [
     [
         'userInitials' => 'UN',
         'userName'     => 'username',
@@ -49,22 +70,21 @@ $posts = [
 <div class="feed-panel">
   <div class="stack">
     <?php foreach ($posts as $post): ?>
-      <?php
-        // Раскладываем массив в переменные, которые ждёт card-feed.php
-        $userInitials = $post['userInitials'];
-        $userName     = $post['userName'];
-        $userAvatar   = $post['userAvatar'];
-        $date         = $post['date'];
-        $text         = $post['text'];
-        $likes        = $post['likes'];
-        $comments     = $post['comments'];
-        $bookCover    = $post['bookCover'];
-        $bookTitle    = $post['bookTitle'];
-        $bookAuthor   = $post['bookAuthor'];
-        $withBook     = true;
-
-        include __DIR__ . '/../../../components/card-feed.php';
-      ?>
+      <?php $view->include('card-feed', [
+          'withBook'     => true,
+          'bookCover'    => $post['bookCover'],
+          'bookTitle'    => $post['bookTitle'],
+          'bookAuthor'   => $post['bookAuthor'],
+          'userInitials' => $post['userInitials'],
+          'userName'     => $post['userName'],
+          'userAvatar'   => $post['userAvatar'],
+          'text'         => $post['text'],
+          'likes'        => $post['likes'],
+          'comments'     => $post['comments'],
+          'date'         => $post['date'],
+      ]); ?>
     <?php endforeach; ?>
   </div>
 </div>
+
+<?php $view->endBlock('content'); ?>
