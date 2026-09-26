@@ -16,7 +16,21 @@
     <h1 class="login-card__title">Sign in to Lore</h1>
   </header>
 
-  <form class="login-form" id="loginForm" action="/login" method="POST" novalidate>
+  <?php if (!empty($innerMessages)): ?>
+    <div class="messages">
+      <?php foreach ($innerMessages as $msg): ?>
+        <div class="message message--<?= $view->e($msg['type']) ?>">
+          <?php if (!empty($msg['title'])): ?>
+            <div class="message__title"><?= $view->e($msg['title']) ?></div>
+          <?php endif; ?>
+          <div class="message__body"><?= $view->e($msg['body']) ?></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <form class="login-form" id="loginForm"
+        action="<?= $view->url('login') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
@@ -39,7 +53,7 @@
     <button class="btn btn--primary" type="submit">Sign in</button>
 
     <div class="login-form__links">
-      <a class="link" href="<?= $view->url('password.reset') ?>">Forgot password?</a>
+      <a class="link" href="<?= $view->url('password.email') ?>">Forgot password?</a>
       <a class="link" href="<?= $view->url('register') ?>">Don't have account?</a>
     </div>
   </form>

@@ -16,7 +16,21 @@
     <h1 class="login-card__title">Create account</h1>
   </header>
 
-  <form class="login-form" id="registerForm" action="/register" method="POST" novalidate>
+  <?php if (!empty($innerMessages)): ?>
+    <div class="messages">
+      <?php foreach ($innerMessages as $msg): ?>
+        <div class="message message--<?= $view->e($msg['type']) ?>">
+          <?php if (!empty($msg['title'])): ?>
+            <div class="message__title"><?= $view->e($msg['title']) ?></div>
+          <?php endif; ?>
+          <div class="message__body"><?= $view->e($msg['body']) ?></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <form class="login-form" id="registerForm"
+        action="<?= $view->url('register') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
@@ -53,7 +67,7 @@
       <p class="form-field__error" id="registerPasswordConfirmError" aria-live="polite"></p>
     </div>
 
-    <button class="btn btn--primary" type="submit">Sign in</button>
+    <button class="btn btn--primary" type="submit">Sign up</button>
 
     <div class="login-form__links login-form__links--center">
       <a class="link" href="<?= $view->url('login') ?>">Already have an account? Sign in</a>
