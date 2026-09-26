@@ -26,5 +26,7 @@ return function(Router $router)
     $router->get('/register', [App\Controllers\AuthController::class, 'getRegister'], 'register', [App\Middleware\AuthMiddleware::class]);
     $router->post('/register', [App\Controllers\AuthController::class, 'register'], NULL, [App\Middleware\AuthMiddleware::class]);
 
+    $router->post('/logout', [App\Controllers\AuthController::class, 'logout'], 'logout');
+
     $router->get('/verify/{token}', [App\Controllers\AuthController::class, 'mailVerify'], NULL, [App\Middleware\AuthMiddleware::class]);
 };

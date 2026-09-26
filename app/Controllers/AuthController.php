@@ -67,6 +67,11 @@ final class AuthController extends Controller
         }
     }
 
+    public function logout(Request $request) : Response{
+        $cookies->clear($response, Constants::TOKEN_COOKIE);
+        return Response::redirect($url->url('login'));
+    }
+
     public function mailVerify(Request $request, string $token) : Response {
         try{
             $isValid = $this->service->mailVerify($token);
