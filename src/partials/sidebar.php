@@ -45,7 +45,7 @@
                 </svg>
             </span>
             <span class="nav-text">Saved</span>
-        </a>х
+        </a>
     </nav>
 
     <div class="sidebar-bottom">

@@ -282,7 +282,7 @@ body.is-menu-open .sidebar-overlay {
     position: fixed !important;
     top: 16px;
     left: 16px;
-    z-index: 50;
+    z-index: 30;
     width: 42px;
     height: 42px;
     min-width: 42px;
@@ -306,7 +306,6 @@ body.is-menu-open .sidebar-overlay {
     border-radius: 2px;
   }
 
-  /* чтобы кнопка не перекрывала заголовок страницы */
   .content {
     padding-top: 76px !important;
   }
