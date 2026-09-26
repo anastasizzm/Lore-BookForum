@@ -1,7 +1,8 @@
+<?php $selectedTab = $view->block('selectedTab'); ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
-        <!-- Кнопка Профиля (Круглая иконка сверху) -->
-        <a href="/profile" class="nav-item mobile-profile-btn <?= $active === 'profile' ? 'active' : '' ?>" title="Profile">
+        <!-- Профиль -->
+        <a href="/profile" class="nav-item mobile-profile-btn <?= $selectedTab === 'profile' ? 'active' : '' ?>" title="Profile">
             <span class="nav-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="#5876A6"/>
@@ -10,8 +11,8 @@
             <span class="nav-text">Profile</span>
         </a>
 
-        <!-- Лента / For You -->
-        <a href="/foryou" class="nav-item mobile-nav-btn <?= $active === 'for-you' ? 'active' : '' ?>" title="Feed">
+        <!-- Лента -->
+        <a href="/" class="nav-item mobile-nav-btn <?= $selectedTab === 'for-you' ? 'active' : '' ?>" title="Feed">
             <span class="nav-icon">
                 <svg width="24" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 6.89454C6 10.5063 8.24165 11.475 8.85924 18.0378C8.88973 18.3758 9.07273 18.5785 9.44634 18.5785H15.5537C15.9273 18.5785 16.1103 18.3758 16.1408 18.0378C16.7584 11.475 19 10.5063 19 6.89454C19 3.62814 16.1331 1 12.4962 1C8.86686 1 6 3.62814 6 6.89454ZM7.27331 6.89454C7.27331 4.24387 9.66745 2.254 12.4962 2.254C15.3326 2.254 17.7267 4.24387 17.7267 6.89454C17.7267 9.69538 15.7977 10.4613 14.9666 17.3245H10.0334C9.19473 10.4613 7.27331 9.69538 7.27331 6.89454ZM9.43871 20.5683H15.5613C15.8587 20.5683 16.0874 20.3356 16.0874 20.0428C16.0874 19.7499 15.8587 19.5171 15.5613 19.5171H9.43871C9.14135 19.5171 8.91261 19.7499 8.91261 20.0428C8.91261 20.3356 9.14135 20.5683 9.43871 20.5683ZM12.4962 23.3167C14.0135 23.3167 15.2411 22.5958 15.3249 21.507H9.67508C9.74369 22.5958 10.9713 23.3167 12.4962 23.3167Z" fill="#5876A6"/>
@@ -21,7 +22,7 @@
         </a>
 
         <!-- Библиотека -->
-        <a href="/library" class="nav-item mobile-nav-btn <?= $active === 'library' ? 'active' : '' ?>" title="Library">
+        <a href="/library" class="nav-item mobile-nav-btn <?= $selectedTab === 'library' ? 'active' : '' ?>" title="Library">
             <span class="nav-icon">
                 <svg width="24" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_42_719)">
@@ -33,8 +34,8 @@
             <span class="nav-text">Library</span>
         </a>
 
-        <!-- Сохраненное -->
-        <a href="/saved" class="nav-item mobile-nav-btn <?= $active === 'saved' ? 'active' : '' ?>" title="Saved">
+        <!-- Сохранённые -->
+        <a href="/saved" class="nav-item mobile-nav-btn <?= $selectedTab === 'saved' ? 'active' : '' ?>" title="Saved">
             <span class="nav-icon">
                 <svg width="20" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_45_49)">
@@ -44,10 +45,9 @@
                 </svg>
             </span>
             <span class="nav-text">Saved</span>
-        </a>
+        </a>х
     </nav>
 
-    <!-- Нижняя кнопка (More) -->
     <div class="sidebar-bottom">
         <a href="/settings" class="nav-item mobile-nav-btn" title="More">
             <span class="nav-icon">
