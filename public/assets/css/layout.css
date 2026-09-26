@@ -276,9 +276,13 @@ body.is-menu-open .sidebar-overlay {
   }
 
   /* Бургер внутри хедера — виден только на мобилке */
-  .page-header .burger {
+  @media (max-width: 768px) {
+  .burger {
     display: flex !important;
-    position: static !important;
+    position: fixed !important;
+    top: 16px;
+    left: 16px;
+    z-index: 50;
     width: 42px;
     height: 42px;
     min-width: 42px;
@@ -292,9 +296,21 @@ body.is-menu-open .sidebar-overlay {
     padding: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     cursor: pointer;
-    flex-shrink: 0;
-    margin: 0 !important;
   }
+
+  .burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #1e293b;
+    border-radius: 2px;
+  }
+
+  /* чтобы кнопка не перекрывала заголовок страницы */
+  .content {
+    padding-top: 76px !important;
+  }
+}
 
   .page-header .burger span {
     display: block;

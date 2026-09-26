@@ -1,17 +1,14 @@
 /* ---------------- book details page ---------------- */
 
-.book-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.book-page-header__actions {
+.book-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.book-actions .btn--primary {
+  flex: 1;
 }
 
 /* ---------------- cover + rating ---------------- */
@@ -136,13 +133,5 @@
   .book-details__cover-col {
     max-width: 200px;
     margin: 0 auto;
-  }
-
-  .book-page-header {
-    flex-wrap: wrap;
-  }
-
-  .book-page-header__title {
-    font-size: 1.5rem !important;
   }
 }
