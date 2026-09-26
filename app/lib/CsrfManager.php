@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Lib;
 
 use App\Http\Request;
 

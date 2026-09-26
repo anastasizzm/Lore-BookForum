@@ -9,12 +9,16 @@ use App\Repositories\UsersRepository;
 use App\Repositories\ProfilesRepository;
 
 use App\Services\UnitOfWork;
+use App\Services\EmailVerificationService;
+
+use App\Models\Email;
 
 use App\Lib\Jwt;
 use App\Lib\CsrfManager;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
+use App\Exceptions\UnauthorizedException;
 use RuntimeException;
 use Throwable;
 
@@ -24,20 +28,27 @@ final class AuthService
         private readonly UsersRepository $usersRepo,
         private readonly ProfilesRepository $profilesRepo,
         private readonly UnitOfWork $uof,
-        private readonly Jwt $jwt
+        private readonly Jwt $jwt,
+        private readonly EmailVerificationService $verificationService
     ){}
 
-    public function login($email, $pass) : ?string
+    /** @throws UnauthorizedException */
+    public function login($form) : string
     {
-        $passHash = password_hash($pass, PASSWORD_BCRYPT);
+        $login = $form['login'];
+        $pass = $form['password'];
+
         $credits = $this->usersRepo->findCreditsByEmail($email);
+        $passHash = password_hash($pass, PASSWORD_BCRYPT);
         
-        if ($credits === null || $credits['is_active'] || password_verify($pass, $credits['pass_hash']))
-            return null;
+        if ($credits === null || !$credits['is_active'] || !password_verify($passHash, $credits['pass_hash']))
+            throw new UnauthorizedException('Invalid login or password');
         
         return $this->jwt->access($credits['id'], ['username' => $credits['username']]);
     }
 
+    /** @throws ValidationException */
+    /** @throws OperationFailedException */
     public function register(array $form) : string
     {
         $errors = $this->validateRegisterForm($form);
@@ -62,11 +73,16 @@ final class AuthService
                 return $userId;
             });
 
-            return $this->jwt->access($userId, ['username' => $username, 'csrf' => CsrfManager::generate()]);
+            $verificationService->send($userId, $email);
+            return $this->jwt->access($userId, ['username' => $username]);
         }
         catch(PDOException $e) {
             throw $this->translatePdoException($e);
         }
+    }
+
+    public function mailVerify(string $token) : bool{
+        return $verificationService->verify($token);
     }
 
     private function translatePdoException(PDOException $e): Throwable

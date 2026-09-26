@@ -12,6 +12,10 @@ return function(Router $router)
 
     // Auth
     $router->get('/login', [App\Controllers\AuthController::class, 'getLogin'], 'login', [App\Middleware\AuthMiddleware::class]);
+    $router->post('/login', [App\Controllers\AuthController::class, 'login'], NULL, [App\Middleware\AuthMiddleware::class]);
+
     $router->get('/register', [App\Controllers\AuthController::class, 'getRegister'], 'register', [App\Middleware\AuthMiddleware::class]);
     $router->post('/register', [App\Controllers\AuthController::class, 'register'], NULL, [App\Middleware\AuthMiddleware::class]);
+
+    $router->get('/verify/{token}', [App\Controllers\AuthController::class, 'mailVerify'], NULL, [App\Middleware\AuthMiddleware::class]);
 };

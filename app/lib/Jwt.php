@@ -30,6 +30,19 @@ final class Jwt
         );
     }
 
+    public function emailVerification(int $userId, int $ttlSeconds = 86400): string
+    {
+        $now = time();
+
+        return $this->encode([
+            'iss' => $this->settings->jwtIssuer,
+            'sub' => $userId->toString(),
+            'typ' => 'email_verify',
+            'iat' => $now,
+            'exp' => $now + $ttlSeconds,
+        ]);
+    }
+
     // ---------- convenience verifiers ----------
 
     /** Returns claims if the token is a valid access token, null otherwise. */
@@ -48,6 +61,15 @@ final class Jwt
         $claims = $this->decode($token);
 
         return ($claims !== null && ($claims['typ'] ?? null) === self::TYP_REFRESH)
+            ? $claims
+            : null;
+    }
+
+    public function decodeEmailVerification(string $token): ?array
+    {
+        $claims = $this->decode($token);
+
+        return ($claims !== null && ($claims['typ'] ?? null) === 'email_verify')
             ? $claims
             : null;
     }

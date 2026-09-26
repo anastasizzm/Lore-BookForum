@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Services\UnitOfWork;
+use App\Lib\Database;
+use Trowable;
 
 final class DatabaseUnitOfWork implements UnitOfWork
 {

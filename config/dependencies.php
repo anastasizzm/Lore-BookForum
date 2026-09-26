@@ -14,6 +14,9 @@ use App\Services\AuthService;
 use App\Services\CookieService;
 use App\Services\UnitOfWork;
 use App\Services\DatabaseUnitOfWork;
+use App\Services\EmailVerificationService;
+use App\Services\Mailer;
+use App\Services\SmtpMailer;
 
 use App\Repositories\UsersRepository;
 use App\Repositories\ProfilesRepository;
@@ -29,15 +32,26 @@ $container->singleton(UsersRepository::class, fn(Container $c) => new UsersRepos
 $container->singleton(ProfilesRepository::class, fn(Container $c) => new ProfilesRepository($c->get(Database::class)));
 
 //Services
-$container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->instance(CookieService::class, new CookieService());
 $container->instance(Jwt::class, new Jwt($settings));
+$container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
+$container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));
+$container->singleton(EmailVerificationService::class, function (Container $c) use ($settings) {
+    $ur = $c->get(UsersRepository::class);
+    $uow = $c->get(UnitOfWork::class);
+    $jwt = $c->get(Jwt::class);
+    $mailer = $c->get(Mailer::class);
+    $urlGen = $c->get(UrlGenerator::class);
+
+    return new EmailVerificationService($jwt, $urlGen, $mailer, $ur,$uow, $settings);
+});
 $container->singleton(AuthService::class, function (Container $c)
 {
     $ur = $c->get(UsersRepository::class);
     $pr = $c->get(ProfilesRepository::class);
     $uow = $c->get(UnitOfWork::class);
     $jwt = $c->get(Jwt::class);
+    $emailService = $c->get(EmailVerificationService::class);
 
-    return new AuthService($ur, $pr, $uow, $jwt);
+    return new AuthService($ur, $pr, $uow, $jwt, $emailService);
 });

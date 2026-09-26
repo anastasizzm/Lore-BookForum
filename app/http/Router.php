@@ -6,7 +6,7 @@ namespace App\Http;
 use App\Http\HttpException;
 use App\Http\Request;
 use App\Http\Response;
-use App\Lib\Route;
+use App\Http\Route;
 use App\Lib\Container;
 use App\Http\RouteRegistry;
 use RuntimeException;
@@ -18,8 +18,8 @@ final class Router
     public function __construct(
         private readonly Container $container
     ) {
-        $registry = $container->get(RouteRegistry::class);
-        if (!isset($registry))
+        $this->registry = $container->get(RouteRegistry::class);
+        if (!isset($this->registry))
             throw new RuntimeException('RouteRegistry is not provided to container');
     }
 
@@ -51,7 +51,7 @@ final class Router
             regex: $this->compile($path),
             handler: $handler,
             name: $name,
-            skipMiddleware: $skip,
+            skipMiddleware: $skipMiddleware,
         ));
     }
 

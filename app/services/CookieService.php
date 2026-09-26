@@ -5,6 +5,7 @@ namespace App\Services;
 
 use App\Http\Request;
 use App\Http\Response;
+use App\Lib\Cookie;
 
 final class CookieService
 {

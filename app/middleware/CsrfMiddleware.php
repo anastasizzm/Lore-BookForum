@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Lib\CsrfManager;
+use App\Lib\View;
+
 use App\Http\HttpException;
 use App\Http\Middleware;
 use App\Http\Request;
 use App\Http\Response;
+
 use App\Constants;
 
 use App\Services\CookieService;

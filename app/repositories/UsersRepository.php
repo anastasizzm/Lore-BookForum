@@ -12,38 +12,18 @@ final class UsersRepository extends Repository
         parent::__construct($db);
     }
 
-    public function findCreditsByEmail(string $email): ?array
+    public function findCreditsByLogin(string $login): ?array
     {
         $stmt = $this->pdo()->prepare(
             'SELECT id, pass_hash, is_active, username
             FROM users
-            WHERE email = :email
+            WHERE email = :login || username = :login
             LIMIT 1'
         );
-        $stmt->execute([':email' => $email]);
+        $stmt->execute([':login' => $login]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : $row;
-    }
-
-    public function usernameExists(string $username): bool
-    {
-        $stmt = $this->pdo()->prepare(
-            'SELECT 1 FROM users WHERE username = :username LIMIT 1'
-        );
-        $stmt->execute([':username' => $email]);
-
-        return (bool)$stmt->fetchColumn();
-    }
-
-    public function emailExists(string $email) : bool
-    {
-        $stmt = $this->pdo()->prepare(
-            'SELECT 1 FROM users WHERE email = :email LIMIT 1'
-        );
-        $stmt->execute([':email' => $email]);
-
-        return (bool)$stmt->fetchColumn();
     }
 
     public function exists(int $id) : bool
@@ -66,5 +46,19 @@ final class UsersRepository extends Repository
 
         $id = (int)$stmt->fetchColumn();
         return $id === false ? null : $id;
+    }
+
+    public function markEmailVerified(int $id): bool
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE users
+            SET is_verified = true
+            WHERE id = :id
+            AND is_verified = false
+            RETURNING id'
+        );
+        $stmt->execute([':id' => $id]);
+
+        return $stmt->fetchColumn() !== false;
     }
 }

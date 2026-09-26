@@ -5,7 +5,8 @@ namespace App\Controllers;
 
 use App\Http\Request;
 use App\Http\Response;
-use App\UrlGenerator;
+use App\Http\UrlGenerator;
+use App\Http\HttpException;
 
 use App\Lib\Controller;
 
@@ -14,6 +15,7 @@ use App\Services\CookieService;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
+use App\Exceptions\UnauthorizedException;
 use App\Constants;
 
 use App\Models\InnerMessageType;
@@ -48,7 +50,30 @@ final class AuthController extends Controller
             return $this->render('auth/register', ['form' => $formData, 'errors' => $e->errors()]);
         }
         catch(OperationFailedException $e){
-            return $this->render('auth/register', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, $e->title, $e->message)]]);
+            return $this->render('auth/register', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, $e->title, $e->getMessage())]]);
+        }
+    }
+
+    public function login(Request $request) : Response {
+        $formData = $request->body();
+
+        try{
+            $token = $this->service->login($formData);
+            $response = Response::redirect($url->url('home'));
+            $cookies->set($response, Constants::TOKEN_COOKIE, $token);
+        }
+        catch(UnauthorizedException $e){
+            return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Authentication failed", $e->getMessage())]]);
+        }
+    }
+
+    public function mailVerify(Request $request, string $token) : Response {
+        try{
+            $isValid = $this->service->mailVerify($token);
+            return Response::redirect($url->url('home'));
+        }
+        catch(HttpException $e){
+            return $this->render('error', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
         }
     }
 }

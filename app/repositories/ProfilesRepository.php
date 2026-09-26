@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Repositories\Repository;
+use App\Lib\Database;
 
 final class ProfilesRepository extends Repository
 {

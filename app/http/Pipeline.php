@@ -6,7 +6,7 @@ namespace App\Http;
 use App\Http\Middleware;
 use App\Http\Request;
 use App\Http\Response;
-use App\Lib\Route;
+use App\Http\Route;
 
 final class Pipeline
 {
