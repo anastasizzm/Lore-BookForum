@@ -1,5 +1,42 @@
+<?php $view->extends('main'); ?>
+
+<?php $view->setBlock('selectedTab', 'library'); ?>
+
+<?php $view->startBlock('title'); ?>
+Library — Book App
+<?php $view->endBlock('title'); ?>
+
+<?php $view->startBlock('content'); ?>
+
 <?php
-// Заглушки — потом заменим на get_all_books()
+// Собираем поиск + кнопку фильтра и передаём в page-header
+ob_start();
+$view->include('input', [
+    'type'        => 'search',
+    'name'        => 'q',
+    'placeholder' => 'Search books',
+    'value'       => '',
+]);
+?>
+<button type="button"
+        class="btn-icon filter-toggle"
+        data-filter-toggle
+        aria-label="Фильтры">
+  <span>☰</span>
+</button>
+<?php
+$pageActions = ob_get_clean();
+
+$view->include('page-header', [
+    'title'   => 'Library',
+    'actions' => $pageActions,
+]);
+
+$view->include('library-filters');
+?>
+
+<?php
+// Заглушки — потом заменим на get_all_books() из контроллера
 $books = $books ?? [];
 if (empty($books)) {
     for ($i = 1; $i <= 24; $i++) {
@@ -25,7 +62,7 @@ $books_count = count($books);
       <div>
         <h2 class="books-panel__title">All books</h2>
         <p class="books-panel__meta">
-          <?= $books_count ?> items · Updated today
+          <?= $view->e($books_count) ?> items · Updated today
         </p>
       </div>
     </div>
@@ -40,28 +77,31 @@ $books_count = count($books);
     $current_sort  = $_GET['sort'] ?? 'popularity';
     $current_label = $sort_options[$current_sort] ?? 'Popularity';
 
-    $label = 'Sort: ' . $current_label;
-
-    $options = [];
+    $dropdownOptions = [];
     foreach ($sort_options as $key => $text) {
-        $options[] = [
+        $dropdownOptions[] = [
             'label' => $text,
             'href'  => '?sort=' . urlencode($key),
         ];
     }
-    include __DIR__ . '/../../../components/dropdown.php';
+
+    $view->include('dropdown', [
+        'label'   => 'Sort: ' . $current_label,
+        'options' => $dropdownOptions,
+    ]);
     ?>
   </header>
 
   <div class="grid-books">
     <?php foreach ($books as $book): ?>
-      <?php
-        $cover  = $book['cover'];
-        $title  = $book['title'];
-        $author = $book['author'];
-        include __DIR__ . '/../../../components/card-book.php';
-      ?>
+      <?php $view->include('card-book', [
+          'cover'  => $book['cover'],
+          'title'  => $book['title'],
+          'author' => $book['author'],
+      ]); ?>
     <?php endforeach; ?>
   </div>
 
 </section>
+
+<?php $view->endBlock('content'); ?>

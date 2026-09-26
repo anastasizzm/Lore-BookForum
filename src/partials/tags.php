@@ -1,18 +1,15 @@
 <?php
 /**
+ * tags — иконка + число (лайки, комментарии).
+ *
  * Ожидает:
- *   $size     — 'sm' | 'md' | 'lg' (по умолчанию md)
- *   $initials — буквы для заглушки
- *   $src      — URL картинки (опционально)
+ *   $icon  — эмодзи иконки
+ *   $value — число
  */
-$size = $size ?? 'md';
-$initials = $initials ?? '';
-$src = $src ?? null;
+$icon  = $icon  ?? '';
+$value = $value ?? 0;
 ?>
-<div class="avatar avatar--<?= $size ?>">
-  <?php if (!empty($src)): ?>
-    <img src="<?= htmlspecialchars($src) ?>" alt="">
-  <?php else: ?>
-    <span><?= htmlspecialchars($initials) ?></span>
-  <?php endif; ?>
-</div>
+<span class="tag">
+  <span class="tag__icon"><?= $icon ?></span>
+  <span class="tag__value"><?= (int)$value ?></span>
+</span>

@@ -1,18 +1,20 @@
 <?php
 /**
+ * avatar — круглая иконка пользователя.
+ *
  * Ожидает:
  *   $size     — 'sm' | 'md' | 'lg' (по умолчанию md)
  *   $initials — буквы для заглушки
  *   $src      — URL картинки (опционально)
  */
-$size = $size ?? 'md';
+$size     = $size     ?? 'md';
 $initials = $initials ?? '';
-$src = $src ?? null;
+$src      = $src      ?? null;
 ?>
-<div class="avatar avatar--<?= $size ?>">
+<div class="avatar avatar--<?= $view->e($size) ?>">
   <?php if (!empty($src)): ?>
-    <img src="<?= htmlspecialchars($src) ?>" alt="">
+    <img src="<?= $view->e($src) ?>" alt="">
   <?php else: ?>
-    <span><?= htmlspecialchars($initials) ?></span>
+    <span><?= $view->e($initials) ?></span>
   <?php endif; ?>
 </div>
