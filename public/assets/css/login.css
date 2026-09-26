@@ -65,6 +65,10 @@
   margin-top: var(--space-3);
 }
 
+.login-form__links--center {
+     justify-content: center;
+   }
+
 /* ---------------- mobile ---------------- */
 
 @media (max-width: 600px) {
