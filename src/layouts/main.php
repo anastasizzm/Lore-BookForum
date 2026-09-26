@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/assets/css/base.css">
 <link rel="stylesheet" href="/assets/css/layout.css">
 <link rel="stylesheet" href="/assets/css/component.css">
+<?= $view->block('head_extra') ?>
 </head>
 <body>
 
