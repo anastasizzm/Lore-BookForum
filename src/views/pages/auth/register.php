@@ -56,7 +56,7 @@
     <button class="btn btn--primary" type="submit">Sign in</button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="/login">Already have an account? Sign in</a>
+      <a class="link" href="<?= $view->url('login') ?>">Already have an account? Sign in</a>
     </div>
   </form>
 
