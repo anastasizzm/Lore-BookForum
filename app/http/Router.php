@@ -8,15 +8,20 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Lib\Route;
 use App\Lib\Container;
+use App\Http\RouteRegistry;
 use RuntimeException;
 
 final class Router
 {
-    /** @var array<string, Route[]> */
-    private array $routes = [];
+    private readonly RouteRegistry $registry;
 
-    /** @var array<string, Route> */
-    private array $namedRoutes = [];
+    public function __construct(
+        private readonly Container $container
+    ) {
+        $registry = $container->get(RouteRegistry::class);
+        if (!isset($registry))
+            throw new RuntimeException('RouteRegistry is not provided to container');
+    }
 
     public function get(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
     { $this->add('GET', $path, $handler, $name, $skipMiddleware); }
@@ -40,23 +45,15 @@ final class Router
         ?string $name,
         array $skipMiddleware,
     ): void {
-        $route = new Route(
+        $this->registry->add(new Route(
             method: strtoupper($method),
             path: $path,
             regex: $this->compile($path),
             handler: $handler,
             name: $name,
-            skipMiddleware: $skipMiddleware,
-        );
-
-        $this->routes[$route->method][] = $route;
-
-        if ($name !== null) {
-            $this->namedRoutes[$name] = $route;
-        }
+            skipMiddleware: $skip,
+        ));
     }
-
-    public function __construct(private Container $container) {}
 
     /**
      * Match the request against stored routes.
@@ -68,7 +65,7 @@ final class Router
     {
         $pathMatched = false;
 
-        foreach ($this->routes as $method => $routes) {
+        foreach ($this->registry->routes() as $method => $routes) {
             foreach ($routes as $route) {
                 if (!preg_match($route->regex, $request->path, $matches)) {
                     continue;
@@ -103,21 +100,6 @@ final class Router
         }
 
         return $result instanceof Response ? $result : Response::json($result);
-    }
-
-    public function url(string $name, array $params = []): string
-    {
-        $route = $this->namedRoutes[$name] ?? null;
-
-        if ($route === null) {
-            throw new RuntimeException("Route named '{$name}' not found.");
-        }
-
-        $path = $route->path;
-        foreach ($params as $key => $value) {
-            $path = str_replace("{{$key}}", (string) $value, $path);
-        }
-        return $path;
     }
 
     private function compile(string $path): string

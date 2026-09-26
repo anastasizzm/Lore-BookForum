@@ -6,15 +6,18 @@ namespace App\Middleware;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Middleware;
-use App\Lib\Jwt;
+use App\Http\UrlGenerator;
 use App\Http\Router;
+
+use App\Lib\Jwt;
 use App\Constants;
+use App\Lib\View;
 
 final class AuthMiddleware implements Middleware
 {
     public function __construct(
         private readonly Jwt $jwt,
-        private readonly Router $router
+        private readonly UrlGenerator $url
     ){}
 
     public function handle(Request $request, callable $next) : Response
@@ -24,11 +27,12 @@ final class AuthMiddleware implements Middleware
 
         if ($claims === null) return $request->isApi() 
             ? Response::json(["errors" => ["Invalid token"]], 401)
-            : Response::redirect($this->router->url('login'));
+            : Response::redirect($this->url->url('login'));
 
-        $request->setAttribute(Constants::CSRF_ATTR, $claims['csrf']);
         $request->setAttribute(Constants::USER_ID_ATTR, $claims['sub']);
         $request->setAttribute(Constants::USERNAME_ATTR, $claims['username']);
+        
+        View::share(Constants::CSRF_ATTR, $claims['csrf']);
 
         return $next($request);
     }

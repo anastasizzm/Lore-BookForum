@@ -14,15 +14,13 @@ use App\Http\HttpException;
 use App\Kernel;
 
 $settings = new Settings($config);
-View::configure($settings);
-
 $container = new Container();
 require __DIR__ . '/../config/dependencies.php';
+View::configure($container);
 
 $router = new Router($container);
 $routeLoader = require __DIR__ . '/../config/routes.php';
 $routeLoader($router);
-$container->instance(Router::class, $router);
 
 try {
     $request = Request::fromGlobals();

@@ -6,6 +6,7 @@ namespace App;
 final class Constants
 {
     public const TOKEN_COOKIE = 'access_token';
+    public const CSRF_COOKIE = 'csrf_token';
     
     public const USER_ID_ATTR = 'user_id';
     public const USERNAME_ATTR = 'username';

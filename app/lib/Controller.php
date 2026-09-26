@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Controllers;
+namespace App\Lib;
 
 use App\Http\Response;
-use View;
+use App\Lib\View;
 
 abstract class Controller
 {
