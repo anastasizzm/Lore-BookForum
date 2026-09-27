@@ -8,12 +8,12 @@
     <?php if (!empty($innerMessages)): ?>
       <div class="messages">
         <?php foreach ($innerMessages as $msg): ?>
-          <div class="message message--<?= $view->e($msg['type']) ?>">
-            <?php if (!empty($msg['title'])): ?>
-              <div class="message__title"><?= $view->e($msg['title']) ?></div>
-            <?php endif; ?>
-            <div class="message__body"><?= $view->e($msg['body']) ?></div>
-          </div>
+          <div class="message message--<?= $view->e($msg['type']->value) ?>">
+          <?php if (!empty($msg['title'])): ?>
+            <div class="message__title"><?= $view->e($msg['title']) ?></div>
+          <?php endif; ?>
+          <div class="message__body"><?= $view->e($msg['body']) ?></div>
+        </div>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>

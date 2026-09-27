@@ -48,12 +48,6 @@ body {
   align-items: center;
 }
 
-.library-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
 /* =======================================================
    2. ПЛАНШЕТЫ (Tablet: >= 768px)
 ======================================================= */

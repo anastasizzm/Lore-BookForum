@@ -91,7 +91,7 @@ $totalPages  = $totalPages  ?? 1;
                 <div class="profile-post__books">
                   <?php foreach ($post['books'] as $book): ?>
                     <a class="profile-post__book"
-                       href="<?= $view->url('book.show', ['id' => $book['id'] ?? 0]) ?>">
+                       href="<?= $view->url('book', ['id' => $book['id'] ?? 0]) ?>">
                       <img src="<?= $view->e($book['cover'] ?? '') ?>" alt="">
                     </a>
                   <?php endforeach; ?>
@@ -162,7 +162,7 @@ $totalPages  = $totalPages  ?? 1;
           <?php foreach ($publications as $pub): ?>
             <li class="profile-publications__item">
               <a class="profile-publications__link"
-                 href="<?= $view->url('book.show', ['id' => $pub['id'] ?? 0]) ?>">
+                 href="<?= $view->url('book', ['id' => $pub['id'] ?? 0]) ?>">
                 <span class="profile-publications__cover">
                   <img src="<?= $view->e($pub['cover'] ?? '') ?>" alt="">
                 </span>

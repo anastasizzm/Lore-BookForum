@@ -19,7 +19,7 @@
       <?php if (!empty($innerMessages)): ?>
         <div class="messages">
           <?php foreach ($innerMessages as $msg): ?>
-            <div class="message message--<?= $view->e($msg['type']) ?>">
+            <div class="message message--<?= $view->e($msg['type']->value) ?>">
               <?php if (!empty($msg['title'])): ?>
                 <div class="message__title"><?= $view->e($msg['title']) ?></div>
               <?php endif; ?>
