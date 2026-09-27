@@ -32,7 +32,7 @@
               class="btn btn--primary"
               data-verify-retry
               data-resend-url="/api/verify/resend"
-              data-message-url="<?= $view->url('message') ?>">
+              data-message-url="#">
         Resend verification
       </button>
     <?php endif; ?>

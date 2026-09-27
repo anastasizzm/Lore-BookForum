@@ -2,7 +2,7 @@
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
         <!-- Профиль -->
-        <a href="<?= $view->url('profile') ?>" class="nav-item mobile-profile-btn <?= $selectedTab === 'profile' ? 'active' : '' ?>" title="Profile">
+        <a href="#">
             <span class="nav-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="#5876A6"/>
@@ -22,7 +22,7 @@
         </a>
 
         <!-- Библиотека -->
-        <a href="<?= $view->url('library') ?>" class="nav-item mobile-nav-btn <?= $selectedTab === 'library' ? 'active' : '' ?>" title="Library">
+        <a href="#">
             <span class="nav-icon">
                 <svg width="24" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_42_719)">
@@ -35,7 +35,7 @@
         </a>
 
         <!-- Сохранённые -->
-        <a href="<?= $view->url('saved') ?>" class="nav-item mobile-nav-btn <?= $selectedTab === 'saved' ? 'active' : '' ?>" title="Saved">
+        <a href="#">
             <span class="nav-icon">
                 <svg width="20" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_45_49)">

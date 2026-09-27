@@ -56,7 +56,7 @@ $totalPages  = $totalPages  ?? 1;
 
       <?php if ($isOwner): ?>
         <a class="btn-icon profile-header__edit"
-           href="<?= $view->url('profile.edit') ?>"
+           href="#"
            aria-label="Edit profile"
            title="Edit profile">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -91,7 +91,7 @@ $totalPages  = $totalPages  ?? 1;
                 <div class="profile-post__books">
                   <?php foreach ($post['books'] as $book): ?>
                     <a class="profile-post__book"
-                       href="<?= $view->url('book', ['id' => $book['id'] ?? 0]) ?>">
+                       href="#">
                       <img src="<?= $view->e($book['cover'] ?? '') ?>" alt="">
                     </a>
                   <?php endforeach; ?>

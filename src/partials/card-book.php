@@ -13,7 +13,7 @@ $cover  = $cover  ?? '';
 $title  = $title  ?? '';
 $author = $author ?? '';
 ?>
-<a class="card-base card-book" href="<?= $view->url('book', ['id' => $id]) ?>">
+<a class="card-base card-book" href="#">
   <div class="card-book__cover">
     <img src="<?= $view->e($cover) ?>" alt="<?= $view->e($title) ?>">
   </div>

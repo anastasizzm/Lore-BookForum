@@ -47,7 +47,7 @@
     <button class="btn btn--primary" type="submit">Sign in</button>
 
     <div class="login-form__links">
-      <a class="link" href="<?= $view->url('password.email') ?>">Forgot password?</a>
+      <a class="link" href="#" title="Coming soon">Forgot password?</a>
       <a class="link" href="<?= $view->url('register') ?>">Don't have account?</a>
     </div>
   </form>

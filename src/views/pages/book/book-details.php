@@ -131,7 +131,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       Comments - <span class="comments-section__count"><?= (int) ($totalComments ?? count($comments)) ?></span>
     </h2>
 
-    <form class="comment-composer" action="<?= $view->url('comments') ?>" method="POST">
+    <form class="comment-composer" action="#" method="POST">
       <?= $view->csrfField() ?>
       <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
       <div class="input">

@@ -5,7 +5,7 @@
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>
 
-  <button type="button" class="burger" data-burger aria-label="Меню">
+  <button type="button" class="burger" data-burger aria-label="Menu">
     <span></span>
     <span></span>
     <span></span>
@@ -19,11 +19,11 @@
       <?php if (!empty($innerMessages)): ?>
         <div class="messages">
           <?php foreach ($innerMessages as $msg): ?>
-            <div class="message message--<?= $view->e($msg['type']->value) ?>">
-              <?php if (!empty($msg['title'])): ?>
-                <div class="message__title"><?= $view->e($msg['title']) ?></div>
+            <div class="message message--<?= $view->e($msg->type->value) ?>">
+              <?php if (!empty($msg->title)): ?>
+                <div class="message__title"><?= $view->e($msg->title) ?></div>
               <?php endif; ?>
-              <div class="message__body"><?= $view->e($msg['body']) ?></div>
+              <div class="message__body"><?= $view->e($msg->message) ?></div>
             </div>
           <?php endforeach; ?>
         </div>
@@ -33,8 +33,8 @@
     </div>
   </main>
 
-  <script src="/assets/js/app.js"></script>
-  <script src="/assets/js/filters.js"></script>
+  <script src="<?= $view->asset('js/app.js') ?>"></script>
+  <script src="<?= $view->asset('js/filters.js') ?>"></script>
   <?= $view->block('scripts') ?>
 </body>
 </html>

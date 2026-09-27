@@ -57,7 +57,7 @@ $books_count = $totalCount ?? count($books);
   <div class="empty-state">
     <p class="empty-state__text">
       You have no saved books yet.
-      <a href="<?= $view->url('library') ?>" class="link">Browse the library</a>
+      <a href="#" class="link">Browse the library</a>
       and save what you like.
     </p>
   </div>
