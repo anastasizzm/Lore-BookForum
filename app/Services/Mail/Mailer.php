@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Mail;
 
 use App\Models\Email;
 use App\Exceptions\MailException;

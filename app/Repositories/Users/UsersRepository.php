@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Repositories;
+namespace App\Repositories\Users;
+
+use App\Models\Auth\AuthCredits;
 
 use App\Repositories\Repository;
 use App\Lib\Database;
@@ -14,7 +16,7 @@ final class UsersRepository extends Repository
         parent::__construct($db);
     }
 
-    public function findCreditsByLogin(string $login): ?array
+    public function findCreditsByLogin(string $login): ?AuthCredits
     {
         $stmt = $this->pdo()->prepare(
             'SELECT id, pass_hash, is_blocked, is_verified, username
@@ -25,7 +27,7 @@ final class UsersRepository extends Repository
         $stmt->execute([':email' => $login, ':username' => $login]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row === false ? null : $row;
+        return $row === false ? null : AuthCredits::fromRow($row);
     }
 
     public function exists(int $id) : bool

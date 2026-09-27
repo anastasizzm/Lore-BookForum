@@ -10,16 +10,16 @@ use App\Lib\Database;
 use App\Lib\Container;
 use App\Lib\Jwt;
 
-use App\Services\AuthService;
-use App\Services\CookieService;
-use App\Services\UnitOfWork;
-use App\Services\DatabaseUnitOfWork;
-use App\Services\EmailVerificationService;
-use App\Services\Mailer;
-use App\Services\SmtpMailer;
+use App\Services\Auth\AuthService;
+use App\Services\Configuration\CookieService;
+use App\Services\Configuration\UnitOfWork;
+use App\Services\Configuration\DatabaseUnitOfWork;
+use App\Services\Auth\EmailVerificationService;
+use App\Services\Mail\Mailer;
+use App\Services\Mail\SmtpMailer;
 
-use App\Repositories\UsersRepository;
-use App\Repositories\ProfilesRepository;
+use App\Repositories\Users\UsersRepository;
+use App\Repositories\Users\ProfilesRepository;
 
 //Basics
 $container->instance(Settings::class, $settings);

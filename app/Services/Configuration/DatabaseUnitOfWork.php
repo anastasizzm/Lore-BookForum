@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Configuration;
 
-use App\Services\UnitOfWork;
+use App\Services\Configuration\UnitOfWork;
 use App\Lib\Database;
 use Trowable;
 

@@ -21,7 +21,7 @@ final class ExceptionMiddleware implements Middleware
             return $next($request);
         }
         catch(HttpException $e){
-            return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $url->url('home'), 'actionTitle' => 'Continue']));
+            return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Continue']));
         }
     }
 }

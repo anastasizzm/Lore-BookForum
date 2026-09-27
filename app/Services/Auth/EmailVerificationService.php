@@ -1,17 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Auth;
 
 use App\Lib\Jwt;
 use App\Lib\Settings;
 
 use App\Http\UrlGenerator;
 
-use App\Services\Mailer;
-use App\Services\UnitOfWork;
+use App\Services\Mail\Mailer;
+use App\Services\Configuration\UnitOfWork;
 
-use App\Repositories\UsersRepository;
+use App\Repositories\Users\UsersRepository;
 
 use App\Models\Email;
 
