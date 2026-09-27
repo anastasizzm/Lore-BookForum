@@ -12,10 +12,14 @@ return [
     ],
 
     'views_dir' => [
-        'pages' => $baseDir . '/src/views/pages/',
+        'pages' => $baseDir . '/src/views/pages',
         'layouts' => $baseDir . '/src/layouts',
-        'partials' => $baseDir . '/src/partials/'
+        'partials' => $baseDir . '/src/partials'
     ],
+
+    'public_dir' => $baseDir . '/public',
+
+    'assets_url' => '/assets',
 
     'database_url' => $_ENV['APP_DATABASE_URL'] ?? 
         throw new RuntimeException('APP_DATABASE_URL not set'),
