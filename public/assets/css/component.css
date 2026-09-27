@@ -926,3 +926,28 @@
   color: var(--color-primary);
   text-decoration: underline;
 }
+
+/* ============================================
+   MESSAGES (общие плашки — везде)
+   ============================================ */
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.message {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--fs-small);
+}
+
+.message--error   { border-color: #ff6b6b; background: #fff5f5; color: #c92a2a; }
+.message--warning { border-color: #ffa94d; background: #fff9f0; color: #b45309; }
+.message--success { border-color: #51cf66; background: #f0fff4; color: #2b8a3e; }
+
+.message__title { font-weight: var(--fw-medium); margin-bottom: var(--space-1); }
+.message__body  { font-size: var(--fs-small); }

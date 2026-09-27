@@ -37,10 +37,6 @@ body {
 /* =======================================================
    1. БАЗОВЫЕ СЕТКИ (Mobile First - для телефонов)
 ======================================================= */
-.layout-wrapper {
-  display: flex;
-  flex-direction: column;
-}
 
 .book-details {
   display: flex;
@@ -56,10 +52,6 @@ body {
     flex-direction: row;
   }
 
-  .library-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
   .book-details {
     flex-direction: row;
     align-items: flex-start;
@@ -73,10 +65,5 @@ body {
   .library-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 24px;
-  }
-
-  .main-content {
-    max-width: 1200px;
-    margin: 0 auto;
   }
 }
