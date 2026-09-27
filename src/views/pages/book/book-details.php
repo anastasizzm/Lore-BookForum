@@ -35,8 +35,8 @@ $comments = $comments ?? [
     ],
 ];
 
-$fullStars  = (int) floor($book['rating']);
-$emptyStars = 5 - $fullStars;
+$rating  = (float) ($book['rating'] ?? 0);
+$percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 ?>
 <?php $view->extends('main'); ?>
 
@@ -68,10 +68,13 @@ $emptyStars = 5 - $fullStars;
       </div>
 
       <div class="book-rating">
-        <span class="book-rating__stars" aria-hidden="true">
-          <?= str_repeat('★', $fullStars) ?><span class="is-empty"><?= str_repeat('☆', $emptyStars) ?></span>
+        <span class="book-rating__stars"
+              style="--rating-percent: <?= $view->e($percent) ?>%;"
+              role="img"
+              aria-label="Rating <?= $view->e(number_format($rating, 1)) ?> out of 5">
+          ★★★★★
         </span>
-        <span class="book-rating__value"><?= $view->e(number_format($book['rating'], 1)) ?></span>
+        <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
         <span class="book-rating__saves">
           🔖 <?= (int) $book['savesCount'] ?>
         </span>
@@ -125,22 +128,31 @@ $emptyStars = 5 - $fullStars;
 
   <section class="comments-section">
     <h2 class="comments-section__title">
-      Comments - <span class="comments-section__count"><?= count($comments) ?></span>
+      Comments - <span class="comments-section__count"><?= (int) ($totalComments ?? count($comments)) ?></span>
     </h2>
 
     <form class="comment-composer" action="<?= $view->url('comments') ?>" method="POST">
       <?= $view->csrfField() ?>
       <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
       <div class="input">
-        <input class="input__field" type="text" name="text" placeholder="Input comments...">
+        <input class="input__field" type="text" name="text"
+              value="<?= $view->e($form['text'] ?? '') ?>"
+              placeholder="Input comments...">
       </div>
+      <?php foreach (($errors['text'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </form>
 
-    <div class="stack">
-      <?php foreach ($comments as $comment): ?>
-        <?php $view->include('card-feed', array_merge($comment, ['withBook' => false])); ?>
-      <?php endforeach; ?>
-    </div>
+    <?php if (empty($comments)): ?>
+      <p class="comments-section__empty">Be the first to comment.</p>
+    <?php else: ?>
+      <div class="stack">
+        <?php foreach ($comments as $comment): ?>
+          <?php $view->include('card-feed', array_merge($comment, ['withBook' => false])); ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </section>
 
 <?php $view->endBlock('content'); ?>

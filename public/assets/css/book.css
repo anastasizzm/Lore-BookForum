@@ -42,15 +42,26 @@
 }
 
 .book-rating__stars {
-  display: inline-flex;
-  gap: 2px;
-  color: var(--color-primary);
-  font-size: 18px;
+  display: inline-block;
+  font-size: 20px;
+  letter-spacing: 2px;
   line-height: 1;
-}
+  user-select: none;
 
-.book-rating__stars .is-empty {
-  color: var(--color-border);
+  /* Градиент: закрашенная часть — #6F84A5, пустая — #F3F6FB */
+  background: linear-gradient(
+    90deg,
+    #6F84A5 0%,
+    #6F84A5 var(--rating-percent, 0%),
+    #F3F6FB var(--rating-percent, 0%),
+    #F3F6FB 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  -webkit-text-stroke: 0.5px #C5CFE0;
 }
 
 .book-rating__value {
@@ -125,6 +136,13 @@
 .comment-composer .input {
   flex: 1;
   border-radius: var(--radius-pill);
+}
+
+.comments-section__empty {
+  padding: var(--space-4);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: var(--fs-small);
 }
 
 /* ---------------- mobile ---------------- */
