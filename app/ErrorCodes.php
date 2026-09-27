@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App;
 
-final class ErorCodes
+final class ErrorCodes
 {
     public const INVALID_REQUIREMENT = 'invalidRequirement';
     

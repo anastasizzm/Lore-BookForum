@@ -7,7 +7,7 @@ return [
 
     'middleware' => [
         App\Middleware\ExceptionMiddleware::class,
-        App\Middleware\AuthMiddleware::class,
+        App\Middleware\JwtMiddleware::class,
         App\Middleware\CsrfMiddleware::class,
         App\Middleware\AuthorizationMiddleware::class,
         App\Middleware\ViewGlobalsMiddleware::class,
@@ -18,6 +18,8 @@ return [
         'layouts' => $baseDir . '/src/layouts',
         'partials' => $baseDir . '/src/partials'
     ],
+
+    'appUrl' => $_ENV['APP_URL'] ?? throw new RuntimeException('APP_URL not set'),
 
     'public_dir' => $baseDir . '/public',
 

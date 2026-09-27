@@ -19,6 +19,8 @@ use App\Exceptions\GoneException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedException;
 
+use PDO;
+
 final class EmailVerificationService
 {
     public function __construct(
@@ -35,7 +37,7 @@ final class EmailVerificationService
         $token = $this->jwt->emailVerification($userId);
 
         $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('email.verify', ['token' => $token]);
+              . $this->url->url('verify.mail', ['token' => $token]);
 
         $this->mailer->send(Email::to(
             $email,
@@ -69,7 +71,7 @@ final class EmailVerificationService
                 }   
             }
 
-            return true;
+            return $ok;
         });
     }
 }

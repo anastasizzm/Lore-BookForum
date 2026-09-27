@@ -16,7 +16,8 @@ final class ProfilesRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO profiles (user_id, name, surname, bio)
-            VALUES (:userId, :name, :surname, :bio)'
+            VALUES (:userId, :name, :surname, :bio)
+            RETURNING id'
         );
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);

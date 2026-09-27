@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Auth;
+namespace App\Lib\Auth;
 
 use RuntimeException;
 
@@ -16,7 +16,7 @@ final class PolicyRegistry
     /** @var array<string, array{callable(HttpContext): AuthorizationRequirement, class-string<Handler>}> */
     private array $policies = [];
 
-    public function register(
+    private function register(
         string $policy,
         callable $requirementFactory,
         string $handlerClass,

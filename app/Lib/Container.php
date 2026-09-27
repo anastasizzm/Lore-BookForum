@@ -19,7 +19,7 @@ final class Container
     /** Register a factory (lazy, one instance per container). */
     public function singleton(string $id, ?Closure $factory = null): void
     {
-        $this->factories[$id] = $factory ?? static fn(self $c) => new $id();
+        $this->factories[$id] = $factory ?? static fn(self $c) => $c->build($id);
     }
 
     /** Register a pre-built instance. */

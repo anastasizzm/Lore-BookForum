@@ -6,10 +6,11 @@ namespace App\Services\Auth;
 use App\Http\HttpContext;
 
 use App\Lib\Container;
+
 use App\Lib\Auth\PolicyRegistry;
 use App\Lib\Auth\Decision;
 use App\Lib\Auth\AuthorizationHandler;
-
+use App\Lib\Auth\AuthPolicy;
 
 final class AuthorizationService
 {
@@ -23,16 +24,16 @@ final class AuthorizationService
      */
     public function authorize(AuthPolicy|string|array $policy, HttpContext $ctx): Decision
     {
-        foreach ((array) $policy as $item) {
+        $policies = is_array($policy) ? $policy : [$policy];
+
+        foreach ($policies as $item) {
             if ($item instanceof AuthPolicy && $item === AuthPolicy::Public) {
                 continue;
             }
 
             [$requirement, $handlerClass] = $this->registry->resolve($item, $ctx);
 
-            /** @var Handler $handler */
             $handler = $this->container->get($handlerClass);
-
             $decision = $handler->handle($requirement, $ctx);
 
             if (!$decision->allowed) {

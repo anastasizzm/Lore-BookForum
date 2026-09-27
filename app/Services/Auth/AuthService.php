@@ -51,7 +51,7 @@ final class AuthService
         if ($credits->isBlocked)
             throw new ForbiddenException('Account is blocked');
 
-        return $this->jwt->access($credits['id'], ['verified', $credits->isVerified ? '1' : '0']);
+        return $this->jwt->access($credits->id, ['verified' => $credits->isVerified ? '1' : '0']);
     }
 
     /** @throws ValidationException */
@@ -68,8 +68,8 @@ final class AuthService
                 return $userId;
             });
 
-            $this->verificationService->send($userId, $email);
-            return $this->jwt->access($userId, ['verified', '0']);
+            $this->verificationService->send($userId, $form->email);
+            return $this->jwt->access($userId, ['verified' => '0']);
         }
         catch(\PDOException $e) {
             throw $this->translatePdoException($e);
@@ -78,10 +78,10 @@ final class AuthService
 
     public function mailVerify(int $userId, string $token) : string
     {
-        $isVerified = $this->verificationService->verify($token);
+        $isVerified = $this->verificationService->verify($userId, $token);
         if (!$isVerified) throw new MailException('Mail verification failed');
 
-        return $this->jwt->access($userId, ['verified', '1']);
+        return $this->jwt->access($userId, ['verified' => '1']);
     }
 
     private const UNIQUE_CONSTRAINTS = [

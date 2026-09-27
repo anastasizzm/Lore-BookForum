@@ -25,6 +25,11 @@ final readonly class HttpContext
         return $this->request->input($key, $default);
     }
 
+    public function query(string $key, mixed $default = null): mixed
+    {
+        return $this->request->getQuery($key, $default);
+    }
+
     public function attribute(string $key, mixed $default = null): mixed
     {
         return $this->request->getAttribute($key, $default);

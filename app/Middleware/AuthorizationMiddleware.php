@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Http\Middleware;
+namespace App\Middleware;
 
-use App\Services\AuthorizationService;
+use App\Services\Auth\AuthorizationService;
 
 use App\Lib\Auth\Decision;
 use App\Lib\View;
@@ -38,7 +38,7 @@ final class AuthorizationMiddleware implements Middleware
                 'errors' => [
                     [
                         'errorCode' => $decision->errorCode,
-                        'message' => $decision->message
+                        'message' => $decision->reason
                     ]
                 ],
                 'code'  => $decision->status,
@@ -48,8 +48,8 @@ final class AuthorizationMiddleware implements Middleware
 
         return match ($decision->status) {
             401     => Response::redirect($this->url->url('login'), 303),
-            404     => Response::html(View::render('message', ['statusCode' => 404, 'message' => "Not Found. $decision->message. ERR_CODE: $decision->errorCode"]), 404),
-            default => Response::html(View::render('message', ['statusCode' => $decision->status, 'message' => "Forbidden. $decision->message. ERR_CODE: $decision->errorCode"]), $decision->status),
+            404     => Response::html(View::render('message', ['statusCode' => 404, 'message' => "Not Found. $decision->reason. ERR_CODE: $decision->errorCode"]), 404),
+            default => Response::html(View::render('message', ['statusCode' => $decision->status, 'message' => "Forbidden. $decision->reason. ERR_CODE: $decision->errorCode"]), $decision->status),
         };
     }
 }

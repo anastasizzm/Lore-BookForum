@@ -16,6 +16,6 @@ final class Route
         public readonly string $regex,
         public readonly mixed $handler,
         public readonly ?string $name = null,
-        public readonly AuthPolicy|string|array $authPolicy = 'public',
+        public readonly AuthPolicy|string|array $authPolicy = AuthPolicy::Public,
     ) {}
 }

@@ -27,20 +27,20 @@ final class Router
             throw new RuntimeException('RouteRegistry is not provided to container');
     }
 
-    public function get(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Guest): void
-    { $this->add('GET', $path, $handler, $name, $skipMiddleware); }
+    public function get(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('GET', $path, $handler, $name, $authPolicy); }
 
-    public function post(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Guest): void
-    { $this->add('POST', $path, $handler, $name, $skipMiddleware); }
+    public function post(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('POST', $path, $handler, $name, $authPolicy); }
 
-    public function put(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Guest): void
-    { $this->add('PUT', $path, $handler, $name, $skipMiddleware); }
+    public function put(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('PUT', $path, $handler, $name, $authPolicy); }
 
-    public function patch(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Guest): void
-    { $this->add('PATCH', $path, $handler, $name, $skipMiddleware); }
+    public function patch(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('PATCH', $path, $handler, $name, $authPolicy); }
 
-    public function delete(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Guest): void
-    { $this->add('DELETE', $path, $handler, $name, $skipMiddleware); }
+    public function delete(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('DELETE', $path, $handler, $name, $authPolicy); }
 
     private function add(
         string $method,

@@ -43,7 +43,7 @@ $container->singleton(ProfilesRepository::class);
 
 //Services
 $container->instance(CookieService::class, new CookieService());
-$container->singleton(AuthorizationService::class);
+$container->singleton(AuthorizationService::class, fn(Container $c) => new AuthorizationService($c->get(PolicyRegistry::class), $c));
 $container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));
 $container->singleton(EmailVerificationService::class);

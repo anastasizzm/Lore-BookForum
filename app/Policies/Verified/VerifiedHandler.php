@@ -12,7 +12,7 @@ use App\Lib\Auth\AuthorizationHandler;
 use App\Lib\Auth\Decision;
 use App\Lib\Auth\AuthorizationRequirement;
 
-use App\Policies\Auth\VerifiedRequirement;
+use App\Policies\Verified\VerifiedRequirement;
 
 final class VerifiedHandler implements AuthorizationHandler
 {
@@ -21,9 +21,7 @@ final class VerifiedHandler implements AuthorizationHandler
         if (!$requirement instanceof VerifiedRequirement)
             return Decision::forbidden(ErrorCodes::INVALID_REQUIREMENT, 'Invalid requirement used');
 
-        $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR) === '1';
-        
-        if ($isVerified) return Decision::allow();
+        if ($ctx->attribute(Constants::VERIFIED_ATTR)) return Decision::allow();
         else return Decision::forbidden(ErrorCodes::FORBIDDEN, $requirement->describe());
     }
 }

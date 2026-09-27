@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Router;
-use App\Http\Request;
+use App\Http\HttpContext;
 use App\Http\Response;
 
 use App\Lib\Auth\AuthPolicy;
@@ -9,16 +9,24 @@ use App\Lib\View;
 
 return function(Router $router)
 {
-    $router->get('/pages/test', function (Request $request){
-        $page = $request->getQuery('page');
+    $router->get('/pages/test', function (HttpContext $context){
+        $page = $context->query('page');
         if (!is_string($page)) return Response::html("<p>Provide page name in ?page query</p>");
 
-        return Response::html(View::render($page, $request->query));
+        return Response::html(View::render($page, $context->request->query));
     }, 'test_pages');
 
-    $router->get('/', function (Request $request) {
+    $router->get('/tests/verified', function (HttpContext $context) {
+        return Response::html("<h1>You are verified</h1>");
+    }, 'test.verified', AuthPolicy::Verified);
+
+    $router->get('/tests/auth', function (HttpContext $context) {
+        return Response::html("<h1>You are authenticated</h1>");
+    }, 'test.auth', AuthPolicy::Auth);
+
+    $router->get('/', function (HttpContext $context) {
         return Response::html("<h1>Test completed successfully</h1>");
-    }, 'home', AuthPolicy::Verified);
+    }, 'home', AuthPolicy::Auth);
 
     // Auth
     $router->get('/login', [App\Controllers\Auth\AuthController::class, 'getLogin'], 'login', AuthPolicy::Public);
