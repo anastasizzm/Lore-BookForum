@@ -12,7 +12,7 @@ final class Constants
     public const CSRF_FIELD = '_token';
     
     public const USER_ID_ATTR = 'user_id';
-    public const USERNAME_ATTR = 'username';
+    public const VERIFIED_ATTR = 'is_verified';
     public const CSRF_ATTR = 'csrf';
 
     public const PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];

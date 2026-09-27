@@ -46,8 +46,9 @@ final class AuthController extends Controller
         $formData = $request->body();
 
         try{
-            $this->service->register(RegisterForm::fromArray($formData));
-            return $this->render('message', ['message' => 'Please confirm your email before login', 'actionUrl' => $url->url('login'), 'actionTitle' => 'Confirmed']);
+            $token = $this->service->register(RegisterForm::fromArray($formData));
+            $response = $this->render('message', ['message' => 'Please confirm your email to have full access', 'actionUrl' => $url->url('home'), 'actionTitle' => 'Start Reading']);
+            return $cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
         catch(ValidationException $e){
             return $this->render('auth/register', ['form' => $formData, 'errors' => $e->errors()]);
@@ -65,9 +66,6 @@ final class AuthController extends Controller
         catch(UnauthorizedException $e){
             return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Authentication failed", $e->getMessage())]]);
         }
-        catch(MailException $e){
-            return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Verification failed", 'Please verify your email first')]]);
-        }
         catch(ForbiddenException $e){
             return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $url->url('login'), 'actionTitle' => 'Understood']);
         }
@@ -80,10 +78,10 @@ final class AuthController extends Controller
 
     public function mailVerify(Request $request, string $token) : Response {
         try{
-            if (!$this->service->mailVerify($token))
-                throw new MailException('Mail verification failed');
-
-            return $this->render('auth/verify-result', ['success' => true, 'message' => 'Email successfully verified. You can now Sign In']);
+            $token = $this->service->mailVerify($token);
+            $response = Response::redirect($url->url('home'));
+            
+            return $cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
         catch(HttpException | MailException $e){
             return $this->render('auth/verify-result', ['success' => false, 'message' => $e->getMessage()]);

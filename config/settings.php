@@ -8,7 +8,9 @@ return [
     'middleware' => [
         App\Middleware\ExceptionMiddleware::class,
         App\Middleware\AuthMiddleware::class,
-        App\Middleware\CsrfMiddleware::class
+        App\Middleware\CsrfMiddleware::class,
+        App\Middleware\AuthorizationMiddleware::class,
+        App\Middleware\ViewGlobalsMiddleware::class,
     ],
 
     'views_dir' => [

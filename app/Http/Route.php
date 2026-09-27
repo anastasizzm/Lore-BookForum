@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Lib\Auth\AuthPolicy;
+
 final class Route
 {
     /**
@@ -14,12 +16,6 @@ final class Route
         public readonly string $regex,
         public readonly mixed $handler,
         public readonly ?string $name = null,
-        public readonly array $skipMiddleware = [],
+        public readonly AuthPolicy|string|array $authPolicy = 'public',
     ) {}
-
-    /** Does this route want to skip the given middleware class? */
-    public function shouldSkip(string $middlewareClass): bool
-    {
-        return in_array($middlewareClass, $this->skipMiddleware, true);
-    }
 }

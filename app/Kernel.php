@@ -10,6 +10,7 @@ use App\Lib\Container;
 use App\Http\Pipeline;
 use App\Http\Request;
 use App\Http\Response;
+use App\Http\HttpContext;
 
 final class Kernel
 {
@@ -33,17 +34,17 @@ final class Kernel
 
         [$route, $params] = $match;
 
-        $endpoint = fn(Request $req) => $this->router->execute($route, $req, $params);
+        $ctx = new HttpContext($request, $route, $params);
         $pipeline = new Pipeline();
 
         foreach ($this->settings->middleware as $middlewareClass) {
-            if (class_exists($middlewareClass)) {
-                $pipeline->through($this->container->get($middlewareClass));
-            } else {
+            if (!class_exists($middlewareClass))
                 throw new \RuntimeException("Middleware class not found: {$middlewareClass}");
-            }
+
+            $pipeline->through($this->container->get($middlewareClass));
         }
 
-        return $pipeline->process($request, $route, $endpoint);
+        $endpoint = fn(HttpContext $context) => $this->router->execute($context);
+        return $pipeline->process($ctx, $endpoint);
     }
 }
