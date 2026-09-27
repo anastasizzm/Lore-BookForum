@@ -40,6 +40,8 @@ $emptyStars = 5 - $fullStars;
 ?>
 <?php $view->extends('main'); ?>
 
+<?php $view->setBlock('selectedTab', 'library'); ?>
+
 <?php $view->startBlock('title'); ?>Book details<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -126,14 +128,9 @@ $emptyStars = 5 - $fullStars;
       Comments - <span class="comments-section__count"><?= count($comments) ?></span>
     </h2>
 
-    <form class="comment-composer" action="/comments" method="POST">
+    <form class="comment-composer" action="<?= $view->url('comments') ?>" method="POST">
       <?= $view->csrfField() ?>
-      <?php
-        $size = 'sm';
-        $initials = 'ME';
-        $src = null;
-        $view->include('avatar', ['size' => $size, 'initials' => $initials, 'src' => $src]);
-      ?>
+      <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
       <div class="input">
         <input class="input__field" type="text" name="text" placeholder="Input comments...">
       </div>
@@ -141,11 +138,13 @@ $emptyStars = 5 - $fullStars;
 
     <div class="stack">
       <?php foreach ($comments as $comment): ?>
-        <?php
-          $view->include('card-feed', array_merge($comment, ['withBook' => false]));
-        ?>
+        <?php $view->include('card-feed', array_merge($comment, ['withBook' => false])); ?>
       <?php endforeach; ?>
     </div>
   </section>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/book.js"></script>
+<?php $view->endBlock('scripts'); ?>

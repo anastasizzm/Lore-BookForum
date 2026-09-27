@@ -880,6 +880,16 @@
   line-height: 1.3;
 }
 
+.btn-icon.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+}
+
+.btn-icon.is-active svg path {
+  fill: currentColor;
+}
+
 /* Адаптив шапки панели */
 @media (max-width: 640px) {
   .books-panel {
