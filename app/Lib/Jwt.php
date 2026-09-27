@@ -36,7 +36,7 @@ final class Jwt
 
         return $this->encode([
             'iss' => $this->settings->jwtIssuer,
-            'sub' => $userId->toString(),
+            'sub' => $userId,
             'typ' => 'email_verify',
             'iat' => $now,
             'exp' => $now + $ttlSeconds,

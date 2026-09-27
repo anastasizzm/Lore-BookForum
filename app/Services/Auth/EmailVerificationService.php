@@ -17,6 +17,9 @@ use App\Models\Email;
 
 use App\Exceptions\GoneException;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\UnauthorizedException;
+
+use PDO;
 
 final class EmailVerificationService
 {
@@ -34,7 +37,7 @@ final class EmailVerificationService
         $token = $this->jwt->emailVerification($userId);
 
         $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('email.verify', ['token' => $token]);
+              . $this->url->url('verify.mail', ['token' => $token]);
 
         $this->mailer->send(Email::to(
             $email,
@@ -45,7 +48,8 @@ final class EmailVerificationService
 
     /** @throws GoneException */
     /** @throws NotFoundException */
-    public function verify(string $token): bool
+    /** @throws UnauthorizedException */
+    public function verify(int $userId, string $token): bool
     {
         $claims = $this->jwt->decodeEmailVerification($token);
 
@@ -53,7 +57,9 @@ final class EmailVerificationService
             throw new GoneException('The link is invalid or has expired');
         }
 
-        $userId = (int)$claims['sub'];
+        $tokenUserId = (int)$claims['sub'];
+        if ($tokenUserId !== $userId)
+            throw new UnauthorizedException('You logged in with invalid user. Login with verifying user and try again');
 
         return $this->uof->transactional(function (PDO $pdo) use ($userId): bool {
             $ok = $this->users->markEmailVerified($userId);
@@ -62,10 +68,10 @@ final class EmailVerificationService
                 $exists = $this->users->exists($userId);
                 if (!$exists) {
                     throw new NotFoundException('User not found');
-                }
+                }   
             }
 
-            return true;
+            return $ok;
         });
     }
 }

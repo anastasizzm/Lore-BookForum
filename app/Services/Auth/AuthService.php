@@ -27,12 +27,14 @@ use App\Exceptions\MailException;
 use RuntimeException;
 use Throwable;
 
+use PDO;    
+
 final class AuthService
 {
     public function __construct(
         private readonly UsersRepository $usersRepo,
         private readonly ProfilesRepository $profilesRepo,
-        private readonly UnitOfWork $uof,
+        private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
         private readonly EmailVerificationService $verificationService
     ){}
@@ -49,14 +51,11 @@ final class AuthService
         if ($credits->isBlocked)
             throw new ForbiddenException('Account is blocked');
 
-        if (!$credits->isVerified)
-            throw new MailException();
-        
-        return $this->jwt->access($credits['id']);
+        return $this->jwt->access($credits->id, ['verified' => $credits->isVerified ? '1' : '0']);
     }
 
     /** @throws ValidationException */
-    public function register(RegisterForm $form) : void
+    public function register(RegisterForm $form) : string
     {
         $errors = $form->validate();
         if (!empty($errors)) throw new ValidationException($errors);
@@ -69,15 +68,20 @@ final class AuthService
                 return $userId;
             });
 
-            $this->verificationService->send($userId, $email);
+            $this->verificationService->send($userId, $form->email);
+            return $this->jwt->access($userId, ['verified' => '0']);
         }
         catch(\PDOException $e) {
             throw $this->translatePdoException($e);
         }
     }
 
-    public function mailVerify(string $token) : bool{
-        return $this->verificationService->verify($token);
+    public function mailVerify(int $userId, string $token) : string
+    {
+        $isVerified = $this->verificationService->verify($userId, $token);
+        if (!$isVerified) throw new MailException('Mail verification failed');
+
+        return $this->jwt->access($userId, ['verified' => '1']);
     }
 
     private const UNIQUE_CONSTRAINTS = [
@@ -91,7 +95,7 @@ final class AuthService
     ];
 
     /** @throws ValidationException */
-    private function translatePdoException(PDOException $e): Throwable
+    private function translatePdoException(\PDOException $e): Throwable
     {
         if ($e->getCode() !== '23505') {
             return $e;

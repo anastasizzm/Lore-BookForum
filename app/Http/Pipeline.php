@@ -22,19 +22,15 @@ final class Pipeline
         return $this;
     }
 
-    public function process(Request $request, Route $route, callable $endpoint) : Response
+    public function process(HttpContext $ctx, callable $handler) : Response
     {
-        $next = fn(Request $r): Response => $endpoint($r);
+        $next = $handler;
 
         foreach (array_reverse($this->middleware) as $mw) {
-            if ($route instanceof Route && $route->shouldSkip($mw::class)) {
-                continue;
-            }
-
             $prev = $next;
-            $next = fn(Request $r): Response => $mw->handle($r, $prev);
+            $next = fn(HttpContext $r): Response => $mw->handle($r, $prev);
         }
 
-        return $next($request);
+        return $next($ctx);
     }
 }

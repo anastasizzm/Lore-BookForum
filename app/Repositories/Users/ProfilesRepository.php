@@ -15,8 +15,9 @@ final class ProfilesRepository extends Repository
     public function create(int $userId, string $name, string $surname, string $bio) : ?int
     {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO profiles (userId, name, surname, bio)
-            VALUES (:userId, :name, :surname, :bio)'
+            'INSERT INTO profiles (user_id, name, surname, bio)
+            VALUES (:userId, :name, :surname, :bio)
+            RETURNING id'
         );
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);

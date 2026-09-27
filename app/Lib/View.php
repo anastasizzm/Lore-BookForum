@@ -74,6 +74,7 @@ final class View
     public static function reset(): void
     {
         self::$engineSettings = null;
+        self::$engineUrlGenerator = null;
         self::$globals = [];
     }
 
@@ -145,11 +146,7 @@ final class View
 
     public function url(string $name, array $params = []): string
     {
-        if (self::$urlGenerator === null) {
-            throw new RuntimeException('URL resolver not configured');
-        }
-
-        return (self::$urlGenerator)($name, $params);
+        return $this->urlGenerator->url($name, $params);
     }
 
     public function asset(string $path): string

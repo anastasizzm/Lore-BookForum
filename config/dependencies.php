@@ -9,49 +9,42 @@ use App\Lib\Settings;
 use App\Lib\Database;
 use App\Lib\Container;
 use App\Lib\Jwt;
+use App\Lib\Auth\PolicyRegistry;
 
 use App\Services\Auth\AuthService;
+use App\Services\Auth\AuthorizationService;
+use App\Services\Auth\EmailVerificationService;
 use App\Services\Configuration\CookieService;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Configuration\DatabaseUnitOfWork;
-use App\Services\Auth\EmailVerificationService;
 use App\Services\Mail\Mailer;
 use App\Services\Mail\SmtpMailer;
 
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\Users\ProfilesRepository;
 
+
+// Policies
+$registry = new PolicyRegistry();
+require __DIR__ . '/policies.php';
+
+
 //Basics
+$container->instance(PolicyRegistry::class, $registry);
 $container->instance(Settings::class, $settings);
+$container->instance(Jwt::class, new Jwt($settings));
 $container->instance(Database::class, new Database($settings));
 $container->instance(RouteRegistry::class, new RouteRegistry());
 $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class)));
 
 //Repositories
-$container->singleton(UsersRepository::class, fn(Container $c) => new UsersRepository($c->get(Database::class)));
-$container->singleton(ProfilesRepository::class, fn(Container $c) => new ProfilesRepository($c->get(Database::class)));
+$container->singleton(UsersRepository::class);
+$container->singleton(ProfilesRepository::class);
 
 //Services
 $container->instance(CookieService::class, new CookieService());
-$container->instance(Jwt::class, new Jwt($settings));
+$container->singleton(AuthorizationService::class, fn(Container $c) => new AuthorizationService($c->get(PolicyRegistry::class), $c));
 $container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));
-$container->singleton(EmailVerificationService::class, function (Container $c) use ($settings) {
-    $ur = $c->get(UsersRepository::class);
-    $uow = $c->get(UnitOfWork::class);
-    $jwt = $c->get(Jwt::class);
-    $mailer = $c->get(Mailer::class);
-    $urlGen = $c->get(UrlGenerator::class);
-
-    return new EmailVerificationService($jwt, $urlGen, $mailer, $ur,$uow, $settings);
-});
-$container->singleton(AuthService::class, function (Container $c)
-{
-    $ur = $c->get(UsersRepository::class);
-    $pr = $c->get(ProfilesRepository::class);
-    $uow = $c->get(UnitOfWork::class);
-    $jwt = $c->get(Jwt::class);
-    $emailService = $c->get(EmailVerificationService::class);
-
-    return new AuthService($ur, $pr, $uow, $jwt, $emailService);
-});
+$container->singleton(EmailVerificationService::class);
+$container->singleton(AuthService::class);

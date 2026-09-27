@@ -5,7 +5,7 @@ namespace App\Forms\Auth;
 
 use App\Forms\Form;
 
-final readonly class RegisterForm extends Form
+final readonly class RegisterForm implements Form
 {
     public function __construct(
         public string $username,

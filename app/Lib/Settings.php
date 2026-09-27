@@ -15,6 +15,7 @@ final class Settings
     // --- app ---
     public readonly bool   $debug;
     public readonly array  $middleware;
+    public readonly string $appURL;
 
     // --- database ---
     public readonly string $dbUrl;
@@ -46,6 +47,7 @@ final class Settings
         // app
         $this->debug      = $data['debug'] ?? false;
         $this->middleware = $data['middleware'] ?? [];
+        $this->appUrl     = $data['appUrl'] ?? 'http://localhost:8080';
 
         // database
         $this->dbUrl = $data['database_url'];

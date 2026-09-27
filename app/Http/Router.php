@@ -6,10 +6,14 @@ namespace App\Http;
 use App\Http\HttpException;
 use App\Http\Request;
 use App\Http\Response;
+use App\Http\HttpContext;
 use App\Http\Route;
-use App\Lib\Container;
 use App\Http\RouteRegistry;
+
 use RuntimeException;
+
+use App\Lib\Container;
+use App\Lib\Auth\AuthPolicy;
 
 final class Router
 {
@@ -23,27 +27,27 @@ final class Router
             throw new RuntimeException('RouteRegistry is not provided to container');
     }
 
-    public function get(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
-    { $this->add('GET', $path, $handler, $name, $skipMiddleware); }
+    public function get(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('GET', $path, $handler, $name, $authPolicy); }
 
-    public function post(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
-    { $this->add('POST', $path, $handler, $name, $skipMiddleware); }
+    public function post(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('POST', $path, $handler, $name, $authPolicy); }
 
-    public function put(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
-    { $this->add('PUT', $path, $handler, $name, $skipMiddleware); }
+    public function put(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('PUT', $path, $handler, $name, $authPolicy); }
 
-    public function patch(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
-    { $this->add('PATCH', $path, $handler, $name, $skipMiddleware); }
+    public function patch(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('PATCH', $path, $handler, $name, $authPolicy); }
 
-    public function delete(string $path, callable|array $handler, ?string $name = null, array $skipMiddleware = []): void
-    { $this->add('DELETE', $path, $handler, $name, $skipMiddleware); }
+    public function delete(string $path, callable|array $handler, ?string $name = null, AuthPolicy|string|array $authPolicy = AuthPolicy::Public): void
+    { $this->add('DELETE', $path, $handler, $name, $authPolicy); }
 
     private function add(
         string $method,
         string $path,
         callable|array $handler,
         ?string $name,
-        array $skipMiddleware,
+        AuthPolicy|string|array $authPolicy,
     ): void {
         $this->registry->add(new Route(
             method: strtoupper($method),
@@ -51,7 +55,7 @@ final class Router
             regex: $this->compile($path),
             handler: $handler,
             name: $name,
-            skipMiddleware: $skipMiddleware,
+           authPolicy: $authPolicy
         ));
     }
 
@@ -87,16 +91,17 @@ final class Router
     }
 
     /** Run the matched route's handler. */
-    public function execute(Route $route, Request $request, array $params): Response
+    public function execute(HttpContext $ctx): Response
     {
-        $handler = $route->handler;
+        $handler = $ctx->route->handler;
+        $params = array_values($ctx->routeParams);
 
         if (is_array($handler)) {
             [$class, $method] = $handler;
             $controller = $this->container->get($class);
-            $result = $controller->$method($request, ...array_values($params));
+            $result = $controller->$method($ctx, ...$params);
         } else {
-            $result = $handler($request, ...array_values($params));
+            $result = $handler($ctx, ...$params);
         }
 
         return $result instanceof Response ? $result : Response::json($result);
