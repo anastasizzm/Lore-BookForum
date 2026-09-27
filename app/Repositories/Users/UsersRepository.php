@@ -1,10 +1,14 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Repositories;
+namespace App\Repositories\Users;
+
+use App\Models\Auth\AuthCredits;
 
 use App\Repositories\Repository;
 use App\Lib\Database;
+
+use PDO;
 
 final class UsersRepository extends Repository
 {
@@ -12,18 +16,18 @@ final class UsersRepository extends Repository
         parent::__construct($db);
     }
 
-    public function findCreditsByLogin(string $login): ?array
+    public function findCreditsByLogin(string $login): ?AuthCredits
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id, pass_hash, is_active, username
+            'SELECT id, pass_hash, is_blocked, is_verified, username
             FROM users
-            WHERE email = :login || username = :login
+            WHERE email = :email OR username = :username
             LIMIT 1'
         );
-        $stmt->execute([':login' => $login]);
+        $stmt->execute([':email' => $login, ':username' => $login]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row === false ? null : $row;
+        return $row === false ? null : AuthCredits::fromRow($row);
     }
 
     public function exists(int $id) : bool
@@ -34,18 +38,22 @@ final class UsersRepository extends Repository
         return (bool)$stmt->fetchColumn();
     }
 
-    public function create($username, $email, $passHash) : ?int
+    public function create($username, $email, $passHash) : int
     {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO users (username, email, pass_hash, is_active)
-             VALUES (:username, :email, :passHash, true)
+            'INSERT INTO users (username, email, pass_hash)
+             VALUES (:username, :email, :passHash)
              RETURNING id'
         );
 
         $stmt->execute([':username' => $username, ':email' => $email, ':passHash' => $passHash]);
 
-        $id = (int)$stmt->fetchColumn();
-        return $id === false ? null : $id;
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new \RuntimeException('No instance created');
+        }
+        
+        return (int)$id;
     }
 
     public function markEmailVerified(int $id): bool

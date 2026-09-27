@@ -1,13 +1,17 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Mail;
 
 use App\Lib\Settings;
+
 use App\Models\Email;
+
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use PHPMailer\PHPMailer\PHPMailer;
-use App\Services\Mailer;
+
+use App\Services\Mail\Mailer;
+
 use App\Exceptions\MailException;
 use Throwable;
 

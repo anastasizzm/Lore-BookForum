@@ -139,17 +139,35 @@ final class View
             return '';
 
         return '<input type="hidden" name="'
-            . CsrfManager::FIELD
+            . Constants::CSRF_FIELD
             . '" value="' . $this->e($token) . '">';
     }
 
     public function url(string $name, array $params = []): string
     {
-        if (self::$urlResolver === null) {
+        if (self::$urlGenerator === null) {
             throw new RuntimeException('URL resolver not configured');
         }
 
-        return (self::$urlResolver)($name, $params);
+        return (self::$urlGenerator)($name, $params);
+    }
+
+    public function asset(string $path): string
+    {
+        $settings = self::$engineSettings
+            ?? throw new RuntimeException('View engine not configured');
+
+        $path = ltrim($path, '/');
+        $url  = rtrim($settings->assetsUrl, '/') . '/' . $path;
+
+        $file = $settings->publicPath . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, $path);
+
+        if (is_file($file)) {
+            $url .= '?v=' . filemtime($file);
+        }
+
+        return $url;
     }
 
     // ---------- internals ----------

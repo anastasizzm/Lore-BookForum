@@ -3,11 +3,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-enum InnerMessageType
+enum InnerMessageType : string
 {
-    case Error;
-    case Warning;
-    case Success;
+    case Error = 'error';
+    case Warning = 'warning';
+    case Success = 'success';
 }
 
 final readonly class InnerMessage

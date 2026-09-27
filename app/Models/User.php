@@ -22,7 +22,7 @@ final readonly class User extends Dto
         $p = Profile::ROW_PREFIX;
 
         return new self(
-            id: self::id($row, $prefix . 'id'),
+            id: self::int($row, $prefix . 'id'),
             email: self::str($row, $prefix . 'email'),
             userName: self::str($row, $prefix . 'username'),
             createdAt: self::dt($row, $prefix . 'created_at'),

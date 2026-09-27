@@ -6,12 +6,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    command: ["postgres", "-c", "port=${POSTGRES_PORT:-5433}"]
     volumes:
       - pgdata:/var/lib/postgresql
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:${POSTGRES_PORT:-5433}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p ${POSTGRES_PORT:-5433} -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -24,7 +25,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB}?sslmode=disable
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_APP_USER: ${POSTGRES_APP_USER:?set POSTGRES_APP_USER in .env}
@@ -33,17 +34,38 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASS_HASH: ${ADMIN_PASS_HASH:-}
       SEED_TEST_DATA: ${SEED_TEST_DATA:-false}
-      DBMATE_MIGRATIONS_DIR: /storage/db/migrations   # container path; the host path is mounted below
+      DBMATE_MIGRATIONS_DIR: /storage/db/migrations
       DBMATE_SCHEMA_FILE: /storage/db/schema.sql
       DBMATE_NO_DUMP_SCHEMA: "true"
     volumes:
-      - ${DBMATE_MIGRATIONS_DIR:?set DBMATE_MIGRATIONS_DIR in .env}:/migrations:ro  # migrations folder (host path)
-      - ./storage/db:/storage/db:ro    # schema.sql, init.sql, migrate.sh
-    # Strips Windows CRLF line endings from the script before running it
+      - ./storage/db:/storage/db:ro    # schema.sql, init.sql, migrate.sh, migrations/
     entrypoint:
       - /bin/sh
       - -c
       - tr -d '\r' < /storage/db/migrate.sh > /tmp/migrate.sh && exec /bin/sh /tmp/migrate.sh
+
+  php:
+    build:
+      context: ./docker/php
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - .:/var/www/html
+    environment:
+      APP_DATABASE_URL: postgres://${POSTGRES_APP_USER}:${POSTGRES_APP_PASSWORD}@db:${POSTGRES_PORT:-5433}/${POSTGRES_DB}?sslmode=disable
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - php
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/lore-bookforum.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "${APP_PORT:-8080}:80"
 
 volumes:
   pgdata:
