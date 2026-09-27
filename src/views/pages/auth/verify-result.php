@@ -31,11 +31,14 @@
       <button type="button"
               class="btn btn--primary"
               data-verify-retry
-              data-resend-url="<?= $view->url('verify.resend') ?>"
+              data-resend-url="/api/verify/resend"
               data-message-url="<?= $view->url('message') ?>">
         Resend verification
       </button>
     <?php endif; ?>
+
+    <!-- Сюда JS будет вставлять плашку при ошибке -->
+    <div class="messages" data-verify-messages hidden></div>
 
   </div>
 
