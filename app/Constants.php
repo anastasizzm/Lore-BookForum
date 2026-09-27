@@ -7,6 +7,9 @@ final class Constants
 {
     public const TOKEN_COOKIE = 'access_token';
     public const CSRF_COOKIE = 'csrf_token';
+
+    public const CSRF_HEADER = 'x-csrf-token';
+    public const CSRF_FIELD = '_token';
     
     public const USER_ID_ATTR = 'user_id';
     public const USERNAME_ATTR = 'username';

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Configuration;
 
 use App\Http\Request;
 use App\Http\Response;
@@ -24,6 +24,7 @@ final class CookieService
         string $name,
         string $value,
         int $maxAge = 0,
+        bool $httpOnly = true,
         ?bool $secure = null
     ): Response {
         $cookie = new Cookie(
@@ -31,7 +32,7 @@ final class CookieService
             value:    $value,
             maxAge:   $maxAge,
             secure:   $secure === null ? $this->secureByDefault : $secure,
-            httpOnly: true,
+            httpOnly: $httpOnly,
             sameSite: $this->sameSite,
         );
 
@@ -41,6 +42,7 @@ final class CookieService
     public function clear(
         Response $response,
         string $name,
+        bool $httpOnly = true,
         ?bool $secure = null
     ): Response {
         $cookie = new Cookie(
@@ -48,7 +50,7 @@ final class CookieService
             value:    '',
             maxAge:   0,
             secure:   $secure === null ? $this->secureByDefault : $secure,
-            httpOnly: true,
+            httpOnly: $httpOnly,
             sameSite: $this->sameSite,
         );
 

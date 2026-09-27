@@ -13,7 +13,7 @@ use App\Http\Response;
 
 use App\Constants;
 
-use App\Services\CookieService;
+use App\Services\Configuration\CookieService;
 
 final class CsrfMiddleware implements Middleware
 {
@@ -40,7 +40,7 @@ final class CsrfMiddleware implements Middleware
             View::share(Constants::CSRF_ATTR, $csrf);
             $response = $next($request);
 
-            if (!$isCsrfSet) $this->cookies->set($response, Constants::CSRF_COOKIE, $csrf);
+            if (!$isCsrfSet) $response = $this->cookies->set($response, Constants::CSRF_COOKIE, $csrf, 0, false);
             return $response;
         }
     }

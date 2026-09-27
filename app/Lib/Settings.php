@@ -9,6 +9,8 @@ final class Settings
     public readonly string $pagesPath;
     public readonly string $layoutsPath;
     public readonly string $partialsPath;
+    public readonly string $assetsUrl;
+    public readonly string $publicPath;
 
     // --- app ---
     public readonly bool   $debug;
@@ -35,9 +37,11 @@ final class Settings
     public function __construct(array $data)
     {
         // view
-        $this->pagesPath    = $data['views_dir']['pages'];
-        $this->layoutsPath  = $data['views_dir']['layouts'];
-        $this->partialsPath = $data['views_dir']['partials'];
+        $this->pagesPath    = rtrim($data['views_dir']['pages'] ?? '/pages', '/');
+        $this->layoutsPath  = rtrim($data['views_dir']['layouts'] ?? '/layouts', '/');
+        $this->partialsPath = rtrim($data['views_dir']['partials'] ?? '/partials', '/');
+        $this->assetsUrl  = rtrim($data['assets_url']  ?? '/assets', '/');
+        $this->publicPath = rtrim($data['public_dir'] ?? __DIR__ . '/../public', '/\\');
 
         // app
         $this->debug      = $data['debug'] ?? false;

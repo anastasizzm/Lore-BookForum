@@ -22,7 +22,7 @@ final class Database
             return $this->pdo;
         }
 
-        [$dsn, $user, $pass] = $this->parseUrl($this->settings->databaseUrl);
+        [$dsn, $user, $pass] = $this->parseUrl($this->settings->dbUrl);
 
         return $this->pdo = new PDO($dsn, $user, $pass, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

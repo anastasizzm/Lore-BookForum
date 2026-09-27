@@ -15,18 +15,18 @@ return function(Router $router)
         return Response::html(View::render($page, $request->query));
     }, 'test_pages');
 
-    $router->get('/test', function (Request $request) {
+    $router->get('/', function (Request $request) {
         return Response::html("<h1>Test completed successfully</h1>");
-    }, 'test_route');
+    }, 'home');
 
     // Auth
-    $router->get('/login', [App\Controllers\AuthController::class, 'getLogin'], 'login', [App\Middleware\AuthMiddleware::class]);
-    $router->post('/login', [App\Controllers\AuthController::class, 'login'], NULL, [App\Middleware\AuthMiddleware::class]);
+    $router->get('/login', [App\Controllers\Auth\AuthController::class, 'getLogin'], 'login', [App\Middleware\AuthMiddleware::class]);
+    $router->post('/login', [App\Controllers\Auth\AuthController::class, 'login'], 'login.submit', [App\Middleware\AuthMiddleware::class]);
 
-    $router->get('/register', [App\Controllers\AuthController::class, 'getRegister'], 'register', [App\Middleware\AuthMiddleware::class]);
-    $router->post('/register', [App\Controllers\AuthController::class, 'register'], NULL, [App\Middleware\AuthMiddleware::class]);
+    $router->get('/register', [App\Controllers\Auth\AuthController::class, 'getRegister'], 'register', [App\Middleware\AuthMiddleware::class]);
+    $router->post('/register', [App\Controllers\Auth\AuthController::class, 'register'], 'register.submit', [App\Middleware\AuthMiddleware::class]);
 
-    $router->post('/logout', [App\Controllers\AuthController::class, 'logout'], 'logout');
+    $router->post('/logout', [App\Controllers\Auth\AuthController::class, 'logout'], 'logout');
 
-    $router->get('/verify/{token}', [App\Controllers\AuthController::class, 'mailVerify'], NULL, [App\Middleware\AuthMiddleware::class]);
+    $router->get('/verify/{token}', [App\Controllers\Auth\AuthController::class, 'mailVerify'], 'verify.mail', [App\Middleware\AuthMiddleware::class]);
 };

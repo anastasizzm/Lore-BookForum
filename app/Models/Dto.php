@@ -50,6 +50,49 @@ abstract readonly class Dto
         return $v === null ? null : new DateTimeImmutable((string) $v);
     }
 
+    /** @param array<string, mixed> $row */
+    protected static function bool(array $row, string $key): bool
+    {
+        if (!array_key_exists($key, $row) || $row[$key] === null) {
+            throw new RuntimeException("Missing required column: $key");
+        }
+
+        return self::toBool($row[$key]);
+    }
+
+    /** @param array<string, mixed> $row */
+    protected static function boolN(array $row, string $key): ?bool
+    {
+        $v = $row[$key] ?? null;
+
+        return $v === null ? null : self::toBool($v);
+    }
+
+    private static function toBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value !== 0;
+        }
+
+        if (is_string($value)) {
+            return match (strtolower($value)) {
+                't', 'true', '1', 'y', 'yes', 'on'  => true,
+                'f', 'false', '0', 'n', 'no', 'off' => false,
+                default => throw new RuntimeException(
+                    "Cannot convert value to bool: '" . $value . "'"
+                ),
+            };
+        }
+
+        throw new RuntimeException(
+            'Cannot convert value to bool: ' . get_debug_type($value)
+        );
+    }
+
     /**
      * True when a prefixed group of columns has at least one non-null value.
      * Use this to detect "the LEFT JOIN returned nothing".
