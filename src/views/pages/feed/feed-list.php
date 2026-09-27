@@ -2,20 +2,18 @@
 
 <?php $view->setBlock('selectedTab', 'for-you'); ?>
 
-<?php $view->startBlock('title'); ?>
-For you — Book App
-<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?>For you — Book App<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('content'); ?>
 
 <?php
-// Собираем HTML поиска и передаём его в page-header как параметр
+// Поиск — в page-header как action
 ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
     'placeholder' => 'Search',
-    'value'       => '',
+    'value'       => $searchQuery ?? '',
 ]);
 $searchHtml = ob_get_clean();
 
@@ -26,7 +24,9 @@ $view->include('page-header', [
 ?>
 
 <?php
-// Заглушки — потом заменим на данные из контроллера ($posts придёт из бэка)
+// TODO: заменить на данные из контроллера ($posts)
+// Пока — заглушки для проверки вёрстки
+
 $posts = $posts ?? [
     [
         'userInitials' => 'UN',
@@ -67,24 +67,34 @@ $posts = $posts ?? [
 ];
 ?>
 
-<div class="feed-panel">
-  <div class="stack">
-    <?php foreach ($posts as $post): ?>
-      <?php $view->include('card-feed', [
-          'withBook'     => true,
-          'bookCover'    => $post['bookCover'],
-          'bookTitle'    => $post['bookTitle'],
-          'bookAuthor'   => $post['bookAuthor'],
-          'userInitials' => $post['userInitials'],
-          'userName'     => $post['userName'],
-          'userAvatar'   => $post['userAvatar'],
-          'text'         => $post['text'],
-          'likes'        => $post['likes'],
-          'comments'     => $post['comments'],
-          'date'         => $post['date'],
-      ]); ?>
-    <?php endforeach; ?>
+<?php if (empty($posts)): ?>
+
+  <div class="empty-state">
+    <p class="empty-state__text">No posts yet. Be the first to share your thoughts.</p>
   </div>
-</div>
+
+<?php else: ?>
+
+  <div class="feed-panel">
+    <div class="stack">
+      <?php foreach ($posts as $post): ?>
+        <?php $view->include('card-feed', [
+            'withBook'     => true,
+            'bookCover'    => $post['bookCover']    ?? '',
+            'bookTitle'    => $post['bookTitle']    ?? '',
+            'bookAuthor'   => $post['bookAuthor']   ?? '',
+            'userInitials' => $post['userInitials'] ?? '',
+            'userName'     => $post['userName']     ?? '',
+            'userAvatar'   => $post['userAvatar']   ?? null,
+            'text'         => $post['text']         ?? '',
+            'likes'        => $post['likes']        ?? 0,
+            'comments'     => $post['comments']     ?? 0,
+            'date'         => $post['date']         ?? '',
+        ]); ?>
+      <?php endforeach; ?>
+    </div>
+  </div>
+
+<?php endif; ?>
 
 <?php $view->endBlock('content'); ?>

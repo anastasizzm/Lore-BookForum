@@ -911,3 +911,17 @@
     font-size: var(--fs-h3);
   }
 }
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.empty-state__text {
+  font-size: var(--fs-body);
+  margin: 0;
+}
