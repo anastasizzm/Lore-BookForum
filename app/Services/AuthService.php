@@ -19,6 +19,8 @@ use App\Lib\CsrfManager;
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\ForbiddenException;
+use App\Exceptions\MailException;
 use RuntimeException;
 use Throwable;
 
@@ -33,22 +35,29 @@ final class AuthService
     ){}
 
     /** @throws UnauthorizedException */
+    /** @throws ForbiddenException */
+    /** @throws MailException */
     public function login($form) : string
     {
         $login = $form['login'];
         $pass = $form['password'];
 
-        $credits = $this->usersRepo->findCreditsByEmail($email);
+        $credits = $this->usersRepo->findCreditsByLogin($login);
         $passHash = password_hash($pass, PASSWORD_BCRYPT);
         
-        if ($credits === null || !$credits['is_active'] || !password_verify($passHash, $credits['pass_hash']))
+        if ($credits === null || !password_verify($passHash, $credits['pass_hash']))
             throw new UnauthorizedException('Invalid login or password');
+
+        if ($credits['is_blocked'])
+            throw new ForbiddenException('Account is blocked');
+
+        if (!$credits['is_verified'])
+            throw new MailException();
         
         return $this->jwt->access($credits['id'], ['username' => $credits['username']]);
     }
 
     /** @throws ValidationException */
-    /** @throws OperationFailedException */
     public function register(array $form) : string
     {
         $errors = $this->validateRegisterForm($form);
@@ -60,15 +69,12 @@ final class AuthService
 
         $name = $form['name'];
         $surname = $form['surname'];
-        $bio = '';
+        $bio = ''; // No bio input in register yet
 
         try{
             $userId = $this->uow->transactional(function (PDO $pdo) use ($username, $email, $pass_hash, $name, $surname, $bio): int 
             {
                 $userId = $this->usersRepo->create($username, $email, $pass_hash);
-                if (!isset($userId))
-                    throw new OperationFailedException("User creation fail",  "Failed to add a new user");
-
                 $this->profiles->create($userId, $name, $surname, $bio);
                 return $userId;
             });

@@ -4,12 +4,10 @@ declare(strict_types=1);
 namespace App\Lib;
 
 use App\Http\Request;
+use App\Constants;
 
 final class CsrfManager
 {
-    public const string FIELD = '_token';
-    public const string HEADER = 'x-csrf-token';
-    public const string COOKIE = 'csrf_token';
     public const int BYTES = 32;
 
     // ---------- generation ----------
@@ -28,9 +26,9 @@ final class CsrfManager
     public static function extract(Request $request): ?string
     {
         $candidates = [
-            $request->input(self::FIELD),
-            $request->header(self::HEADER),
-            $request->cookies[self::COOKIE] ?? null,
+            $request->input(Constants::CSRF_FIELD),
+            $request->getHeader(Constants::CSRF_HEADER),
+            $request->getCookie(Constants::CSRF_COOKIE) ?? null,
         ];
 
         foreach ($candidates as $value) {

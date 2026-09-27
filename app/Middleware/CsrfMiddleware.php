@@ -40,7 +40,7 @@ final class CsrfMiddleware implements Middleware
             View::share(Constants::CSRF_ATTR, $csrf);
             $response = $next($request);
 
-            if (!$isCsrfSet) $this->cookies->set($response, Constants::CSRF_COOKIE, $csrf);
+            if (!$isCsrfSet) $response = $this->cookies->set($response, Constants::CSRF_COOKIE, $csrf);
             return $response;
         }
     }

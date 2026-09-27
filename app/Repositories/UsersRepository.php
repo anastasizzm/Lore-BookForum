@@ -6,6 +6,8 @@ namespace App\Repositories;
 use App\Repositories\Repository;
 use App\Lib\Database;
 
+use PDO;
+
 final class UsersRepository extends Repository
 {
     public function __construct(Database $db){
@@ -15,12 +17,12 @@ final class UsersRepository extends Repository
     public function findCreditsByLogin(string $login): ?array
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id, pass_hash, is_active, username
+            'SELECT id, pass_hash, is_blocked, is_verified, username
             FROM users
-            WHERE email = :login || username = :login
+            WHERE email = :email OR username = :username
             LIMIT 1'
         );
-        $stmt->execute([':login' => $login]);
+        $stmt->execute([':email' => $login, ':username' => $login]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : $row;
@@ -34,18 +36,22 @@ final class UsersRepository extends Repository
         return (bool)$stmt->fetchColumn();
     }
 
-    public function create($username, $email, $passHash) : ?int
+    public function create($username, $email, $passHash) : int
     {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO users (username, email, pass_hash, is_active)
-             VALUES (:username, :email, :passHash, true)
+            'INSERT INTO users (username, email, pass_hash)
+             VALUES (:username, :email, :passHash)
              RETURNING id'
         );
 
         $stmt->execute([':username' => $username, ':email' => $email, ':passHash' => $passHash]);
 
-        $id = (int)$stmt->fetchColumn();
-        return $id === false ? null : $id;
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new \RuntimeException('No instance created');
+        }
+        
+        return (int)$id;
     }
 
     public function markEmailVerified(int $id): bool

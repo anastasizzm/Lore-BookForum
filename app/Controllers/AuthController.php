@@ -16,6 +16,8 @@ use App\Services\CookieService;
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\MailException;
+use App\Exceptions\ForbiddenException;
 use App\Constants;
 
 use App\Models\InnerMessageType;
@@ -49,9 +51,6 @@ final class AuthController extends Controller
         catch(ValidationException $e){
             return $this->render('auth/register', ['form' => $formData, 'errors' => $e->errors()]);
         }
-        catch(OperationFailedException $e){
-            return $this->render('auth/register', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, $e->title, $e->getMessage())]]);
-        }
     }
 
     public function login(Request $request) : Response {
@@ -61,9 +60,16 @@ final class AuthController extends Controller
             $token = $this->service->login($formData);
             $response = Response::redirect($url->url('home'));
             $cookies->set($response, Constants::TOKEN_COOKIE, $token);
+            return $response;
         }
         catch(UnauthorizedException $e){
             return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Authentication failed", $e->getMessage())]]);
+        }
+        catch(MailException $e){
+            return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Verification failed", 'Please verify your email first')]]);
+        }
+        catch(ForbiddenException $e){
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl'-> $url->url('login'), 'actionTitle' => 'Leave']);
         }
     }
 

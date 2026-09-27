@@ -139,7 +139,7 @@ final class View
             return '';
 
         return '<input type="hidden" name="'
-            . CsrfManager::FIELD
+            . Constants::CSRF_FIELD
             . '" value="' . $this->e($token) . '">';
     }
 

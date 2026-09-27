@@ -6,6 +6,7 @@ return [
     'debug' => true,
 
     'middleware' => [
+        App\Middleware\ExceptionMiddleware::class,
         App\Middleware\AuthMiddleware::class,
         App\Middleware\CsrfMiddleware::class
     ],
