@@ -57,4 +57,38 @@ document.addEventListener('DOMContentLoaded', () => {
       closeMenu();
     }
   });
+
+  /* ===== Settings menu (sidebar) ===== */
+(function () {
+  var toggle = document.querySelector('[data-settings-toggle]');
+  var menu = document.querySelector('[data-settings-menu]');
+
+  if (!toggle || !menu) return;
+
+  function closeMenu() {
+    menu.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  toggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (menu.hidden) {
+      menu.hidden = false;
+      toggle.setAttribute('aria-expanded', 'true');
+    } else {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (menu.hidden) return;
+    if (!menu.contains(e.target) && e.target !== toggle) {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !menu.hidden) closeMenu();
+  });
+})();
 });

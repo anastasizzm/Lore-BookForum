@@ -55,7 +55,9 @@
 }
 
 .login-form .btn {
-  margin-top: var(--space-4);
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-3);
 }
 
 .login-form__links {
@@ -67,7 +69,43 @@
 
 .login-form__links--center {
      justify-content: center;
-   }
+}
+
+.login-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+  padding: var(--space-4) 0;
+}
+
+.login-message__status {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.login-message__text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.login-message--success .login-message__text {
+  color: #2b8a3e;
+}
+
+.login-message--error .login-message__text {
+  color: #c92a2a;
+}
+
+.login-message .btn {
+  align-self: center;
+}
+
 
 /* ---------------- mobile ---------------- */
 
