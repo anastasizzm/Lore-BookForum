@@ -1,5 +1,7 @@
 <?php $view->extends('auth'); ?>
 
+<?php $view->startBlock('title'); ?>Sign in to Lore<?php $view->endBlock('title'); ?>
+
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,16 +18,19 @@
     <h1 class="login-card__title">Sign in to Lore</h1>
   </header>
 
-  <form class="login-form" id="loginForm" action="/login" method="POST" novalidate>
+  <form class="login-form" id="loginForm" action="<?= $view->url('login') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
-      <label class="visually-hidden" for="loginEmail">Email</label>
-      <input class="form-field__input" type="email" id="loginEmail" name="email"
-             value="<?= $view->e($email ?? '') ?>"
-             placeholder="Enter email" autocomplete="username" maxlength="254"
-             aria-describedby="loginEmailError">
-      <p class="form-field__error" id="loginEmailError" aria-live="polite"></p>
+      <label class="visually-hidden" for="loginLogin">Login or email</label>
+      <input class="form-field__input" type="text" id="loginLogin" name="login"
+             value="<?= $view->e($form['login'] ?? '') ?>"
+             placeholder="Enter login or email" autocomplete="username" maxlength="254"
+             aria-describedby="loginLoginError">
+      <p class="form-field__error" id="loginLoginError" aria-live="polite"></p>
+      <?php foreach (($errors['login'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
     <div class="form-field">
@@ -34,13 +39,16 @@
              placeholder="Enter password" autocomplete="current-password" maxlength="64"
              aria-describedby="loginPasswordError">
       <p class="form-field__error" id="loginPasswordError" aria-live="polite"></p>
+      <?php foreach (($errors['password'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
     <button class="btn btn--primary" type="submit">Sign in</button>
 
     <div class="login-form__links">
-      <a class="link" href="/forgot-password">Forgot password?</a>
-      <a class="link" href="/register">Don't have account?</a>
+      <a class="link" href="#" title="Coming soon">Forgot password?</a>
+      <a class="link" href="<?= $view->url('register') ?>">Don't have account?</a>
     </div>
   </form>
 

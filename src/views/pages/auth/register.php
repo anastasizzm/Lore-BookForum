@@ -1,5 +1,7 @@
 <?php $view->extends('auth'); ?>
 
+<?php $view->startBlock('title'); ?>Create account<?php $view->endBlock('title'); ?>
+
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,25 +18,55 @@
     <h1 class="login-card__title">Create account</h1>
   </header>
 
-  <form class="login-form" id="registerForm" action="/register" method="POST" novalidate>
+  <form class="login-form" id="registerForm" action="<?= $view->url('register') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
       <label class="visually-hidden" for="registerEmail">Email</label>
       <input class="form-field__input" type="email" id="registerEmail" name="email"
-             value="<?= $view->e($email ?? '') ?>"
-             placeholder="Enter email" autocomplete="username" maxlength="254"
+             value="<?= $view->e($form['email'] ?? '') ?>"
+             placeholder="Enter email" autocomplete="email" maxlength="254"
              aria-describedby="registerEmailError">
       <p class="form-field__error" id="registerEmailError" aria-live="polite"></p>
+      <?php foreach (($errors['email'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
     <div class="form-field">
-      <label class="visually-hidden" for="registerNickname">Nickname</label>
-      <input class="form-field__input" type="text" id="registerNickname" name="nickname"
-             value="<?= $view->e($nickname ?? '') ?>"
-             placeholder="Enter nickname" autocomplete="nickname" maxlength="32"
-             aria-describedby="registerNicknameError">
-      <p class="form-field__error" id="registerNicknameError" aria-live="polite"></p>
+      <label class="visually-hidden" for="registerUsername">Username</label>
+      <input class="form-field__input" type="text" id="registerUsername" name="username"
+             value="<?= $view->e($form['username'] ?? '') ?>"
+             placeholder="Enter username" autocomplete="username" maxlength="32"
+             aria-describedby="registerUsernameError">
+      <p class="form-field__error" id="registerUsernameError" aria-live="polite"></p>
+      <?php foreach (($errors['username'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="form-field">
+      <label class="visually-hidden" for="registerName">Name</label>
+      <input class="form-field__input" type="text" id="registerName" name="name"
+             value="<?= $view->e($form['name'] ?? '') ?>"
+             placeholder="Enter name" autocomplete="given-name" maxlength="64"
+             aria-describedby="registerNameError">
+      <p class="form-field__error" id="registerNameError" aria-live="polite"></p>
+      <?php foreach (($errors['name'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="form-field">
+      <label class="visually-hidden" for="registerSurname">Surname</label>
+      <input class="form-field__input" type="text" id="registerSurname" name="surname"
+             value="<?= $view->e($form['surname'] ?? '') ?>"
+             placeholder="Enter surname" autocomplete="family-name" maxlength="64"
+             aria-describedby="registerSurnameError">
+      <p class="form-field__error" id="registerSurnameError" aria-live="polite"></p>
+      <?php foreach (($errors['surname'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
     <div class="form-field">
@@ -43,6 +75,9 @@
              placeholder="Enter password" autocomplete="new-password" maxlength="64"
              aria-describedby="registerPasswordError">
       <p class="form-field__error" id="registerPasswordError" aria-live="polite"></p>
+      <?php foreach (($errors['password'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
     <div class="form-field">
@@ -51,12 +86,15 @@
              placeholder="Repeat password" autocomplete="new-password" maxlength="64"
              aria-describedby="registerPasswordConfirmError">
       <p class="form-field__error" id="registerPasswordConfirmError" aria-live="polite"></p>
+      <?php foreach (($errors['password_confirm'] ?? []) as $err): ?>
+        <p class="form-field__error"><?= $view->e($err) ?></p>
+      <?php endforeach; ?>
     </div>
 
-    <button class="btn btn--primary" type="submit">Sign in</button>
+    <button class="btn btn--primary" type="submit">Sign up</button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="/login">Already have an account? Sign in</a>
+      <a class="link" href="<?= $view->url('login') ?>">Already have an account? Sign in</a>
     </div>
   </form>
 

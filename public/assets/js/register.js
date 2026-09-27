@@ -3,12 +3,12 @@
 function initRegisterPage() {
   const form = document.getElementById("registerForm");
   const email = document.getElementById("registerEmail");
-  const nickname = document.getElementById("registerNickname");
+  const username = document.getElementById("registerUsername");
+  const name = document.getElementById("registerName");
+  const surname = document.getElementById("registerSurname");
   const password = document.getElementById("registerPassword");
   const passwordConfirm = document.getElementById("registerPasswordConfirm");
 
-  // errors are shown only after the first "Sign up" click;
-  // before that, focusing or leaving a field never triggers validation
   let submitAttempted = false;
 
   function setError(input, messageId, text) {
@@ -24,9 +24,32 @@ function initRegisterPage() {
     return ok;
   }
 
-  function validateNickname() {
-    const ok = nickname.value.trim().length > 0;
-    setError(nickname, "registerNicknameError", ok ? "" : "Invalid nickname");
+  function validateUsername() {
+    const ok = LoreValidators.isUsername(username.value);
+    let message = "";
+    if (!ok) {
+      const v = username.value.trim();
+      if (v.length < LoreValidators.LOGIN_MIN_LENGTH) {
+        message = `Username must be at least ${LoreValidators.LOGIN_MIN_LENGTH} characters`;
+      } else if (!/^[A-Za-z0-9._-]+$/.test(v)) {
+        message = "Only letters, digits, dot, dash and underscore allowed";
+      } else {
+        message = "Invalid username";
+      }
+    }
+    setError(username, "registerUsernameError", message);
+    return ok;
+  }
+
+  function validateName() {
+    const ok = name.value.trim().length > 0;
+    setError(name, "registerNameError", ok ? "" : "Name is required");
+    return ok;
+  }
+
+  function validateSurname() {
+    const ok = surname.value.trim().length > 0;
+    setError(surname, "registerSurnameError", ok ? "" : "Surname is required");
     return ok;
   }
 
@@ -53,18 +76,13 @@ function initRegisterPage() {
     return ok;
   }
 
-  // after a failed attempt, re-check while typing so errors
-  // disappear as soon as the values become valid
-  email.addEventListener("input", () => {
-    if (submitAttempted) validateEmail();
-  });
-  nickname.addEventListener("input", () => {
-    if (submitAttempted) validateNickname();
-  });
+  email.addEventListener("input", () => { if (submitAttempted) validateEmail(); });
+  username.addEventListener("input", () => { if (submitAttempted) validateUsername(); });
+  name.addEventListener("input", () => { if (submitAttempted) validateName(); });
+  surname.addEventListener("input", () => { if (submitAttempted) validateSurname(); });
   password.addEventListener("input", () => {
     if (submitAttempted) {
       validatePassword();
-      // confirm field depends on password's value, so re-check it too
       if (passwordConfirm.value !== "") validatePasswordConfirm();
     }
   });
@@ -74,12 +92,15 @@ function initRegisterPage() {
 
   form.addEventListener("submit", (event) => {
     submitAttempted = true;
-    // all three checks run (no short-circuit) so every error shows at once
-    const emailOk = validateEmail();
-    const nicknameOk = validateNickname();
+    const emailOk    = validateEmail();
+    const usernameOk = validateUsername();
+    const nameOk     = validateName();
+    const surnameOk  = validateSurname();
     const passwordOk = validatePassword();
-    const confirmOk = validatePasswordConfirm();
-    if (!emailOk || !nicknameOk || !passwordOk || !confirmOk) event.preventDefault();
+    const confirmOk  = validatePasswordConfirm();
+    if (!emailOk || !usernameOk || !nameOk || !surnameOk || !passwordOk || !confirmOk) {
+      event.preventDefault();
+    }
   });
 }
 
