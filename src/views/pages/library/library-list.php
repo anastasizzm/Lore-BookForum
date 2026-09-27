@@ -2,26 +2,24 @@
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
 
-<?php $view->startBlock('title'); ?>
-Library — Book App
-<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?>Library — Book App<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('content'); ?>
 
 <?php
-// Собираем поиск + кнопку фильтра и передаём в page-header
+// Поиск + кнопка фильтра — в page-header
 ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
     'placeholder' => 'Search books',
-    'value'       => '',
+    'value'       => $searchQuery ?? '',
 ]);
 ?>
 <button type="button"
         class="btn-icon filter-toggle"
         data-filter-toggle
-        aria-label="Фильтры">
+        aria-label="Filters">
   <span>☰</span>
 </button>
 <?php
@@ -36,7 +34,9 @@ $view->include('library-filters');
 ?>
 
 <?php
-// Заглушки — потом заменим на get_all_books() из контроллера
+// TODO: заменить на данные из контроллера ($books, $currentSort, $sortOptions, $totalCount)
+// Пока — заглушки для проверки вёрстки
+
 $books = $books ?? [];
 if (empty($books)) {
     for ($i = 1; $i <= 24; $i++) {
@@ -47,7 +47,27 @@ if (empty($books)) {
         ];
     }
 }
-$books_count = count($books);
+
+$books_count = $totalCount ?? count($books);
+
+// TODO: заменить на $sortOptions из контроллера
+$sort_options = $sortOptions ?? [
+    'popularity' => 'Popularity',
+    'newest'     => 'Newest',
+    'title'      => 'A → Z',
+];
+
+// TODO: заменить на $currentSort из контроллера
+$current_sort  = $currentSort ?? 'popularity';
+$current_label = $sort_options[$current_sort] ?? 'Popularity';
+
+$dropdownOptions = [];
+foreach ($sort_options as $key => $text) {
+    $dropdownOptions[] = [
+        'label' => $text,
+        'href'  => '?sort=' . urlencode($key),
+    ];
+}
 ?>
 
 <section class="books-panel">
@@ -68,23 +88,6 @@ $books_count = count($books);
     </div>
 
     <?php
-    $sort_options = [
-        'popularity' => 'Popularity',
-        'newest'     => 'Newest',
-        'title'      => 'A → Z',
-    ];
-
-    $current_sort  = $_GET['sort'] ?? 'popularity';
-    $current_label = $sort_options[$current_sort] ?? 'Popularity';
-
-    $dropdownOptions = [];
-    foreach ($sort_options as $key => $text) {
-        $dropdownOptions[] = [
-            'label' => $text,
-            'href'  => '?sort=' . urlencode($key),
-        ];
-    }
-
     $view->include('dropdown', [
         'label'   => 'Sort: ' . $current_label,
         'options' => $dropdownOptions,
@@ -95,9 +98,9 @@ $books_count = count($books);
   <div class="grid-books">
     <?php foreach ($books as $book): ?>
       <?php $view->include('card-book', [
-          'cover'  => $book['cover'],
-          'title'  => $book['title'],
-          'author' => $book['author'],
+          'cover'  => $book['cover']  ?? '',
+          'title'  => $book['title']  ?? '',
+          'author' => $book['author'] ?? '',
       ]); ?>
     <?php endforeach; ?>
   </div>
