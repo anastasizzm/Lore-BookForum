@@ -2,7 +2,7 @@
 
 function initLoginPage() {
   const form = document.getElementById("loginForm");
-  const email = document.getElementById("loginEmail");
+  const login = document.getElementById("loginLogin");
   const password = document.getElementById("loginPassword");
 
   // errors are shown only after the first "Sign in" click;
@@ -16,9 +16,9 @@ function initLoginPage() {
     document.getElementById(messageId).textContent = text;
   }
 
-  function validateEmail() {
-    const ok = LoreValidators.isEmail(email.value);
-    setError(email, "loginEmailError", ok ? "" : "Invalid email");
+  function validateLogin() {
+    const ok = LoreValidators.isLogin(login.value);
+    setError(login, "loginLoginError", ok ? "" : "Invalid login or email");
     return ok;
   }
 
@@ -37,8 +37,8 @@ function initLoginPage() {
 
   // after a failed attempt, re-check while typing so the error
   // disappears as soon as the value becomes valid
-  email.addEventListener("input", () => {
-    if (submitAttempted) validateEmail();
+  login.addEventListener("input", () => {
+    if (submitAttempted) validateLogin();
   });
   password.addEventListener("input", () => {
     if (submitAttempted) validatePassword();
@@ -47,9 +47,9 @@ function initLoginPage() {
   form.addEventListener("submit", (event) => {
     submitAttempted = true;
     // both checks run (no short-circuit) so both errors show at once
-    const emailOk = validateEmail();
+    const loginOk = validateLogin();
     const passwordOk = validatePassword();
-    if (!emailOk || !passwordOk) event.preventDefault();
+    if (!loginOk || !passwordOk) event.preventDefault();
   });
 }
 
