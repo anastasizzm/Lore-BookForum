@@ -145,11 +145,11 @@ final class View
 
     public function url(string $name, array $params = []): string
     {
-        if (self::$urlResolver === null) {
+        if (self::$urlGenerator === null) {
             throw new RuntimeException('URL resolver not configured');
         }
 
-        return (self::$urlResolver)($name, $params);
+        return (self::$urlGenerator)($name, $params);
     }
 
     // ---------- internals ----------
