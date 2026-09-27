@@ -48,8 +48,12 @@
         </a>
     </nav>
 
-    <div class="sidebar-bottom">
-        <a href="/settings" class="nav-item mobile-nav-btn" title="More">
+        <div class="sidebar-bottom">
+        <button type="button"
+                class="nav-item mobile-nav-btn"
+                data-settings-toggle
+                aria-label="More"
+                aria-expanded="false">
             <span class="nav-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="6" r="2" fill="#5876A6"/>
@@ -58,6 +62,26 @@
                 </svg>
             </span>
             <span class="nav-text">More</span>
-        </a>
+        </button>
+
+        <div class="settings-menu" data-settings-menu hidden>
+            <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
+                <?= $view->csrfField() ?>
+                <button type="submit" class="settings-menu__item">
+                    <span class="settings-menu__icon">↩</span>
+                    <span>Log out</span>
+                </button>
+            </form>
+
+            <button type="button" class="settings-menu__item">
+                <span class="settings-menu__icon">?</span>
+                <span>Help</span>
+            </button>
+
+            <button type="button" class="settings-menu__item">
+                <span class="settings-menu__icon">§</span>
+                <span>Privacy Policy</span>
+            </button>
+        </div>
     </div>
 </aside>
