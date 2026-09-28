@@ -47,7 +47,11 @@ body.is-menu-open {
   color: var(--color-text-muted, #5876A6);
   text-decoration: none;
   background: transparent;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
   transition: background 0.15s;
+  cursor: pointer;
 }
 
 .nav-item:hover {
@@ -62,6 +66,14 @@ body.is-menu-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Выделение иконки профиля (кружок на фоне) */
+.nav-profile .nav-icon {
+  background-color: var(--color-bg-subtle, #F3F6FB);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
 }
 
 /* Sidebar — нижний блок (More + settings dropdown) */
@@ -168,18 +180,21 @@ body.is-menu-open .sidebar-overlay {
 }
 
 /* ============================================
-   SETTINGS DROPDOWN (внизу sidebar)
+   SETTINGS DROPDOWN (выпадающее меню внизу)
    ============================================ */
 .settings-menu {
   position: absolute;
-  bottom: calc(100% + var(--space-2));
-  left: 50%;
-  transform: translateX(-50%);
+  /* Открываем меню строго над кнопкой */
+  bottom: calc(100% + 8px); 
+  /* Привязываем левый край так, чтобы оно не улетало влево */
+  left: 12px; 
+  /* СБРАСЫВАЕМ старый transform: translateX(-50%) */
+  transform: none !important; 
   min-width: 200px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-2);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-2, 8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
@@ -231,7 +246,6 @@ body.is-menu-open .sidebar-overlay {
    ============================================ */
 @media (max-width: 768px) {
 
-  /* Сайдбар выезжает слева */
   .sidebar {
     transform: translateX(-100%);
     width: 260px;
@@ -249,25 +263,7 @@ body.is-menu-open .sidebar-overlay {
     width: 100%;
   }
 
-  /* Мобильная аватарка профиля (первый пункт) */
-  .sidebar .mobile-profile-btn {
-    width: 64px;
-    height: 64px;
-    min-width: 64px;
-    border-radius: 50%;
-    background: #eef2f7;
-    margin: 10px auto 16px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .sidebar .mobile-profile-btn .nav-text {
-    display: none;
-  }
-
-  /* Мобильные широкие кнопки (Feed, Library, Saved) */
+  /* Мобильные широкие кнопки (Profile, Feed, Library, Saved, More) */
   .sidebar .mobile-nav-btn {
     width: 220px;
     height: 52px;
@@ -279,6 +275,7 @@ body.is-menu-open .sidebar-overlay {
     gap: 16px;
     border-radius: 20px;
     background: #f8fafc;
+    border: none !important; /* Убираем любую рамку */
   }
 
   .sidebar .mobile-nav-btn:hover {
@@ -299,7 +296,7 @@ body.is-menu-open .sidebar-overlay {
     width: 24px;
   }
 
-  /* Нижняя кнопка More */
+  /* Нижний блок на мобильных */
   .sidebar .sidebar-bottom {
     display: flex;
     justify-content: center;
@@ -311,14 +308,12 @@ body.is-menu-open .sidebar-overlay {
     margin: 0 auto;
   }
 
-  /* Отступы контента */
   .content {
     margin-left: 0;
     padding: 76px 16px 24px 16px;
     min-height: 100vh;
   }
 
-  /* Бургер — показывается на мобиле */
   .burger {
     display: flex;
     position: fixed;
@@ -348,29 +343,25 @@ body.is-menu-open .sidebar-overlay {
     border-radius: 2px;
   }
 
-  /* Заголовок страницы компактнее */
   .page-header__title {
     font-size: 2.2rem;
     margin: 0;
   }
 
-  /* Поиск растягивается, кнопка справа */
   .page-header__actions .input--search {
     flex: 1 1 auto;
     width: auto;
     max-width: none;
   }
 
-  /* Settings dropdown на мобиле */
   .sidebar-bottom {
     justify-content: flex-start;
-    padding: 0 var(--space-3);
   }
 
+  /* На мобильных меню настроек вписывается в сайдбар */
   .settings-menu {
-    left: var(--space-3);
-    right: var(--space-3);
-    transform: none;
+    left: 16px;
+    right: 16px;
     min-width: 0;
   }
 }
