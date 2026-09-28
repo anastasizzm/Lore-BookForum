@@ -1,4 +1,12 @@
 /* ============================================
+   GLOBAL / BODY (Добавлено для фона приложения)
+   ============================================ */
+body {
+  background-color: #F8FAFC; /* Цвет фона приложения как на макете */
+  margin: 0;
+}
+
+/* ============================================
    BUTTONS
    ============================================ */
 .btn {
@@ -99,16 +107,28 @@
 }
 
 /* ============================================
-   INPUTS
+   INPUTS (Изменено: добавлен Hover)
    ============================================ */
 .input {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--color-white);
+  background: var(--color-white, #fff);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Добавлена анимация */
+}
+
+/* Эффект при наведении на поле */
+.input:hover {
+  border-color: var(--color-text-muted, #94A3B8);
+}
+
+/* Эффект при клике (когда мы пишем текст) */
+.input:focus-within {
+  border-color: var(--color-primary, #5876A6);
+  box-shadow: 0 0 0 2px rgba(88, 118, 166, 0.15);
 }
 
 .input--search {
@@ -239,11 +259,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  background: var(--color-surface);
+  background: var(--color-surface, #fff); /* Карточки белые */
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-lg); /* Либо задать 16px жестко, если var(--radius-lg) меньше */
   padding: var(--space-4);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); /* Легкая тень, как на макете */
 }
 
 .card-feed__book-header {
@@ -313,11 +333,52 @@
   color: var(--color-text-muted);
 }
 
+/* 
+  Стили для кнопок лайков и комментов внутри карточки 
+*/
+.card-feed__actions {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted, #94A3B8);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s ease;
+  outline: none;
+}
+
+.action-btn:hover {
+  color: var(--color-text, #1E293B);
+}
+
+.action-btn.action-like:hover {
+  color: #EF4444; 
+}
+.action-btn.action-like:hover svg {
+  fill: #EF4444; /* Закрашивает сердечко при наведении */
+}
+
+.action-btn.action-comment:hover {
+  color: var(--color-primary, #5876A6);
+}
+.action-btn.action-comment:hover svg {
+  fill: #E2E8F0;
+}
+
+/* Изменено: Убраны фон и рамки, чтобы карточки были самостоятельными элементами на сером фоне */
 .feed-panel {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 /* ============================================
@@ -424,7 +485,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 28px;              /* ← уменьшили с 40px */
+  height: 28px;
   padding: 0 14px;
   border-radius: var(--radius-pill);
   background: transparent;
@@ -595,12 +656,12 @@
 }
 
 /* ============================================
-   STACK
+   STACK (Изменено: отступ между карточками)
    ============================================ */
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px; /* Было 20px, сделано 16px как на макете */
 }
 
 /* ============================================
