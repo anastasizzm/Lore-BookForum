@@ -241,3 +241,17 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* ============================================
+   CARD-BASE OVERRIDE — точечно для карточек профиля
+   Утолщаем обводку, как на макете.
+   ============================================ */
+
+.profile-header.card-base,
+.profile-sidebar-box.card-base,
+.profile-post.card-base {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--border-card-color);   
+  border-radius: var(--radius-lg);
+}
