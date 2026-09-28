@@ -24,9 +24,9 @@ return function(Router $router)
         return Response::html("<h1>You are authenticated</h1>");
     }, 'test.auth', AuthPolicy::Auth);
 
-    $router->get('/', function (HttpContext $context) {
+    $router->get('/tests', function (HttpContext $context) {
         return Response::html("<h1>Test completed successfully</h1>");
-    }, 'home', AuthPolicy::Auth);
+    }, 'test', AuthPolicy::Auth);
 
     // Auth
     $router->get('/login', [App\Controllers\Auth\AuthController::class, 'getLogin'], 'login', AuthPolicy::Public);
@@ -38,4 +38,12 @@ return function(Router $router)
     $router->post('/logout', [App\Controllers\Auth\AuthController::class, 'logout'], 'logout', AuthPolicy::Auth);
 
     $router->get('/verify/{token}', [App\Controllers\Auth\AuthController::class, 'mailVerify'], 'verify.mail', AuthPolicy::Public);
+
+
+    // Feed
+    $router->get('/', [App\Controllers\Feed\FeedController::class, 'list'], 'home', AuthPolicy::Auth);
+    
+    // Profile
+    $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
+    $router->get('/users/{id}', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users.profile', AuthPolicy::Auth);
 };

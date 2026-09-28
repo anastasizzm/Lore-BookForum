@@ -108,7 +108,7 @@ final class UsersRepository extends Repository
     public function loadContext(int $userId) : ?UserContext
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT u.id, u.username, p.name, p.avatar, ur.is_admin, ur.is_redactor
+            'SELECT u.id, u.username, p.name, p.surname, p.avatar, ur.is_admin, ur.is_redactor
             FROM (SELECT u0.id, u0.username FROM users u0 WHERE u0.id = :userId) u
             INNER JOIN profiles p ON p.user_id = u.id
             INNER JOIN users_rules ur ON ur.user_id = u.id'

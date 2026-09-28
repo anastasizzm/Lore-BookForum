@@ -68,6 +68,19 @@ abstract readonly class Dto
         return $v === null ? null : self::toBool($v);
     }
 
+    protected static function uuid(array $row, string $key): Uuid
+    {
+        return Uuid::fromString(self::str($row, $key));
+    }
+
+    /** @param array<string, mixed> $row */
+    protected static function uuidN(array $row, string $key): ?Uuid
+    {
+        $v = self::strN($row, $key);
+
+        return $v === null ? null : Uuid::fromString($v);
+    }
+
     private static function toBool(mixed $value): bool
     {
         if (is_bool($value)) {

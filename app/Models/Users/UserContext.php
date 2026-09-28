@@ -5,24 +5,28 @@ namespace App\Models\Users;
 
 use App\Models\Dto;
 
-final readonly class UserContext extends Dto
+final readonly class UserContext extends UserShortData
 {
     public function __construct(
-        public int     $id,
-        public string  $username,
-        public string  $name,
-        public string  $avatar,
+        $id,
+        $username,
+        $name,
+        $surname,
+        $avatar,
         public bool    $isAdmin,
         public bool    $isRedactor,
-    ) {}
+    ) {
+        parent::__construct($id, $username, $name, $surname, $avatar);
+    }
 
     public static function fromRow(string $row, string $prefix = '') : self
     {
+        $parent = parent::fromRow($row, $prefix);
         return new self(
-            id: self::int($row, $prefix . 'id'),
-            name: self::str($row, $prefix, 'name'),
-            username: self::str($row, $prefix . 'username'),
-            avatar: self::str($row, $prefix, 'avatar'),
+            id: $parent->id,
+            name: $parent->name,
+            username: $parent->username,
+            avatar: $parent->avatar,
             isAdmin: self::bool($row, $prefix, 'is_admin'),
             isRedactor: self::bool($row, $prefix, 'is_redactor'),
         );
