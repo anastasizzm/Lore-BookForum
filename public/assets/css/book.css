@@ -1,17 +1,23 @@
 /* ---------------- book details page ---------------- */
 
-.book-actions {
+.book-page-header {
+  margin-bottom: var(--space-4, 24px);
+}
+
+.book-page-title {
+  font-size: var(--fs-h1, 32px);
+  font-weight: var(--fw-bold, 700);
+  color: var(--color-primary, #1A3760);
+  margin: 0;
+}
+
+/* ---------------- cover + buttons + rating ---------------- */
+
+.book-details {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+  align-items: flex-start;
+  gap: 32px;
 }
-
-.book-actions .btn--primary {
-  flex: 1;
-}
-
-/* ---------------- cover + rating ---------------- */
 
 .book-details__cover-col {
   width: 100%;
@@ -21,10 +27,10 @@
 
 .book-details__cover {
   aspect-ratio: 3 / 4;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md, 12px);
   overflow: hidden;
-  background: var(--color-overlay);
-  box-shadow: var(--shadow-card);
+  background: var(--color-overlay, #e2e8f0);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0,0,0,0.1));
 }
 
 .book-details__cover img {
@@ -34,11 +40,62 @@
   display: block;
 }
 
-.book-rating {
+/* Выравнивание кнопок строго под обложкой */
+.book-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+  gap: 12px;
+  margin-top: 24px;
+  width: 100%; 
+}
+
+/* Растягиваем синюю кнопку на все оставшееся место */
+.book-actions .btn--primary {
+  flex: 1;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-icon--circle {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border, #E2E8F0);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #6F84A5);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-icon--circle:hover {
+  color: var(--color-primary, #1A3760);
+  border-color: var(--color-primary, #1A3760);
+}
+
+.btn--pill {
+  border-radius: 9999px;
+  padding: 10px 24px;
+}
+
+/* Рейтинг */
+.book-rating {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+}
+
+/* Группируем звезды и цифру, чтобы они были рядом */
+.book-rating__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .book-rating__stars {
@@ -47,8 +104,6 @@
   letter-spacing: 2px;
   line-height: 1;
   user-select: none;
-
-  /* Градиент: закрашенная часть — #6F84A5, пустая — #F3F6FB */
   background: linear-gradient(
     90deg,
     #6F84A5 0%,
@@ -56,7 +111,6 @@
     #F3F6FB var(--rating-percent, 0%),
     #F3F6FB 100%
   );
-
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -65,17 +119,18 @@
 }
 
 .book-rating__value {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
-  color: var(--color-text);
+  font-size: var(--fs-body, 16px);
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text, #1A3760);
 }
 
 .book-rating__saves {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: var(--fs-small);
+  gap: 6px;
+  color: var(--color-text-muted, #6F84A5);
+  font-size: var(--fs-small, 14px);
+  font-weight: var(--fw-medium, 500);
 }
 
 /* ---------------- info box ---------------- */
@@ -84,10 +139,16 @@
   width: 100%;
 }
 
+.info-box__title {
+  font-size: var(--fs-h2, 24px);
+  color: var(--color-primary, #1A3760);
+  margin-bottom: var(--space-2, 8px);
+}
+
 .info-box__meta {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-body);
-  color: var(--color-text-muted);
+  margin: 0 0 var(--space-1, 4px);
+  font-size: var(--fs-body, 14px);
+  color: var(--color-text-muted, #6F84A5);
 }
 
 .info-box__meta:last-child {
@@ -95,61 +156,137 @@
 }
 
 .book-tabs-panel {
-  margin-top: var(--space-4);
+  margin-top: var(--space-4, 24px);
 }
 
 .book-tabs-panel__content {
-  margin-top: var(--space-3);
+  margin-top: var(--space-3, 16px);
 }
 
 .book-tabs-panel__note {
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
+  margin-top: var(--space-3, 16px);
+  padding-top: var(--space-3, 16px);
+  border-top: 1px solid var(--color-border, #E2E8F0);
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #6F84A5);
 }
 
 /* ---------------- comments ---------------- */
 
 .comments-section {
-  margin-top: var(--space-4);
+  margin-top: 32px;
 }
 
 .comments-section__title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-h2);
-  font-weight: var(--font-weight-bold);
-}
-
-.comments-section__count {
-  color: var(--color-primary);
-}
-
-.comment-composer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-
-.comment-composer .input {
-  flex: 1;
-  border-radius: var(--radius-pill);
+  margin: 0 0 24px;
+  font-size: var(--fs-h2, 20px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary, #1A3760);
 }
 
 .comments-section__empty {
-  padding: var(--space-4);
-  color: var(--color-text-muted);
+  padding: 32px;
+  color: var(--color-text-muted, #6F84A5);
   text-align: center;
-  font-size: var(--fs-small);
+  font-size: var(--fs-body, 14px);
+}
+
+/* Единый стиль карточки для формы ввода и самого комментария */
+.comment-card {
+  display: block;
+  background: #ffffff;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.comment-card__inner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.comment-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-card__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #1A3760);
+  margin-bottom: 8px;
+}
+
+/* Поле ввода */
+.comment-card__input {
+  width: 100%;
+  background: var(--color-bg-subtle, #F3F6FB);
+  border: none;
+  border-radius: 9999px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-text, #1A3760);
+  outline: none;
+}
+
+.comment-card__input::placeholder {
+  color: var(--color-text-muted, #6F84A5);
+}
+
+/* Текст комментария */
+.comment-card__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, #1A3760);
+  margin-bottom: 16px;
+  word-wrap: break-word;
+}
+
+/* Подвал комментария (иконки, дата) */
+.comment-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.btn-icon-small {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #6F84A5);
+  transition: color 0.2s ease;
+}
+
+.btn-icon-small:hover {
+  color: var(--color-primary, #1A3760);
 }
 
 /* ---------------- mobile ---------------- */
 
 @media (max-width: 767px) {
+  .book-details {
+    flex-direction: column;
+    align-items: center;
+  }
   .book-details__cover-col {
-    max-width: 200px;
+    max-width: 240px;
     margin: 0 auto;
   }
 }
