@@ -6,7 +6,6 @@ namespace App\Services\Auth;
 use App\Constants;
 
 use App\Repositories\Users\UsersRepository;
-use App\Repositories\Users\ProfilesRepository;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Auth\EmailVerificationService;
@@ -33,7 +32,6 @@ final class AuthService
 {
     public function __construct(
         private readonly UsersRepository $usersRepo,
-        private readonly ProfilesRepository $profilesRepo,
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
         private readonly EmailVerificationService $verificationService
@@ -64,7 +62,8 @@ final class AuthService
             $userId = $this->uow->transactional(function (PDO $pdo) use ($form): int 
             {
                 $userId = $this->usersRepo->create($form->username, $form->email, password_hash($form->password, PASSWORD_DEFAULT));
-                $this->profilesRepo->create($userId, $form->name, $form->surname, '');
+                $this->usersRepo->createProfile($userId, $form->name, $form->surname, '');
+                $this->usersRepo->createRules($userId, false, false);
                 return $userId;
             });
 

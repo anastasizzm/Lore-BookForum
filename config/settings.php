@@ -28,6 +28,14 @@ return [
     'database_url' => $_ENV['APP_DATABASE_URL'] ?? 
         throw new RuntimeException('APP_DATABASE_URL not set'),
 
+    'redis' => [
+        'host'     => $_ENV['REDIS_HOST']     ?? 'redis',
+        'port'     => (int) ($_ENV['REDIS_PORT']     ?? 6379),
+        'password' => $_ENV['REDIS_PASSWORD'] ?? '',
+        'database' => (int) ($_ENV['REDIS_DB']       ?? 0),
+        'ttl'      => (int) ($_ENV['REDIS_TTL']      ?? 300),
+    ],
+
     'jwt' => [
         'issuer' => 'LoreIssuer',
         'secret' => $_ENV['JWT_SECRET'] ?? 

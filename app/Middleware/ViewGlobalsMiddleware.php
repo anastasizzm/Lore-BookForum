@@ -15,6 +15,8 @@ final class ViewGlobalsMiddleware implements Middleware
 {
     public function handle(HttpContext $ctx, callable $next): Response
     {
+        if($ctx->request->isApi()) return $next($ctx);
+
         $csrf = $ctx->attribute(Constants::CSRF_ATTR);
         $userId = $ctx->attribute(Constants::USER_ID_ATTR);
         $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR);

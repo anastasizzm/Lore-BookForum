@@ -14,16 +14,12 @@ use App\Http\HttpContext;
 
 final class Kernel
 {
-    private Settings $settings;
-
     public function __construct(
         private Router $router,
-        private Container $container
+        private Container $container,
+        private readonly Settings $settings,
     ) 
-    {
-        $this->settings = $container->get(Settings::class);
-        if ($this->settings === null) throw new \RuntimeException('Miss Settings instance');
-    }
+    {}
 
     public function handle(Request $request): Response
     {

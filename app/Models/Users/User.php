@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Models\Users;
 
 use DateTimeImmutable;
-use Profile;
-use Dto;
+use App\Models\Users\Profile;
+use App\Models\Dto;
 
 final readonly class User extends Dto
 {

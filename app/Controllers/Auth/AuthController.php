@@ -26,6 +26,8 @@ use App\Forms\Auth\LoginForm;
 use App\Models\InnerMessageType;
 use App\Models\InnerMessage;
 
+use App\Services\Users\UsersService;
+
 final class AuthController extends Controller
 {
     public function __construct(

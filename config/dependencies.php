@@ -6,10 +6,14 @@ use App\Http\UrlGenerator;
 use App\Http\RouteUrlGenerator;
 
 use App\Lib\Settings;
-use App\Lib\Database;
+use App\Lib\Data\Database;
+use App\Lib\Data\RedisClient;
 use App\Lib\Container;
 use App\Lib\Jwt;
 use App\Lib\Auth\PolicyRegistry;
+
+use App\Cache\UserContextCache;
+use App\Cache\RedisUserContextCache;
 
 use App\Services\Auth\AuthService;
 use App\Services\Auth\AuthorizationService;
@@ -34,17 +38,15 @@ $container->instance(PolicyRegistry::class, $registry);
 $container->instance(Settings::class, $settings);
 $container->instance(Jwt::class, new Jwt($settings));
 $container->instance(Database::class, new Database($settings));
+$container->instance(RedisClient::class, new RedisClient($settings));
 $container->instance(RouteRegistry::class, new RouteRegistry());
 $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class)));
-
-//Repositories
-$container->singleton(UsersRepository::class);
-$container->singleton(ProfilesRepository::class);
 
 //Services
 $container->instance(CookieService::class, new CookieService());
 $container->singleton(AuthorizationService::class, fn(Container $c) => new AuthorizationService($c->get(PolicyRegistry::class), $c));
 $container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));
-$container->singleton(EmailVerificationService::class);
-$container->singleton(AuthService::class);
+
+//Model-based
+$container->singleton(UserContextCache::class, fn(Container $c) => new RedisUserContextCache($c->get(RedisClient::class)));
