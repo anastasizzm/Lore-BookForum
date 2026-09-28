@@ -11,7 +11,7 @@
 
 <?php $view->startBlock('content'); ?>
 
-  <header class="login-card__header">
+  <header class="login-card__header login-card__header--center">
     <span class="login-card__logo">
       <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
     </span>
@@ -19,7 +19,7 @@
 
   <div class="login-message">
     <?php if (!empty($statusCode)): ?>
-      <div class="login-message__status"><?= $view->e($statusCode) ?></div>
+      <div class="login-message__status"><?= $view->e((string) $statusCode) ?></div>
     <?php endif; ?>
 
     <p class="login-message__text"><?= $view->e($message ?? '') ?></p>

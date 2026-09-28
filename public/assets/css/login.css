@@ -29,8 +29,8 @@
 
 .login-card__logo {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 112px;
+  height: 112px;
   overflow: hidden;
   background-color: var(--color-white);
   border-radius: 50%;
@@ -104,8 +104,16 @@
 
 .login-message .btn {
   align-self: center;
+  min-width: 200px;
+  height: 44px;
+  padding: 0 var(--space-4);
+  text-decoration: none; /* <a class="btn"> has no reset in component.css */
 }
 
+
+.login-card__header--center {
+  justify-content: center;
+}
 
 /* ---------------- mobile ---------------- */
 

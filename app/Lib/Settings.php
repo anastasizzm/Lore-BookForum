@@ -15,7 +15,7 @@ final class Settings
     // --- app ---
     public readonly bool   $debug;
     public readonly array  $middleware;
-    public readonly string $appURL;
+    public readonly string $appUrl;
 
     // --- database ---
     public readonly string $dbUrl;
