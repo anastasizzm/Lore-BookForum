@@ -37,6 +37,16 @@ body.is-menu-open {
   width: 100%;
 }
 
+/* Группа для кнопок Лента, Библиотека и Сохраненные */
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px; /* 2) Увеличено расстояние между элементами */
+  margin-top: 32px; /* 1) Опустили элементы вниз */
+  width: 100%;
+}
+
 .nav-item {
   display: flex;
   align-items: center;
@@ -50,12 +60,15 @@ body.is-menu-open {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s; /* Добавлена плавная смена цвета иконки */
   cursor: pointer;
 }
 
-.nav-item:hover {
-  background: var(--color-overlay, #f1f5f9);
+/* 2) Исправлен ховер — фон сделан темнее, а цвет иконки меняется на контрастный */
+.nav-item:hover,
+.nav-item.active {
+  background: var(--color-overlay-hover, #e2e8f0); 
+  color: var(--color-primary, #1e293b); 
 }
 
 .nav-text {
@@ -79,6 +92,12 @@ body.is-menu-open {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.15s;
+}
+
+/* Убираем фон кружка профиля при ховере, чтобы кнопка заливалась единым цветом */
+.sidebar .nav-profile:hover .nav-icon {
+  background-color: transparent;
 }
 
 /* Sidebar — нижний блок (More + settings dropdown) */
@@ -268,6 +287,11 @@ body.is-menu-open .sidebar-overlay {
     width: 100%;
   }
 
+  .sidebar-nav-group {
+    gap: 20px; /* Адаптируем отступы для мобильной версии */
+    margin-top: 24px; 
+  }
+
   /* Мобильные широкие кнопки (Profile, Feed, Library, Saved, More) */
   .sidebar .mobile-nav-btn {
     width: 220px;
@@ -291,7 +315,7 @@ body.is-menu-open .sidebar-overlay {
     display: inline-block;
     font-weight: 500;
     font-size: 16px;
-    color: #1e293b;
+    color: inherit; /* наследуем цвет, чтобы текст тоже менялся при ховере */
   }
 
   .sidebar .mobile-nav-btn .nav-icon {
