@@ -16,47 +16,75 @@ final class PostsRepository extends Repository
         parent::__construct($db);
     }
 
-    public function getTopList(int $page, int $pageSize, string $search) : array
+    public function getList(
+        int $page, 
+        int $pageSize, 
+        string $search,
+        array $includeObjects,
+        ?int $parentId = null, 
+        ?int $publicationId = null, 
+        ?int $creatorId = null) : array
     {
-        $where = '';
+        $whereClauses = ['c.is_active'];
         $params = [];
-        if (!empty($search))
-        {
-            $where = 'WHERE (p.title ILIKE :q OR u.username ILIKE :q) AND p.is_active AND p.parent_id IS NULL';
-            $params[':q'] = '%' . $search . '%';
+        if (!empty($search)){
+            $where = 'u.username ILIKE :q';
+            $params[':q'] = $search . '%';
+        }
+        if ($parentId !== null){
+            $whereClauses[] = 'c.parent_id = :parentId';
+            $params[':parentId'] = $parentId;
+        }
+        else $whereClauses[] = 'c.parent_id IS NULL';
+
+        if ($creatorId !== null){
+            $whereClauses[] = 'c.creator_id = :creatorId';
+            $params[':creatorId'] = $creatorId;
         }
 
+        if ($publicationId !== null){
+            $whereClauses[] = 'c.publication_id = :publicationId';
+            $params[':publicationId'] = $publicationId; 
+        }
+
+        $joinClauses = [];
+        $selectClauses = [];
+        foreach($includeObjects as $prop){
+            switch($prop){
+                case 'creator':
+                    $joinClauses[] = 'INNER JOIN profiles prof ON prof.user_id = u.id';
+                    $selectClauses[] = "u.id as u_id,\nu.username as u_username,\nprof.name as u_name,\nprof.surname as u_surname,\nprof.avatar as u_avatar";
+                    break;
+                
+                case 'publication':
+                    $joinClauses[] = 'INNER JOIN publications p ON c.publication_id = p.id';
+                    $selectClauses[] = "p.id as pub_id,\np.title as pub_title,\np.icon_id as pub_icon_id,\np.created_at as pub_created_at";
+                    break;
+            }
+        }
+
+        $where = implode(" AND\n", $whereClauses);
+        if (!empty($where)) $where = 'WHERE ' . $where;
+
+        $joins = implode("\n", $joinClauses);
+        $select = "SELECT c.id,\nc.content,\nc.is_active,\nc.creator_id,\nc.publication_id,\nc.created_at,\nc.likes_count,\nc.comments_count"
+                    . implode(",\n", $selectClauses);
+
         $sql = "
-            SELECT 
-                c.id,
-                c.content,
-                c.is_active,
-                c.creator_id,
-                c.publication_id,
-                c.created_at,
-                u.id as u_id,
-                u.username as u_username,
-                prof.name as u_name,
-                prof.surname as u_surname
-                prof.avatar as u_avatar,
-                p.id as pub_id,
-                p.title as pub_title,
-                p.icon_id as pub_icon_id,
-                p.created_at as pub_created_at
+            $select
             FROM comments c
-            INNER JOIN publications p ON c.publication_id = p.id
             INNER JOIN users u ON u.id = c.creator_id
-            INNER JOIN profiles prof ON prof.user_id = u.id
+            $joins
             $where
             ORDER BY c.created_at DESC
             LIMIT :limit OFFSET :offset
         ";
 
         $stmt = $this->pdo()->prepare($sql);
-        foreach ($params as $key => $value) {
+        foreach($params as $key => $value){
             $stmt->bindValue($key, $value);
         }
-        $stmt->bindValue(':limit',  $pageSize + 1, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $pageSize + 1, PDO::PARAM_INT);
         $stmt->bindValue(':offset', (($pageNum - 1) * $pageSize), PDO::PARAM_INT);
         $stmt->execute();
 
@@ -65,17 +93,6 @@ final class PostsRepository extends Repository
             $stmt->fetchAll(),
         );
 
-        $hasNext = count($items) > $pageSize;
-        if ($hasNext) {
-            $items = array_slice($items, 0, $pageSize);
-        }
-
-        return [
-            'items'   => $items,
-            'total'   => $total,
-            'page'    => $page,
-            'pageSize' => $pageSize,
-            'hasNext' => $hasNext
-        ];
+        return $items;
     }
 }

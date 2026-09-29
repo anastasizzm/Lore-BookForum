@@ -5,6 +5,9 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\PostsRepository;
 use App\Forms\Queries\PaginationQuery;
+use App\Forms\Queries\PropertiesQuery;
+
+use App\Models\PaginatedList;
 
 final class PostsService
 {
@@ -12,19 +15,36 @@ final class PostsService
         private readonly PostsRepository $postsRepo
     ){}
 
-    public function topList(PaginationQuery $pageQ, string $search) : array
+    public function getList(
+        PaginationQuery $pageQ,
+        string $search,
+        PropertiesQuery $props,
+        ?int $parentId = null,
+        ?int $publicationId = null,
+        ?int $creatorId = null
+    ) : PaginatedList
     {
-        $errors = $pageQ->validate();
-        if (!empty($errors)) throw new ValidationException($errors);
+        $errors = [];
+        $isValid = true;
+        foreach([$pageQ, $props] as $form){
+            $isValid = $isValid & $form->validate($errors);
+        }
 
-        $items = $postsRepo->getTopList($pageQ->page, $pageQ->pageSize, $search);
-        return [
-            'items' => $items['items'], 
-            'meta' => [
-                'hasNext' => $items['hasNext'],
-                'page' => $items['page'],
-                'pageSize' => $items['pageSize']
-            ]
-        ];
+        if(!$isValid) throw new ValidationException($errors);
+
+        $page = $pageQ->page;
+        $pageSize = $pageQ->pageSize;
+
+        $items = $postsRepo->getList(
+            $page, 
+            $pageSize, 
+            $search, 
+            $props->getProps(),
+            $parentId, 
+            $publicationId,
+            $creatorId
+        );
+
+        return PaginatedList::fromArray($items, $page, $pageSize);
     }
 }

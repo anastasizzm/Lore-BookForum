@@ -14,6 +14,8 @@ final readonly class Post extends Dto
         public int $id,
         public string $content,
         public bool $isActive,
+        public int $likesCount,
+        public int $commentsCount,
         private int $creatorId,
         private int $publicationId,
         public DateTimeImmutable $createdAt,
@@ -31,6 +33,8 @@ final readonly class Post extends Dto
             content: self::str($row, $prefix . 'content'),
             isActive: self::bool($row, $prefix . 'is_active'),
             createdAt: self::dt($row, $prefix . 'created_at'),
+            likesCount: self::int($row, $prefix . 'likes_count'),
+            commentsCount: self::int($row, $prefix . 'comments_count'),
             publicationId: self::int($row, $prefix . 'publication_id'),
             creatorId: self::int($row, $prefix . 'creator_id'),
             creator: self::hasGroup($row, $u, 'id')

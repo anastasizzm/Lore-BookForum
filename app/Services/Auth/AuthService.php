@@ -38,10 +38,15 @@ final class AuthService
     ){}
 
     /** @throws UnauthorizedException */
+    /** @throws ValidationException */
     /** @throws ForbiddenException */
     /** @throws MailException */
     public function login(LoginForm $form) : string
     {
+        $errors = [];
+        $isValid = $form->validate($errors);
+        if (!$isValid) throw new ValidationException($errors);
+
         $credits = $this->usersRepo->findCreditsByLogin($form->login);
         if ($credits === null || !password_verify($form->password, $credits->password))
             throw new UnauthorizedException('Invalid login or password');
@@ -55,8 +60,9 @@ final class AuthService
     /** @throws ValidationException */
     public function register(RegisterForm $form) : string
     {
-        $errors = $form->validate();
-        if (!empty($errors)) throw new ValidationException($errors);
+        $errors = [];
+        $isValid = $form->validate($errors);
+        if (!$isValid) throw new ValidationException($errors);
 
         try{
             $userId = $this->uow->transactional(function (PDO $pdo) use ($form): int 

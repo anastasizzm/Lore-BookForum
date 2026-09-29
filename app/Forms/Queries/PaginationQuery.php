@@ -12,7 +12,7 @@ final class PaginationQuery implements Form
         public string $pageSize,
     ) {}
 
-    public static function fromArray(array $input): self
+    public static function fromInput(array $input): self
     {
         return new self(
             page:    max((int)($input['page']), 1),
@@ -20,18 +20,19 @@ final class PaginationQuery implements Form
         );
     }
 
-    public function validate(): array
+    public function validate(array &$errors): bool
     {
-        $errors = [];
-
+        $ok = true;
         if ($this->page < 1) {
             $errors['page'][] = 'Page must be greater than 1';
+            $ok = false;
         }
 
         if ($this->pageSize < 1 || $this->pageSize > 50) {
             $errors['ps'][] = 'Page size must be greater between 1 and 50';
+            $ok = false;
         }
 
-        return $errors;
+        return $ok;
     }
 }

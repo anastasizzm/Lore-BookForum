@@ -10,8 +10,10 @@ use App\Services\Publications\PostsService;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Models\Posts\Post;
 
 use App\Forms\Queries\PaginationQuery;
+use App\Forms\Queries\PropertiesQuery;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -26,18 +28,36 @@ final class FeedController extends Controller
     ){}
 
     public function list(HttpContext $context){
-        $pageQ = PaginationQuery::fromArray($context->request->query);
-        $q = $context->query('q', '');
-
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
+
+        $pageQ = PaginationQuery::fromInput($context->request->query);
+        $propsQ = PropertiesQuery::fromInput($context->request->query);
+        $propsQ->setType(Post::class);
+        $searchQ = $context->query('q', '');
+
+        $parentId = $context->query('parent', 0);
+        if (!is_int($parentId) || $parentId == 0) $parentId = NULL;
+
+        $creatorId = $context->query('creator', 0);
+        if (!is_int($creatorId) || $creatorId == 0) $creatorId = NULL;
+
+        $publicationId = $context->query('publication', 0);
+        if (!is_int($publicationId) || $publicationId == 0) $publicationId = NULL;
         
         $userContext = $usersService->loadContext($userId);
-
         try{
-            $results = $postsService->topList($pageQ, $q);
-            return $this->render('feed/feed-list', ['items' => $results['items'], 'meta' => $results['meta'], 'user' => $userContext]);
+            $paginatedList = $postsService->getList($pageQ, $searchQ, $propsQ, $parentId, $publicationId, $creatorId);
+            return $this->render('feed/feed-list', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext()
+                ], 
+                'user' => $userContext
+            ]);
         }
         catch(ValidationException $e){
             return $this->render('feed/feed-list', [

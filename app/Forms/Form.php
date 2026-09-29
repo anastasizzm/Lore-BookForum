@@ -6,8 +6,8 @@ namespace App\Forms;
 interface Form
 {
     /** @param array<string, mixed> $input*/
-    public static function fromArray(array $form) : self;
+    public static function fromInput(array $form) : self;
 
-    /** @return array<string, list<string>> */
-    public function validate() : array;
+    /** @return bool */
+    public function validate(array &$errors) : bool;
 }
