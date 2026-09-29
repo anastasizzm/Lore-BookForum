@@ -222,8 +222,16 @@ body {
    ============================================ */
 .card-book {
   display: flex;
+  text-decoration: none;             
+  color: inherit;
   flex-direction: column;
   padding-bottom: var(--space-2);
+}
+
+.card-book:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-color: #CBD5E1;              /* если у .card-base есть border — он подсветится */
 }
 
 .card-book__cover {
@@ -241,15 +249,24 @@ body {
 }
 
 .card-book__title {
+  color: var(--color-text);
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   margin-bottom: var(--space-1);
+  text-decoration: none; 
 }
 
 .card-book__author {
   font-size: var(--fs-small);
   color: var(--color-text-muted);
   margin-bottom: 0;
+  text-decoration: none;
+}
+
+.card-book__title:hover,
+.card-book__author:hover {
+  text-shadow: 0.5px 0 0 currentColor;
+  color: #111827;
 }
 
 /* ============================================
@@ -896,19 +913,42 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* Шапка панели: заголовок и сортировка в одну строку, оба слева */
 .books-panel__head {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-3);
-  margin-bottom: var(--space-3);
+  justify-content: space-between;      /* ← было space-between, стало flex-start */
+  gap: var(--space-4);              /* расстояние между заголовком и сортировкой */
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);    /* ← увеличенный отступ снизу до сетки книг */
 }
 
+/* Блок с иконкой + заголовком */
 .books-panel__title-wrap {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.book-panel-library__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);          /* 8px — как в макете; при необходимости замените на --radius-md */
+  background: var(--color-bg-secondary);    /* #E8EEF7 — светло-голубая подложка */
+  color: var(--color-accent);               /* #5876A6 — цвет иконки; SVG наследует через currentColor */
+  flex-shrink: 0;
+  transition: color var(--transition-fast); /* опционально — на случай ховера */
+}
+
+.book-panel-library__icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
 }
 
 .books-panel__icon {

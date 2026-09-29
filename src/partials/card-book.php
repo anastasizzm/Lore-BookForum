@@ -12,8 +12,13 @@ $id     = $id     ?? 0;
 $cover  = $cover  ?? '';
 $title  = $title  ?? '';
 $author = $author ?? '';
+
+// TODO: заменить на $view->url('book', ['id' => $id]), когда бэкенд добавит маршрут 'book'
+// Пока — заглушка, чтобы страница рендерилась без ошибки.
+$bookUrl = '#';
+// $bookUrl = $view->url('book', ['id' => $id]);
 ?>
-<a class="card-base card-book" href="#">
+<a class="card-base card-book" href="<?= $view->e($bookUrl) ?>">
   <div class="card-book__cover">
     <img src="<?= $view->e($cover) ?>" alt="<?= $view->e($title) ?>">
   </div>

@@ -7,23 +7,14 @@
 <?php $view->startBlock('content'); ?>
 
 <?php
-// Поиск + табы All/To read/Finished — в page-header
+// В page-header оставляем только поиск.
+// Табы перенесены в books-panel, чтобы они были в доске с книгами.
 ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
     'placeholder' => 'Search saved books',
     'value'       => $searchQuery ?? '',
-]);
-?>
-<?php
-$view->include('tabs', [
-    'variant' => 'filled',
-    'items'   => [
-        ['label' => 'All',      'href' => '?filter=all',      'active' => ($currentFilter ?? 'all') === 'all'],
-        ['label' => 'To read',  'href' => '?filter=to-read',  'active' => ($currentFilter ?? '') === 'to-read'],
-        ['label' => 'Finished', 'href' => '?filter=finished', 'active' => ($currentFilter ?? '') === 'finished'],
-    ],
 ]);
 $pageActions = ob_get_clean();
 
@@ -35,20 +26,8 @@ $view->include('page-header', [
 ?>
 
 <?php
-// TODO: заменить на данные из контроллера ($books)
-// Пока — заглушки для проверки вёрстки:
-// $books = $books ?? [];
-// if (empty($books)) {
-//     for ($i = 1; $i <= 24; $i++) {
-//         $books[] = [
-//             'cover'  => 'https://placehold.co/160x224',
-//             'title'  => 'Saved book ' . $i,
-//             'author' => 'Author Name',
-//         ];
-//     }
-// }
-
-$books = $books ?? [];
+// TODO: заменить на данные из контроллера ($books, $currentFilter, $totalCount)
+$books       = $books ?? [];
 $books_count = $totalCount ?? count($books);
 ?>
 
@@ -80,14 +59,28 @@ $books_count = $totalCount ?? count($books);
           </p>
         </div>
       </div>
+
+      <?php
+      // Табы внутри доски — справа от заголовка.
+      // Показываются только когда $books не пуст (мы уже внутри else).
+      $view->include('tabs', [
+          'variant' => 'filled',
+          'items'   => [
+              ['label' => 'All',      'href' => '?filter=all',      'active' => ($currentFilter ?? 'all') === 'all'],
+              ['label' => 'To read',  'href' => '?filter=to-read',  'active' => ($currentFilter ?? '') === 'to-read'],
+              ['label' => 'Finished', 'href' => '?filter=finished', 'active' => ($currentFilter ?? '') === 'finished'],
+          ],
+      ]);
+      ?>
     </header>
 
     <div class="grid-books">
       <?php foreach ($books as $book): ?>
         <?php $view->include('card-book', [
-            'cover'     => $book['cover']  ?? '',
-            'title'     => $book['title']  ?? '',
-            'author'    => $book['author'] ?? '',
+            'id'     => $book['id']     ?? 0,
+            'cover'  => $book['cover']  ?? '',
+            'title'  => $book['title']  ?? '',
+            'author' => $book['author'] ?? '',
         ]); ?>
       <?php endforeach; ?>
     </div>
