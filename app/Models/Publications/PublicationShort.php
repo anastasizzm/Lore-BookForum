@@ -5,24 +5,27 @@ namespace App\Models\Publications;
 
 use DateTimeImmutable;
 
-use App\Models\Dto;
+use App\Models\BasicModel;
 
-readonly class PublicationShort extends Dto
+readonly class PublicationShort extends BasicModel
 {
     public const ROW_PREFIX = 'pub_';
 
     public function __construct(
-        public int $id,
-        public string $title,
+        int $id,
+        string $title,
         public int $iconId,
         public DateTimeImmutable $createdAt
-    ){}
+    ){
+        parent::__construct($id, $title);
+    }
 
     public static function fromRow(string $row, string $prefix = '') : self 
     {
+        $parent = parent::fromRow($row, $prefix);
         return new self(
-            id: self::int($row, $prefix, 'id'),
-            title: self::str($row, $prefix, 'title'),
+            id: $parent->id,
+            title: $parent->title,
             iconId: self::uuidN($row, $prefix, 'icon_id'),
             createdAt: self::dt($row, $prefix . 'created_at'),
         );

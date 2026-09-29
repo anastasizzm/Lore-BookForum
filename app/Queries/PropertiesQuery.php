@@ -1,37 +1,24 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Forms\Queries;
+namespace App\Queries;
 
-use App\Forms\Form;
-
-final class PropertiesQuery implements Form
+final class PropertiesQuery implements Query
 {
     public const PROPS_DELIMITER = '+';
 
-    protected function __construct(
+    public function __construct(
         private readonly array $parsedArray,
-        private string|object|null $type
     ){}
-    
-    public static function fromRaw(string|object $type, string $rawProps) : self
-    {
-        return new self(self::parseRaw($rawProps), $type);
-    }
 
-    public static function fromInput(array $input) : self
+    public static function fromRaw(string $raw) : self
     {
-        $raw = $input['include'] ?? '';
         return new self(self::parseRaw($raw));
     }
-
-    public function setType(string|object $type){
-        $this->type = $type;
-    }
-
-    public function getType() : string|object|null
+    
+    public static function fromInput(array $input) : self
     {
-        return $this->type;
+        return self::fromRaw( $input['include'] ?? '');
     }
 
     public function getProps() : array
@@ -39,11 +26,11 @@ final class PropertiesQuery implements Form
         return $this->parsedArray;
     }
 
-    public function validate(array &$errors) : bool
+    public function validateForType(string|object $type, array &$errors) : bool
     {
         if (empty($parsedArray)) return true;
 
-        $className = is_object($this->type) ? $this->type::class : $this->type;
+        $className = is_object($type) ? $type::class : $type;
 
         if (!class_exists($className)) {
             $errors['_type'][] = "Class '$className' does not exist";

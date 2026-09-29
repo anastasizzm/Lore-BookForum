@@ -42,6 +42,10 @@ return function(Router $router)
 
     // Feed
     $router->get('/', [App\Controllers\Feed\FeedController::class, 'list'], 'home', AuthPolicy::Auth);
+
+
+    // Books
+    $router->get('/books', [App\Controllers\Books\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
     
     // Profile
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);

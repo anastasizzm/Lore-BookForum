@@ -3,43 +3,45 @@ declare(strict_types=1);
 
 namespace App\Services\Publications;
 
-use App\Repositories\Publications\PostsRepository;
+use App\Repositories\Publications\PublicationsRepository;
 use App\Queries\PaginationQuery;
 use App\Queries\PropertiesQuery;
-
-use App\Models\Posts\Post;
+use App\Queries\SortQuery;
 
 use App\Models\PaginatedList;
+use App\Models\Publications\Publication;
+use App\Models\Enums\PublicationsSortBy;
 
-final class PostsService
+final class PublicationsService
 {
     public function __construct(
-        private readonly PostsRepository $postsRepo
+        private readonly PublicationsRepository $pubsRepo
     ){}
 
     public function getList(
         PaginationQuery $pageQ,
         string $search,
         PropertiesQuery $props,
-        ?int $parentId = null,
-        ?int $publicationId = null,
+        SortQuery $sort,
+        ?int $genreId = null,
         ?int $creatorId = null
     ) : PaginatedList
     {
         $errors = [];
-        $isValid = $props->validateForType(Post::class, $errors);
+        $isValid = $props->validateForType(Publication::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
-
+        
+        $sortEnum = $sort->tryResolve(PublicationsSortBy::class) ?? PublicationsSortBy::Newest;
         $page = $pageQ->page();
         $pageSize = $pageQ->pageSize();
 
-        $items = $this->postsRepo->getList(
+        $items = $this->pubsRepo->getList(
             $page, 
             $pageSize, 
             $search, 
+            $sortEnum,
             $props->getProps(),
-            $parentId, 
-            $publicationId,
+            $genreId, 
             $creatorId
         );
 
