@@ -8,14 +8,14 @@ use App\Forms\Form;
 final class PaginationQuery implements Form
 {
     public function __construct(
-        public string $page,
-        public string $pageSize,
+        public int $page,
+        public int $pageSize,
     ) {}
 
     public static function fromInput(array $input): self
     {
         return new self(
-            page:    max((int)($input['page']), 1),
+            page:    max((int)($input['page'] ?? 1), 1),
             pageSize: min((int)($input['ps'] ?? 25), 50),
         );
     }

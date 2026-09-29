@@ -67,8 +67,9 @@ final class PostsRepository extends Repository
         if (!empty($where)) $where = 'WHERE ' . $where;
 
         $joins = implode("\n", $joinClauses);
-        $select = "SELECT c.id,\nc.content,\nc.is_active,\nc.creator_id,\nc.publication_id,\nc.created_at,\nc.likes_count,\nc.comments_count"
-                    . implode(",\n", $selectClauses);
+        $select = "SELECT c.id,\nc.content,\nc.is_active,\nc.creator_id,\nc.publication_id,\nc.created_at,\nc.likes_count,\nc.comments_count";
+        if (!empty($selectClauses))
+            $select = $select . ",\n" . implode(",\n", $selectClauses);
 
         $sql = "
             $select
@@ -85,7 +86,7 @@ final class PostsRepository extends Repository
             $stmt->bindValue($key, $value);
         }
         $stmt->bindValue(':limit', $pageSize + 1, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (($pageNum - 1) * $pageSize), PDO::PARAM_INT);
+        $stmt->bindValue(':offset', (($page - 1) * $pageSize), PDO::PARAM_INT);
         $stmt->execute();
 
         $items = array_map(

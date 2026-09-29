@@ -35,7 +35,7 @@ final class PostsService
         $page = $pageQ->page;
         $pageSize = $pageQ->pageSize;
 
-        $items = $postsRepo->getList(
+        $items = $this->postsRepo->getList(
             $page, 
             $pageSize, 
             $search, 

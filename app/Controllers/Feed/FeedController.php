@@ -33,22 +33,12 @@ final class FeedController extends Controller
             return Response::redirect('login');
 
         $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromInput($context->request->query);
-        $propsQ->setType(Post::class);
+        $propsQ = PropertiesQuery::fromRaw(Post::class, "creator+publication");
         $searchQ = $context->query('q', '');
-
-        $parentId = $context->query('parent', 0);
-        if (!is_int($parentId) || $parentId == 0) $parentId = NULL;
-
-        $creatorId = $context->query('creator', 0);
-        if (!is_int($creatorId) || $creatorId == 0) $creatorId = NULL;
-
-        $publicationId = $context->query('publication', 0);
-        if (!is_int($publicationId) || $publicationId == 0) $publicationId = NULL;
         
-        $userContext = $usersService->loadContext($userId);
+        $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $postsService->getList($pageQ, $searchQ, $propsQ, $parentId, $publicationId, $creatorId);
+            $paginatedList = $this->postsService->getList($pageQ, $searchQ, $propsQ);
             return $this->render('feed/feed-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
