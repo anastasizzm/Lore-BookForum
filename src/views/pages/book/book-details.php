@@ -3,10 +3,7 @@
  * Ожидаемые переменные от контроллера:
  *   $book      — ['cover','title','author','createdAt','genre','category','series',
  *                 'rating' (float 0-5), 'savesCount', 'annotation', 'authorNote', 'tableOfContents']
- *   $comments  — массив постов для card-feed.php (те же поля, что в feed-list.php),
- *                но БЕЗ книжного блока — передаём withBook = false
- *
- * Ниже — временные заглушки, чтобы страницу можно было проверить до готовности бэка.
+ *   $comments  — массив постов (те же поля, что в feed-list.php)
  */
 $book = $book ?? [
     'cover'           => 'https://placehold.co/400x560?text=Cover',
@@ -50,7 +47,9 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
 <?php $view->startBlock('content'); ?>
 
-  <?php $view->include('page-header', ['title' => 'Book details']); ?>
+  <div class="book-page-header">
+    <h1 class="book-page-title">Book details</h1>
+  </div>
 
   <div class="book-details">
     <div class="book-details__cover-col">
@@ -58,29 +57,37 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
         <img src="<?= $view->e($book['cover']) ?>" alt="<?= $view->e($book['title']) ?> cover">
       </div>
 
+      <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <button type="button" class="btn-icon" aria-label="Save book" data-toggle-bookmark>
-          <svg width="18" height="18" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M2 2.5C2 1.83696 2.21401 1.20107 2.59494 0.732233C2.97587 0.263392 3.49253 0 4.03125 0L12.1562 0C12.695 0 13.2116 0.263392 13.5926 0.732233C13.9735 1.20107 14.1875 1.83696 14.1875 2.5V19.375C14.1875 19.4881 14.1625 19.599 14.1153 19.6959C14.0681 19.7929 14.0004 19.8723 13.9194 19.9257C13.8384 19.979 13.7472 20.0044 13.6554 19.999C13.5637 19.9936 13.4748 19.9576 13.3984 19.895L8.09375 16.3762L2.78914 19.895C2.71267 19.9576 2.62383 19.9936 2.53208 19.999C2.44033 20.0044 2.3491 19.979 2.26812 19.9257C2.18714 19.8723 2.11944 19.7929 2.07223 19.6959C2.02501 19.599 2.00005 19.4881 2 19.375V2.5ZM4.03125 1.25C3.76189 1.25 3.50356 1.3817 3.31309 1.61612C3.12263 1.85054 3.01562 2.16848 3.01562 2.5V18.2075L7.81242 15.105C7.89576 15.0367 7.99364 15.0003 8.09375 15.0003C8.19386 15.0003 8.29174 15.0367 8.37508 15.105L13.1719 18.2075V2.5C13.1719 2.16848 13.0649 1.85054 12.8744 1.61612C12.6839 1.3817 12.4256 1.25 12.1562 1.25H4.03125Z" fill="currentColor"/>
+        <button type="button" class="btn-icon btn-icon--circle" aria-label="Save book" data-toggle-bookmark>
+          <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
         </button>
-        <button type="button" class="btn btn--primary" data-start-reading>Start reading</button>
+        <button type="button" class="btn btn--primary btn--pill" data-start-reading>Start reading</button>
       </div>
 
+      <!-- Блок рейтинга и сохранений -->
       <div class="book-rating">
-        <span class="book-rating__stars"
-              style="--rating-percent: <?= $view->e($percent) ?>%;"
-              role="img"
-              aria-label="Rating <?= $view->e(number_format($rating, 1)) ?> out of 5">
-          ★★★★★
-        </span>
-        <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+        <div class="book-rating__group">
+          <span class="book-rating__stars"
+                style="--rating-percent: <?= $view->e($percent) ?>%;"
+                role="img"
+                aria-label="Rating <?= $view->e(number_format($rating, 1)) ?> out of 5">
+            ★★★★★
+          </span>
+          <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+        </div>
         <span class="book-rating__saves">
-          🔖 <?= (int) $book['savesCount'] ?>
+          <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 2C1 1.44772 1.44772 1 2 1H10C10.5523 1 11 1.44772 11 2V14.5273C11 14.928 10.5574 15.1704 10.2039 14.9631L6 12.5L1.79612 14.9631C1.44265 15.1704 1 14.928 1 14.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          <?= (int) $book['savesCount'] ?>
         </span>
       </div>
     </div>
 
+    <!-- Инфо-карточка книги -->
     <div class="card-base info-box">
       <h2 class="info-box__title"><?= $view->e($book['title']) ?></h2>
       <p class="info-box__meta"><?= $view->e($book['author']) ?></p>
@@ -105,7 +112,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
           <?php if (!empty($book['authorNote'])): ?>
             <div class="book-tabs-panel__note">
-              <strong>Author's Note:</strong>
+              <strong>Author's Note:</strong><br>
               <?= nl2br($view->e($book['authorNote'])) ?>
             </div>
           <?php endif; ?>
@@ -126,22 +133,27 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     </div>
   </div>
 
+  <!-- Блок комментариев -->
   <section class="comments-section">
     <h2 class="comments-section__title">
-      Comments - <span class="comments-section__count"><?= (int) ($totalComments ?? count($comments)) ?></span>
+      Comments: <?= (int) ($totalComments ?? count($comments)) ?>
     </h2>
 
-    <form class="comment-composer" action="#" method="POST">
+    <!-- Форма написания комментария (стилизована как карточка) -->
+    <form class="comment-card" action="#" method="POST">
       <?= $view->csrfField() ?>
-      <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
-      <div class="input">
-        <input class="input__field" type="text" name="text"
-              value="<?= $view->e($form['text'] ?? '') ?>"
-              placeholder="Input comments...">
+      <div class="comment-card__inner">
+        <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
+        <div class="comment-card__content">
+          <div class="comment-card__author">sername</div>
+          <input class="comment-card__input" type="text" name="text"
+                 value="<?= $view->e($form['text'] ?? '') ?>"
+                 placeholder="Input comments...">
+          <?php foreach (($errors['text'] ?? []) as $err): ?>
+            <p class="form-field__error" style="color: red; margin-top: 8px; font-size: 14px;"><?= $view->e($err) ?></p>
+          <?php endforeach; ?>
+        </div>
       </div>
-      <?php foreach (($errors['text'] ?? []) as $err): ?>
-        <p class="form-field__error"><?= $view->e($err) ?></p>
-      <?php endforeach; ?>
     </form>
 
     <?php if (empty($comments)): ?>
@@ -149,7 +161,36 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     <?php else: ?>
       <div class="stack">
         <?php foreach ($comments as $comment): ?>
-          <?php $view->include('card-feed', array_merge($comment, ['withBook' => false])); ?>
+          
+          <!-- Карточка комментария -->
+          <div class="comment-card">
+            <div class="comment-card__inner">
+              <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
+              
+              <div class="comment-card__content">
+                <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
+                <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
+                
+                <div class="comment-card__footer">
+                  <button type="button" class="btn-icon-small" aria-label="Like">
+                    <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M7.5 13.1L6.45 12.06C2.6 8.56 0 6.36 0 3.5C0 1.4 1.65 0 3.75 0C4.95 0 6.15 0.55 6.825 1.45L7.5 2.2L8.175 1.45C8.85 0.55 10.05 0 11.25 0C13.35 0 15 1.4 15 3.5C15 6.36 12.4 8.56 8.55 12.06L7.5 13.1Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                    </svg>
+                  </button>
+                  
+                  <div class="comment-card__meta">
+                    <span><?= $view->e($comment['date']) ?></span>
+                    <button type="button" class="btn-icon-small" aria-label="Reply">
+                      <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
         <?php endforeach; ?>
       </div>
     <?php endif; ?>

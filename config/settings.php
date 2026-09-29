@@ -1,8 +1,10 @@
 <?php
 
+
 $baseDir = realpath(__DIR__ . '/..'); 
 
 return [
+    
     'debug' => true,
 
     'middleware' => [
