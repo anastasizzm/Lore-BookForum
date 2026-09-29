@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ===== Бургер-меню (Делегирование событий) =====
+  // ===== Бургер-меню (делегирование событий) =====
   const body = document.body;
   const overlay = document.querySelector('.sidebar-overlay');
   const sidebar = document.querySelector('[data-sidebar]');
@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     body.classList.add('is-menu-open');
   }
 
-  // Вешаем клик на весь документ, но отлавливаем именно клик по бургеру
   document.addEventListener('click', function (e) {
     const burgerTarget = e.target.closest('.burger, [data-burger]');
     if (burgerTarget) {
@@ -58,37 +57,74 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ===== Settings menu (sidebar) ===== */
-(function () {
-  var toggle = document.querySelector('[data-settings-toggle]');
-  var menu = document.querySelector('[data-settings-menu]');
+  // ===== Раскрытие сайдбара на десктопе =====
+  if (sidebar) {
+    const desktop = window.matchMedia('(min-width: 769px)');
 
-  if (!toggle || !menu) return;
+    const setExpanded = (value) => {
+      sidebar.classList.toggle('is-expanded', value);
+      body.classList.toggle('is-sidebar-expanded', value);
+    };
 
-  function closeMenu() {
-    menu.hidden = true;
-    toggle.setAttribute('aria-expanded', 'false');
+    // Клик по пустой области сайдбара
+    sidebar.addEventListener('click', (e) => {
+      if (!desktop.matches) return;
+      if (e.target.closest('a, button, .settings-menu')) return;
+      setExpanded(!sidebar.classList.contains('is-expanded'));
+    });
+
+    // Клик вне сайдбара
+    document.addEventListener('click', (e) => {
+      if (!sidebar.contains(e.target)) setExpanded(false);
+    });
+
+    // Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setExpanded(false);
+    });
+
+    // Клик по ссылке на десктопе тоже сворачивает
+    sidebar.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => setExpanded(false));
+    });
+
+    // Переход на мобильную ширину сбрасывает состояние
+    desktop.addEventListener('change', (e) => {
+      if (!e.matches) setExpanded(false);
+    });
   }
 
-  toggle.addEventListener('click', function (e) {
-    e.stopPropagation();
-    if (menu.hidden) {
-      menu.hidden = false;
-      toggle.setAttribute('aria-expanded', 'true');
-    } else {
-      closeMenu();
-    }
-  });
+  /* ===== Settings menu (sidebar) ===== */
+  (function () {
+    var toggle = document.querySelector('[data-settings-toggle]');
+    var menu = document.querySelector('[data-settings-menu]');
 
-  document.addEventListener('click', function (e) {
-    if (menu.hidden) return;
-    if (!menu.contains(e.target) && e.target !== toggle) {
-      closeMenu();
-    }
-  });
+    if (!toggle || !menu) return;
 
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !menu.hidden) closeMenu();
-  });
-})();
+    function closeSettings() {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (menu.hidden) {
+        menu.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
+      } else {
+        closeSettings();
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (menu.hidden) return;
+      if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+        closeSettings();
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !menu.hidden) closeSettings();
+    });
+  })();
 });

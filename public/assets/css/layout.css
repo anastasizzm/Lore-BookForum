@@ -5,7 +5,8 @@ body {
   min-height: 100vh;
 }
 
-body.is-menu-open {
+body.is-menu-open,
+body.is-sidebar-expanded {
   overflow: hidden;
 }
 
@@ -37,13 +38,12 @@ body.is-menu-open {
   width: 100%;
 }
 
-/* Группа для кнопок Лента, Библиотека и Сохраненные */
 .sidebar-nav-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px; /* 2) Увеличено расстояние между элементами */
-  margin-top: 32px; /* 1) Опустили элементы вниз */
+  gap: 28px;
+  margin-top: 32px;
   width: 100%;
 }
 
@@ -60,15 +60,14 @@ body.is-menu-open {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  transition: background 0.15s, color 0.15s; /* Добавлена плавная смена цвета иконки */
+  transition: background 0.15s, color 0.15s;
   cursor: pointer;
 }
 
-/* 2) Исправлен ховер — фон сделан темнее, а цвет иконки меняется на контрастный */
 .nav-item:hover,
 .nav-item.active {
-  background: var(--color-overlay-hover, #e2e8f0); 
-  color: var(--color-primary, #1e293b); 
+  background: var(--color-overlay-hover, #e2e8f0);
+  color: var(--color-primary, #1e293b);
 }
 
 .nav-text {
@@ -81,13 +80,12 @@ body.is-menu-open {
   justify-content: center;
 }
 
-/* Выделение иконки профиля (кружок на фоне) */
 .sidebar .nav-profile .nav-icon {
   background-color: var(--color-bg-subtle, #F3F6FB);
   border-radius: 50%;
   width: 40px !important;
   height: 40px !important;
-  min-width: 40px; /* Запрещаем флексбоксу сужать элемент */
+  min-width: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -95,12 +93,10 @@ body.is-menu-open {
   transition: background-color 0.15s;
 }
 
-/* Убираем фон кружка профиля при ховере, чтобы кнопка заливалась единым цветом */
 .sidebar .nav-profile:hover .nav-icon {
   background-color: transparent;
 }
 
-/* Sidebar — нижний блок (More + settings dropdown) */
 .sidebar-bottom {
   position: relative;
   margin-top: auto;
@@ -108,6 +104,57 @@ body.is-menu-open {
   align-items: center;
   justify-content: center;
   width: 100%;
+}
+
+/* ============================================
+   SIDEBAR: раскрытие по клику на пустую область (Desktop)
+   ============================================ */
+@media (min-width: 769px) {
+  .sidebar {
+    cursor: pointer;
+    transition: width 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .sidebar.is-expanded {
+    width: 260px;
+    padding: 24px 16px;
+    z-index: 60;
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .sidebar.is-expanded .sidebar-nav,
+  .sidebar.is-expanded .sidebar-nav-group,
+  .sidebar.is-expanded .sidebar-bottom {
+    align-items: stretch;
+  }
+
+  .sidebar.is-expanded .nav-item {
+    width: 100%;
+    height: 52px;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 0 20px;
+    border-radius: 20px;
+    background: #f8fafc;
+    box-sizing: border-box;
+  }
+
+  .sidebar.is-expanded .nav-item:hover,
+  .sidebar.is-expanded .nav-item.active {
+    background: #e2e8f0;
+  }
+
+  .sidebar.is-expanded .nav-icon {
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .sidebar.is-expanded .nav-text {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
 }
 
 /* ============================================
@@ -186,34 +233,34 @@ body.is-menu-open {
 }
 
 /* ============================================
-   OVERLAY (затемнение при открытом сайдбаре)
+   OVERLAY (затемнение — мобильная и десктопная версии)
    ============================================ */
 .sidebar-overlay {
-  display: none;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: 35;
   opacity: 0;
-  transition: opacity 0.25s;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s, visibility 0.25s;
 }
 
-body.is-menu-open .sidebar-overlay {
-  display: block;
+body.is-menu-open .sidebar-overlay,
+body.is-sidebar-expanded .sidebar-overlay {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* ============================================
-   SETTINGS DROPDOWN (выпадающее меню внизу)
+   SETTINGS DROPDOWN
    ============================================ */
 .settings-menu {
   position: absolute;
-  /* Открываем меню строго над кнопкой */
-  bottom: calc(100% + 8px); 
-  /* Привязываем левый край так, чтобы оно не улетало влево */
-  left: 12px; 
-  /* СБРАСЫВАЕМ старый transform: translateX(-50%) */
-  transform: none !important; 
+  bottom: calc(100% + 8px);
+  left: 12px;
+  transform: none !important;
   min-width: 200px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
@@ -288,11 +335,10 @@ body.is-menu-open .sidebar-overlay {
   }
 
   .sidebar-nav-group {
-    gap: 20px; /* Адаптируем отступы для мобильной версии */
-    margin-top: 24px; 
+    gap: 20px;
+    margin-top: 24px;
   }
 
-  /* Мобильные широкие кнопки (Profile, Feed, Library, Saved, More) */
   .sidebar .mobile-nav-btn {
     width: 220px;
     height: 52px;
@@ -304,7 +350,7 @@ body.is-menu-open .sidebar-overlay {
     gap: 16px;
     border-radius: 20px;
     background: #f8fafc;
-    border: none !important; /* Убираем любую рамку */
+    border: none !important;
   }
 
   .sidebar .mobile-nav-btn:hover {
@@ -315,7 +361,7 @@ body.is-menu-open .sidebar-overlay {
     display: inline-block;
     font-weight: 500;
     font-size: 16px;
-    color: inherit; /* наследуем цвет, чтобы текст тоже менялся при ховере */
+    color: inherit;
   }
 
   .sidebar .mobile-nav-btn .nav-icon {
@@ -325,7 +371,6 @@ body.is-menu-open .sidebar-overlay {
     width: 24px;
   }
 
-  /* Нижний блок на мобильных */
   .sidebar .sidebar-bottom {
     display: flex;
     justify-content: center;
@@ -387,7 +432,6 @@ body.is-menu-open .sidebar-overlay {
     justify-content: flex-start;
   }
 
-  /* На мобильных меню настроек вписывается в сайдбар */
   .settings-menu {
     left: 16px;
     right: 16px;
