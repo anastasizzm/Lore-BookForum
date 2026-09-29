@@ -13,7 +13,7 @@ $book = $book ?? [
     'genre'           => 'Drama',
     'category'        => 'Artistic literature',
     'series'          => '10.09.2026',
-    'rating'          => 4.0,
+    'rating'          => 4.6,
     'savesCount'      => 121,
     'annotation'      => "After the destruction of most of humanity, Grigory takes up a profession that never existed before: taxidermist of extraterrestrial fauna.\nDo you want a stuffed \"Root-Jumper\" from a distant star system, or perhaps one of the very last Glass Serpents? Nothing is impossible; Grigory will fulfill your request.\nThe job seems simple enough-until each new order begins to pull him deeper and deeper into the alien cosmos...",
     'authorNote'      => 'By the way, the series has a standalone prequel; you can read it here: https://author.today/work/627498',
@@ -84,6 +84,25 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           </svg>
           <?= (int) $book['savesCount'] ?>
         </span>
+      </div>
+
+      <!-- Оценка пользователя -->
+      <div class="rate" data-rate role="radiogroup" aria-label="Rate this book">
+        <span class="rate__label">Click to Rate:</span>
+        <div class="rate__stars">
+          <?php for ($i = 1; $i <= 5; $i++): ?>
+            <button type="button"
+                    class="rate__star"
+                    data-rate-value="<?= $i ?>"
+                    role="radio"
+                    aria-checked="false"
+                    aria-label="<?= $i ?> out of 5">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
+              </svg>
+            </button>
+          <?php endfor; ?>
+        </div>
       </div>
     </div>
 
