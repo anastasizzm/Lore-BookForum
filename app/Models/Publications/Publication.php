@@ -24,7 +24,7 @@ readonly class Publication extends PublicationShort
         parent::__construct($id, $title, $createdAt);
     }
 
-    public static function fromRow(string $row, string $prefix = '') : self 
+    public static function fromRow(array $row, string $prefix = '') : self 
     {
         $u = UserShortData::ROW_PREFIX;
         $g = 'g_';

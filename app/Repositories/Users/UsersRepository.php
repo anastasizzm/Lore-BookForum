@@ -75,7 +75,10 @@ final class UsersRepository extends Repository
             VALUES (:userId, :isRedactor, :isAdmin)'
         );
 
-        $stmt->execute([':userId' => $userId, ':isRedactor' => $isRedactor, ':isAdmin' => $isAdmin]);
+        $stmt->bindValue(':userId',     $userId,     PDO::PARAM_INT);
+        $stmt->bindValue(':isRedactor', $isRedactor, PDO::PARAM_BOOL);
+        $stmt->bindValue(':isAdmin',    $isAdmin,    PDO::PARAM_BOOL);
+        $stmt->execute();
     }
 
     public function markEmailVerified(int $id): bool
