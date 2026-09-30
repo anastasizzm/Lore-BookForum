@@ -86,7 +86,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   });
 });
 
-/* 3. Сброс */
+/* 4. Сброс */
 document.querySelectorAll('[data-filter-reset]').forEach(btn => {
   btn.addEventListener('click', () => {
     const panel = btn.closest('[data-filter-panel]');
