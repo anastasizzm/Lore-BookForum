@@ -2,11 +2,6 @@
 
 namespace App\Models\Queries;
 
-use UnitEnum;
-use ValueError;
-use ReflectionEnum;
-use BackedEnum;
-
 final class StatusQuery implements Query
 {
     private readonly string $status;
@@ -22,5 +17,5 @@ final class StatusQuery implements Query
         return new self($input['status'] ?? '');
     }
 
-    public function status() :string { return $this->status; }
+    public function status() : string { return $this->status; }
 }

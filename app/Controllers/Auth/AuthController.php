@@ -8,7 +8,7 @@ use App\Http\Response;
 use App\Http\UrlGenerator;
 use App\Http\HttpException;
 
-use App\Lib\Controller;
+use App\Controllers\Controller;
 
 use App\Services\Auth\AuthService;
 use App\Services\Configuration\CookieService;

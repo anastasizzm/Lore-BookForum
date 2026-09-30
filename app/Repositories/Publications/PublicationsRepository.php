@@ -7,7 +7,7 @@ use App\Repositories\Repository;
 
 use App\Lib\Data\Database;
 
-class PublicationsRepository extends Repository
+abstract class PublicationsRepository extends Repository
 {
     public function __construct(
         Database $db

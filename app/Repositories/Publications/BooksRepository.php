@@ -30,7 +30,7 @@ final class BooksRepository extends PublicationsRepository
         ?int $genreId = null,
         ?int $creatorId = null,
         ?string $isbn = null,
-        ?RadingStatusFilters $status = null
+        ?ReadingStatusFilters $status = null
     ) : array
     {
         $whereClauses = [];

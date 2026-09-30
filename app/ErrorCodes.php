@@ -13,4 +13,9 @@ final class ErrorCodes
 
     public const CSRF_FAIL = 'csrfFail';
     public const TOKEN_FAIL = 'jwtFail';
+
+    public const VALIDATION_FAIL = 'validationFail';
+    public const UNHANDLED_EX = 'unhandledEx';
+
+    public const UNAUTH_TRY = 'unauthorizedTry';
 }

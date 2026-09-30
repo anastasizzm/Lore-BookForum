@@ -13,6 +13,10 @@ use App\Http\Middleware;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 
+use App\Extensions\ResponseTemplates;
+
+use App\Models\Error;
+
 final class AuthorizationMiddleware implements Middleware
 {
     public function __construct(
@@ -33,17 +37,10 @@ final class AuthorizationMiddleware implements Middleware
 
     private function deny(HttpContext $ctx, Decision $decision): Response
     {
-        if ($ctx->request->isApi()) {
-            return Response::json([
-                'errors' => [
-                    [
-                        'errorCode' => $decision->errorCode,
-                        'message' => $decision->reason
-                    ]
-                ],
-                'code'  => $decision->status,
-                'message' => 'Forbidden',
-            ], $decision->status);
+        if ($ctx->isApi()) {
+            return Response::json(ResponseTemplates::errors([
+                new Error($decision->errorCode, $decision->reason)
+            ], $decision->status, "Forbidden"), $decision->status);
         }
 
         return match ($decision->status) {

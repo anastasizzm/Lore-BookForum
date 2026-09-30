@@ -7,10 +7,11 @@ use App\Repositories\Publications\BooksRepository;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
 use App\Models\Queries\SortQuery;
+use App\Models\Queries\StatusQuery;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
-use App\Models\Filters\RadingStatusFilters;
+use App\Models\Filters\ReadingStatusFilters;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
 
@@ -19,7 +20,7 @@ use App\Extensions\EnumExtensions;
 final class BooksService
 {
     public function __construct(
-        private readonly BooksRepository $pubsRepo
+        private readonly BooksRepository $booksRepo
     ){}
 
     public function getList(
@@ -41,15 +42,15 @@ final class BooksService
         $sortEnum = $sort == null ? null : EnumExtensions::tryResolve(PublicationsSortBy::class, $sort->sortString());
         $sortEnum ??= PublicationsSortBy::Newest;
         
-        $statusEnum = $status == null ? null : EnumExtensions::tryResolve(ReadingStatus::class, $sort->status());
+        $statusEnum = $status == null ? null : EnumExtensions::tryResolve(ReadingStatus::class, $status->status());
         $statusEnum ??= ReadingStatus::None;
 
-        $statusFilter = is_int($currentUserId) ? new RadingStatusFilters($currentUserId, $statusEnum) : null;
+        $statusFilter = is_int($currentUserId) ? new ReadingStatusFilters($currentUserId, $statusEnum) : null;
 
         $page = $pageQ->page();
         $pageSize = $pageQ->pageSize();
 
-        $items = $this->pubsRepo->getList(
+        $items = $this->booksRepo->getList(
             $page, 
             $pageSize, 
             $search, 

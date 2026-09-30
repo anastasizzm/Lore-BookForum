@@ -11,6 +11,12 @@ use App\Http\HttpContext;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 
+use App\ErrorCodes;
+
+use App\Models\Error;
+
+use App\Extensions\ResponseTemplates;
+
 final class ExceptionMiddleware implements Middleware
 {
     public function __construct(private readonly UrlGenerator $url){}
@@ -21,7 +27,11 @@ final class ExceptionMiddleware implements Middleware
             return $next($ctx);
         }
         catch(HttpException $e){
-            return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Continue']));
+            if ($ctx->isApi())
+                return Response::json(ResponseTemplates::errors([
+                    new Error(ErrorCodes::UNHANDLED_EX, $e->getMessage())
+                ], $e->getStatus(), "Unhandled exception occured"), $e->getStatus());
+            else return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Continue']));
         }
     }
 }
