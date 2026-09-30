@@ -32,6 +32,26 @@ $comments = $comments ?? [
     ],
 ];
 
+/**
+ * Статус чтения текущего пользователя (передаёт контроллер):
+ *   'new'         — ещё не начинал      -> Start reading
+ *   'in_progress' — читает              -> Resume reading
+ *   'finished'    — дочитал             -> Read again
+ */
+$readingStatus  = $book['readingStatus'] ?? $readingStatus ?? 'new';
+// DEV-предпросмотр: ?reading=in_progress или ?reading=finished
+$readingStatus = $_GET['reading'] ?? $readingStatus;
+
+$readingButtons = [
+    'new'         => ['label' => 'Start reading',  'modifier' => 'start'],
+    'in_progress' => ['label' => 'Resume reading', 'modifier' => 'resume'],
+    'finished'    => ['label' => 'Read again',     'modifier' => 'again'],
+];
+if (!isset($readingButtons[$readingStatus])) {
+    $readingStatus = 'new'; // неизвестное значение -> безопасный вариант
+}
+$readingBtn = $readingButtons[$readingStatus];
+
 $rating  = (float) ($book['rating'] ?? 0);
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 ?>
@@ -64,7 +84,10 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
         </button>
-        <button type="button" class="btn btn--primary btn--pill" data-start-reading>Start reading</button>
+        <button type="button"
+                class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
+                data-start-reading
+                data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></button>
       </div>
 
       <!-- Блок рейтинга и сохранений -->

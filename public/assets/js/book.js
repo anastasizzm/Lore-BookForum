@@ -14,11 +14,14 @@
     });
   }
 
-  // Start reading — пока заглушка
+  // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
     startReading.addEventListener('click', function () {
-      // TODO: добавить логику "начать читать"
+      var status = startReading.dataset.readingStatus; // new | in_progress | finished
+      // TODO: new -> открыть с первой главы
+      //       in_progress -> открыть с сохранённого места
+      //       finished -> сбросить прогресс и открыть с начала
     });
   }
 

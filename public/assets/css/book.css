@@ -60,20 +60,35 @@
   justify-content: center;
 }
 
-.book-actions .btn--primary {
-  background: var(--book-btn-bg);
-  border-color: var(--book-btn-bg);
+/* Кнопка чтения: цвет зависит от статуса (start / resume / again) */
+.book-actions .btn--read {
+  --read-btn-bg: var(--book-btn-bg);
+  --read-btn-bg-hover: var(--book-btn-bg-hover);
+  background: var(--read-btn-bg);
+  border-color: var(--read-btn-bg);
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
-.book-actions .btn--primary:hover,
-.book-actions .btn--primary:focus-visible {
-  background: var(--book-btn-bg-hover);
-  border-color: var(--book-btn-bg-hover);
+.book-actions .btn--read:hover,
+.book-actions .btn--read:focus-visible {
+  background: var(--read-btn-bg-hover);
+  border-color: var(--read-btn-bg-hover);
 }
 
-.book-actions .btn--primary:active {
+/* Resume reading — тёмно-зелёная */
+.book-actions .btn--read-resume {
+  --read-btn-bg: #2F6B4F;
+  --read-btn-bg-hover: #22513B;
+}
+
+/* Read again — бордовая */
+.book-actions .btn--read-again {
+  --read-btn-bg: #5B4B9A;
+  --read-btn-bg-hover: #463A7B;
+}
+
+.book-actions .btn--read:active {
   transform: scale(0.98);
 }
 
