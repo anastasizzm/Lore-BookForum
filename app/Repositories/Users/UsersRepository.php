@@ -5,6 +5,7 @@ namespace App\Repositories\Users;
 
 use App\Models\Auth\AuthCredits;
 use App\Models\Users\UserContext;
+use App\Models\Users\UserData;
 
 use App\Repositories\Repository;
 use App\Lib\Data\Database;
@@ -57,38 +58,24 @@ final class UsersRepository extends Repository
         return (int)$id;
     }
 
-    public function createProfile(int $userId, string $name, string $surname, string $bio) : int
+    public function createProfile(int $userId, string $name, string $surname, string $bio) : void
     {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO profiles (user_id, name, surname, bio)
-            VALUES (:userId, :name, :surname, :bio)
-            RETURNING id'
+            VALUES (:userId, :name, :surname, :bio)'
         );
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);
-        $id = $stmt->fetchColumn();
-        if ($id === false) {
-            throw new \RuntimeException('No instance created');
-        }
-
-        return (int)$id;
     }
 
-    public function createRules(int $userId, bool $isAdmin, bool $isRedactor) : int 
+    public function createRules(int $userId, bool $isAdmin, bool $isRedactor) 
     {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO users_rules (user_id, is_redactor, is_admin)
-            VALUES (:userId, :isRedactor, :isAdmin)
-            RETURNING id'
+            VALUES (:userId, :isRedactor, :isAdmin)'
         );
 
         $stmt->execute([':userId' => $userId, ':isRedactor' => $isRedactor, ':isAdmin' => $isAdmin]);
-        $id = $stmt->fetchColumn();
-        if ($id === false) {
-            throw new \RuntimeException('No instance created');
-        }
-
-        return (int)$id;
     }
 
     public function markEmailVerified(int $id): bool
@@ -117,5 +104,59 @@ final class UsersRepository extends Repository
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : UserContext::fromRow($row);
+    }
+
+    public function retrieve(int $userId) : ?UserData
+    {
+        $sql = "
+            SELECT
+                u.id,
+                u.username,
+                u.created_at,
+                p.name,
+                p.surname,
+                p.bio,
+                p.avatar
+            FROM users u
+            INNER JOIN profiles p ON p.user_id = u.id
+            WHERE u.id = :userId
+            LIMIT 1
+        ";
+
+        $stmt = $this->pdo()->prepare($sql);
+        $stmt->execute([':userId' => $userId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : UserData::fromRow($row);
+    }
+
+    public function edit(
+        int $userId,
+        string $email,
+        string $username,
+    ) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE users SET email = :email, username = :username
+            WHERE id = :userId'
+        );
+
+        $stmt->execute([':userId' => $userId, ':email' => $email, ':username' => $username]);
+    }
+
+    public function editProfile(
+        int $userId,
+        string $name,
+        string $surname,
+        string $bio,
+        string $avatar,
+    ) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE profiles SET name = :name, surname = :surname, bio = :bio, avatar = :avatar
+            WHERE user_id = :userId'
+        );
+
+        $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
     }
 }

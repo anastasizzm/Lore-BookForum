@@ -14,6 +14,7 @@ final class ErrorCodes
     public const CSRF_FAIL = 'csrfFail';
     public const TOKEN_FAIL = 'jwtFail';
     public const OP_FAIL = 'opFail';
+    public const PATH_FAIL = 'pathFail';
 
     public const VALIDATION_FAIL = 'validationFail';
     public const UNHANDLED_EX = 'unhandledEx';

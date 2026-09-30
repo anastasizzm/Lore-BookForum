@@ -3,18 +3,20 @@ declare(strict_types=1);
 
 namespace App\Models\Users;
 
-use App\Models\Dto;
+use App\Models\Users\UserShortData;
 
-final readonly class UserContext extends UserShortData
+use DateTimeImmutable;
+
+readonly class UserData extends UserShortData
 {
     public function __construct(
-        int $id,
+        int    $id,
         string $username,
         string $name,
         string $surname,
         string $avatar,
-        public bool    $isAdmin,
-        public bool    $isRedactor,
+        public string $bio,
+        public DateTimeImmutable $createdAt
     ) {
         parent::__construct($id, $username, $name, $surname, $avatar);
     }
@@ -28,8 +30,8 @@ final readonly class UserContext extends UserShortData
             username: $parent->username,
             surname: $parent->surname,
             avatar: $parent->avatar,
-            isAdmin: self::bool($row, $prefix . 'is_admin'),
-            isRedactor: self::bool($row, $prefix . 'is_redactor'),
+            bio: self::str($row, $prefix . 'bio'),
+            createdAt: self::dt($row, $prefix . 'created_at')
         );
     }
 }
