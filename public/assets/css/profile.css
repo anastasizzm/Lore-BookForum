@@ -46,7 +46,7 @@
 }
 
 .profile-header__name {
-  font-size: var(--font-size-title);   /* 28px */
+  font-size: var(--font-size-title);
   font-weight: var(--font-weight-bold);
   line-height: 1.2;
   color: var(--color-text);
@@ -75,7 +75,7 @@
 }
 
 .profile-posts__title {
-  font-size: var(--font-size-h2);   /* 20px */
+  font-size: var(--font-size-h2);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: 0 0 var(--space-2);
@@ -130,7 +130,7 @@
 }
 
 .profile-sidebar-box__title {
-  font-size: var(--font-size-h2);   /* 20px */
+  font-size: var(--font-size-h2);
   font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin: 0 0 var(--space-3);
@@ -244,14 +244,102 @@
 
 /* ============================================
    CARD-BASE OVERRIDE — точечно для карточек профиля
-   Утолщаем обводку, как на макете.
    ============================================ */
-
 .profile-header.card-base,
 .profile-sidebar-box.card-base,
 .profile-post.card-base {
   border-width: 2px;
   border-style: solid;
-  border-color: var(--border-card-color);   
+  border-color: var(--border-card-color);
   border-radius: var(--radius-lg);
+}
+
+/* ============================================
+   PROFILE EDIT FORM
+   ============================================ */
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.profile-edit__section-title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Форма — ограничена по ширине, поля не растягиваются на весь экран */
+.profile-edit form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.profile-edit .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.profile-edit .form-field label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.profile-edit .form-field__input--textarea {
+  min-height: 120px;
+  padding: var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--lh-normal);
+}
+
+.profile-edit__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ============================================
+   PROFILE EDIT — MOBILE
+   ============================================ */
+@media (max-width: 480px) {
+  .profile-edit form,
+  .profile-edit__actions {
+    max-width: 100%;
+  }
+
+  .profile-edit__actions {
+    flex-direction: column-reverse;
+  }
+
+  .profile-edit__actions .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   FORM ROW — Name + Surname в одну строку
+   ============================================ */
+.form-row--two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 380px));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .form-row--two-cols {
+    grid-template-columns: 1fr;
+  }
 }

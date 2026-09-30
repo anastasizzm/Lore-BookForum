@@ -3,26 +3,40 @@
  * card-book — вертикальная карточка книги.
  *
  * Ожидает:
- *   $id     — ID книги (для ссылки)
- *   $cover  — URL обложки
- *   $title  — название книги
- *   $author — автор
+ *   $id       — ID книги
+ *   $cover    — URL обложки
+ *   $title    — название книги
+ *   $authorId — ID автора
+ *   $author   — имя автора
  */
-$id     = $id     ?? 0;
-$cover  = $cover  ?? '';
-$title  = $title  ?? '';
-$author = $author ?? '';
+$id       = $id       ?? 0;
+$cover    = $cover    ?? '';
+$title    = $title    ?? '';
+$authorId = $authorId ?? 0;
+$author   = $author   ?? '';
 
-// TODO: заменить на $view->url('book', ['id' => $id]), когда бэкенд добавит маршрут 'book'
-// Пока — заглушка, чтобы страница рендерилась без ошибки.
-$bookUrl = '#';
-// $bookUrl = $view->url('book', ['id' => $id]);
+// TODO: заменить, когда будут маршруты
+$bookUrl   = '#';
+$authorUrl = '#';
+// $bookUrl   = $view->url('book',   ['id' => $id]);
+// $authorUrl = $view->url('author', ['id' => $authorId]);
 ?>
-<a class="card-base card-book" href="<?= $view->e($bookUrl) ?>">
+<article class="card-base card-book">
+
   <div class="card-book__cover">
     <img src="<?= $view->e($cover) ?>" alt="<?= $view->e($title) ?>">
   </div>
 
-  <h3 class="card-book__title"><?= $view->e($title) ?></h3>
-  <p class="card-book__author"><?= $view->e($author) ?></p>
-</a>
+  <h3 class="card-book__title">
+    <a class="card-book__link" href="<?= $view->e($bookUrl) ?>">
+      <?= $view->e($title) ?>
+    </a>
+  </h3>
+
+  <p class="card-book__author">
+    <a class="card-book__author-link" href="<?= $view->e($authorUrl) ?>">
+      <?= $view->e($author) ?>
+    </a>
+  </p>
+
+</article>
