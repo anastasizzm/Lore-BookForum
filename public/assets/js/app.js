@@ -1,20 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
   // ===== Дропдауны =====
-  document.querySelectorAll('[data-dropdown]').forEach(function (dd) {
-    var trigger = dd.querySelector('[data-dropdown-trigger]');
-    if (!trigger) return;
+  /* 3. Дропдауны: открытие, автозакрытие соседей, закрытие по клику вне и Escape */
+document.querySelectorAll('[data-dropdown]').forEach(dd => {
+  const trigger = dd.querySelector('[data-dropdown-trigger]');
+  if (!trigger) return;
 
-    trigger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      dd.classList.toggle('is-open');
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();                       // не даём клику дойти до document
+    const willOpen = !dd.classList.contains('is-open');
+
+    // ← КЛЮЧЕВОЕ: закрываем все остальные открытые дропдауны
+    document.querySelectorAll('[data-dropdown].is-open').forEach(other => {
+      if (other !== dd) other.classList.remove('is-open');
     });
+
+    dd.classList.toggle('is-open', willOpen);
   });
 
-  document.addEventListener('click', () => {
-    document.querySelectorAll('[data-dropdown].is-open').forEach(dd => {
+  // Клик по пункту меню — закрываем дропдаун перед переходом
+  dd.querySelectorAll('.dropdown__item').forEach(item => {
+    item.addEventListener('click', () => {
       dd.classList.remove('is-open');
     });
   });
+});
+
+// Клик в любом месте вне дропдауна — закрыть все
+document.addEventListener('click', () => {
+  document.querySelectorAll('[data-dropdown].is-open')
+    .forEach(dd => dd.classList.remove('is-open'));
+});
+
+// Escape — закрыть все
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('[data-dropdown].is-open')
+      .forEach(dd => dd.classList.remove('is-open'));
+  }
+});
 
   // ===== Бургер-меню (делегирование событий) =====
   const body = document.body;

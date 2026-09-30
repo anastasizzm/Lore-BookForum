@@ -30,11 +30,6 @@ $filter_rows = [
                 ],
             ],
             [
-                'type'    => 'dropdown',
-                'label'   => 'Автор',
-                'options' => [['label' => 'Все авторы', 'href' => '?author=all']],
-            ],
-            [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
@@ -63,11 +58,6 @@ $filter_rows = [
                 'type'    => 'dropdown',
                 'label'   => 'Жанр',
                 'options' => [['label' => 'Все жанры', 'href' => '?genre=all']],
-            ],
-            [
-                'type'    => 'dropdown',
-                'label'   => 'Автор',
-                'options' => [['label' => 'Все авторы', 'href' => '?author=all']],
             ],
             [
                 'type'    => 'dropdown',
