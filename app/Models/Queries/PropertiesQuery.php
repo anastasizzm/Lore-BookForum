@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Queries;
+namespace App\Models\Queries;
 
 final class PropertiesQuery implements Query
 {

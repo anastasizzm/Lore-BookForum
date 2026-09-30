@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\PostsRepository;
-use App\Queries\PaginationQuery;
-use App\Queries\PropertiesQuery;
+use App\Models\Queries\PaginationQuery;
+use App\Models\Queries\PropertiesQuery;
 
 use App\Models\Posts\Post;
 

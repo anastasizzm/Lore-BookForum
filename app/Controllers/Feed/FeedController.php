@@ -11,8 +11,8 @@ use App\Services\Publications\PostsService;
 use App\Http\HttpContext;
 use App\Http\Response;
 
-use App\Queries\PaginationQuery;
-use App\Queries\PropertiesQuery;
+use App\Models\Queries\PaginationQuery;
+use App\Models\Queries\PropertiesQuery;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
