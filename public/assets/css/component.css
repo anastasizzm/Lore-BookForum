@@ -315,6 +315,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.card-feed__body-section--with-book {
   padding-left: var(--space-3);
   border-left: 2px solid var(--color-border);
   margin-left: var(--space-3);

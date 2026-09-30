@@ -37,7 +37,7 @@ $date         = $date         ?? '';
     </div>
   <?php endif; ?>
 
-  <div class="card-feed__body-section">
+  <div class="card-feed__body-section<?= $withBook ? ' card-feed__body-section--with-book' : '' ?>">
     <header class="card-feed__head">
       <?php $view->include('avatar', [
           'size'     => 'md',
