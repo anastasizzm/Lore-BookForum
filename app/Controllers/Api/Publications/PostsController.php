@@ -46,7 +46,7 @@ final class PostsController extends Controller
 
         try{
             $this->postsService->removeLike($postId, $userId);
-            return $this->jsonEmpty(201);
+            return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
             $this->jsonValidationErrors($e->errors());
