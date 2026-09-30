@@ -18,6 +18,8 @@ use App\Lib\CsrfManager;
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
 
+use App\Extensions\PdoExtensions;
+
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
@@ -95,8 +97,8 @@ final class AuthService
     ];
 
     private const UNIQUE_MESSAGES = [
-        'username' => 'Такое имя уже занято',
-        'email'    => 'Такой email уже зарегистрирован',
+        'username' => 'Such username already exists',
+        'email'    => 'The email already exists',
     ];
 
     /** @throws ValidationException */
@@ -106,7 +108,7 @@ final class AuthService
             return $e;
         }
 
-        $constraint = $this->extractConstraintName($e->getMessage());
+        $constraint = PdoExtensions::extractConstraintName($e->getMessage());
 
         if ($constraint === null) {
             return $e;
@@ -121,14 +123,5 @@ final class AuthService
         return new ValidationException([
             $field => [self::UNIQUE_MESSAGES[$field]],
         ]);
-    }
-
-    private function extractConstraintName(string $message): ?string
-    {
-        if (preg_match('/constraint "([^"]+)"/', $message, $m)) {
-            return $m[1];
-        }
-
-        return null;
     }
 }

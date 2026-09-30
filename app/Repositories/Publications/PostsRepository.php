@@ -96,4 +96,28 @@ final class PostsRepository extends Repository
 
         return $items;
     }
+
+    public function setLike(
+        int $commentId,
+        int $userId
+    ) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'INSERT INTO comments_likes (user_id, comment_id)
+            VALUES (:userId, :commentId)
+            RETURNING comment_id'
+        );
+        $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
+    }
+
+    public function removeLike(
+        int $commentId,
+        int $userId
+    ) : void
+    {
+        $smtm = $this->pdo()->prepare(
+            'DELETE FROM comments_likes WHERE user_id = :userId AND comment_id = :commentId'
+        );
+        $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
+    }
 }

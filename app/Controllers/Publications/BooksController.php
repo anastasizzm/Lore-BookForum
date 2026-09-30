@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Publications;
 
-use App\Lib\Controller;
+use App\Controllers\Controller;
 
 use App\Services\Users\UsersService;
 use App\Services\Publications\BooksService;
@@ -47,6 +47,7 @@ final class BooksController extends Controller
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'book'
                 ], 
                 'user' => $userContext
             ]);

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Feed;
 
-use App\Lib\Controller;
+use App\Controllers\Controller;
 
 use App\Services\Users\UsersService;
 use App\Services\Publications\PostsService;

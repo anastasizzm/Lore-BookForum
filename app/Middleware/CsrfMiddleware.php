@@ -14,6 +14,10 @@ use App\Http\Response;
 use App\Constants;
 use App\ErrorCodes;
 
+use App\Extensions\ResponseTemplates;
+
+use App\Models\Error;
+
 use App\Services\Configuration\CookieService;
 
 final class CsrfMiddleware implements Middleware
@@ -28,15 +32,10 @@ final class CsrfMiddleware implements Middleware
         if(in_array($ctx->request->method, Constants::PROTECTED_METHODS, true))
             {
             if (!$isCsrfSet || !CsrfManager::verify($ctx->request, $csrf))
-                return $ctx->request->isApi()
-                ? Response::json([
-                    'errors' => [
-                        'errorCode' => ErrorCodes::CSRF_FAIL,
-                        'message' => 'CSRF token mismatch'
-                    ],
-                    'code'  => 419,
-                    'message' => 'CSRF mismatch',
-                ], 419)
+                return $ctx->isApi()
+                ? Response::json(ResponseTemplates::errors([
+                    new Error(ErrorCodes::CSRF_FAIL, "CSRF token mismatch")
+                ], 419, "CSRF mismatch"), 419)
                 : Response::html('<h1>CSRF token mismatch</h1><p>Please reload the page and try again.</p>', 419);
                 
             $ctx->request->setAttribute(Constants::CSRF_ATTR, $csrf);

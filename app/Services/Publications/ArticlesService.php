@@ -3,24 +3,23 @@ declare(strict_types=1);
 
 namespace App\Services\Publications;
 
-use App\Repositories\Publications\BooksRepository;
+use App\Repositories\Publications\ArticlesRepository;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
 use App\Models\Queries\SortQuery;
-use App\Models\Queries\StatusQuery;
+use App\Models\Queries\TypeQuery;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
-use App\Models\Filters\ReadingStatusFilters;
 use App\Models\Enums\PublicationsSortBy;
-use App\Models\Enums\ReadingStatus;
+use App\Models\Enums\ArticleType;
 
 use App\Extensions\EnumExtensions;
 
-final class BooksService
+final class ArticlesService
 {
     public function __construct(
-        private readonly BooksRepository $booksRepo
+        private readonly ArticlesRepository $articlesRepo
     ){}
 
     public function getList(
@@ -28,11 +27,11 @@ final class BooksService
         string $search,
         PropertiesQuery $props,
         ?SortQuery $sort = null,
-        ?StatusQuery $status = null,
-        ?int $currentUserId = null,
         ?int $genreId = null,
         ?int $creatorId = null,
-        ?string $isbn = null
+        ?int $bookId = null,
+        ?string $doi = null,
+        ?TypeQuery $type = null
     ) : PaginatedList
     {
         $errors = [];
@@ -41,16 +40,13 @@ final class BooksService
         
         $sortEnum = $sort == null ? null : EnumExtensions::tryResolve(PublicationsSortBy::class, $sort->sortString());
         $sortEnum ??= PublicationsSortBy::Newest;
-        
-        $statusEnum = $status == null ? null : EnumExtensions::tryResolve(ReadingStatus::class, $status->status());
-        $statusEnum ??= ReadingStatus::None;
 
-        $statusFilter = is_int($currentUserId) ? new ReadingStatusFilters($currentUserId, $statusEnum) : null;
+        $typeEnum = $type == null ? null : EnumExtensions::tryResolve(ArticleType::class, $type->type());
 
         $page = $pageQ->page();
         $pageSize = $pageQ->pageSize();
 
-        $items = $this->booksRepo->getList(
+        $items = $this->articlesRepo->getList(
             $page, 
             $pageSize, 
             $search, 
@@ -58,8 +54,9 @@ final class BooksService
             $props->getProps(),
             $genreId, 
             $creatorId,
-            $isbn,
-            $statusFilter
+            $bookId,
+            $doi,
+            $typeEnum
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);

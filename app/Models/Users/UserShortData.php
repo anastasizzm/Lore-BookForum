@@ -17,14 +17,14 @@ readonly class UserShortData extends Dto
         public string  $avatar,
     ) {}
 
-    public static function fromRow(string $row, string $prefix = '') : self
+    public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(
             id: self::int($row, $prefix . 'id'),
-            name: self::str($row, $prefix, 'name'),
+            name: self::str($row, $prefix . 'name'),
             username: self::str($row, $prefix . 'username'),
             surname: self::str($row, $prefix . 'surname'),
-            avatar: self::str($row, $prefix, 'avatar'),
+            avatar: self::str($row, $prefix . 'avatar'),
         );
     }
 }

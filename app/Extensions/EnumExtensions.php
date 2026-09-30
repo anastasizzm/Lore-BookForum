@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 namespace App\Extensions;
 
+use UnitEnum;
+use ValueError;
+use ReflectionEnum;
+use BackedEnum;
+
 final class EnumExtensions
 {
     public static function tryResolve(string $enumClass, string $value): ?UnitEnum

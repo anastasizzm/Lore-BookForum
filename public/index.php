@@ -26,7 +26,9 @@ View::configure($container);
 
 $router = new Router($container);
 $routeLoader = require __DIR__ . '/../config/routes.php';
+$endpointsLoader = require __DIR__ . '/../config/endpoints.php';
 $routeLoader($router);
+$endpointsLoader($router);
 
 try {
     $request = Request::fromGlobals();
