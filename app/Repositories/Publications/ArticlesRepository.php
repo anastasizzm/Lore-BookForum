@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Publications;
 
-use App\Repositories\PublicationsRepository;
+use App\Repositories\Publications\PublicationsRepository;
 
 use PDO;
 use App\Lib\Data\Database;
@@ -12,7 +12,7 @@ use App\Models\Publications\Publication;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ArticleType;
 
-class ArticlesRepository extends PublicationsRepository
+final class ArticlesRepository extends PublicationsRepository
 {
     public function __construct(
         Database $db
@@ -28,13 +28,17 @@ class ArticlesRepository extends PublicationsRepository
         array $includeObjects,
         ?int $genreId = null,
         ?int $creatorId = null,
+        ?int $bookId = null,
+        ?string $doi = null,
         ?ArticleType $type = null
     ) : array
     {
         $whereClauses = [];
+        $joinClauses = [];
+        $selectClauses = [];
         $params = [];
         if (!empty($search)){
-            $where = 'p.title ILIKE :q';
+            $whereClauses[] = 'p.title ILIKE :q';
             $params[':q'] = '%' . $search . '%';
         }
         if ($genreId !== null){
@@ -47,8 +51,25 @@ class ArticlesRepository extends PublicationsRepository
             $params[':creatorId'] = $creatorId;
         }
 
-        $joinClauses = [];
-        $selectClauses = [];
+        if ($bookId !== null || $doi !== null || $type !== null){
+            $joinClauses[] = 'INNER JOIN articles a ON a.publication_id = p.id';
+        }
+
+        if ($bookId !== null){
+            $whereClauses[] = 'a.book_id = :bookId';
+            $params[':bookId'] = $bookId;
+        }
+
+        if (!empty($doi)){
+            $whereClauses[] = 'a.doi ILIKE :doi';
+            $params[':doi'] = $doi . '%';
+        }
+
+        if ($type !== null){
+            $whereClauses[] = 'a.type = :type';
+            $params[':type'] = $type->value;
+        }
+
         foreach($includeObjects as $prop){
             switch($prop){
                 case 'creator':

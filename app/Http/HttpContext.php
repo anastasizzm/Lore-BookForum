@@ -44,4 +44,9 @@ final readonly class HttpContext
     {
         return $this->request->getHeader($name, $default);
     }
+
+    public function isApi() : bool
+    {
+        return $this->request->isApi();
+    }
 }

@@ -38,7 +38,7 @@ final class BooksRepository extends PublicationsRepository
         $selectClauses = [];
         $params = [];
         if (!empty($search)){
-            $where = 'p.title ILIKE :q';
+            $whereClauses[] = 'p.title ILIKE :q';
             $params[':q'] = '%' . $search . '%';
         }
         if ($genreId !== null){

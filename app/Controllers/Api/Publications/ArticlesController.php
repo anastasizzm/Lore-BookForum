@@ -3,12 +3,12 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Publications;
 
-use App\Services\Publications\BooksService;
+use App\Services\Publications\ArticlesService;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
 use App\Models\Queries\SortQuery;
-use App\Models\Queries\StatusQuery;
+use App\Models\Queries\TypeQuery;
 
 use App\Controllers\Controller;
 
@@ -18,24 +18,20 @@ use App\ErrorCodes;
 
 use App\Constants;
 
-final class BooksController extends Controller
+final class ArticlesController extends Controller
 {
     public function __construct(
-        private readonly BooksService $booksService
+        private readonly ArticlesService $articlesService
     ){}
 
     public function list(HttpContext $context)
     {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
-
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromInput($context->request->query);
         $sortQ = SortQuery::fromInput($context->request->query);
-        $statusQ = StatusQuery::fromInput($context->request->query);
+        $typeQ = TypeQuery::fromInput($context->request->query);
         $searchQ = $context->query('q', '');
-        $isbnQ = $context->query('isbn', NULL);
+        $doi = $context->query('doi', NULL);
 
         $genreId = $context->query('genre', 0);
         if (!is_int($genreId) || $genreId == 0)
@@ -45,8 +41,12 @@ final class BooksController extends Controller
         if (!is_int($creatorId) || $creatorId == 0)
             $creatorId = NULL;
 
+        $bookId = $context->query('book', 0);
+        if (!is_int($bookId) || $bookId == 0)
+            $bookId = NULL;
+
         try{
-            $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $sortQ, $statusQ, $userId, $genreId, $creatorId,$isbnQ);
+            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $sortQ, $genreId, $creatorId, $bookId, $doi, $typeQ);
             return $this->jsonList($paginatedList->getArray(), [
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),

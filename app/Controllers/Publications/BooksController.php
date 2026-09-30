@@ -47,6 +47,7 @@ final class BooksController extends Controller
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'book'
                 ], 
                 'user' => $userContext
             ]);
