@@ -57,13 +57,4 @@ final class BooksController extends Controller
             return $this->jsonValidationErrors($e->errors());
         }
     }
-
-    public function setLike(HttpContext $context, int $bookId)
-    {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
-
-        
-    }
 }
