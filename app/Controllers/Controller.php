@@ -41,4 +41,9 @@ abstract class Controller
     {
         return Response::json(ResponseTemplates::object($obj, $meta));
     }
+
+    protected function jsonEmpty(int $statusCode = 200) : Response
+    {
+        return Response::json([], $statusCode);
+    }
 } 
