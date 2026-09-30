@@ -211,7 +211,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                 <!-- Форма ответа -->
                 <form class="comment-reply-form" data-reply-form hidden>
                   <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-                  <button type="submit" class="comment-reply-form__submit" disabled>Post</button>
+                  <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </button>
                 </form>
 
                 <div class="comment-replies" data-replies></div>

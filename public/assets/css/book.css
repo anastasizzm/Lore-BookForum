@@ -42,6 +42,8 @@
 
 /* Выравнивание кнопок строго под обложкой */
 .book-actions {
+  --book-btn-bg: #5E77A3;         /* основной цвет кнопок под обложкой */
+  --book-btn-bg-hover: #3F5A8A;   /* цвет при наведении (темнее) */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -56,6 +58,23 @@
   text-align: center;
   display: flex;
   justify-content: center;
+}
+
+.book-actions .btn--primary {
+  background: var(--book-btn-bg);
+  border-color: var(--book-btn-bg);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.book-actions .btn--primary:hover,
+.book-actions .btn--primary:focus-visible {
+  background: var(--book-btn-bg-hover);
+  border-color: var(--book-btn-bg-hover);
+}
+
+.book-actions .btn--primary:active {
+  transform: scale(0.98);
 }
 
 .btn-icon--circle {
@@ -78,12 +97,17 @@
   border-color: var(--color-primary, #1A3760);
 }
 
-/* Сохранённая книга: иконка остаётся видимой и при hover */
-.btn-icon--circle.is-active,
+/* Сохранённая книга: иконка остаётся видимой, hover заметен */
+.btn-icon--circle.is-active {
+  background: var(--book-btn-bg);
+  border-color: var(--book-btn-bg);
+  color: #fff;
+}
+
 .btn-icon--circle.is-active:hover,
 .btn-icon--circle.is-active:focus-visible {
-  background: var(--color-primary, #1A3760);
-  border-color: var(--color-primary, #1A3760);
+  background: var(--book-btn-bg-hover);
+  border-color: var(--book-btn-bg-hover);
   color: #fff;
 }
 
@@ -404,19 +428,26 @@
 }
 
 .comment-reply-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
   border: none;
   background: transparent;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-primary, #1A3760);
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  color: #C5CFE0;                 /* серая, пока ничего не введено */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease;
 }
 
-.comment-reply-form__submit:disabled {
-  opacity: 0.4;
-  cursor: default;
+.comment-reply-form__submit:not(:disabled) {
+  color: var(--color-primary, #1A3760);   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-reply-form__submit:not(:disabled):hover,
+.comment-reply-form__submit:not(:disabled):focus-visible {
+  transform: scale(1.12);
 }
 
 .comment-replies {
