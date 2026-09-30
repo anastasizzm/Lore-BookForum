@@ -51,5 +51,5 @@ return function(Router $router)
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
     $router->get('/users/{userId}', [App\Controllers\Users\UsersController::class, 'retrieve'], 'users.profile', AuthPolicy::Auth);
     $router->get('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'getEdit'], 'users.profile.edit', 'profile_owner');
-    $router->post('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'edit'], 'users.profile.edit.submit', 'profile_owner');
+    $router->put('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'edit'], 'users.profile.edit.submit', 'profile_owner');
 };
