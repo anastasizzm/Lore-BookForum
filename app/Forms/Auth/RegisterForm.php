@@ -15,7 +15,7 @@ final readonly class RegisterForm implements Form
         public string $password,
     ) {}
 
-    public static function fromArray(array $input): self
+    public static function fromInput(array $input): self
     {
         return new self(
             username: trim((string) ($input['username'] ?? '')),
@@ -26,30 +26,35 @@ final readonly class RegisterForm implements Form
         );
     }
 
-    public function validate(): array
+    public function validate(array &$errors): bool
     {
-        $errors = [];
+        $ok = true;
 
         if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $this->username)) {
             $errors['username'][] = 'Invalid username format';
+            $ok = false;
         }
 
         if (!filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
             $errors['email'][] = 'Invalid email format';
+            $ok = false;
         }
 
         if ($this->name === '') {
             $errors['name'][] = 'Name is required';
+            $ok = false;
         }
 
         if ($this->surname === '') {
             $errors['surname'][] = 'Surname is required';
+            $ok = false;
         }
 
         if (strlen($this->password) < 8) {
             $errors['password'][] = 'Password must be at least 8 characters';
+            $ok = false;
         }
 
-        return $errors;
+        return $ok;
     }
 }

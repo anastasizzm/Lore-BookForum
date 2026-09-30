@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Configuration;
 
 use App\Services\Configuration\UnitOfWork;
-use App\Lib\Database;
+use App\Lib\Data\Database;
 use Trowable;
 
 final class DatabaseUnitOfWork implements UnitOfWork

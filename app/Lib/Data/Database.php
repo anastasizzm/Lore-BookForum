@@ -1,9 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Lib;
+namespace App\Lib\Data;
 
 use PDO;
+use App\Lib\Settings;
 use RuntimeException;
 
 final class Database

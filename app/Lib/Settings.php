@@ -20,6 +20,13 @@ final class Settings
     // --- database ---
     public readonly string $dbUrl;
 
+    // --- redis ---
+    public readonly string $redisHost;
+    public readonly int    $redisPort;
+    public readonly string $redisPassword;
+    public readonly int    $redisDatabase;
+    public readonly int    $redisTtl;
+
     // --- jwt ---
     public readonly string $jwtSecret;
     public readonly string $jwtIssuer;
@@ -51,6 +58,15 @@ final class Settings
 
         // database
         $this->dbUrl = $data['database_url'];
+
+        // cache
+        $redis = $data['redis'] ?? [];
+
+        $this->redisHost     = $redis['host']     ?? 'redis';
+        $this->redisPort     = (int) ($redis['port']     ?? 6379);
+        $this->redisPassword = $redis['password'] ?? '';
+        $this->redisDatabase = (int) ($redis['database'] ?? 0);
+        $this->redisTtl      = (int) ($redis['ttl']      ?? 300);
 
         // jwt
         $this->jwtIssuer     = $data['jwt']['issuer'] ?? 'myapp';

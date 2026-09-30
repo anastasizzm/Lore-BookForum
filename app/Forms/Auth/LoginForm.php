@@ -12,7 +12,7 @@ final class LoginForm implements Form
         public string $password,
     ) {}
 
-    public static function fromArray(array $input): self
+    public static function fromInput(array $input): self
     {
         return new self(
             login:    mb_strtolower(trim((string) ($input['login'] ?? ''))),
@@ -20,18 +20,19 @@ final class LoginForm implements Form
         );
     }
 
-    public function validate(): array
+    public function validate(array &$errors): bool
     {
-        $errors = [];
-
+        $ok = true;
         if ($this->login === '') {
             $errors['login'][] = 'Login is required';
+            $ok = false;
         }
 
         if (strlen($this->password) == 0) {
             $errors['password'][] = 'Password cannot be empty';
+            $ok = false;
         }
 
-        return $errors;
+        return $ok;
     }
 }

@@ -26,6 +26,8 @@ use App\Forms\Auth\LoginForm;
 use App\Models\InnerMessageType;
 use App\Models\InnerMessage;
 
+use App\Services\Users\UsersService;
+
 final class AuthController extends Controller
 {
     public function __construct(
@@ -46,7 +48,7 @@ final class AuthController extends Controller
         $formData = $ctx->request->body();
 
         try{
-            $token = $this->service->register(RegisterForm::fromArray($formData));
+            $token = $this->service->register(RegisterForm::fromInput($formData));
             $response = $this->render('message', ['message' => 'Please confirm your email to have full access', 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Start Reading']);
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
@@ -59,7 +61,7 @@ final class AuthController extends Controller
         $formData = $ctx->request->body();
 
         try{
-            $token = $this->service->login(LoginForm::fromArray($formData));
+            $token = $this->service->login(LoginForm::fromInput($formData));
             $response = Response::redirect($this->url->url('home'));
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
@@ -68,6 +70,9 @@ final class AuthController extends Controller
         }
         catch(ForbiddenException $e){
             return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login'), 'actionTitle' => 'Understood']);
+        }
+        catch(ValidationException $e){
+            return $this->render('auth/login', ['form' => $formData, 'errors' => $e->errors()]);
         }
     }
 
