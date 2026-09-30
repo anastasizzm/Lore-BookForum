@@ -40,7 +40,7 @@ $comments = $comments ?? [
  */
 $readingStatus  = $book['readingStatus'] ?? $readingStatus ?? 'new';
 // DEV-предпросмотр: ?reading=in_progress или ?reading=finished
-$readingStatus = $_GET['reading'] ?? $readingStatus;
+//$readingStatus = $_GET['reading'] ?? $readingStatus;
 
 $readingButtons = [
     'new'         => ['label' => 'Start reading',  'modifier' => 'start'],
