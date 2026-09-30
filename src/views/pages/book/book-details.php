@@ -191,21 +191,30 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                 <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
                 
                 <div class="comment-card__footer">
-                  <button type="button" class="btn-icon-small" aria-label="Like">
-                    <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M7.5 13.1L6.45 12.06C2.6 8.56 0 6.36 0 3.5C0 1.4 1.65 0 3.75 0C4.95 0 6.15 0.55 6.825 1.45L7.5 2.2L8.175 1.45C8.85 0.55 10.05 0 11.25 0C13.35 0 15 1.4 15 3.5C15 6.36 12.4 8.56 8.55 12.06L7.5 13.1Z" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                  <button type="button" class="btn-icon-small btn-like" data-comment-like aria-pressed="false" aria-label="Like">
+                    <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
+                    <span data-comment-like-count><?= (int) ($comment['likes'] ?? 0) ?></span>
                   </button>
-                  
+
                   <div class="comment-card__meta">
                     <span><?= $view->e($comment['date']) ?></span>
-                    <button type="button" class="btn-icon-small" aria-label="Reply">
-                      <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
+                      <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
                     </button>
                   </div>
                 </div>
+
+                <!-- Форма ответа -->
+                <form class="comment-reply-form" data-reply-form hidden>
+                  <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
+                  <button type="submit" class="comment-reply-form__submit" disabled>Post</button>
+                </form>
+
+                <div class="comment-replies" data-replies></div>
               </div>
             </div>
           </div>
@@ -214,6 +223,17 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       </div>
     <?php endif; ?>
   </section>
+
+  <!-- Шаблон нового ответа (клонируется из book.js) -->
+  <template id="reply-template">
+    <div class="comment-reply">
+      <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
+      <div class="comment-reply__content">
+        <div class="comment-reply__author">sername</div>
+        <div class="comment-reply__text"></div>
+      </div>
+    </div>
+  </template>
 
 <?php $view->endBlock('content'); ?>
 

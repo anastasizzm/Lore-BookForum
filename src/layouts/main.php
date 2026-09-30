@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <?php $view->include('head'); ?>
+<script src="/assets/js/card-feed.js" defer></script>
 <body>
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>

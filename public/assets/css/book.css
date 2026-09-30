@@ -78,6 +78,19 @@
   border-color: var(--color-primary, #1A3760);
 }
 
+/* Сохранённая книга: иконка остаётся видимой и при hover */
+.btn-icon--circle.is-active,
+.btn-icon--circle.is-active:hover,
+.btn-icon--circle.is-active:focus-visible {
+  background: var(--color-primary, #1A3760);
+  border-color: var(--color-primary, #1A3760);
+  color: #fff;
+}
+
+.btn-icon--circle.is-active svg path {
+  fill: currentColor;
+}
+
 .btn--pill {
   border-radius: 9999px;
   padding: 10px 24px;
@@ -337,6 +350,109 @@
 
 .btn-icon-small:hover {
   color: var(--color-primary, #1A3760);
+}
+
+/* ---------------- like + reply ---------------- */
+
+.btn-like {
+  gap: 6px;
+  font-size: var(--fs-small, 14px);
+}
+
+.btn-like svg {
+  flex-shrink: 0;
+  transition: fill 0.2s ease;
+}
+
+.btn-like.is-liked,
+.btn-like.is-liked:hover {
+  color: #EF4444;
+}
+
+.btn-like.is-liked svg {
+  fill: #EF4444;
+}
+
+.comment-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  background: var(--color-bg-subtle, #F3F6FB);
+}
+
+.comment-reply-form[hidden] {
+  display: none;
+}
+
+.comment-reply-form__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text, #1A3760);
+  padding: 8px 0;
+}
+
+.comment-reply-form__input::placeholder {
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.comment-reply-form__submit {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #1A3760);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.comment-reply-form__submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comment-replies:not(:empty) {
+  margin-top: 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-border, #E2E8F0);
+}
+
+.comment-reply {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.comment-reply__content {
+  min-width: 0;
+}
+
+.comment-reply__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #1A3760);
+  margin-bottom: 4px;
+}
+
+.comment-reply__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, #1A3760);
+  overflow-wrap: anywhere;
 }
 
 /* ---------------- mobile ---------------- */

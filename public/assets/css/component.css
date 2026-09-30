@@ -359,6 +359,64 @@ body {
   color: var(--color-text-muted);
 }
 
+.action-btn svg {
+  flex-shrink: 0;
+  transition: fill 0.2s ease;
+}
+
+/* Лайк поставлен */
+.action-btn.is-liked {
+  color: #EF4444;
+}
+.action-btn.is-liked svg {
+  fill: #EF4444;
+}
+
+/* Поле комментария */
+.comment-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.comment-form[hidden] {
+  display: none;
+}
+
+.comment-form__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  padding: var(--space-2) 0;
+}
+
+.comment-form__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.comment-form__submit {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary, #5876A6);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  transition: opacity 0.15s ease;
+}
+
+.comment-form__submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* 
   Стили для кнопок лайков и комментов внутри карточки 
 */
