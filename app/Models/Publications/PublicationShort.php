@@ -20,7 +20,7 @@ readonly class PublicationShort extends BasicModel
         parent::__construct($id, $title);
     }
 
-    public static function fromRow(string $row, string $prefix = '') : self 
+    public static function fromRow(array $row, string $prefix = '') : self 
     {
         $parent = parent::fromRow($row, $prefix);
         return new self(
