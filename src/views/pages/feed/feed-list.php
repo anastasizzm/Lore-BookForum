@@ -7,6 +7,35 @@
 <?php $view->startBlock('content'); ?>
 
 <?php
+// DEV: тестовые данные для предпросмотра, открывать с &preview=1
+if (isset($_GET['preview'])) {
+    $items = [
+        (object) [
+            'creator' => (object) [
+                'name' => 'Иван', 'surname' => 'Иванов',
+                'username' => 'ivan', 'avatar' => null,
+            ],
+            'publication' => (object) [
+                'cover' => '', 'title' => 'Тестовая книга', 'author' => 'Автор Авторов',
+            ],
+            'content'   => 'Пример поста с привязанной книгой, чтобы посмотреть карточку.',
+            'createdAt' => new DateTimeImmutable('2026-09-30'),
+        ],
+        (object) [
+            'creator' => (object) [
+                'name' => 'Анна', 'surname' => 'Петрова',
+                'username' => 'anna', 'avatar' => null,
+            ],
+            'publication' => null, // пост без книги
+            'content'   => 'Комментарий без книги. Длинный текст для проверки переноса строк: lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.',
+            'createdAt' => new DateTimeImmutable('2026-09-29'),
+        ],
+    ];
+    $meta = ['hasNext' => false];
+}
+?>
+
+<?php
 // Поиск
 ob_start();
 $view->include('input', [
