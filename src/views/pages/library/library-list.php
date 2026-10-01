@@ -1,12 +1,12 @@
 <?php
 $view->extends('main');
 
-// Определяем раздел по meta.type (надёжнее, чем URL)
-// BooksController → 'book', ArticlesController → 'article'
+$items = $items ?? [];
+
+// Определяем раздел по meta.type
 $type       = $meta['type'] ?? null;
 $isArticles = $type === 'article';
 
-// Если тип не пришёл (например, страница упала в catch) — резервный вариант через URL
 if ($type === null) {
     $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
     $isArticles  = str_starts_with($currentPath, '/articles');
@@ -18,11 +18,10 @@ $emptyText  = $isArticles ? 'No articles yet.' : 'No books yet.';
 $searchHint = $isArticles ? 'Search articles'  : 'Search books';
 
 $view->setBlock('selectedTab', $tabKey);
-$view->startBlock('title'); ?><?= $view->e($pageTitle) ?> — Book App<?php $view->endBlock('title');
+$view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - Book App<?php $view->endBlock('title');
 
 $view->startBlock('content');
 
-// Поиск + кнопка фильтра
 ob_start();
 $view->include('input', [
     'type'        => 'search',
@@ -35,7 +34,7 @@ $view->include('input', [
         class="btn-icon filter-toggle"
         data-filter-toggle
         aria-label="Filters">
-  <span>☰</span>
+  <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
@@ -45,35 +44,15 @@ $view->include('page-header', [
     'actions' => $pageActions,
 ]);
 
-$view->include('library-filters');
-?>
+$view->include('library-filters', ['filterState' => $filterState ?? 'closed']);
 
-<?php
-// TODO: заменить на данные из контроллера ($books, $currentSort, $sortOptions, $totalCount)
-// Пока — заглушки для проверки вёрстки
-
-$books = $books ?? [];
-if (empty($books)) {
-    for ($i = 1; $i <= 24; $i++) {
-        $books[] = [
-            'id'     => $i,
-            'cover'  => 'https://placehold.co/160x224',
-            'title'  => 'Name of book ' . $i,
-            'author' => 'Author',
-        ];
-    }
-}
-
-$books_count = $totalCount ?? count($books);
-
-// TODO: заменить на $sortOptions из контроллера
+// Sort options (контроллер пока не передаёт — статика)
 $sort_options = $sortOptions ?? [
     'popularity' => 'Popularity',
     'newest'     => 'Newest',
-    'title'      => 'A → Z',
+    'title'      => 'A to Z',
 ];
 
-// TODO: заменить на $currentSort из контроллера
 $current_sort  = $currentSort ?? 'popularity';
 $current_label = $sort_options[$current_sort] ?? 'Popularity';
 
@@ -88,7 +67,6 @@ foreach ($sort_options as $key => $text) {
 
 <section class="books-panel">
 
-  <!-- CSRF-токен для fetch-запросов (save) -->
   <div hidden data-csrf><?= $view->csrfField() ?></div>
 
   <header class="books-panel__head">
@@ -117,7 +95,7 @@ foreach ($sort_options as $key => $text) {
       <div>
         <h2 class="books-panel__title"><?= $view->e($pageTitle) ?></h2>
         <p class="books-panel__meta">
-          <?= $view->e($books_count) ?> items · Updated today
+          <?= $view->e(count($items)) ?> items
         </p>
       </div>
     </div>
@@ -154,6 +132,7 @@ foreach ($sort_options as $key => $text) {
               'title'    => $item->title,
               'authorId' => $creator?->id ?? 0,
               'author'   => $authorName,
+              'saved'    => false,
           ]);
         ?>
       <?php endforeach; ?>

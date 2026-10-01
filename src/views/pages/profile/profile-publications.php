@@ -1,6 +1,17 @@
 <?php $view->extends('main'); ?>
 
 <?php
+// Fallback: если $userData не передан (открытие через /pages/test)
+if (!isset($userData) || !is_object($userData)) {
+    $userId = (int)($_GET['userId'] ?? 1);
+    $userData = (object)[
+        'id'       => $userId,
+        'name'     => '',
+        'surname'  => '',
+        'username' => 'user' . $userId,
+    ];
+}
+
 $view->setBlock('selectedTab', 'profile');
 
 $displayName = trim(($userData->name ?? '') . ' ' . ($userData->surname ?? ''));
@@ -8,8 +19,12 @@ if ($displayName === '') $displayName = $userData->username;
 
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
-$typeFilter  = $q['type']  ?? 'book';   // по умолчанию — книги
+$typeFilter  = $q['type']  ?? 'book';
 $genreFilter = $q['genre'] ?? null;
+$searchQuery = $q['q']     ?? '';
+
+// Флаг открытия/закрытия панели фильтров
+$filter_open = ($q['f'] ?? 'closed') === 'open';
 
 $buildUrl = function (array $params) use ($currentPath, $q) {
     $merged = array_merge($q, $params);
@@ -35,12 +50,18 @@ $postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" r
 
 <?php
 ob_start();
+$view->include('input', [
+    'type'        => 'search',
+    'name'        => 'q',
+    'placeholder' => 'Search',
+    'value'       => $searchQuery,
+]);
 ?>
 <button type="button"
-        class="btn-icon filter-toggle"
+        class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
         data-filter-toggle
         aria-label="Filters">
-  <span>☰</span>
+  <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
@@ -86,7 +107,10 @@ $filter_rows = [
     ],
 ];
 
-$view->include('filter-panel', ['filter_rows' => $filter_rows]);
+$view->include('filter-panel', [
+    'filter_rows' => $filter_rows,
+    'filter_open' => $filter_open,
+]);
 ?>
 
 <section class="books-panel">
@@ -125,7 +149,8 @@ $view->include('filter-panel', ['filter_rows' => $filter_rows]);
        data-publications-page
        data-publications-page-user-id="<?= (int)$userData->id ?>"
        data-publications-page-type="<?= $view->e($typeFilter) ?>"
-       data-publications-page-genre="<?= $view->e($genreFilter ?? '') ?>">
+       data-publications-page-genre="<?= $view->e($genreFilter ?? '') ?>"
+       data-publications-page-search="<?= $view->e($searchQuery) ?>">
     <p class="empty-state__text">Loading...</p>
   </div>
 

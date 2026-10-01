@@ -30,12 +30,15 @@
   var PLACEHOLDER = '/img/book-placeholder.svg';
 
   async function fetchAll(userId) {
+    var include = 'creator';
+
     var responses = await Promise.all([
-      fetch('/api/books?creator=' + encodeURIComponent(userId), {
+      fetch('/api/books?creator=' + encodeURIComponent(userId) + '&include=' + include, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
-      fetch('/api/articles?creator=' + encodeURIComponent(userId), {
+
+      fetch('/api/articles?creator=' + encodeURIComponent(userId) + '&include=' + include, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
@@ -45,11 +48,13 @@
     var articles = extractItems(responses[1]).map(function (i) { return { item: i, type: 'article' }; });
 
     var all = books.concat(articles);
+
     all.sort(function (a, b) {
       var da = a.item.createdAt && a.item.createdAt.date ? a.item.createdAt.date : '';
       var db = b.item.createdAt && b.item.createdAt.date ? b.item.createdAt.date : '';
       return db.localeCompare(da);
     });
+
     return all;
   }
 
@@ -103,13 +108,14 @@
       return renderItem(entry.item, entry.type);
     }).join('');
 
-    if (all.length > limit && moreUrl) {
-      var more = document.createElement('a');
-      more.className = 'profile-publications__more';
-      more.href = moreUrl;
-      more.textContent = 'See all publications';
-      el.appendChild(more);
-    }
+        // TODO: раскомментировать, когда появится роут /users/{id}/publications
+    // if (all.length > limit && moreUrl) {
+    //   var more = document.createElement('a');
+    //   more.className = 'profile-publications__more';
+    //   more.href = moreUrl;
+    //   more.textContent = 'See all publications';
+    //   el.appendChild(more);
+    // }
   }
 
   document.addEventListener('DOMContentLoaded', function () {

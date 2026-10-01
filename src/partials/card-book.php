@@ -1,16 +1,7 @@
 <?php
 /**
- * card-book — вертикальная карточка книги.
- *
- * Ожидает:
- *   $id       — ID книги
- *   $cover    — URL обложки (может быть пустым)
- *   $title    — название книги
- *   $authorId — ID автора (user_id)
- *   $author   — имя автора
- *   $saved    — сохранена ли книга текущим пользователем (bool)
+ * card-book - vertical book card.
  */
-
 $id       = (int)($id       ?? 0);
 $cover    = (string)($cover    ?? '');
 $title    = (string)($title    ?? '');
@@ -18,14 +9,11 @@ $authorId = (int)($authorId ?? 0);
 $author   = (string)($author   ?? '');
 $saved    = (bool)($saved    ?? false);
 
-// Заглушка, если обложки нет
 $coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
 
-// TODO: роут на отдельную книгу бэк ещё не добавил.
-// Когда появится (например, /books/{id}) — заменить на него.
+// TODO: route for single book is not added yet
 $bookUrl = '#';
 
-// Профиль автора — реальный роут из routes.php
 $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
 ?>
 <article class="card-base card-book">
@@ -35,7 +23,6 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
          alt="<?= $view->e($title) ?>"
          loading="lazy">
 
-    <!-- Закладка: POST/DELETE /api/books/{id}/save (обработчик в app.js) -->
     <button type="button"
             class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
             data-save-book
@@ -51,7 +38,7 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
   <h3 class="card-book__title">
     <a class="card-book__link"
        href="<?= $view->e($bookUrl) ?>"
-       aria-label="Открыть страницу книги «<?= $view->e($title) ?>»">
+       aria-label="Open book: <?= $view->e($title) ?>">
       <?= $view->e($title) ?>
     </a>
   </h3>
@@ -60,7 +47,7 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
     <p class="card-book__author">
       <a class="card-book__author-link"
          href="<?= $view->e($authorUrl) ?>"
-         aria-label="Открыть профиль автора <?= $view->e($author) ?>">
+         aria-label="Open author profile: <?= $view->e($author) ?>">
         <?= $view->e($author) ?>
       </a>
     </p>

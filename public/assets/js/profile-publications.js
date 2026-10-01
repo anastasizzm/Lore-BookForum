@@ -31,7 +31,10 @@
 
   async function fetchByType(type, userId, genre) {
     var endpoint = type === 'article' ? '/api/articles' : '/api/books';
-    var params = new URLSearchParams({ creator: userId });
+    var params = new URLSearchParams({
+      creator: userId,
+      include: 'creator',
+    });
     if (genre) params.set('genre', genre);
 
     var res = await fetch(endpoint + '?' + params.toString(), {
