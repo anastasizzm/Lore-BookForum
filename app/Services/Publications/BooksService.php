@@ -17,10 +17,13 @@ use App\Models\Enums\ReadingStatus;
 
 use App\Extensions\EnumExtensions;
 
+use App\Exceptions\Translators\BookExceptionTranslator;
+
 final class BooksService
 {
     public function __construct(
-        private readonly BooksRepository $booksRepo
+        private readonly BooksRepository $booksRepo,
+        private readonly BookExceptionTranslator $translator
     ){}
 
     public function getList(
@@ -63,5 +66,27 @@ final class BooksService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function save(int $userId, int $bookId) : void
+    {
+        try{
+            $this->articlesRepo->save($userId, $bookId);
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function deleteSave(int $userId, int $bookId) : void
+    {
+        try{
+            $this->articlesRepo->deleteSave($userId, $bookId);
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->translator->translate($e);
+        }
     }
 }

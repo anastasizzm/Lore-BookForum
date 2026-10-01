@@ -16,10 +16,13 @@ use App\Models\Enums\ArticleType;
 
 use App\Extensions\EnumExtensions;
 
+use App\Exceptions\Translators\ArticleExceptionTranslator;
+
 final class ArticlesService
 {
     public function __construct(
-        private readonly ArticlesRepository $articlesRepo
+        private readonly ArticlesRepository $articlesRepo,
+        private readonly ArticleExceptionTranslator $translator
     ){}
 
     public function getList(
@@ -60,5 +63,25 @@ final class ArticlesService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function save(int $userId, int $articleId) : void
+    {
+        try{
+            $this->articlesRepo->save($userId, $articleId);
+        }
+        catch(\PDOException $e){
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function deleteSave(int $userId, int $articleId) : void
+    {
+        try{
+            $this->articlesRepo->deleteSave($userId, $articleId);
+        }
+        catch(\PDOException $e){
+            throw $this->translator->translate($e);
+        }
     }
 }

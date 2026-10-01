@@ -14,4 +14,22 @@ abstract class PublicationsRepository extends Repository
     ){
         parent::__construct($db);
     }
+
+    public function save(int $userId, int $publicationId) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'INSERT INTO saved_publications (user_id, publication_id)
+            VALUES (:userId, :publicationId)'
+        );
+
+        $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
+    }
+
+    public function deleteSave(int $userId, int $publicationId) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'DELETE FROM saved_publications WHERE user_id = :userId AND publication_id = :publicationId'
+        );
+        $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
+    }
 }

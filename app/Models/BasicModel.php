@@ -12,11 +12,11 @@ readonly class BasicModel extends Dto
         public string $title,
     ){}
 
-    public static function fromRow(string $row, string $prefix = '') : self 
+    public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(
             id: self::int($row, $prefix . 'id'),
-            title: self::str($row, $pregix . 'title')
+            title: self::str($row, $prefix . 'title')
         );
     }
 }
