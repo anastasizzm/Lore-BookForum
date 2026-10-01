@@ -24,7 +24,7 @@ abstract class Controller
 
     protected function jsonErrors(array $errors, int $statusCode, string $message) : Response
     {
-        return Response::json(ResponseTemplates::errors($errors, $statusCode, $message));
+        return Response::json(ResponseTemplates::errors($errors, $statusCode, $message), $statusCode);
     }
 
     protected function jsonValidationErrors(array $errors) : Response
@@ -32,14 +32,14 @@ abstract class Controller
         return $this->jsonErrors($errors, 422, "Can't process the input data");
     }    
 
-    protected function jsonList(array $items, array $meta = []) : Response
+    protected function jsonList(array $items, array $meta = [], int $statusCode = 200) : Response
     {
-        return Response::json(ResponseTemplates::list($items, $meta));
+        return Response::json(ResponseTemplates::list($items, $meta), $statusCode);
     }
 
-    protected function jsonObject(object $obj, array $meta = []) : Response
+    protected function jsonObject(object $obj, array $meta = [], int $statusCode = 200) : Response
     {
-        return Response::json(ResponseTemplates::object($obj, $meta));
+        return Response::json(ResponseTemplates::object($obj, $meta), $statusCode);
     }
 
     protected function jsonEmpty(int $statusCode = 200) : Response

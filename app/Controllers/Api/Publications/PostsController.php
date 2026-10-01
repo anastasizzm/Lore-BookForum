@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Publications;
 
-use App\Services\Publications\BooksService;
+use App\Services\Publications\PostsService;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
@@ -83,6 +83,39 @@ final class PostsController extends Controller
 
         try{
             $this->postsService->removeLike($postId, $userId);
+            return $this->jsonEmpty(204);
+        }
+        catch(ValidationException $e){
+            $this->jsonValidationErrors($e->errors());
+        }
+    }
+
+    public function addComment(HttpContext $context, string $postId = '')
+    {
+        if (!empty($postId)) $postId = (int)$postId;
+        else $postId = NULL;
+
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+
+        $formData = PostForm::fromInput($context->request->body());
+        try
+        {
+            $id = $this->postsService->addComment($userId, $formData, $postId);
+            return $this->jsonObject(['createdId' => $id], statusCode: 201);
+        }
+        catch(ValidationException $e){
+            $this->jsonValidationErrors($e->errors());
+        }
+    }
+
+    public function removeComment(HttpContext $context, string $postId)
+    {
+        $postId = (int)$postId;
+        try
+        {
+            $id = $this->postsService->removeComment($postId);
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){

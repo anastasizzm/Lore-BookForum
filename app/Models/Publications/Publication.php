@@ -21,7 +21,7 @@ readonly class Publication extends PublicationShort
         public ?BasicModel $genre,
         public ?UserShortData $creator
     ){
-        parent::__construct($id, $title, $createdAt);
+        parent::__construct($id, $title, $iconId, $createdAt);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -29,16 +29,16 @@ readonly class Publication extends PublicationShort
         $u = UserShortData::ROW_PREFIX;
         $g = 'g_';
 
-        $parent = self::fromRow($row, $prefix);
+        $parent = parent::fromRow($row, $prefix);
         return new self(
             id: $parent->id,
             title: $parent->title,
             iconId: $parent->icon_id,
             createdAt: $parent->created_at,
-            creatorId: self::int($row, $prefix, 'creator_id'),
-            genreId: self::int($row, $prefix, 'genre_id'),
-            commentsCount: self::int($row, $prefix, 'comments_count'),
-            rating: self::int($row, $prefix, 'rating_avg'),
+            creatorId: self::int($row, $prefix . 'creator_id'),
+            genreId: self::int($row, $prefix . 'genre_id'),
+            commentsCount: self::int($row, $prefix . 'comments_count'),
+            rating: self::int($row, $prefix . 'rating_avg'),
             creator: self::hasGroup($row, $prefix . $u, 'id')
                 ? UserShortData::fromRow($row, $prefix . $u) : NULL,
             genre: self::hasGroup($row, $prefix . $g, 'id')

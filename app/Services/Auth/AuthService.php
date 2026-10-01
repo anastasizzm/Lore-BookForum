@@ -92,8 +92,8 @@ final class AuthService
     }
 
     private const UNIQUE_CONSTRAINTS = [
-        'users_username_unique' => 'username',
-        'users_email_unique'    => 'email',
+        'uq_users_username_lower' => 'username',
+        'uq_users_email_lower'    => 'email',
     ];
 
     private const UNIQUE_MESSAGES = [
