@@ -4,31 +4,35 @@
  * Параметры передаются через $view->include('card-feed', [...])
  *
  * Ожидает:
- *   $withBook     — true/false, показывать ли блок книги
- *   $bookCover    — обложка книги
- *   $bookTitle    — название книги
- *   $userInitials — инициалы
- *   $userAvatar   — URL аватара (опционально)
- *   $userName     — имя пользователя
- *   $text         — текст поста/коммента
- *   $likes        — число лайков
- *   $comments     — число комментариев
- *   $date         — дата строкой
+ *   $postId        — id поста (comments.id), на него отправляется ответ
+ *   $publicationId — id публикации поста (нужен бэкенду для валидации)
+ *   $withBook      — true/false, показывать ли блок книги
+ *   $bookCover     — обложка книги
+ *   $bookTitle     — название книги
+ *   $userInitials  — инициалы
+ *   $userAvatar    — URL аватара (опционально)
+ *   $userName      — имя пользователя
+ *   $text          — текст поста/коммента
+ *   $likes         — число лайков
+ *   $comments      — число комментариев
+ *   $date          — дата строкой
  */
 
 // Безопасные значения по умолчанию
-$withBook     = $withBook     ?? false;
-$bookCover    = $bookCover    ?? '';
-$bookTitle    = $bookTitle    ?? '';
-$userInitials = $userInitials ?? '';
-$userAvatar   = $userAvatar   ?? null;
-$userName     = $userName     ?? '';
-$text         = $text         ?? '';
-$likes        = $likes        ?? 0;
-$comments     = $comments     ?? 0;
-$date         = $date         ?? '';
+$postId        = (int) ($postId        ?? 0);
+$publicationId = (int) ($publicationId ?? 0);
+$withBook      = $withBook     ?? false;
+$bookCover     = $bookCover    ?? '';
+$bookTitle     = $bookTitle    ?? '';
+$userInitials  = $userInitials ?? '';
+$userAvatar    = $userAvatar   ?? null;
+$userName      = $userName     ?? '';
+$text          = $text         ?? '';
+$likes         = $likes        ?? 0;
+$comments      = $comments     ?? 0;
+$date          = $date         ?? '';
 ?>
-<article class="card-base card-feed">
+<article class="card-base card-feed" data-post-id="<?= $postId ?>">
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
@@ -70,9 +74,23 @@ $date         = $date         ?? '';
     <span class="card-feed__date"><?= $view->e($date) ?></span>
 </footer>
 
-<form class="comment-form" data-comment-form hidden>
-    <input type="text" class="comment-form__input" placeholder="Add a comment…" maxlength="500" autocomplete="off">
+<!--
+  Ответ на пост: POST /api/posts/{postId}, application/x-www-form-urlencoded
+    поля: content, publicationId, csrf-поле
+    успех: 201 {"createdId": N}
+    ошибка: не-201, JSON с errors / message
+  Отправку делает card-feed.js (fetch).
+-->
+<form class="comment-form" action="/api/posts/<?= $postId ?>" method="POST"
+      data-feed-comment-form data-post-id="<?= $postId ?>" novalidate hidden>
+    <?= $view->csrfField() ?>
+    <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
+    <input type="text" class="comment-form__input" name="content" placeholder="Add a comment…" maxlength="500" autocomplete="off">
     <button type="submit" class="comment-form__submit" disabled>Post</button>
+    <p data-comment-error role="alert" hidden
+       style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
+    <p data-comment-status role="status" hidden
+       style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>
 </form>
   </div>
 </article>

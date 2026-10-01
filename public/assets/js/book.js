@@ -94,7 +94,7 @@
       if (countEl) {
         countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) + (liked ? 1 : -1));
       }
-      // TODO: отправить лайк на сервер
+      // TODO: отправить лайк на сервер (POST/DELETE /api/posts/{postId}/like)
       return;
     }
 
@@ -140,6 +140,97 @@
     form.querySelector('.comment-reply-form__submit').disabled = true;
     form.hidden = true;
     content.querySelector('[data-reply-toggle]').setAttribute('aria-expanded', 'false');
-    // TODO: отправить ответ на сервер
+    // TODO: отправить ответ на сервер (POST /api/posts/{postId})
   });
+
+  // ===== Отправка нового комментария: POST /api/posts =====
+  // Контракт: urlencoded (content, publicationId, csrf-поле)
+  //   успех: 201 {"createdId": N}
+  //   ошибка: не-201, JSON с errors / message
+  var commentForm = document.querySelector('[data-comment-form]');
+  if (commentForm) {
+    var cInput  = commentForm.querySelector('input[name="content"]');
+    var cError  = commentForm.querySelector('[data-comment-error]');
+    var cStatus = commentForm.querySelector('[data-comment-status]');
+    var COMMENT_MAX = 2000;
+    var sending = false;
+
+    var setMsg = function (el, text) {
+      el.textContent = text;
+      el.hidden = text === '';
+    };
+
+    var resetMsgs = function () {
+      setMsg(cError, '');
+      setMsg(cStatus, '');
+      cInput.setAttribute('aria-invalid', 'false');
+    };
+
+    var fail = function (msg) {
+      setMsg(cError, msg);
+      cInput.setAttribute('aria-invalid', 'true');
+    };
+
+    cInput.addEventListener('input', resetMsgs);
+
+    commentForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (sending) return;
+      resetMsgs();
+
+      var text = cInput.value.trim();
+      if (text === '') return fail('Comment cannot be empty');
+      if (text.length > COMMENT_MAX) return fail('Max length is ' + COMMENT_MAX + ' characters');
+      if (!Number(commentForm.elements.publicationId.value)) return fail('publicationId is missing');
+
+      var body = new URLSearchParams(new FormData(commentForm));
+      body.set('content', text);
+
+      sending = true;
+      cInput.disabled = true;
+
+      try {
+        var res = await fetch(commentForm.action, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          body: body
+        });
+
+        var data = null;
+        try { data = await res.json(); } catch (_) { /* не JSON */ }
+        console.log('POST', commentForm.action, res.status, data); // для отладки бэка
+
+        if (res.status === 201) {
+          setMsg(cStatus, 'Comment sent' + (data && data.createdId ? ' (id ' + data.createdId + ')' : ''));
+          cInput.value = '';
+
+          var counter = document.querySelector('[data-comments-count]');
+          if (counter) counter.textContent = (parseInt(counter.textContent, 10) || 0) + 1;
+
+          // Хук для будущей вставки карточки в список
+          commentForm.dispatchEvent(new CustomEvent('comment:created', {
+            bubbles: true,
+            detail: { id: data && data.createdId, content: text }
+          }));
+        } else {
+          var msg = '';
+          if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
+          if (!msg && data && data.message) msg = data.message;
+          if (!msg) {
+            msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
+                : res.status === 401 ? 'Please sign in again'
+                : 'Failed to send comment (HTTP ' + res.status + ')';
+          }
+          fail(msg);
+        }
+      } catch (err) {
+        fail('Network error. Try again.');
+      } finally {
+        sending = false;
+        cInput.disabled = false;
+        cInput.focus();
+      }
+    });
+  }
 })();

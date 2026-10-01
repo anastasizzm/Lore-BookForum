@@ -1,11 +1,12 @@
 <?php
 /**
  * Ожидаемые переменные от контроллера:
- *   $book      — ['cover','title','author','createdAt','genre','category','series',
+ *   $book      — ['publicationId','cover','title','author','createdAt','genre','category','series',
  *                 'rating' (float 0-5), 'savesCount', 'annotation', 'authorNote', 'tableOfContents']
  *   $comments  — массив постов (те же поля, что в feed-list.php)
  */
 $book = $book ?? [
+    'publicationId'   => 0,
     'cover'           => 'https://placehold.co/400x560?text=Cover',
     'title'           => 'Full name of book',
     'author'          => 'Name Surname',
@@ -31,6 +32,16 @@ $comments = $comments ?? [
         'comments'     => 0,
     ],
 ];
+
+/**
+ * id публикации для формы комментария.
+ * Берётся из контроллера ($book['publicationId']).
+ * DEV: пока нет контроллера страницы, можно передать ?pub=<id> в адресе.
+ */
+$publicationId = (int) ($book['publicationId'] ?? 0);
+if ($publicationId === 0) {
+    $publicationId = (int) ($_GET['pub'] ?? 0);
+}
 
 /**
  * Статус чтения текущего пользователя (передаёт контроллер):
@@ -178,22 +189,31 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
   <!-- Блок комментариев -->
   <section class="comments-section">
     <h2 class="comments-section__title">
-      Comments: <?= (int) ($totalComments ?? count($comments)) ?>
+      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments)) ?></span>
     </h2>
 
-    <!-- Форма написания комментария (стилизована как карточка) -->
-    <form class="comment-card" action="#" method="POST">
+    <!--
+      Форма написания комментария (стилизована как карточка).
+      Контракт: POST /api/posts, application/x-www-form-urlencoded
+        поля: content, publicationId, csrf-поле
+        успех: 201 {"createdId": N}
+        ошибка: не-201, JSON с errors / message
+      Отправку делает book.js (fetch).
+    -->
+    <form class="comment-card" action="/api/posts" method="POST" data-comment-form novalidate>
       <?= $view->csrfField() ?>
+      <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
       <div class="comment-card__inner">
         <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
         <div class="comment-card__content">
           <div class="comment-card__author">sername</div>
-          <input class="comment-card__input" type="text" name="text"
-                 value="<?= $view->e($form['text'] ?? '') ?>"
+          <input class="comment-card__input" type="text" name="content"
+                 maxlength="2000" autocomplete="off"
                  placeholder="Input comments...">
-          <?php foreach (($errors['text'] ?? []) as $err): ?>
-            <p class="form-field__error" style="color: red; margin-top: 8px; font-size: 14px;"><?= $view->e($err) ?></p>
-          <?php endforeach; ?>
+          <p class="form-field__error" data-comment-error role="alert" hidden
+             style="color: red; margin-top: 8px; font-size: 14px;"></p>
+          <p data-comment-status role="status" hidden
+             style="color: green; margin-top: 8px; font-size: 14px;"></p>
         </div>
       </div>
     </form>
