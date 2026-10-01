@@ -704,6 +704,10 @@ textarea.form-field__input {
   display: none;
   box-shadow: var(--shadow-card);
   z-index: 30;
+
+  /* Новое: ограничение высоты и скролл */
+  max-height: 220px;      /* ~5 пунктов, посчитай под свой размер */
+  overflow-y: auto;
 }
 
 .dropdown.is-open .dropdown__menu {
@@ -726,6 +730,24 @@ textarea.form-field__input {
   background: var(--color-overlay);
   color: var(--color-text);
   font-weight: var(--fw-medium);
+}
+
+/* Кастомный скроллбар для меню дропдауна */
+.dropdown__menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown__menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
 }
 
 /* ============================================

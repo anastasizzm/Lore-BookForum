@@ -111,3 +111,119 @@ document.querySelectorAll('[data-filter-reset]').forEach(btn => {
     }
   });
 });
+
+
+/* ============================================
+   LIBRARY FILTERS — динамические дропдауны (жанры)
+   ============================================ */
+
+(function () {
+  'use strict';
+
+  let genresCache = null;
+
+  async function fetchGenres() {
+    if (genresCache) return genresCache;
+
+    const res = await fetch('/api/additional/genres', {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin',
+    });
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const data = await res.json();
+    const list = Array.isArray(data)
+      ? data
+      : (Array.isArray(data.items) ? data.items : []);
+
+    genresCache = list;
+    return list;
+  }
+
+  async function populateGenres(dropdown) {
+    const menu = dropdown.querySelector('.dropdown__menu');
+    if (!menu) return;
+
+    menu.innerHTML = '<li class="dropdown__loading">Загрузка…</li>';
+
+    try {
+      const genres = await fetchGenres();
+
+      if (genres.length === 0) {
+        menu.innerHTML = '<li class="dropdown__empty">Жанров нет</li>';
+        return;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const currentGenre = params.get('genre');
+
+      // Если жанр не выбран в URL — активен "Все жанры"
+      const isAllActive = !currentGenre;
+
+      const items = [
+        {
+          id: 'all',
+          title: 'Все жанры',
+          href: stripParam('genre'),
+          active: isAllActive,
+        },
+        ...genres.map(g => ({
+          id: String(g.id),
+          title: g.title,
+          href: '?genre=' + encodeURIComponent(g.id),
+          active: String(g.id) === currentGenre,
+        })),
+      ];
+
+      menu.innerHTML = items.map(item =>
+        '<li>' +
+          '<a href="' + item.href + '" class="dropdown__item ' + (item.active ? 'is-active' : '') + '">' +
+            escapeHtml(item.title) +
+          '</a>' +
+        '</li>'
+      ).join('');
+
+      // Обновляем метку на триггере
+      const label = dropdown.querySelector('[data-dropdown-label]');
+      if (label) {
+        if (currentGenre) {
+          const current = genres.find(g => String(g.id) === currentGenre);
+          label.textContent = 'Жанр: ' + (current ? current.title : 'Все жанры');
+        } else {
+          label.textContent = 'Жанр: Все жанры';
+        }
+      }
+    } catch (e) {
+      console.error('[library-filters] genres load failed:', e);
+      menu.innerHTML = '<li class="dropdown__error">Ошибка загрузки</li>';
+    }
+  }
+
+  // --- Утилиты ---
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function stripParam(key) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete(key);
+    url.searchParams.delete('page');
+    const qs = url.searchParams.toString();
+    return qs ? '?' + qs : url.pathname;
+  }
+
+  // --- Инициализация ---
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document
+      .querySelectorAll('[data-dropdown][data-dynamic="genres"]')
+      .forEach(function (dd) { populateGenres(dd); });
+  });
+})();
