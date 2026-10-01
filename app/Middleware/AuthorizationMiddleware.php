@@ -39,7 +39,7 @@ final class AuthorizationMiddleware implements Middleware
     {
         if ($ctx->isApi()) {
             return Response::json(ResponseTemplates::errors([
-                new Error($decision->errorCode, $decision->reason)
+                Error::fromMessage($decision->errorCode, $decision->reason)
             ], $decision->status, "Forbidden"), $decision->status);
         }
 

@@ -41,7 +41,7 @@ final class ArticlesController extends Controller
         
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ);
+            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId);
             return $this->render('library/library-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -56,6 +56,44 @@ final class ArticlesController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('library/library-list', [
+                'innerMessages' => array_map(
+                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
+                    array_keys($e->errors), 
+                    $e->errors), 
+                'user' => $userContext,
+                'filterState' => $filterState
+            ]);
+        }
+    }
+
+    public function savedList(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect('login');
+
+        $pageQ = PaginationQuery::fromInput($context->request->query);
+        $propsQ = PropertiesQuery::fromRaw("creator");
+        $searchQ = $context->query('q', '');
+        $filterState = $context->query('f', 'closed');
+        
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId, true);
+            return $this->render('saved/saved-list', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'article'
+                ], 
+                'user' => $userContext,
+                'filterState' => $filterState
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('saved/saved-list', [
                 'innerMessages' => array_map(
                     static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
                     array_keys($e->errors), 

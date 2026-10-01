@@ -10,10 +10,19 @@ use App\Lib\Data\Database;
 
 use App\Models\Publications\Publication;
 use App\Models\Enums\PublicationsSortBy;
+use App\Models\Enums\ReadingStatus;
 use App\Models\Enums\ArticleType;
+use App\Models\Filters\UserByPublicationFilters;
 
 final class ArticlesRepository extends PublicationsRepository
 {
+    public function checkType(int $publicationId) : bool
+    {
+        $stmt = $this->pdo()->prepare('SELECT 1 FROM articles WHERE publication_id = :pubId');
+        $stmt->execute([':pubId' => $publicationId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function __construct(
         Database $db
     ){
@@ -30,7 +39,8 @@ final class ArticlesRepository extends PublicationsRepository
         ?int $creatorId = null,
         ?int $bookId = null,
         ?string $doi = null,
-        ?ArticleType $type = null
+        ?ArticleType $type = null,
+        ?UserByPublicationFilters $userByFilters = null
     ) : array
     {
         $whereClauses = [];
@@ -64,6 +74,24 @@ final class ArticlesRepository extends PublicationsRepository
         if ($type !== null){
             $whereClauses[] = 'a.type = :type';
             $params[':type'] = $type->value;
+        }
+
+        if ($userByFilters !== null){
+            $statusWhere = match($userByFilters->getReadingStatus()){
+                ReadingStatus::None => '',
+                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
+                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
+            };
+            if (!empty($statusWhere)){
+                $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';
+                $params[':sUserId'] = $userByFilters->getUserId();
+                $whereClauses[] = $statusWhere;
+            }
+
+            if ($userByFilters->getSavedOnly()){
+                $joinClauses[] = 'INNER JOIN saved_publications sp ON sp.user_id = :svUserId AND sp.publication_id = p.id';
+                $params[':svUserId'] = $userByFilters->getUserId();
+            }
         }
 
         foreach($includeObjects as $prop){

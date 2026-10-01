@@ -11,10 +11,17 @@ use App\Lib\Data\Database;
 use App\Models\Publications\Publication;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
-use App\Models\Filters\ReadingStatusFilters;
+use App\Models\Filters\UserByPublicationFilters;
 
 final class BooksRepository extends PublicationsRepository
 {
+    public function checkType(int $publicationId) : bool
+    {
+        $stmt = $this->pdo()->prepare('SELECT 1 FROM books WHERE publication_id = :pubId');
+        $stmt->execute([':pubId' => $publicationId]);
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function __construct(
         Database $db
     ){
@@ -30,7 +37,7 @@ final class BooksRepository extends PublicationsRepository
         ?int $genreId = null,
         ?int $creatorId = null,
         ?string $isbn = null,
-        ?ReadingStatusFilters $status = null
+        ?UserByPublicationFilters $userByFilters = null
     ) : array
     {
         $whereClauses = [];
@@ -56,16 +63,21 @@ final class BooksRepository extends PublicationsRepository
             $params[':isbn'] = $isbn . '%';
         }
 
-        if ($status !== null){
-            $statusWhere = match($status->getReadingStatus()){
+        if ($userByFilters !== null){
+            $statusWhere = match($userByFilters->getReadingStatus()){
                 ReadingStatus::None => '',
                 ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
                 ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
-            };
-            if (!empty($statusWhere)){
-                $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :currUserId AND ur.publication_id = p.id';
-                $params[':currUserId'] = $status->getUserId();
+                };
+                if (!empty($statusWhere)){
+                $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';
+                $params[':sUserId'] = $userByFilters->getUserId();
                 $whereClauses[] = $statusWhere;
+            }
+
+            if ($userByFilters->getSavedOnly()){
+                $joinClauses[] = 'INNER JOIN saved_publications sp ON sp.user_id = :svUserId AND sp.publication_id = p.id';
+                $params[':svUserId'] = $userByFilters->getUserId();
             }
         }
 

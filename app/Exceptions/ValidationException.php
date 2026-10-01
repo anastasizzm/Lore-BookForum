@@ -9,14 +9,13 @@ use App\Models\ValidationError;
 
 final class ValidationException extends RuntimeException
 {
-    private readonly ?array $errors;
+    private array $errors;
 
     public function __construct(
-        private readonly ?array $errorsArray,
+        private readonly array $errorsArray = [],
         string $message = 'Validation failed',
     ) {
         parent::__construct($message);
-        $this->errors = NULL;
     }
 
     /** @return array<string, list<string>> */

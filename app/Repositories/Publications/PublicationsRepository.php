@@ -9,6 +9,8 @@ use App\Lib\Data\Database;
 
 abstract class PublicationsRepository extends Repository
 {
+    public abstract function checkType(int $publicationId) : bool;
+
     public function __construct(
         Database $db
     ){
