@@ -151,3 +151,113 @@ document.addEventListener('keydown', e => {
     });
   })();
 });
+
+/* ===== Save book: POST/DELETE /api/books/{id}/save =====
+   Кнопка: [data-save-book] с data-book-id; состояние — класс is-active.
+   Работает и на странице книги, и на карточках (делегирование).
+   Успех: любой 2xx. Ошибка: откат состояния + сообщение. */
+(function () {
+  var busy = new WeakSet();
+
+  function csrfInput() {
+    return document.querySelector(
+      '[data-csrf] input[type="hidden"], ' +
+      'input[type="hidden"][name*="csrf" i], ' +
+      'input[type="hidden"][name*="token" i]'
+    );
+  }
+
+  function toast(text) {
+    var el = document.createElement('div');
+    el.setAttribute('role', 'alert');
+    el.textContent = text;
+    el.style.cssText =
+      'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+      'background:#222;color:#fff;padding:10px 16px;border-radius:8px;' +
+      'font-size:14px;z-index:1000;max-width:90vw;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 3500);
+  }
+
+  function setState(btn, saved) {
+    btn.classList.toggle('is-active', saved);
+    btn.setAttribute('aria-pressed', String(saved));
+    btn.setAttribute('aria-label', saved ? 'Remove from saved' : 'Save book');
+  }
+
+  function bumpSavesCount(delta) {
+    var el = document.querySelector('[data-saves-count]');
+    if (el) el.textContent = Math.max(0, (parseInt(el.textContent, 10) || 0) + delta);
+  }
+
+  document.addEventListener('click', async function (e) {
+    var btn = e.target.closest('[data-save-book]');
+    if (!btn) return;
+    e.preventDefault();
+    if (busy.has(btn)) return;
+
+    var id = Number(btn.dataset.bookId);
+    if (!id) {
+      console.error('Save book: data-book-id is missing');
+      toast('Could not save the book. Please reload the page.');
+      return;
+    }
+
+    var wasSaved = btn.classList.contains('is-active');
+    var willSave = !wasSaved;
+
+    // оптимистично обновляем UI, при ошибке откатываем
+    setState(btn, willSave);
+    busy.add(btn);
+    btn.disabled = true;
+
+    var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    var body = new URLSearchParams();
+    var token = csrfInput();
+    if (token) {
+      headers['X-CSRF-Token'] = token.value;   // на случай, если токен ждут в заголовке
+      body.set(token.name, token.value);       // и в теле, как у обычных форм
+    }
+
+    var url = '/api/books/' + id + '/save';
+    var method = willSave ? 'POST' : 'DELETE';
+
+    try {
+      var res = await fetch(url, {
+        method: method,
+        credentials: 'same-origin',
+        headers: headers,
+        body: body
+      });
+
+      var data = null;
+      try { data = await res.json(); } catch (_) { /* пустой ответ / не JSON */ }
+      console.log(method, url, res.status, data); // для отладки бэка
+
+      if (res.ok) {
+        bumpSavesCount(willSave ? 1 : -1);
+        btn.dispatchEvent(new CustomEvent('book:save-changed', {
+          bubbles: true,
+          detail: { id: id, saved: willSave }
+        }));
+      } else {
+        setState(btn, wasSaved);
+        var msg = '';
+        if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
+        if (!msg && data && data.message) msg = data.message;
+        if (!msg) {
+          msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
+              : res.status === 401 ? 'Please sign in again'
+              : 'Failed to update saved books (HTTP ' + res.status + ')';
+        }
+        toast(msg);
+      }
+    } catch (err) {
+      setState(btn, wasSaved);
+      toast('Network error. Try again.');
+    } finally {
+      busy.delete(btn);
+      btn.disabled = false;
+    }
+  });
+})();

@@ -44,6 +44,17 @@ if ($publicationId === 0) {
 }
 
 /**
+ * id книги (books.id) и состояние закладки — для кнопки Save.
+ * Берутся из контроллера ($book['id'], $book['isSaved']).
+ * DEV: пока нет контроллера страницы, можно передать ?book=<id> в адресе.
+ */
+$bookId = (int) ($book['id'] ?? 0);
+if ($bookId === 0) {
+    $bookId = (int) ($_GET['book'] ?? 0);
+}
+$isSaved = (bool) ($book['isSaved'] ?? false);
+
+/**
  * Статус чтения текущего пользователя (передаёт контроллер):
  *   'new'         — ещё не начинал      -> Start reading
  *   'in_progress' — читает              -> Resume reading
@@ -90,7 +101,13 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
       <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <button type="button" class="btn-icon btn-icon--circle" aria-label="Save book" data-toggle-bookmark>
+        <!-- Закладка: POST/DELETE /api/books/{id}/save (обработчик в app.js) -->
+        <button type="button"
+                class="btn-icon btn-icon--circle<?= $isSaved ? ' is-active' : '' ?>"
+                data-save-book
+                data-book-id="<?= $bookId ?>"
+                aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
+                aria-label="<?= $isSaved ? 'Remove from saved' : 'Save book' ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
@@ -116,7 +133,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H10C10.5523 1 11 1.44772 11 2V14.5273C11 14.928 10.5574 15.1704 10.2039 14.9631L6 12.5L1.79612 14.9631C1.44265 15.1704 1 14.928 1 14.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
-          <?= (int) $book['savesCount'] ?>
+          <span data-saves-count><?= (int) $book['savesCount'] ?></span>
         </span>
       </div>
 
