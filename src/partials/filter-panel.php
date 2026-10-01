@@ -1,23 +1,4 @@
 <?php
-/**
- * filter-panel — универсальная панель фильтров.
- *
- * Ожидает:
- *   $filter_rows — массив рядов:
- *     [
- *       'id'       => 'books',
- *       'hidden'   => false,
- *       'controls' => [ ... ],
- *     ]
- *   $filter_open — bool, открыта ли панель по умолчанию (default false)
- *
- * Формат контрола:
- *   ['type' => 'tabs',     'variant' => 'filled', 'items' => [...]]
- *   ['type' => 'dropdown', 'label'   => 'Жанр',   'options' => [...]]
- *   ['type' => 'input',    'name'    => 'series', 'placeholder' => '...']
- *   ['type' => 'reset']
- */
-
 $filter_rows = $filter_rows ?? [];
 $filter_open = $filter_open ?? false;
 ?>
@@ -38,8 +19,9 @@ $filter_open = $filter_open ?? false;
 
         <?php elseif (($control['type'] ?? '') === 'dropdown'): ?>
           <?php $view->include('dropdown', [
-              'label'   => $control['label']   ?? 'Выбрать',
+              'label'   => $control['label']   ?? 'Select',
               'options' => $control['options'] ?? [],
+              'dynamic' => $control['dynamic'] ?? null,
           ]); ?>
 
         <?php elseif (($control['type'] ?? '') === 'input'): ?>
@@ -51,7 +33,7 @@ $filter_open = $filter_open ?? false;
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
           <button type="button" class="filter-reset" data-filter-reset>
-            ✕ Сбросить
+            &#10005; Reset
           </button>
 
         <?php endif; ?>

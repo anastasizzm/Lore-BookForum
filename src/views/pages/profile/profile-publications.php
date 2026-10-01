@@ -1,37 +1,85 @@
+<?php $view->extends('main'); ?>
+
 <?php
-$view->extends('main');
-
-$items = $items ?? [];
-
-// Определяем раздел по meta.type
-$type       = $meta['type'] ?? null;
-$isArticles = $type === 'article';
-
-if ($type === null) {
-    $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-    $isArticles  = str_starts_with($currentPath, '/articles');
+// userId вытаскиваем из URL: /users/{id}/books или /users/{id}/articles
+$uri    = $_SERVER['REQUEST_URI'] ?? '/';
+$path   = parse_url($uri, PHP_URL_PATH);
+$userId = 0;
+if (preg_match('#^/users/(\d+)/(books|articles)#', $path, $m)) {
+    $userId = (int)$m[1];
 }
 
-$pageTitle  = $isArticles ? 'All articles' : 'All books';
-$tabKey     = $isArticles ? 'articles'     : 'library';
-$emptyText  = $isArticles ? 'No articles yet.' : 'No books yet.';
-$searchHint = $isArticles ? 'Search articles'  : 'Search books';
+$isArticles = str_contains($path, '/articles');
 
-$view->setBlock('selectedTab', $tabKey);
-$view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - Book App<?php $view->endBlock('title');
+// Имя пользователя (если передан $user и это он же)
+$userName = '';
+if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
+    $userName = trim(($user->name ?? '') . ' ' . ($user->surname ?? ''));
+    if ($userName === '') $userName = $user->username ?? '';
+}
+if ($userName === '') $userName = 'User #' . $userId;
 
-$view->startBlock('content');
+// Флаги и параметры
+$filter_open = ($filterState ?? 'closed') === 'open';
 
+parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
+$genreFilter = $q['genre'] ?? null;
+$searchQuery = $q['q']     ?? '';
+
+$view->setBlock('selectedTab', 'profile');
+
+$bookIcon = '<svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h5v16H5a2 2 0 0 0-2 2V5z"/><path d="M21 5a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2V5z"/></svg>';
+$postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
+
+// Ссылки табов — на реальные роуты
+$bookUrl     = '/users/' . $userId . '/books';
+$articlesUrl = '/users/' . $userId . '/articles';
+if ($filter_open) {
+    $bookUrl     .= '?f=open';
+    $articlesUrl .= '?f=open';
+}
+
+// Переключатель Books/Articles
+$switcher = [
+    'type'    => 'tabs',
+    'variant' => 'segmented',
+    'items' => [
+        [
+            'label'  => 'Books',
+            'href'   => $bookUrl,
+            'icon'   => $bookIcon,
+            'active' => !$isArticles,
+        ],
+        [
+            'label'  => 'Articles',
+            'href'   => $articlesUrl,
+            'icon'   => $postIcon,
+            'active' => $isArticles,
+        ],
+    ],
+];
+?>
+
+<?php $view->startBlock('title'); ?>Publications of <?= $view->e($userName) ?> - Book App<?php $view->endBlock('title'); ?>
+
+<?php $view->startBlock('head_extra'); ?>
+  <link rel="stylesheet" href="/assets/css/profile.css">
+  <script src="/assets/js/profile-publications.js" defer></script>
+<?php $view->endBlock('head_extra'); ?>
+
+<?php $view->startBlock('content'); ?>
+
+<?php
 ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => $searchHint,
-    'value'       => $searchQuery ?? '',
+    'placeholder' => 'Search',
+    'value'       => $searchQuery,
 ]);
 ?>
 <button type="button"
-        class="btn-icon filter-toggle"
+        class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
         data-filter-toggle
         aria-label="Filters">
   <span>&#9776;</span>
@@ -40,34 +88,15 @@ $view->include('input', [
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'Library',
+    'title'   => 'Publications',
     'actions' => $pageActions,
 ]);
-
-$view->include('library-filters', ['filterState' => $filterState ?? 'closed']);
-
-// Sort options (контроллер пока не передаёт — статика)
-$sort_options = $sortOptions ?? [
-    'popularity' => 'Popularity',
-    'newest'     => 'Newest',
-    'title'      => 'A to Z',
-];
-
-$current_sort  = $currentSort ?? 'popularity';
-$current_label = $sort_options[$current_sort] ?? 'Popularity';
-
-$dropdownOptions = [];
-foreach ($sort_options as $key => $text) {
-    $dropdownOptions[] = [
-        'label' => $text,
-        'href'  => '?sort=' . urlencode($key),
-    ];
-}
+?>
+<?php
+$view->include('library-filters', ['filterState' => $filterState ?? 'closed', 'bookHref' => $view->url('users.profile.books', ['userId' => $userId]), 'articleHref' => $view->url('users.profile.articles', ['userId' => $userId])]);
 ?>
 
 <section class="books-panel">
-
-  <div hidden data-csrf><?= $view->csrfField() ?></div>
 
   <header class="books-panel__head">
     <div class="books-panel__title-wrap">
@@ -93,57 +122,45 @@ foreach ($sort_options as $key => $text) {
         <?php endif; ?>
       </div>
       <div>
-        <h2 class="books-panel__title"><?= $view->e($pageTitle) ?></h2>
-        <p class="books-panel__meta">
-          <?= $view->e(count($items)) ?> items
-        </p>
+        <h2 class="books-panel__title"><?= $view->e($userName) ?></h2>
+        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> items</p>
       </div>
     </div>
-
-    <?php
-    $view->include('dropdown', [
-        'label'   => 'Sort: ' . $current_label,
-        'options' => $dropdownOptions,
-    ]);
-    ?>
   </header>
 
   <?php if (empty($items)): ?>
 
     <div class="empty-state">
-      <p class="empty-state__text"><?= $view->e($emptyText) ?></p>
+      <p class="empty-state__text">
+        <?= $isArticles ? 'No articles yet.' : 'No books yet.' ?>
+      </p>
     </div>
 
   <?php else: ?>
 
-    <div class="grid-books">
+    <div class="grid-publications">
       <?php foreach ($items as $item): ?>
         <?php
-          $creator = $item->creator;
-
+          $creator    = $item->creator;
           $authorName = trim(($creator?->name ?? '') . ' ' . ($creator?->surname ?? ''));
           if ($authorName === '') $authorName = $creator?->username ?? '';
+          $year = $item->createdAt ? $item->createdAt->format('Y') : '';
 
-          $cover = '';
-
-          $view->include('card-book', [
-              'id'       => $item->id,
-              'cover'    => $cover,
-              'title'    => $item->title,
-              'authorId' => $creator?->id ?? 0,
-              'author'   => $authorName,
-              'saved'    => false,
-          ]);
+          $url = $isArticles
+            ? '/articles/' . (int)$item->id
+            : '/books/' . (int)$item->id;
         ?>
+        <a class="publication-card" href="<?= $view->e($url) ?>">
+          <span class="publication-card__cover">
+            <img src="/img/book-placeholder.svg" alt="" loading="lazy">
+          </span>
+          <span class="publication-card__title"><?= $view->e($item->title) ?></span>
+          <span class="publication-card__meta">
+            <?= $isArticles ? 'Article' : 'Book' ?><?= $year ? ' - ' . $view->e($year) : '' ?>
+          </span>
+        </a>
       <?php endforeach; ?>
     </div>
-
-    <?php if (($meta['hasNext'] ?? false)): ?>
-      <div class="feed-panel__load-more">
-        <a href="?page=<?= ($meta['page'] ?? 1) + 1 ?><?= !empty($searchQuery) ? '&q=' . urlencode($searchQuery) : '' ?>"
-           class="btn btn--secondary">Load more</a>
-      </div>
-    <?php endif; ?>
 
   <?php endif; ?>
 
