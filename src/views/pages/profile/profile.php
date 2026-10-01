@@ -1,8 +1,6 @@
 <?php $view->extends('main'); ?>
 
 <?php
-// $user     — UserContext (кто залогинен)
-// $userData — UserData    (чей профиль смотрим)
 $view->setBlock('selectedTab', 'profile');
 
 $displayName = trim(($userData->name ?? '') . ' ' . ($userData->surname ?? ''));
@@ -16,20 +14,19 @@ if ($initials === '') {
     $initials = mb_strtoupper(mb_substr($userData->username ?? '', 0, 1));
 }
 
-// Аватар: 'default' и пустая строка → инициалы
 $avatarRaw = $userData->avatar ?? '';
 $avatarSrc = ($avatarRaw !== '' && $avatarRaw !== 'default')
     ? '/uploads/avatars/' . $avatarRaw
     : null;
 
-// Владелец ли текущий пользователь?
 $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
 ?>
 
-<?php $view->startBlock('title'); ?><?= $view->e($displayName) ?> — Profile<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $view->e($displayName) ?> - Profile<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
+  <script src="/assets/js/profile.js" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -38,7 +35,6 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
 
   <div class="profile-layout__main">
 
-    <!-- Profile header -->
     <header class="profile-header card-base">
       <div class="profile-header__avatar">
         <?php $view->include('avatar', [
@@ -55,9 +51,9 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
 
       <?php if ($isOwner): ?>
         <a class="btn-icon profile-header__edit"
-          href="/users/<?= (int)$userData->id ?>/edit"
-          aria-label="Edit profile"
-          title="Edit profile">
+           href="/users/<?= (int)$userData->id ?>/edit"
+           aria-label="Edit profile"
+           title="Edit profile">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 20h4l10-10-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M13.5 6.5l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -66,7 +62,6 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
       <?php endif; ?>
     </header>
 
-    <!-- Posts (пока пусто — контроллер не передаёт) -->
     <section class="profile-posts">
       <h2 class="profile-posts__title">Posts</h2>
       <p class="empty-state__text">No posts yet.</p>
@@ -76,7 +71,6 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
 
   <aside class="profile-layout__sidebar">
 
-    <!-- Biography -->
     <section class="card-base profile-sidebar-box">
       <h2 class="profile-sidebar-box__title">Biography</h2>
       <?php if (!empty($userData->bio)): ?>
@@ -88,12 +82,17 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
       <?php endif; ?>
     </section>
 
-    <!-- Publications (пока пусто — контроллер не передаёт) -->
     <section class="card-base profile-sidebar-box">
       <h2 class="profile-sidebar-box__title">Publications</h2>
-      <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
-        No publications yet.
-      </p>
+      <div class="profile-publications"
+           data-publications
+           data-publications-user-id="<?= (int)$userData->id ?>"
+           data-publications-limit="7"
+           data-publications-more-url="/users/<?= (int)$userData->id ?>/publications">
+        <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
+          Loading...
+        </p>
+      </div>
     </section>
 
   </aside>
