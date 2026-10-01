@@ -15,10 +15,15 @@ use App\Models\Posts\Post;
 
 use App\Models\PaginatedList;
 
+use Throwable;
+use App\Exceptions\ValidationException;
+use App\Exceptions\PostExceptionTranslator;
+
 final class PostsService
 {
     public function __construct(
-        private readonly PostsRepository $postsRepo
+        private readonly PostsRepository $postsRepo,
+        private readonly PostExceptionTranslator $translator
     ){}
 
     public function getList(
@@ -59,7 +64,7 @@ final class PostsService
             $this->postsRepo->setLike($postId, $userId);
         }
         catch(\PDOException $e){
-            throw $this->translatePdoException($e);
+           throw $this->translator->translate($e);
         }
     }
 
@@ -72,66 +77,10 @@ final class PostsService
             $this->postsRepo->removeLike($postId, $userId);
         }
         catch(\PDOException $e){
-            throw $this->translatePdoException($e);
+           throw $this->translator->translate($e);
         }
     }
-
-    private const FK_CONSTRAINTS = [
-        'comments_likes_comment_id_fkey' => 'comment_id',
-        'comments_likes_user_id_fkey'    => 'user_id',
-    ];
-
-    private const FK_MESSAGES = [
-        'user_id'    => 'The user does not exist',
-        'comment_id' => 'The comment does not exist',
-    ];
-
-    private const UNIQUE_MESSAGES = [
-        'comments_likes_pkey' => 'You have already liked this comment',
-    ];
-
-    /** @throws ValidationException */
-    private function translatePdoException(\PDOException $e): Throwable
-    {
-        $code = $e->getCode();
-
-        if ($code === '23503') {
-            $constraint = PdoExtensions::extractConstraintName($e->getMessage());
-
-            if ($constraint === null) {
-                return $e;
-            }
-
-            $field = self::FK_CONSTRAINTS[$constraint] ?? null;
-
-            if ($field === null) {
-                return $e;
-            }
-
-            return new ValidationException([
-                $field => [self::FK_MESSAGES[$field]],
-            ]);
-        }
-
-        if ($code === '23505') {
-            $constraint = PdoExtensions::extractConstraintName($e->getMessage());
-
-            $message = $constraint !== null
-                ? self::UNIQUE_MESSAGES[$constraint] ?? null
-                : null;
-
-            if ($message === null) {
-                return $e;
-            }
-
-            return new ValidationException([
-                'comment_id' => [$message],
-            ]);
-        }
-
-        return $e;
-    }
-
+    
     public function addComment(int $creatorId, PostForm $form, ?int $parentId = NULL) : int
     {
         $errors = [];
@@ -141,7 +90,7 @@ final class PostsService
             return $this->postsRepo->addComment($creatorId, $form->publicationId, $form->content, $parentId);
         }
         catch(\PDOException $e){
-            throw $this->translatePdoException($e);
+            throw $this->translator->translate($e);
         }
     }
 
@@ -151,7 +100,7 @@ final class PostsService
             $this->postsRepo->removeComment($commentId);
         }
         catch(\PDOException $e){
-            throw $this->translatePdoException($e);
+           throw $this->translator->translate($e);
         }
     } 
 

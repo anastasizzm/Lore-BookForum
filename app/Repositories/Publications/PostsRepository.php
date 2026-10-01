@@ -28,7 +28,7 @@ final class PostsRepository extends Repository
         $whereClauses = ['c.is_active'];
         $params = [];
         if (!empty($search)){
-            $where = 'u.username ILIKE :q';
+            $whereClauses = 'u.username ILIKE :q';
             $params[':q'] = $search . '%';
         }
         if ($parentId !== null){
@@ -115,21 +115,21 @@ final class PostsRepository extends Repository
         int $userId
     ) : void
     {
-        $smtm = $this->pdo()->prepare(
+        $stmt = $this->pdo()->prepare(
             'DELETE FROM comments_likes WHERE user_id = :userId AND comment_id = :commentId'
         );
         $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
     }
 
-    public function addComment(int $creatorId, int $publicationId, string $content, ?int $parentId = null) : int
+    public function addComment(int $creatorId, int $publicationId, string $content, ?int $parentId = null) : ?int
     {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO comments (creator_id, publication_id, content, parent_id)
-            VALUES (:creatodId, :publicationId, :content, :parentId)
+            VALUES (:creatorId, :publicationId, :content, :parentId)
             RETURNING id'
         );
 
-        $stmt->execute([':creatodId' => $creatorId, ':publciationId' => $publicationId, ':content' => $content, ':parentId' => $parentId]);
+        $stmt->execute([':creatorId' => $creatorId, ':publicationId' => $publicationId, ':content' => $content, ':parentId' => $parentId]);
         $id = $stmt->fetchColumn();
         return $id === false ? null : (int)$id;
     }   
@@ -149,8 +149,8 @@ final class PostsRepository extends Repository
             FROM comments 
             WHERE id = :commentId AND creator_id = :userId'
         );
-        $stmt->execute([':commentId' => $commentId, [':userId' => $userId]]);
+        $stmt->execute([':commentId' => $commentId, ':userId' => $userId]);
 
-        return $stmt.fetchColumn() !== false;
+        return $stmt->fetchColumn() !== false;
     }
 }
