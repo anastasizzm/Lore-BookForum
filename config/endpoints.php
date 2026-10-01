@@ -8,6 +8,9 @@ use App\Lib\Auth\AuthPolicy;
 
 return function(Router $router)
 {
+    // Auth
+    $router->post('/api/mail', [App\Controllers\Api\Auth\AuthController::class, 'sendMail'], 'api.sendmail', AuthPolicy::Auth);
+
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', AuthPolicy::Verified);

@@ -116,6 +116,7 @@ final class UsersRepository extends Repository
                 u.id,
                 u.username,
                 u.created_at,
+                u.email,
                 p.name,
                 p.surname,
                 p.bio,

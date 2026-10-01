@@ -15,6 +15,7 @@ readonly class UserData extends UserShortData
         string $name,
         string $surname,
         string $avatar,
+        public string $email,
         public string $bio,
         public DateTimeImmutable $createdAt
     ) {
@@ -30,6 +31,7 @@ readonly class UserData extends UserShortData
             username: $parent->username,
             surname: $parent->surname,
             avatar: $parent->avatar,
+            email: self::str($row, $prefix . 'email'),
             bio: self::str($row, $prefix . 'bio'),
             createdAt: self::dt($row, $prefix . 'created_at')
         );
