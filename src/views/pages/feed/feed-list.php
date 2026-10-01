@@ -11,6 +11,7 @@
 if (isset($_GET['preview'])) {
     $items = [
         (object) [
+            'id' => 1,
             'creator' => (object) [
                 'name' => 'Иван', 'surname' => 'Иванов',
                 'username' => 'ivan', 'avatar' => null,
@@ -22,6 +23,7 @@ if (isset($_GET['preview'])) {
             'createdAt' => new DateTimeImmutable('2026-09-30'),
         ],
         (object) [
+            'id' => 2,
             'creator' => (object) [
                 'name' => 'Анна', 'surname' => 'Петрова',
                 'username' => 'anna', 'avatar' => null,
@@ -92,17 +94,24 @@ $view->include('page-header', [
               ? '/uploads/avatars/' . $avatarRaw
               : null;
 
+          // id публикации: у модели Post он приватный (геттер), у DEV-заглушки его нет
+          $publicationId = method_exists($post, 'getPublicationId')
+              ? $post->getPublicationId()
+              : 0;
+
           $view->include('card-feed', [
-              'withBook'     => $publication !== null,
-              'bookCover'    => $publication?->iconId ?? '',
-              'bookTitle'    => $publication?->title  ?? '',
-              'userInitials' => $initials,
-              'userName'     => $creator?->username   ?? '',
-              'userAvatar'   => $avatarSrc,
-              'text'         => $post->content,
-              'likes'        => $post->likesCount,
-              'comments'     => $post->commentsCount,
-              'date'         => $post->createdAt->format('d.m.Y'),
+              'postId'        => $post->id ?? 0,
+              'publicationId' => $publicationId,
+              'withBook'      => $publication !== null,
+              'bookCover'     => $publication?->iconId ?? '',
+              'bookTitle'     => $publication?->title  ?? '',
+              'userInitials'  => $initials,
+              'userName'      => $creator?->username   ?? '',
+              'userAvatar'    => $avatarSrc,
+              'text'          => $post->content,
+              'likes'         => $post->likesCount ?? 0,
+              'comments'      => $post->commentsCount ?? 0,
+              'date'          => $post->createdAt->format('d.m.Y'),
           ]);
         ?>
       <?php endforeach; ?>
