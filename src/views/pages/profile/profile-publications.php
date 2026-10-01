@@ -1,45 +1,66 @@
 <?php $view->extends('main'); ?>
 
 <?php
-// Fallback: если $userData не передан (открытие через /pages/test)
-if (!isset($userData) || !is_object($userData)) {
-    $userId = (int)($_GET['userId'] ?? 1);
-    $userData = (object)[
-        'id'       => $userId,
-        'name'     => '',
-        'surname'  => '',
-        'username' => 'user' . $userId,
-    ];
+// userId вытаскиваем из URL: /users/{id}/books или /users/{id}/articles
+$uri    = $_SERVER['REQUEST_URI'] ?? '/';
+$path   = parse_url($uri, PHP_URL_PATH);
+$userId = 0;
+if (preg_match('#^/users/(\d+)/(books|articles)#', $path, $m)) {
+    $userId = (int)$m[1];
 }
 
-$view->setBlock('selectedTab', 'profile');
+$isArticles = str_contains($path, '/articles');
 
-$displayName = trim(($userData->name ?? '') . ' ' . ($userData->surname ?? ''));
-if ($displayName === '') $displayName = $userData->username;
+// Имя пользователя (если передан $user и это он же)
+$userName = '';
+if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
+    $userName = trim(($user->name ?? '') . ' ' . ($user->surname ?? ''));
+    if ($userName === '') $userName = $user->username ?? '';
+}
+if ($userName === '') $userName = 'User #' . $userId;
 
-$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+// Флаги и параметры
+$filter_open = ($filterState ?? 'closed') === 'open';
+
 parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
-$typeFilter  = $q['type']  ?? 'book';
 $genreFilter = $q['genre'] ?? null;
 $searchQuery = $q['q']     ?? '';
 
-// Флаг открытия/закрытия панели фильтров
-$filter_open = ($q['f'] ?? 'closed') === 'open';
-
-$buildUrl = function (array $params) use ($currentPath, $q) {
-    $merged = array_merge($q, $params);
-    foreach ($merged as $k => $v) {
-        if ($v === null || $v === '' || $v === '0') unset($merged[$k]);
-    }
-    $qs = http_build_query($merged);
-    return $currentPath . ($qs ? '?' . $qs : '');
-};
+$view->setBlock('selectedTab', 'profile');
 
 $bookIcon = '<svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h5v16H5a2 2 0 0 0-2 2V5z"/><path d="M21 5a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2V5z"/></svg>';
 $postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
+
+// Ссылки табов — на реальные роуты
+$bookUrl     = '/users/' . $userId . '/books';
+$articlesUrl = '/users/' . $userId . '/articles';
+if ($filter_open) {
+    $bookUrl     .= '?f=open';
+    $articlesUrl .= '?f=open';
+}
+
+// Переключатель Books/Articles
+$switcher = [
+    'type'    => 'tabs',
+    'variant' => 'segmented',
+    'items' => [
+        [
+            'label'  => 'Books',
+            'href'   => $bookUrl,
+            'icon'   => $bookIcon,
+            'active' => !$isArticles,
+        ],
+        [
+            'label'  => 'Articles',
+            'href'   => $articlesUrl,
+            'icon'   => $postIcon,
+            'active' => $isArticles,
+        ],
+    ],
+];
 ?>
 
-<?php $view->startBlock('title'); ?>Publications of <?= $view->e($displayName) ?> - Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?>Publications of <?= $view->e($userName) ?> - Book App<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
@@ -71,46 +92,8 @@ $view->include('page-header', [
     'actions' => $pageActions,
 ]);
 ?>
-
 <?php
-$filter_rows = [
-    [
-        'id'     => 'publications',
-        'hidden' => false,
-        'controls' => [
-            [
-                'type'    => 'tabs',
-                'variant' => 'segmented',
-                'items' => [
-                    [
-                        'label'  => 'Books',
-                        'href'   => $buildUrl(['type' => 'book']),
-                        'icon'   => $bookIcon,
-                        'active' => $typeFilter === 'book',
-                    ],
-                    [
-                        'label'  => 'Articles',
-                        'href'   => $buildUrl(['type' => 'article']),
-                        'icon'   => $postIcon,
-                        'active' => $typeFilter === 'article',
-                    ],
-                ],
-            ],
-            [
-                'type'    => 'dropdown',
-                'label'   => 'Genre',
-                'dynamic' => 'publications-genres',
-                'options' => [],
-            ],
-            ['type' => 'reset'],
-        ],
-    ],
-];
-
-$view->include('filter-panel', [
-    'filter_rows' => $filter_rows,
-    'filter_open' => $filter_open,
-]);
+$view->include('library-filters', ['filterState' => $filterState ?? 'closed', 'bookHref' => $view->url('users.profile.books', ['userId' => $userId]), 'articleHref' => $view->url('users.profile.articles', ['userId' => $userId])]);
 ?>
 
 <section class="books-panel">
@@ -118,7 +101,7 @@ $view->include('filter-panel', [
   <header class="books-panel__head">
     <div class="books-panel__title-wrap">
       <div class="book-panel-library__icon">
-        <?php if ($typeFilter === 'article'): ?>
+        <?php if ($isArticles): ?>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.6" fill="none"/>
             <line x1="8" y1="9"  x2="16" y2="9"  stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -139,20 +122,47 @@ $view->include('filter-panel', [
         <?php endif; ?>
       </div>
       <div>
-        <h2 class="books-panel__title"><?= $view->e($displayName) ?></h2>
-        <p class="books-panel__meta" data-publications-count>Loading...</p>
+        <h2 class="books-panel__title"><?= $view->e($userName) ?></h2>
+        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> items</p>
       </div>
     </div>
   </header>
 
-  <div class="publications-page"
-       data-publications-page
-       data-publications-page-user-id="<?= (int)$userData->id ?>"
-       data-publications-page-type="<?= $view->e($typeFilter) ?>"
-       data-publications-page-genre="<?= $view->e($genreFilter ?? '') ?>"
-       data-publications-page-search="<?= $view->e($searchQuery) ?>">
-    <p class="empty-state__text">Loading...</p>
-  </div>
+  <?php if (empty($items)): ?>
+
+    <div class="empty-state">
+      <p class="empty-state__text">
+        <?= $isArticles ? 'No articles yet.' : 'No books yet.' ?>
+      </p>
+    </div>
+
+  <?php else: ?>
+
+    <div class="grid-publications">
+      <?php foreach ($items as $item): ?>
+        <?php
+          $creator    = $item->creator;
+          $authorName = trim(($creator?->name ?? '') . ' ' . ($creator?->surname ?? ''));
+          if ($authorName === '') $authorName = $creator?->username ?? '';
+          $year = $item->createdAt ? $item->createdAt->format('Y') : '';
+
+          $url = $isArticles
+            ? '/articles/' . (int)$item->id
+            : '/books/' . (int)$item->id;
+        ?>
+        <a class="publication-card" href="<?= $view->e($url) ?>">
+          <span class="publication-card__cover">
+            <img src="/img/book-placeholder.svg" alt="" loading="lazy">
+          </span>
+          <span class="publication-card__title"><?= $view->e($item->title) ?></span>
+          <span class="publication-card__meta">
+            <?= $isArticles ? 'Article' : 'Book' ?><?= $year ? ' - ' . $view->e($year) : '' ?>
+          </span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+
+  <?php endif; ?>
 
 </section>
 

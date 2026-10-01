@@ -88,7 +88,7 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
            data-publications
            data-publications-user-id="<?= (int)$userData->id ?>"
            data-publications-limit="5"
-           data-publications-more-url="/users/<?= (int)$userData->id ?>/publications">
+           data-publications-more-url="/users/<?= (int)$userData->id ?>/books">
         <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
           Loading...
         </p>

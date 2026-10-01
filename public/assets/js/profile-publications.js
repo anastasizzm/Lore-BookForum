@@ -1,5 +1,5 @@
 /* ============================================
-   PROFILE PUBLICATIONS - tabs load separate data
+   PROFILE PUBLICATIONS - genres dropdown + reset
    ============================================ */
 
 (function () {
@@ -12,94 +12,6 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-
-  function extractItems(data) {
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data.items)) return data.items;
-    return [];
-  }
-
-  function formatYear(value) {
-    if (!value) return '';
-    if (typeof value === 'object' && value.date) return String(value.date).slice(0, 4);
-    return String(value).slice(0, 4);
-  }
-
-  var PLACEHOLDER = '/img/book-placeholder.svg';
-
-  async function fetchByType(type, userId, genre) {
-    var endpoint = type === 'article' ? '/api/articles' : '/api/books';
-    var params = new URLSearchParams({
-      creator: userId,
-      include: 'creator',
-    });
-    if (genre) params.set('genre', genre);
-
-    var res = await fetch(endpoint + '?' + params.toString(), {
-      headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin',
-    });
-
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    return extractItems(data);
-  }
-
-  function renderCard(item, type) {
-    var url = type === 'book'
-      ? '/books/' + encodeURIComponent(item.id)
-      : '/articles/' + encodeURIComponent(item.id);
-    var label = type === 'book' ? 'Book' : 'Article';
-    var year  = formatYear(item.createdAt);
-
-    return '' +
-      '<a class="publication-card" href="' + url + '">' +
-        '<span class="publication-card__cover">' +
-          '<img src="' + PLACEHOLDER + '" alt="" loading="lazy">' +
-        '</span>' +
-        '<span class="publication-card__title">' + escapeHtml(item.title) + '</span>' +
-        '<span class="publication-card__meta">' + label + (year ? ' - ' + year : '') + '</span>' +
-      '</a>';
-  }
-
-  async function loadPage() {
-    var el = document.querySelector('[data-publications-page]');
-    if (!el) return;
-
-    var userId  = el.getAttribute('data-publications-page-user-id');
-    var type    = el.getAttribute('data-publications-page-type') || 'book';
-    var genre   = el.getAttribute('data-publications-page-genre') || null;
-    var countEl = document.querySelector('[data-publications-count]');
-
-    if (!userId || userId === '0') {
-      el.innerHTML = '<p class="empty-state__text">No publications yet.</p>';
-      if (countEl) countEl.textContent = '0 items';
-      return;
-    }
-
-    var items;
-    try {
-      items = await fetchByType(type, userId, genre);
-    } catch (e) {
-      console.error('[profile-publications] load failed:', e);
-      el.innerHTML = '<p class="empty-state__text">Failed to load publications.</p>';
-      if (countEl) countEl.textContent = '';
-      return;
-    }
-
-    if (items.length === 0) {
-      el.innerHTML = '<p class="empty-state__text">No publications yet.</p>';
-      if (countEl) countEl.textContent = '0 items';
-      return;
-    }
-
-    if (countEl) countEl.textContent = items.length + ' items';
-
-    el.innerHTML = '<div class="grid-publications">' +
-      items.map(function (item) { return renderCard(item, type); }).join('') +
-      '</div>';
   }
 
   async function initGenresDropdown() {
@@ -133,6 +45,7 @@
       var p = new URLSearchParams(window.location.search);
       if (genreId) p.set('genre', genreId);
       else p.delete('genre');
+      p.delete('page');
       var qs = p.toString();
       return window.location.pathname + (qs ? '?' + qs : '');
     }
@@ -169,16 +82,21 @@
     document.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-filter-reset]');
       if (!btn) return;
-      if (!document.querySelector('[data-publications-page]')) return;
+      if (!document.querySelector('.publications-page') &&
+          !document.querySelector('.grid-publications') &&
+          !document.querySelector('.books-panel')) return;
+
+      // Reset only clears query params on publications pages
+      var path = window.location.pathname;
+      if (!/\/users\/\d+\/(books|articles)/.test(path)) return;
 
       e.preventDefault();
       e.stopImmediatePropagation();
-      window.location.href = window.location.pathname;
+      window.location.href = path;
     }, true);
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    loadPage();
     initGenresDropdown();
     initReset();
   });

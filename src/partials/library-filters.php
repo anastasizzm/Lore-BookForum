@@ -13,19 +13,22 @@ $postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" r
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $isArticles  = str_starts_with($currentPath, '/articles');
 
+$bookHref ??= '/books';
+$articleHref ??= '/articles';
+
 $switcher = [
     'type'    => 'tabs',
     'variant' => 'segmented',
     'items' => [
         [
             'label'  => 'Books',
-            'href'   => '/books' . $fQs,
+            'href'   => $bookHref . $fQs,
             'icon'   => $bookIcon,
             'active' => !$isArticles,
         ],
         [
             'label'  => 'Articles',
-            'href'   => '/articles' . $fQs,
+            'href'   => $articleHref . $fQs,
             'icon'   => $postIcon,
             'active' => $isArticles,
         ],

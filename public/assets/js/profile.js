@@ -108,14 +108,13 @@
       return renderItem(entry.item, entry.type);
     }).join('');
 
-        // TODO: раскомментировать, когда появится роут /users/{id}/publications
-    // if (all.length > limit && moreUrl) {
-    //   var more = document.createElement('a');
-    //   more.className = 'profile-publications__more';
-    //   more.href = moreUrl;
-    //   more.textContent = 'See all publications';
-    //   el.appendChild(more);
-    // }
+            if (moreUrl && all.length > 0) {
+      var more = document.createElement('a');
+      more.className = 'profile-publications__more';
+      more.href = moreUrl;
+      more.textContent = 'See all publications';
+      el.appendChild(more);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
