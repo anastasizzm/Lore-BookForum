@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Exceptions\Translators;
 
 use App\Exceptions\ValidationException;
-use App\Support\PdoExtensions;
+use App\Extensions\PdoExtensions;
 use PDOException;
 use Throwable;
 
