@@ -57,4 +57,36 @@ final class BooksController extends Controller
             return $this->jsonValidationErrors($e->errors());
         }
     }
+
+    public function save(HttpContext $context, string $bookId)
+    {
+        $bookId = (int)$bookId;
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+
+        try
+        {
+            $this->booksService->save($userId, $bookId);
+        }
+        catch(ValidationException $e){
+            return $this->jsonValidationErrors($e->errors());
+        }
+    }
+
+    public function deleteSave(HttpContext $context, string $bookId)
+    {
+        $bookId = (int)$bookId;
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+
+        try
+        {
+            $this->booksService->deleteSave($userId, $bookId);
+        }
+        catch(ValidationException $e){
+            return $this->jsonValidationErrors($e->errors());
+        }
+    }
 }

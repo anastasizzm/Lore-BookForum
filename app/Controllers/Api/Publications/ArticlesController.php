@@ -57,4 +57,36 @@ final class ArticlesController extends Controller
             return $this->jsonValidationErrors($e->errors());
         }
     }
+
+    public function save(HttpContext $context, string $articleId)
+    {
+        $articleId = (int)$articleId;
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+
+        try
+        {
+            $this->articlesService->save($userId, $articleId);
+        }
+        catch(ValidationException $e){
+            return $this->jsonValidationErrors($e->errors());
+        }
+    }
+
+    public function deleteSave(HttpContext $context, string $articleId)
+    {
+        $articleId = (int)$articleId;
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+
+        try
+        {
+            $this->articlesService->deleteSave($userId, $articleId);
+        }
+        catch(ValidationException $e){
+            return $this->jsonValidationErrors($e->errors());
+        }
+    }
 }
