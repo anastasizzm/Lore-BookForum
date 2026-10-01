@@ -19,4 +19,4 @@ $registry->registerPolicy(AuthPolicy::Auth, fn($ctx) => new AuthenticatedRequire
 $registry->registerPolicy(AuthPolicy::Verified, fn($ctx) => new VerifiedRequirement(), VerifiedHandler::class);
 $registry->registerPolicy(AuthPolicy::Admin, fn($ctx) => new AdminRequirement(), AdminHandler::class);
 $registry->registerPolicy('profile_owner', fn($ctx) => new ProfileOwnerRequirement(), ProfileOwnerHandler::class);
-$registry->registerPolict('post_owner', fn($ctx) => new PostOwnerRequirement(), PostOwnerHandler::class);
+$registry->registerPolicy('post_owner', fn($ctx) => new PostOwnerRequirement(), PostOwnerHandler::class);

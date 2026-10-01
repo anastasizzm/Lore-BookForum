@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Publications;
 
-use App\Services\Publications\BooksService;
+use App\Services\Publications\PostsService;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
