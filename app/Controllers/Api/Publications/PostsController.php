@@ -7,9 +7,11 @@ use App\Services\Publications\PostsService;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
+use App\Models\Error;
 use App\Exceptions\ValidationException;
 use App\Controllers\Controller;
 
+use App\Forms\Publications\PostForm;
 use App\Http\HttpContext;
 
 use App\ErrorCodes;
@@ -70,7 +72,7 @@ final class PostsController extends Controller
             return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
-            $this->jsonValidationErrors($e->errors());
+            return $this->jsonValidationErrors($e->errors());
         }
     }
 
@@ -86,7 +88,7 @@ final class PostsController extends Controller
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
-            $this->jsonValidationErrors($e->errors());
+            return $this->jsonValidationErrors($e->errors());
         }
     }
 
@@ -106,7 +108,7 @@ final class PostsController extends Controller
             return $this->jsonObject(['createdId' => $id], statusCode: 201);
         }
         catch(ValidationException $e){
-            $this->jsonValidationErrors($e->errors());
+            return $this->jsonValidationErrors($e->errors());
         }
     }
 
@@ -119,7 +121,7 @@ final class PostsController extends Controller
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
-            $this->jsonValidationErrors($e->errors());
+            return $this->jsonValidationErrors($e->errors());
         }
     }
 }

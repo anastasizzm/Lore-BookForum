@@ -6,7 +6,7 @@ namespace App\Models\Posts;
 use DateTimeImmutable;
 use App\Models\Users\UserShortData;
 use App\Models\Dto;
-use App\Models\Publications\Publication;
+use App\Models\Publications\PublicationShort;
 
 final readonly class Post extends Dto
 {

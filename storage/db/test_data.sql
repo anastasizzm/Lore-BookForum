@@ -127,7 +127,7 @@ BEGIN
                 v_pages,
                 pg_temp.random_isbn(),
                 v_file_id)
-        RETURNING id INTO v_book_id;
+        RETURNING publication_id INTO v_book_id;
 
         v_book_ids   := v_book_ids   || v_book_id;
         v_book_pages := v_book_pages || v_pages;
