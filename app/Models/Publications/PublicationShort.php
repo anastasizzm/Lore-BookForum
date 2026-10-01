@@ -26,7 +26,7 @@ readonly class PublicationShort extends BasicModel
         return new self(
             id: $parent->id,
             title: $parent->title,
-            iconId: self::uuidN($row, $prefix, 'icon_id'),
+            iconId: self::uuidN($row, $prefix . 'icon_id'),
             createdAt: self::dt($row, $prefix . 'created_at'),
         );
     }

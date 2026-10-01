@@ -120,4 +120,37 @@ final class PostsRepository extends Repository
         );
         $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
     }
+
+    public function addComment(int $creatorId, int $publicationId, string $content, ?int $parentId = null) : int
+    {
+        $stmt = $this->pdo()->prepare(
+            'INSERT INTO comments (creator_id, publication_id, content, parent_id)
+            VALUES (:creatodId, :publicationId, :content, :parentId)
+            RETURNING id'
+        );
+
+        $stmt->execute([':creatodId' => $creatorId, ':publciationId' => $publicationId, ':content' => $content, ':parentId' => $parentId]);
+        $id = $stmt->fetchColumn();
+        return $id === false ? null : (int)$id;
+    }   
+    
+    public function removeComment(int $commentId) : void
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE comments SET is_active = false WHERE id = :commentId'
+        );
+        $stmt->execute([':commentId' => $commentId]);
+    }
+
+    public function hasAccess(int $userId, int $commentId) : bool
+    {
+        $stmt = $this->pdo()->prepare(
+            'SELECT id
+            FROM comments 
+            WHERE id = :commentId AND creator_id = :userId'
+        );
+        $stmt->execute([':commentId' => $commentId, [':userId' => $userId]]);
+
+        return $stmt.fetchColumn() !== false;
+    }
 }
