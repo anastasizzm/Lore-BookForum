@@ -75,7 +75,7 @@ final class UsersController extends Controller
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
             $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
-            return $this->render('profile/profile', [
+            return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
                     'page' => $paginatedList->getPage(),
@@ -88,7 +88,7 @@ final class UsersController extends Controller
             ]);
         }
         catch(ValidationException $e){
-            return $this->render('library/library-list', [
+            return $this->render('profile/profile-publications', [
                 'innerMessages' => array_map(
                     static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
                     array_keys($e->errors), 
@@ -114,7 +114,7 @@ final class UsersController extends Controller
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
             $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
-            return $this->render('profile/profile', [
+            return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
                     'page' => $paginatedList->getPage(),
@@ -127,7 +127,7 @@ final class UsersController extends Controller
             ]);
         }
         catch(ValidationException $e){
-            return $this->render('library/library-list', [
+            return $this->render('profile/profile-publications', [
                 'innerMessages' => array_map(
                     static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
                     array_keys($e->errors), 
