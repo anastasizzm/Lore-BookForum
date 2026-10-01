@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/users/{{userId}}'
+order: 1000
+pathVariables:
+  - key: userId
+    value: '1'

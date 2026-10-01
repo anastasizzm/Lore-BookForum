@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/verify/{{token}}'
+order: 6000
+pathVariables:
+  - key: token
+    value: your_verification_token

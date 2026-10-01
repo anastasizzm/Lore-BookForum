@@ -1,0 +1,7 @@
+$kind: http-request
+method: DELETE
+url: '{{base_url}}/api/articles/{{articleId}}/save'
+order: 6000
+pathVariables:
+  - key: articleId
+    value: '1'

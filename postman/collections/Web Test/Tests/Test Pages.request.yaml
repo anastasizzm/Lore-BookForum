@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/pages/test?page=home'
+order: 1000
+queryParams:
+  - key: page
+    value: home

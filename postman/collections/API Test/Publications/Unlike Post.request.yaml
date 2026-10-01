@@ -1,0 +1,7 @@
+$kind: http-request
+method: DELETE
+url: '{{base_url}}/api/posts/{{postId}}/like'
+order: 12000
+pathVariables:
+  - key: postId
+    value: '1'

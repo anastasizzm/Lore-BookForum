@@ -1,0 +1,4 @@
+$kind: collection
+variables:
+  base_url: http://localhost:8000
+  csrf_token: ""

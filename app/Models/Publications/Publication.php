@@ -2,6 +2,7 @@
 namespace App\Models\Publications;
 
 use DateTimeImmutable;
+use Uuid;
 
 use App\Models\Users\UserShortData;
 use App\Models\Publications\PublicationShort;
@@ -12,7 +13,7 @@ readonly class Publication extends PublicationShort
     public function __construct(
         int $id,
         string $title,
-        int $iconId,
+        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
         public int $commentsCount,
         public int $rating, // avg rating * 10
@@ -33,8 +34,8 @@ readonly class Publication extends PublicationShort
         return new self(
             id: $parent->id,
             title: $parent->title,
-            iconId: $parent->icon_id,
-            createdAt: $parent->created_at,
+            iconId: $parent->iconId,
+            createdAt: $parent->createdAt,
             creatorId: self::int($row, $prefix . 'creator_id'),
             genreId: self::int($row, $prefix . 'genre_id'),
             commentsCount: self::int($row, $prefix . 'comments_count'),
