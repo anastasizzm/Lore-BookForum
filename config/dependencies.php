@@ -43,7 +43,7 @@ $container->instance(RouteRegistry::class, new RouteRegistry());
 $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class)));
 
 //Services
-$container->instance(CookieService::class, new CookieService());
+$container->instance(CookieService::class, new CookieService(secureByDefault: false));
 $container->singleton(AuthorizationService::class, fn(Container $c) => new AuthorizationService($c->get(PolicyRegistry::class), $c));
 $container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));

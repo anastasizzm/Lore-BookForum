@@ -8,12 +8,9 @@ use App\ErrorCodes;
 readonly class ValidationError extends Error
 {
     public function __construct(
-        private string $element,
-        private array $messages
+        public string $element,
+        array $messages
     ){
-        parent::__construct(ErrorCodes::VALIDATION_FAIL, "One or multiple problems occured during the validation");
+        parent::__construct(ErrorCodes::VALIDATION_FAIL, $messages);
     }
-
-    public function element() : string { return $this->element; }
-    public function messages() : array { return $this->messages; }
 }

@@ -28,7 +28,7 @@ final class PostsController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
 
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromInput($context->request->query);
@@ -65,7 +65,7 @@ final class PostsController extends Controller
         $postId = (int)$postId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
 
         try{
             $this->postsService->setLike($postId, $userId);
@@ -81,7 +81,7 @@ final class PostsController extends Controller
         $postId = (int)$postId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
 
         try{
             $this->postsService->removeLike($postId, $userId);
@@ -99,13 +99,13 @@ final class PostsController extends Controller
 
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
+            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
 
         $formData = PostForm::fromInput($context->request->body());
         try
         {
             $id = $this->postsService->addComment($userId, $formData, $postId);
-            return $this->jsonObject(['createdId' => $id], statusCode: 201);
+            return $this->jsonCreatedId($id, statusCode: 201);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());

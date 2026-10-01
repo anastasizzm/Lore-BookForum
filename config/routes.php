@@ -45,11 +45,12 @@ return function(Router $router)
 
     // Publications
     $router->get('/books', [App\Controllers\Publications\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
+    $router->get('/books/saved', [App\Controllers\Publications\BooksController::class, 'savedList'], 'books.saved', AuthPolicy::Auth);
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
+    $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
     
     // Profile
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
     $router->get('/users/{userId}', [App\Controllers\Users\UsersController::class, 'retrieve'], 'users.profile', AuthPolicy::Auth);
     $router->get('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'getEdit'], 'users.profile.edit', 'profile_owner');
-    $router->put('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'edit'], 'users.profile.edit.submit', 'profile_owner');
 };

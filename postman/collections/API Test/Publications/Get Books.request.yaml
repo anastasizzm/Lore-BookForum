@@ -1,4 +1,9 @@
 $kind: http-request
 method: GET
-url: '{{base_url}}/api/books'
+url: "{{base_url}}/api/books"
+queryParams:
+  - key: isbn
+    value: "979"
+    disabled: true
+    description: ""
 order: 1000

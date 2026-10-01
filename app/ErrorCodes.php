@@ -20,4 +20,5 @@ final class ErrorCodes
     public const UNHANDLED_EX = 'unhandledEx';
 
     public const UNAUTH_TRY = 'unauthorizedTry';
+    public const ALREADY_DONE = 'alreadyDone';
 }

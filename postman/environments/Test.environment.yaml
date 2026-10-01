@@ -1,0 +1,6 @@
+name: Test
+values:
+  - key: csrf_token
+    value: ''
+  - key: base_url
+    value: ''
