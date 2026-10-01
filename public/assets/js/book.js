@@ -7,16 +7,21 @@
   // Toggle bookmark (Save book)
   var bookmark = document.querySelector('[data-toggle-bookmark]');
   if (bookmark) {
+    bookmark.setAttribute('aria-pressed', 'false');
     bookmark.addEventListener('click', function () {
-      bookmark.classList.toggle('is-active');
+      var active = bookmark.classList.toggle('is-active');
+      bookmark.setAttribute('aria-pressed', String(active));
     });
   }
 
-  // Start reading — пока заглушка
+  // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
     startReading.addEventListener('click', function () {
-      // TODO: добавить логику "начать читать"
+      var status = startReading.dataset.readingStatus; // new | in_progress | finished
+      // TODO: new -> открыть с первой главы
+      //       in_progress -> открыть с сохранённого места
+      //       finished -> сбросить прогресс и открыть с начала
     });
   }
 
@@ -77,4 +82,64 @@
       });
     });
   }
+
+  // Комментарии: лайк и ответ (делегирование событий)
+  document.addEventListener('click', function (e) {
+    // Лайк комментария
+    var likeBtn = e.target.closest('[data-comment-like]');
+    if (likeBtn) {
+      var countEl = likeBtn.querySelector('[data-comment-like-count]');
+      var liked = likeBtn.classList.toggle('is-liked');
+      likeBtn.setAttribute('aria-pressed', String(liked));
+      if (countEl) {
+        countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) + (liked ? 1 : -1));
+      }
+      // TODO: отправить лайк на сервер
+      return;
+    }
+
+    // Показать/скрыть форму ответа
+    var replyBtn = e.target.closest('[data-reply-toggle]');
+    if (replyBtn) {
+      var form = replyBtn.closest('.comment-card__content').querySelector('[data-reply-form]');
+      var open = form.hidden;
+      form.hidden = !open;
+      replyBtn.setAttribute('aria-expanded', String(open));
+      if (open) form.querySelector('input').focus();
+    }
+  });
+
+  // Post активна, только когда есть текст
+  document.addEventListener('input', function (e) {
+    var input = e.target.closest('.comment-reply-form__input');
+    if (!input) return;
+    input.closest('form').querySelector('.comment-reply-form__submit').disabled =
+      input.value.trim() === '';
+  });
+
+  // Отправка ответа (пока только локально)
+  document.addEventListener('submit', function (e) {
+    var form = e.target.closest('[data-reply-form]');
+    if (!form) return;
+    e.preventDefault();
+
+    var input = form.querySelector('input');
+    var text = input.value.trim();
+    if (text === '') return;
+
+    var template = document.getElementById('reply-template');
+    if (!template) return;
+
+    var reply = template.content.firstElementChild.cloneNode(true);
+    reply.querySelector('.comment-reply__text').textContent = text; // textContent: без XSS
+
+    var content = form.closest('.comment-card__content');
+    content.querySelector('[data-replies]').appendChild(reply);
+
+    input.value = '';
+    form.querySelector('.comment-reply-form__submit').disabled = true;
+    form.hidden = true;
+    content.querySelector('[data-reply-toggle]').setAttribute('aria-expanded', 'false');
+    // TODO: отправить ответ на сервер
+  });
 })();
