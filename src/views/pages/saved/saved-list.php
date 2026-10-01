@@ -7,15 +7,80 @@
 <?php $view->startBlock('content'); ?>
 
 <?php
+/**
+ * Данные от BooksController::savedList:
+ *   $items — массив Publication (id, title, iconId, creator, getCreatorId()...)
+ *   $meta  — ['page', 'pageSize', 'hasNext', 'type']
+ * Необязательно: $searchQuery, $currentFilter (иначе берутся из ?q= и ?filter=)
+ */
+$items    = $items ?? [];
+$meta     = $meta  ?? [];
+$page     = max(1, (int) ($meta['page'] ?? 1));
+$pageSize = (int) ($meta['pageSize'] ?? 0);
+$hasNext  = (bool) ($meta['hasNext'] ?? false);
+
+$q = $searchQuery ?? ($_GET['q'] ?? '');
+$q = is_string($q) ? trim($q) : '';
+
+// all -> все сохранённые, to-read -> в процессе чтения, finished -> дочитанные
+// ИСПРАВЛЕНО: 'filter' заменен на 'f'
+$f = $currentFilter ?? ($_GET['f'] ?? 'all');
+if (!in_array($f, ['all', 'to-read', 'finished'], true)) $f = 'all';
+
+// TODO: уточнить у бэка, как отдаются обложки по icon_id (files.id)
+$coversBase = '/uploads/covers/';
+
+// Publication -> параметры для card-book
+$cards = [];
+foreach ($items as $p) {
+    $creator = $p->creator ?? null;
+
+    $author = $creator ? trim(($creator->name ?? '') . ' ' . ($creator->surname ?? '')) : '';
+    if ($author === '' && $creator) $author = (string) ($creator->username ?? '');
+
+    $icon = $p->iconId ?? null;
+
+    $cards[] = [
+        'id'       => (int) $p->id,
+        'cover'    => $icon instanceof Stringable ? $coversBase . $icon : '',
+        'title'    => (string) $p->title,
+        'authorId' => (int) ($creator->id ?? $p->getCreatorId()),
+        'author'   => $author,
+    ];
+}
+
+// Ссылки сохраняют поиск и фильтр
+$baseUrl = $view->url('books.saved');
+$link = static function (array $params) use ($baseUrl): string {
+    $params = array_filter($params, static fn($v) => $v !== null && $v !== '');
+    $qs = http_build_query($params);
+    return $baseUrl . ($qs !== '' ? '?' . $qs : '');
+};
+$filterParam = $f === 'all' ? null : $f;
+
+// Сколько книг показано (нижняя граница, если есть следующая страница)
+$shown = ($page - 1) * $pageSize + count($cards);
+?>
+
+<?php
 // В page-header оставляем только поиск.
-// Табы перенесены в books-panel, чтобы они были в доске с книгами.
+// ИСПРАВЛЕНО: Обернули input в form для работы по нажатию Enter.
 ob_start();
-$view->include('input', [
-    'type'        => 'search',
-    'name'        => 'q',
-    'placeholder' => 'Search saved books',
-    'value'       => $searchQuery ?? '',
-]);
+?>
+<form method="get" action="">
+    <?php if ($filterParam): ?>
+        <input type="hidden" name="f" value="<?= htmlspecialchars($filterParam) ?>">
+    <?php endif; ?>
+    <?php
+    $view->include('input', [
+        'type'        => 'search',
+        'name'        => 'q',
+        'placeholder' => 'Search saved books',
+        'value'       => $q,
+    ]);
+    ?>
+</form>
+<?php
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
@@ -25,18 +90,12 @@ $view->include('page-header', [
 ]);
 ?>
 
-<?php
-// TODO: заменить на данные из контроллера ($books, $currentFilter, $totalCount)
-$books       = $books ?? [];
-$books_count = $totalCount ?? count($books);
-?>
-
-<?php if (empty($books)): ?>
+<?php if (empty($cards) && $q === '' && $f === 'all' && $page === 1): ?>
 
   <div class="empty-state">
     <p class="empty-state__text">
       You have no saved books yet.
-      <a href="#" class="link">Browse the library</a>
+      <a href="<?= $view->e($view->url('books')) ?>" class="link">Browse the library</a>
       and save what you like.
     </p>
   </div>
@@ -58,39 +117,66 @@ $books_count = $totalCount ?? count($books);
         <div>
           <h2 class="books-panel__title">Saved books</h2>
           <p class="books-panel__meta">
-            <?= $view->e($books_count) ?> items · Updated today
+            <span data-saved-count><?= $shown ?></span><?= $hasNext ? '+' : '' ?> items · Updated today
           </p>
         </div>
       </div>
 
       <?php
-      // Табы внутри доски — справа от заголовка.
-      // Показываются только когда $books не пуст (мы уже внутри else).
+      // ИСПРАВЛЕНО: 'filter' заменен на 'f' в параметрах ссылок
       $view->include('tabs', [
           'variant' => 'filled',
           'items'   => [
-              ['label' => 'All',      'href' => '?filter=all',      'active' => ($currentFilter ?? 'all') === 'all'],
-              ['label' => 'To read',  'href' => '?filter=to-read',  'active' => ($currentFilter ?? '') === 'to-read'],
-              ['label' => 'Finished', 'href' => '?filter=finished', 'active' => ($currentFilter ?? '') === 'finished'],
+              ['label' => 'All',      'href' => $link(['q' => $q]),                     'active' => $f === 'all'],
+              ['label' => 'To read',  'href' => $link(['q' => $q, 'f' => 'to-read']),  'active' => $f === 'to-read'],
+              ['label' => 'Finished', 'href' => $link(['q' => $q, 'f' => 'finished']), 'active' => $f === 'finished'],
           ],
       ]);
       ?>
     </header>
 
-    <div class="grid-books">
-      <?php foreach ($books as $book): ?>
-        <?php $view->include('card-book', [
-            'id'     => $book['id']     ?? 0,
-            'cover'  => $book['cover']  ?? '',
-            'title'  => $book['title']  ?? '',
-            'author' => $book['author'] ?? '',
-            'saved'  => true, // на странице Saved все книги сохранены
-        ]); ?>
-      <?php endforeach; ?>
-    </div>
+    <?php if (empty($cards)): ?>
+      <p class="empty-state__text">
+        <?= $q !== '' ? 'Nothing found for your search.' : 'No books here yet.' ?>
+        <?php if ($page > 1): ?>
+          <a href="<?= $view->e($link(['q' => $q, 'f' => $filterParam])) ?>" class="link">Back to the first page</a>
+        <?php endif; ?>
+      </p>
+    <?php else: ?>
+      <div class="grid-books" data-saved-grid>
+        <?php foreach ($cards as $card): ?>
+          <?php $view->include('card-book', $card + [
+              'saved' => true, // на странице Saved все книги сохранены
+          ]); ?>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <!-- Показывается из saved.js, когда на странице сняли закладки со всех книг -->
+    <p class="empty-state__text" data-saved-empty hidden>
+      No saved books left on this page.
+      <a href="<?= $view->e($link(['q' => $q, 'f' => $filterParam])) ?>" class="link">Reload</a>
+    </p>
+
+    <?php if ($page > 1 || $hasNext): ?>
+      <nav class="books-panel__pager" aria-label="Pagination">
+        <?php if ($page > 1): ?>
+          <a class="btn btn--secondary"
+             href="<?= $view->e($link(['q' => $q, 'f' => $filterParam, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
+        <?php endif; ?>
+        <?php if ($hasNext): ?>
+          <a class="btn btn--secondary"
+             href="<?= $view->e($link(['q' => $q, 'f' => $filterParam, 'page' => $page + 1])) ?>">Next</a>
+        <?php endif; ?>
+      </nav>
+    <?php endif; ?>
 
   </section>
 
 <?php endif; ?>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/saved.js"></script>
+<?php $view->endBlock('scripts'); ?>
