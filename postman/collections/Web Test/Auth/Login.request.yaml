@@ -1,0 +1,12 @@
+$kind: http-request
+method: POST
+url: "{{base_url}}/login"
+order: 2000
+headers:
+  Content-Type: application/x-www-form-urlencoded
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: urlencoded
+  content:
+    login: lore_user
+    password: "1234567890"

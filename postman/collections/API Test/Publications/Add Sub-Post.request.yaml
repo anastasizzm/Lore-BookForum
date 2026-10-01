@@ -1,0 +1,17 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/api/posts/{{postId}}'
+order: 9000
+pathVariables:
+  - key: postId
+    value: '1'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "publicationId": 1,
+      "content": "Your reply here"
+    }

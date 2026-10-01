@@ -1,0 +1,4 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/api/additional/genres'
+order: 1000

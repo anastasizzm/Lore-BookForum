@@ -1,0 +1,7 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/api/articles/{{articleId}}/save'
+order: 5000
+pathVariables:
+  - key: articleId
+    value: '1'

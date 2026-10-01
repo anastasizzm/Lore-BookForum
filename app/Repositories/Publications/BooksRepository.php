@@ -88,7 +88,7 @@ final class BooksRepository extends PublicationsRepository
         if (!empty($where)) $where = 'WHERE ' . $where;
 
         $joins = implode("\n", $joinClauses);
-        $select = "SELECT p.id,\np.title,\np.creator_id,\np.icon_id,\np.created_at,\np.rating_avg,\np.comments_count";
+        $select = "SELECT p.id,\np.title,\np.creator_id,\np.icon_id,\np.created_at,\np.rating_avg,\np.comments_count,\np.genre_id";
         if (!empty($selectClauses))
             $select = $select . ",\n" . implode(",\n", $selectClauses);
 

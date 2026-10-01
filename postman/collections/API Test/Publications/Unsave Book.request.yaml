@@ -1,0 +1,7 @@
+$kind: http-request
+method: DELETE
+url: '{{base_url}}/api/books/{{bookId}}/save'
+order: 3000
+pathVariables:
+  - key: bookId
+    value: '1'

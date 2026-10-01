@@ -1,0 +1,7 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/users/{{userId}}/edit'
+order: 2000
+pathVariables:
+  - key: userId
+    value: '1'

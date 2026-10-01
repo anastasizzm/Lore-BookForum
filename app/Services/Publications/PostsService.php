@@ -17,7 +17,7 @@ use App\Models\PaginatedList;
 
 use Throwable;
 use App\Exceptions\ValidationException;
-use App\Exceptions\PostExceptionTranslator;
+use App\Exceptions\Translators\PostExceptionTranslator;
 
 final class PostsService
 {

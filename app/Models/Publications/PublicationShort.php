@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models\Publications;
 
 use DateTimeImmutable;
+use Uuid;
 
 use App\Models\BasicModel;
 
@@ -14,7 +15,7 @@ readonly class PublicationShort extends BasicModel
     public function __construct(
         int $id,
         string $title,
-        public int $iconId,
+        public ?Uuid $iconId,
         public DateTimeImmutable $createdAt
     ){
         parent::__construct($id, $title);
