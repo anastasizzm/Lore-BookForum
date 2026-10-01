@@ -1,5 +1,5 @@
 /* ============================================
-   PROFILE EDIT - validation, avatar picker
+   PROFILE EDIT - validation, avatar picker, save via PUT API
    ============================================ */
 
 (function () {
@@ -33,12 +33,10 @@
   var form = document.getElementById('profileEditForm');
   if (!form) return;
 
-  // Регулярки для проверки букв (любые Unicode-буквы)
-  // \p{L} - буквы, \p{M} - диакритические метки, \s - пробелы, ' - апостроф, - дефис
   var NAME_RE     = /^[\p{L}\p{M}\s'\-]+$/u;
   var USERNAME_RE = /^[A-Za-z0-9_.\-]{3,30}$/;
 
-    var RULES = {
+  var RULES = {
     name: {
       required: true,
       maxLength: 64,
@@ -92,16 +90,16 @@
       .replace(/'/g, '&#39;');
   }
 
-    function setError(name, message) {
-        var field = getField(name);
-        var errorEl = getErrorEl(name);
-        if (field) field.classList.add('form-field__input--invalid');
-        if (errorEl) {
-        errorEl.innerHTML =
-            '<span class="field-error-icon">!</span>' +
-            '<span class="field-error-text">' + escapeHtml(message) + '</span>';
-        }
+  function setError(name, message) {
+    var field = getField(name);
+    var errorEl = getErrorEl(name);
+    if (field) field.classList.add('form-field__input--invalid');
+    if (errorEl) {
+      errorEl.innerHTML =
+        '<span class="field-error-icon">!</span>' +
+        '<span class="field-error-text">' + escapeHtml(message) + '</span>';
     }
+  }
 
   function clearError(name) {
     var field = getField(name);
@@ -110,13 +108,16 @@
     if (errorEl) errorEl.innerHTML = '';
   }
 
+  function clearAllErrors() {
+    Object.keys(RULES).forEach(clearError);
+  }
+
   // --- Validate one field ---
 
   function validateField(name) {
     var rule = RULES[name];
     if (!rule) return true;
 
-    // Special case: avatar (radio group)
     if (name === 'avatar') {
       var checked = form.querySelector('input[name="avatar"]:checked');
       if (rule.required && !checked) {
@@ -171,53 +172,141 @@
     return ok;
   }
 
-  // --- Attach handlers ---
+  // --- Attach handlers on fields ---
 
-    // --- Server errors: render icon + text ---
+  Object.keys(RULES).forEach(function (name) {
+    if (name === 'avatar') {
+      form.querySelectorAll('input[name="avatar"]').forEach(function (radio) {
+        radio.addEventListener('change', function () { validateField('avatar'); });
+      });
+      return;
+    }
+    var field = getField(name);
+    if (!field) return;
+
+    field.addEventListener('blur', function () { validateField(name); });
+    field.addEventListener('input', function () {
+      if (field.classList.contains('form-field__input--invalid')) {
+        validateField(name);
+      }
+    });
+  });
+
+  // --- Server errors on load (from PHP $errors) ---
+
   Object.keys(RULES).forEach(function (name) {
     var errorEl = getErrorEl(name);
     if (!errorEl) return;
     var text = errorEl.textContent.trim();
     if (text !== '') {
-      errorEl.innerHTML =
-        '<span class="field-error-icon">!</span>' +
-        '<span class="field-error-text">' + escapeHtml(text) + '</span>';
+      if (!errorEl.querySelector('.field-error-icon')) {
+        errorEl.innerHTML =
+          '<span class="field-error-icon">!</span>' +
+          '<span class="field-error-text">' + escapeHtml(text) + '</span>';
+      }
       var field = getField(name);
       if (field) field.classList.add('form-field__input--invalid');
     }
   });
 
-  // --- Submit: block if invalid ---
+  // --- Save via PUT API ---
 
-  form.addEventListener('submit', function (e) {
+  function extractUserId() {
+    var m = window.location.pathname.match(/\/users\/(\d+)\//);
+    return m ? m[1] : null;
+  }
+
+  function renderServerErrors(errors) {
+    if (!errors || typeof errors !== 'object') return;
+
+    Object.keys(errors).forEach(function (field) {
+      var msgs = errors[field];
+      var message = Array.isArray(msgs) ? msgs[0] : String(msgs);
+      if (RULES[field]) {
+        setError(field, message);
+      }
+    });
+
+    var firstInvalid = form.querySelector('.form-field__input--invalid');
+    if (firstInvalid) {
+      firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalid.focus();
+    }
+  }
+
+    form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearAllErrors();
+
     if (!validateAll()) {
-      e.preventDefault();
       var firstInvalid = form.querySelector('.form-field__input--invalid');
       if (firstInvalid) {
         firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
         firstInvalid.focus();
       }
+      return;
     }
-  });
 
-  // --- Server errors: replace text with icons ---
-
-  Object.keys(RULES).forEach(function (name) {
-    var errorEl = getErrorEl(name);
-    if (!errorEl) return;
-    var text = errorEl.textContent.trim();
-    if (text !== '') {
-      // На сервере уже отрендерена иконка, но если пришёл просто текст —
-      // переводим его в иконку.
-      if (!errorEl.querySelector('.field-error-icon')) {
-        errorEl.innerHTML =
-          '<span class="field-error-icon" title="' +
-          escapeHtml(text) +
-          '">!</span>';
-      }
-      var field = getField(name);
-      if (field) field.classList.add('form-field__input--invalid');
+    var userId = extractUserId();
+    if (!userId) {
+      alert('Cannot determine user id from URL.');
+      return;
     }
+
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalText = submitBtn ? submitBtn.textContent : 'Save changes';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+    }
+
+    var formData = new FormData(form);
+    formData.delete('_method');
+
+    // application/x-www-form-urlencoded
+    var body = new URLSearchParams(formData).toString();
+
+    fetch('/api/users/' + userId + '/edit', {
+      method: 'PUT',
+      body: body,
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json',
+      },
+    })
+      .then(function (response) {
+        if (response.status >= 200 && response.status < 300) {
+          window.location.href = '/users/' + userId;
+          return null;
+        }
+
+        if (response.status === 400 || response.status === 422) {
+          return response.json()
+            .then(function (data) {
+              var errors = data && data.errors ? data.errors : data;
+              renderServerErrors(errors);
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+              }
+            })
+            .catch(function () {
+              throw new Error('Invalid JSON in error response');
+            });
+        }
+
+        throw new Error('HTTP ' + response.status);
+      })
+      .catch(function (err) {
+        console.error('[profile-edit] save failed:', err);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+        alert('Something went wrong. Please try again.');
+      });
   });
 
   // --- Init picker ---
