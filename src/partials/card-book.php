@@ -18,8 +18,8 @@ $authorId = (int)($authorId ?? 0);
 $author   = (string)($author   ?? '');
 $saved    = (bool)($saved    ?? false);
 
-// Заглушка, если обложки нет
-$coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
+// ИСПРАВЛЕНО: Правильный путь к заглушке через папку /assets
+$coverSrc = $cover !== '' ? $cover : '/assets/img/book-placeholder.svg';
 
 // TODO: роут на отдельную книгу бэк ещё не добавил.
 // Когда появится (например, /books/{id}) — заменить на него.
