@@ -30,7 +30,7 @@ final class CsrfMiddleware implements Middleware
         $isCsrfSet = is_string($csrf);
         
         if(in_array($ctx->request->method, Constants::PROTECTED_METHODS, true))
-            {
+        {
             if (!$isCsrfSet || !CsrfManager::verify($ctx->request, $csrf))
                 return $ctx->isApi()
                 ? Response::json(ResponseTemplates::errors([

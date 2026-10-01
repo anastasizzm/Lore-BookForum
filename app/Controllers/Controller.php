@@ -42,8 +42,13 @@ abstract class Controller
         return Response::json(ResponseTemplates::object($obj, $meta), $statusCode);
     }
 
+    protected function jsonCreatedId(mixed $id, int $statusCode = 201) : Response
+    {
+        return Response::json(['createdId' => $id], $statusCode);
+    }
+
     protected function jsonEmpty(int $statusCode = 200) : Response
     {
-        return Response::json([], $statusCode);
+        return Response::json((object)[], $statusCode);
     }
 } 

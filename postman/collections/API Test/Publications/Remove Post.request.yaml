@@ -1,7 +1,8 @@
 $kind: http-request
 method: DELETE
-url: '{{base_url}}/api/posts/{{postId}}'
+url: "{{base_url}}/api/posts/{{postId}}"
+headers:
+  x-csrf-token: "{{csrf_token}}"
 order: 10000
 pathVariables:
-  - key: postId
-    value: '1'
+  postId: "1"

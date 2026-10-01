@@ -37,6 +37,7 @@ final class ArticlesController extends Controller
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromRaw("creator");
         $searchQ = $context->query('q', '');
+        $filterState = $context->query('f', 'closed');
         
         $userContext = $this->usersService->loadContext($userId);
         try{
@@ -49,7 +50,8 @@ final class ArticlesController extends Controller
                     'hasNext' => $paginatedList->hasNext(),
                     'type' => 'article'
                 ], 
-                'user' => $userContext
+                'user' => $userContext,
+                'filterState' => $filterState
             ]);
         }
         catch(ValidationException $e){
@@ -58,7 +60,8 @@ final class ArticlesController extends Controller
                     static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
                     array_keys($e->errors), 
                     $e->errors), 
-                'user' => $userContext
+                'user' => $userContext,
+                'filterState' => $filterState
             ]);
         }
     }

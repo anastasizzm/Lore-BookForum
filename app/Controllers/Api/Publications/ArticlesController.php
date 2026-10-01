@@ -68,6 +68,7 @@ final class ArticlesController extends Controller
         try
         {
             $this->articlesService->save($userId, $articleId);
+            return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());
@@ -84,6 +85,7 @@ final class ArticlesController extends Controller
         try
         {
             $this->articlesService->deleteSave($userId, $articleId);
+            return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());

@@ -52,7 +52,6 @@ final class BooksRepository extends PublicationsRepository
         }
 
         if (!empty($isbn)){
-            $joinClauses[] = 'INNER JOIN books b ON b.publication_id = p.id';
             $whereClauses[] = 'b.isbn ILIKE :isbn';
             $params[':isbn'] = $isbn . '%';
         }
@@ -101,6 +100,7 @@ final class BooksRepository extends PublicationsRepository
         $sql = "
             $select
             FROM publications p
+            INNER JOIN books b ON b.publication_id = p.id
             $joins
             $where
             $order

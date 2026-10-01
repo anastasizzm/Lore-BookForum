@@ -21,14 +21,13 @@ final class CsrfManager
 
     /**
      * Pull the submitted token from the request.
-     * Order: form field → header → cookie.
+     * Order: form field → header.
      */
     public static function extract(Request $request): ?string
     {
         $candidates = [
             $request->input(Constants::CSRF_FIELD),
-            $request->getHeader(Constants::CSRF_HEADER),
-            $request->getCookie(Constants::CSRF_COOKIE) ?? null,
+            $request->getHeader(Constants::CSRF_HEADER) ?? null
         ];
 
         foreach ($candidates as $value) {

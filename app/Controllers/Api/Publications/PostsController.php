@@ -105,7 +105,7 @@ final class PostsController extends Controller
         try
         {
             $id = $this->postsService->addComment($userId, $formData, $postId);
-            return $this->jsonObject(['createdId' => $id], statusCode: 201);
+            return $this->jsonCreatedId($id, statusCode: 201);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());

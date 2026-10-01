@@ -51,10 +51,6 @@ final class ArticlesRepository extends PublicationsRepository
             $params[':creatorId'] = $creatorId;
         }
 
-        if ($bookId !== null || $doi !== null || $type !== null){
-            $joinClauses[] = 'INNER JOIN articles a ON a.publication_id = p.id';
-        }
-
         if ($bookId !== null){
             $whereClauses[] = 'a.book_id = :bookId';
             $params[':bookId'] = $bookId;
@@ -101,6 +97,7 @@ final class ArticlesRepository extends PublicationsRepository
         $sql = "
             $select
             FROM publications p
+            INNER JOIN articles a ON a.publication_id = p.id
             $joins
             $where
             $order

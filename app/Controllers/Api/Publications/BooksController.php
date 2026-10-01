@@ -64,10 +64,10 @@ final class BooksController extends Controller
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
-
         try
         {
             $this->booksService->save($userId, $bookId);
+            return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());
@@ -80,10 +80,10 @@ final class BooksController extends Controller
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTH_TRY), 401, "Authorize first");
-
         try
         {
             $this->booksService->deleteSave($userId, $bookId);
+            return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
             return $this->jsonValidationErrors($e->errors());

@@ -1,14 +1,14 @@
 $kind: http-request
 method: POST
-url: '{{base_url}}/api/posts'
+url: "{{base_url}}/api/posts"
 order: 8000
 headers:
-  - key: Content-Type
-    value: application/json
+  Content-Type: application/json
+  x-csrf-token: "{{csrf_token}}"
 body:
   type: json
   content: |-
     {
       "publicationId": 1,
-      "content": "Your comment here"
+      "content": "Very good book"
     }
