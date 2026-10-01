@@ -20,6 +20,7 @@ document.addEventListener('click', (e) => {
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', open);
     if (open) form.querySelector('.comment-form__input').focus();
+    fcSetOpen(card, open);
   }
 });
 
@@ -111,4 +112,202 @@ document.addEventListener('submit', async (e) => {
     submitBtn.disabled = input.value.trim() === '';
     input.focus();
   }
+});
+
+/* ============================================
+   Ленивая подгрузка комментариев в ленте
+   GET /api/posts?parent={postId}&page=N&pageSize=M&props=creator
+   Ответ: { items: [...], meta: { page, pageSize, hasNext } }
+   Первая загрузка — при первом раскрытии карточки (иконка комментария),
+   дальше — кнопка Load more. После отправки своего комментария
+   (событие comment:created) список перезагружается с первой страницы.
+   ============================================ */
+const FEED_COMMENTS = {
+  url: '/api/posts',
+  pageSize: 10,
+  pageParam: 'page',
+  pageSizeParam: 'pageSize',
+  propsParam: 'props',     // имя параметра смотри в PropertiesQuery::fromInput
+  propsValue: 'creator',   // чтобы в ответе пришёл автор комментария
+  avatarsDir: '/uploads/avatars/',
+};
+
+const feedCommentsState = new WeakMap(); // card -> { page, hasNext, loading, gen, started }
+
+function fcParts(card) {
+  const root = card.querySelector('[data-feed-comments]');
+  if (!root) return null;
+  return {
+    root,
+    list: root.querySelector('[data-fc-list]'),
+    status: root.querySelector('[data-fc-status]'),
+    more: root.querySelector('[data-fc-more]'),
+  };
+}
+
+function fcState(card) {
+  let st = feedCommentsState.get(card);
+  if (!st) {
+    st = { page: 0, hasNext: false, loading: false, gen: 0, started: false };
+    feedCommentsState.set(card, st);
+  }
+  return st;
+}
+
+function fcEsc(value) {
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+const fcFirstChar = (s) => Array.from(s || '')[0] || '';
+
+// createdAt приходит либо строкой, либо объектом {date: "..."} (так сериализуется DateTimeImmutable)
+function fcFormatDate(value) {
+  const raw = value && typeof value === 'object' ? value.date : value;
+  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
+}
+
+function fcBuildItem(item, tpl) {
+  const node = tpl.content.firstElementChild.cloneNode(true);
+  const c = item.creator || {};
+
+  const initials = (fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
+    || fcFirstChar(c.username).toUpperCase();
+  const avatarRaw = c.avatar || '';
+  const src = avatarRaw && avatarRaw !== 'default' ? FEED_COMMENTS.avatarsDir + avatarRaw : null;
+
+  const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
+  const wrapImg = node.querySelector('[data-fc-avatar-img]');
+  if (wrapInitials && wrapImg) {
+    const used = src ? wrapImg : wrapInitials;
+    (src ? wrapInitials : wrapImg).remove();
+    used.hidden = false;
+    used.innerHTML = used.innerHTML
+      .split('__INITIALS__').join(fcEsc(initials))
+      .split('__SRC__').join(fcEsc(src ? encodeURI(src) : ''));
+  }
+
+  // textContent: без XSS
+  node.querySelector('[data-fc-author]').textContent = c.username || '';
+  node.querySelector('[data-fc-date]').textContent = fcFormatDate(item.createdAt);
+  node.querySelector('[data-fc-text]').textContent = item.content || '';
+  if (item.id != null) node.dataset.commentId = item.id;
+  return node;
+}
+
+async function fcLoad(card, reset = false) {
+  const parts = fcParts(card);
+  const tpl = document.getElementById('feed-comment-template');
+  const postId = Number(card.dataset.postId);
+  if (!parts || !tpl || !postId) return;
+
+  const st = fcState(card);
+  if (reset) {
+    st.gen++;               // ответы на старые запросы будут отброшены
+    st.page = 0;
+    st.hasNext = false;
+    st.loading = false;
+    parts.list.replaceChildren();
+  }
+  if (st.loading) return;
+
+  const gen = st.gen;
+  const page = st.page + 1;
+  st.loading = true;
+  parts.more.hidden = true;
+  setFeedMsg(parts.status, 'Loading comments…');
+
+  const params = new URLSearchParams({
+    parent: String(postId),
+    [FEED_COMMENTS.pageParam]: String(page),
+    [FEED_COMMENTS.pageSizeParam]: String(FEED_COMMENTS.pageSize),
+    [FEED_COMMENTS.propsParam]: FEED_COMMENTS.propsValue,
+  });
+  const url = `${FEED_COMMENTS.url}?${params}`;
+
+  const showError = (msg) => {
+    setFeedMsg(parts.status, msg);
+    parts.more.textContent = 'Try again';
+    parts.more.hidden = false;
+  };
+
+  try {
+    const res = await fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* не JSON */ }
+    console.log('GET', url, res.status, data); // для отладки бэка
+
+    if (gen !== st.gen) return; // пришёл устаревший ответ
+
+    if (!res.ok || !data || !Array.isArray(data.items)) {
+      let msg = '';
+      if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
+      if (!msg && data && data.message) msg = data.message;
+      if (!msg) {
+        msg = res.status === 401 ? 'Please sign in again'
+            : `Failed to load comments (HTTP ${res.status})`;
+      }
+      return showError(msg);
+    }
+
+    const frag = document.createDocumentFragment();
+    data.items.forEach((item) => frag.appendChild(fcBuildItem(item, tpl)));
+    parts.list.appendChild(frag);
+
+    st.page = page;
+    st.hasNext = !!(data.meta && data.meta.hasNext);
+    setFeedMsg(parts.status, page === 1 && data.items.length === 0 ? 'No comments yet.' : '');
+    parts.more.textContent = 'Load more';
+    parts.more.hidden = !st.hasNext;
+  } catch (err) {
+    if (gen !== st.gen) return;
+    showError('Network error. Try again.');
+  } finally {
+    if (gen === st.gen) st.loading = false;
+  }
+}
+
+// Показать/скрыть список вместе с формой; первая загрузка — при первом открытии
+function fcSetOpen(card, open) {
+  const parts = fcParts(card);
+  if (!parts) return;
+  parts.root.hidden = !open;
+  if (!open) return;
+
+  const st = fcState(card);
+  if (st.started) return;
+  st.started = true;
+
+  const count = parseInt(card.querySelector('[data-comment-count]')?.textContent, 10) || 0;
+  if (count === 0) {
+    setFeedMsg(parts.status, 'No comments yet.'); // зря в сеть не ходим
+    return;
+  }
+  fcLoad(card);
+}
+
+// Load more / Try again
+document.addEventListener('click', (e) => {
+  const more = e.target.closest('[data-fc-more]');
+  if (!more) return;
+  const card = more.closest('.card-feed');
+  if (card) fcLoad(card);
+});
+
+// Свой комментарий отправлен — перезагружаем список с первой страницы
+// (на сервере порядок created_at DESC, новый окажется сверху)
+document.addEventListener('comment:created', (e) => {
+  const card = e.target.closest && e.target.closest('.card-feed');
+  if (!card) return;
+  const parts = fcParts(card);
+  if (!parts) return;
+  parts.root.hidden = false;
+  fcState(card).started = true;
+  fcLoad(card, true);
 });
