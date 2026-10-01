@@ -36,4 +36,8 @@ return function(Router $router)
     // Additional
     $router->get('/api/additional/genres', [App\Controllers\Api\Additional\GenresController::class, 'list'], 'api.genres', AuthPolicy::Auth);
     $router->get('/api/additional/categories', [App\Controllers\Api\Additional\CategoriesController::class, 'list'], 'api.categories', AuthPolicy::Auth);
+
+
+    // Users
+    $router->put('/api/users/{userId}/edit', [App\Controllers\Api\Users\UsersController::class, 'edit'], 'api.users.profile.edit.submit', 'profile_owner');
 };

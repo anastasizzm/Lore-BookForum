@@ -56,23 +56,4 @@ final class UsersController extends Controller
         return $this->render('profile/profile-edit', ['user' => $userContext, 'userData' => $userData]);
     }
 
-    public function edit(HttpContext $context, string $userId)
-    {
-        $userId = (int)$userId;
-
-        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($currentUserId))
-            return Response::redirect('login');
-        
-        $userContext = $this->usersService->loadContext($currentUserId);
-        $formData = $context->request->body();
-        try{
-            $this->usersService->edit($userId, $formData);
-            return Response::redirect('users.profile', ['userId' => $userId]);
-        }
-        catch(ValidationException $e){
-            return $this->render('profile/profile-edit', ['user' => $userContext, 'form' => $formData, 'errors' => $e->errors()]);
-        }
-
-    }
 }

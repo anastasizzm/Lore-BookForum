@@ -69,7 +69,7 @@ final class UsersService
     public function edit(int $userId, UserForm $form)
     {
         $errors = [];
-        $isValid = $form->validate();
+        $isValid = $form->validate($errors);
         if (!$isValid) throw new ValidationException($errors);
 
         try{

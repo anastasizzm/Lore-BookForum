@@ -30,19 +30,38 @@ final readonly class UserForm implements Form
 
     public function validate(array &$errors) : bool
     {
+        $ok = true;
+
         if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $this->username))
+        {
             $errors['username'][] = "Invalid username format";
+            $ok = false;
+        }
 
         if (!filter_var($this->email, FILTER_VALIDATE_EMAIL))
+        {
             $errors['email'][] = "Invalid email format";
+            $ok = false;
+        }
 
         if (empty($this->avatar))
+        {
             $errors['avatar'][] = "Avatar can't be empty";
+            $ok = false;
+        }
 
         if (empty($this->name))
+        {
             $errors['name'][] = "Name can't be empty";
+            $ok = false;
+        }
 
         if (empty($this->surname))
+        {
             $erorrs['surname'][] = "Surname can't be empty";
+            $ok = false;
+        }
+
+        return $ok;
     } 
 }

@@ -1,0 +1,16 @@
+$kind: http-request
+method: PUT
+url: "{{base_url}}/api/users/{{userId}}/edit"
+order: 1790854811852
+headers:
+  Content-Type: application/x-www-form-urlencoded
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: urlencoded
+  content:
+    username: lore_user
+    email: alex20061105@gmail.com
+    avatar: default
+    name: LoreName
+    surname: Lorevich
+    bio: The first user of the system on this pc
