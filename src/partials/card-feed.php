@@ -92,5 +92,15 @@ $date          = $date         ?? '';
     <p data-comment-status role="status" hidden
        style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>
 </form>
+
+<!--
+  Комментарии к посту: GET /api/posts?parent={postId}.
+  Подгружаются лениво при первом раскрытии (card-feed.js), дальше по кнопке Load more.
+-->
+<div class="feed-comments" data-feed-comments hidden>
+    <div class="feed-comments__list" data-fc-list></div>
+    <p class="feed-comments__status" data-fc-status role="status" hidden></p>
+    <button type="button" class="btn btn--secondary feed-comments__more" data-fc-more hidden>Load more</button>
+</div>
   </div>
 </article>

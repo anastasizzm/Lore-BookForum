@@ -8,6 +8,7 @@
  *   $title    — название книги
  *   $authorId — ID автора (user_id)
  *   $author   — имя автора
+ *   $saved    — сохранена ли книга текущим пользователем (bool)
  */
 
 $id       = (int)($id       ?? 0);
@@ -15,6 +16,7 @@ $cover    = (string)($cover    ?? '');
 $title    = (string)($title    ?? '');
 $authorId = (int)($authorId ?? 0);
 $author   = (string)($author   ?? '');
+$saved    = (bool)($saved    ?? false);
 
 // Заглушка, если обложки нет
 $coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
@@ -32,6 +34,18 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
     <img src="<?= $view->e($coverSrc) ?>"
          alt="<?= $view->e($title) ?>"
          loading="lazy">
+
+    <!-- Закладка: POST/DELETE /api/books/{id}/save (обработчик в app.js) -->
+    <button type="button"
+            class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
+            data-save-book
+            data-book-id="<?= $id ?>"
+            aria-pressed="<?= $saved ? 'true' : 'false' ?>"
+            aria-label="<?= $saved ? 'Remove from saved' : 'Save book' ?>">
+      <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
   </div>
 
   <h3 class="card-book__title">

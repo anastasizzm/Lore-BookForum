@@ -4,15 +4,8 @@
    Book details page
    ============================================ */
 (function () {
-  // Toggle bookmark (Save book)
-  var bookmark = document.querySelector('[data-toggle-bookmark]');
-  if (bookmark) {
-    bookmark.setAttribute('aria-pressed', 'false');
-    bookmark.addEventListener('click', function () {
-      var active = bookmark.classList.toggle('is-active');
-      bookmark.setAttribute('aria-pressed', String(active));
-    });
-  }
+  // Закладка (Save book): обработчик [data-save-book] лежит в app.js
+  // (общий для страницы книги и карточек: POST/DELETE /api/books/{id}/save)
 
   // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');

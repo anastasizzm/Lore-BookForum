@@ -45,6 +45,9 @@ $books_count = $totalCount ?? count($books);
 
   <section class="books-panel">
 
+    <!-- CSRF-токен для fetch-запросов (save) -->
+    <div hidden data-csrf><?= $view->csrfField() ?></div>
+
     <header class="books-panel__head">
       <div class="books-panel__title-wrap">
         <div class="books-panel__icon">
@@ -81,6 +84,7 @@ $books_count = $totalCount ?? count($books);
             'cover'  => $book['cover']  ?? '',
             'title'  => $book['title']  ?? '',
             'author' => $book['author'] ?? '',
+            'saved'  => true, // на странице Saved все книги сохранены
         ]); ?>
       <?php endforeach; ?>
     </div>

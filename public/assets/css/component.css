@@ -1169,3 +1169,121 @@ textarea.form-field__input {
 
 .message__title { font-weight: var(--fw-medium); margin-bottom: var(--space-1); }
 .message__body  { font-size: var(--fs-small); }
+
+
+/* ============================================
+   CARD — Book: кнопка «Сохранить» (закладка)
+   POST/DELETE /api/books/{id}/save — обработчик в app.js
+   ============================================ */
+.card-book__cover {
+  position: relative;
+}
+
+.card-book__save {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;                 /* выше растянутой ссылки .card-book__link::after (z-index: 1) */
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.card-book__save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.card-book__save:focus-visible {
+  outline: 2px solid var(--main-text-color);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CARD — Feed: лениво подгружаемые комментарии
+   GET /api/posts?parent={postId} — card-feed.js
+   ============================================ */
+.feed-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.feed-comments[hidden] {
+  display: none;
+}
+
+.feed-comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feed-comments__list:empty {
+  display: none;
+}
+
+.feed-comment {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.feed-comment__avatar {
+  flex-shrink: 0;
+}
+
+.feed-comment__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feed-comment__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.feed-comment__author {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+}
+
+.feed-comment__date {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.feed-comment__text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--interaction-text-color);
+  white-space: pre-line;      /* переносы строк из комментария */
+  overflow-wrap: anywhere;
+}
+
+.feed-comments__status {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.feed-comments__status[hidden] {
+  display: none;
+}
+
+.feed-comments__more {
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+}
+
+.feed-comments__more[hidden] {
+  display: none;               /* .btn задаёт display, перебивая атрибут hidden */
+}

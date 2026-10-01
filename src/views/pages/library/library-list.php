@@ -73,6 +73,9 @@ foreach ($sort_options as $key => $text) {
 
 <section class="books-panel">
 
+  <!-- CSRF-токен для fetch-запросов (save) -->
+  <div hidden data-csrf><?= $view->csrfField() ?></div>
+
   <header class="books-panel__head">
     <div class="books-panel__title-wrap">
       <div class="book-panel-library__icon">
@@ -110,6 +113,7 @@ foreach ($sort_options as $key => $text) {
           'cover'  => $book['cover']  ?? '',
           'title'  => $book['title']  ?? '',
           'author' => $book['author'] ?? '',
+          'saved'  => $book['saved']  ?? false,
       ]); ?>
     <?php endforeach; ?>
   </div>

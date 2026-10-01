@@ -127,4 +127,22 @@ $view->include('page-header', [
 
 <?php endif; ?>
 
+<!-- Шаблон комментария под постом (клонируется из card-feed.js).
+     __INITIALS__ и __SRC__ — плейсхолдеры: JS оставляет один из двух вариантов аватара -->
+<template id="feed-comment-template">
+  <div class="feed-comment">
+    <div class="feed-comment__avatar">
+      <div data-fc-avatar-initials hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => null]); ?></div>
+      <div data-fc-avatar-img hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '', 'src' => '__SRC__']); ?></div>
+    </div>
+    <div class="feed-comment__body">
+      <div class="feed-comment__head">
+        <span class="feed-comment__author" data-fc-author></span>
+        <span class="feed-comment__date" data-fc-date></span>
+      </div>
+      <div class="feed-comment__text" data-fc-text></div>
+    </div>
+  </div>
+</template>
+
 <?php $view->endBlock('content'); ?>
