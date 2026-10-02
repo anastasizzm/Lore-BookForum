@@ -66,10 +66,9 @@ final class ArticlesRepository extends PublicationsRepository
             $params[':bookId'] = $bookId;
         }
 
-        // DOI prefix search ("10.12" matches "10.1234/abc"). LIKE wildcards in user input are escaped.
         if (!empty($doi)){
             $whereClauses[] = 'a.doi ILIKE :doi';
-            $params[':doi'] = addcslashes(trim($doi), '%_\\') . '%';
+            $params[':doi'] = $doi . '%';
         }
 
         if ($type !== null){
@@ -80,8 +79,8 @@ final class ArticlesRepository extends PublicationsRepository
         if ($userByFilters !== null){
             $statusWhere = match($userByFilters->getReadingStatus()){
                 ReadingStatus::None => '',
-                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND NOT ur.is_closed',
-                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND ur.is_closed'
+                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
+                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
             };
             if (!empty($statusWhere)){
                 $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';

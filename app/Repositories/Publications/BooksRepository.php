@@ -58,23 +58,18 @@ final class BooksRepository extends PublicationsRepository
             $params[':creatorId'] = $creatorId;
         }
 
-        // ISBN prefix search. Hyphens/spaces are ignored on both sides,
-        // so "9780" and "978-0" both match "978-0-306-40615-7" and "9780306406157".
         if (!empty($isbn)){
-            $isbnClean = strtoupper(preg_replace('/[^0-9Xx]/', '', $isbn) ?? '');
-            if ($isbnClean !== ''){
-                $whereClauses[] = "regexp_replace(b.isbn, '[^0-9Xx]', '', 'g') ILIKE :isbn";
-                $params[':isbn'] = $isbnClean . '%';
-            }
+            $whereClauses[] = 'b.isbn ILIKE :isbn';
+            $params[':isbn'] = $isbn . '%';
         }
 
         if ($userByFilters !== null){
             $statusWhere = match($userByFilters->getReadingStatus()){
                 ReadingStatus::None => '',
-                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND NOT ur.is_closed',
-                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND ur.is_closed'
-            };
-            if (!empty($statusWhere)){
+                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
+                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
+                };
+                if (!empty($statusWhere)){
                 $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';
                 $params[':sUserId'] = $userByFilters->getUserId();
                 $whereClauses[] = $statusWhere;
