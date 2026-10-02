@@ -29,7 +29,18 @@ $filter_open = $filter_open ?? false;
                  class="filter-input"
                  name="<?= $view->e($control['name'] ?? '') ?>"
                  value="<?= $view->e($control['value'] ?? '') ?>"
-                 placeholder="<?= $view->e($control['placeholder'] ?? '') ?>">
+                 placeholder="<?= $view->e($control['placeholder'] ?? '') ?>"
+                 autocomplete="off"
+                 spellcheck="false"
+                 <?php if (!empty($control['format'])): ?>
+                   data-format="<?= $view->e($control['format']) ?>"
+                 <?php endif; ?>
+                 <?php if (!empty($control['maxlength'])): ?>
+                   maxlength="<?= (int)$control['maxlength'] ?>"
+                 <?php endif; ?>
+                 <?php if (!empty($control['inputmode'])): ?>
+                   inputmode="<?= $view->e($control['inputmode']) ?>"
+                 <?php endif; ?>>
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
           <a class="filter-reset"

@@ -66,9 +66,10 @@ final class ArticlesRepository extends PublicationsRepository
             $params[':bookId'] = $bookId;
         }
 
+        // DOI prefix search ("10.12" matches "10.1234/abc"). LIKE wildcards in user input are escaped.
         if (!empty($doi)){
             $whereClauses[] = 'a.doi ILIKE :doi';
-            $params[':doi'] = $doi . '%';
+            $params[':doi'] = addcslashes(trim($doi), '%_\\') . '%';
         }
 
         if ($type !== null){

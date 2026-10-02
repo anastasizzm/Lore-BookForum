@@ -37,9 +37,12 @@ $tabHref = static function (string $href) use ($keep): string {
     return $href . (str_contains($href, '?') ? '&' : '?') . http_build_query($keep);
 };
 
-$status = strtolower((string)($params['status'] ?? ''));
-$type   = strtolower((string)($params['type'] ?? ''));
-$series = (string)($params['series'] ?? '');
+$str = static fn(string $key): string => is_string($params[$key] ?? null) ? $params[$key] : '';
+
+$status = strtolower($str('status'));
+$type   = strtolower($str('type'));
+$isbn   = $str('isbn');
+$doi    = $str('doi');
 
 $switcher = [
     'type'    => 'tabs',
@@ -50,7 +53,8 @@ $switcher = [
     ],
 ];
 
-$resetHref = $link([], ['genre', 'status', 'series', 'type', 'sort']);
+// Reset clears filters but keeps search (q) and panel state (f)
+$resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'type', 'sort']);
 
 $filter_rows = [
     [
@@ -68,7 +72,15 @@ $filter_rows = [
                     ['label' => 'Finished', 'href' => $link(['status' => 'ended']),   'active' => $status === 'ended'],
                 ],
             ],
-            ['type' => 'input', 'name' => 'series', 'placeholder' => 'Series number', 'value' => $series],
+            [
+                'type'        => 'input',
+                'name'        => 'isbn',
+                'placeholder' => 'ISBN',
+                'value'       => $isbn,
+                'format'      => 'isbn',
+                'maxlength'   => 17,
+                'inputmode'   => 'text',
+            ],
             ['type' => 'reset', 'href' => $resetHref],
         ],
     ],
@@ -88,6 +100,15 @@ $filter_rows = [
                     ['label' => 'Essay',    'href' => $link(['type' => 'essay'])],
                     ['label' => 'Note',     'href' => $link(['type' => 'note'])],
                 ],
+            ],
+            [
+                'type'        => 'input',
+                'name'        => 'doi',
+                'placeholder' => 'DOI',
+                'value'       => $doi,
+                'format'      => 'doi',
+                'maxlength'   => 200,
+                'inputmode'   => 'text',
             ],
             ['type' => 'reset', 'href' => $resetHref],
         ],
