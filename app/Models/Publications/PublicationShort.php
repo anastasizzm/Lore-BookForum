@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace App\Models\Publications;
 
 use DateTimeImmutable;
-use Uuid;
 
+use App\Models\Uuid;
 use App\Models\BasicModel;
 
 readonly class PublicationShort extends BasicModel

@@ -34,4 +34,24 @@ abstract class PublicationsRepository extends Repository
         );
         $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
     }
+
+    protected function addIncludeObjects(array &$selectClauses, array &$joinClauses, array $includeObjects)
+    {
+        foreach($includeObjects as $prop)
+        {
+            switch(lower($prop)){
+                case 'creator':
+                    $joinClauses[] = 'INNER JOIN users ON users.id = p.creator_id';
+                    $joinClauses[] = 'INNER JOIN profiles ON profiles.user_id = u.id';
+                    $selectClauses[] = "users.id as u_id,\nusers.username as u_username,\nprofiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar";
+                    break;
+                case 'genre':
+                    $joinClauses[] = 'INNER JOIN genres ON genres.id = publications.genre_id';
+                    $selectClauses[] = "genres.id as g_id,\ngenres.title as g_title";
+                    break;
+            }
+        }
+    }
+
+    
 }

@@ -15,7 +15,6 @@ use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Exceptions\ValidationException;
-use App\Exceptions\UnauthorizedException;
 
 use App\Constants;
 
@@ -50,10 +49,7 @@ final class FeedController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('feed/feed-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext
             ]);
         }

@@ -29,7 +29,7 @@ final class ArticlesController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromInput($context->request->query);
@@ -60,7 +60,7 @@ final class ArticlesController extends Controller
                 ]);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -68,7 +68,7 @@ final class ArticlesController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromInput($context->request->query);
@@ -99,7 +99,7 @@ final class ArticlesController extends Controller
                 ]);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -108,7 +108,7 @@ final class ArticlesController extends Controller
         $articleId = (int)$articleId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         try
         {
@@ -116,7 +116,7 @@ final class ArticlesController extends Controller
             return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -125,7 +125,7 @@ final class ArticlesController extends Controller
         $articleId = (int)$articleId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         try
         {
@@ -133,7 +133,7 @@ final class ArticlesController extends Controller
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 }

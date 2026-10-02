@@ -5,7 +5,7 @@ namespace App\Models;
 
 use DateTimeImmutable;
 use RuntimeException;
-use Uuid;
+use App\Models\Uuid;
 
 abstract readonly class Dto
 {

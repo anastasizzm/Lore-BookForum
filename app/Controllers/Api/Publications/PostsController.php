@@ -28,7 +28,7 @@ final class PostsController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $pageQ = PaginationQuery::fromInput($context->request->query);
         $propsQ = PropertiesQuery::fromInput($context->request->query);
@@ -56,7 +56,7 @@ final class PostsController extends Controller
                 ]);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -65,14 +65,14 @@ final class PostsController extends Controller
         $postId = (int)$postId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
         try{
             $this->postsService->setLike($postId, $userId);
             return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -81,14 +81,14 @@ final class PostsController extends Controller
         $postId = (int)$postId;
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
         try{
             $this->postsService->removeLike($postId, $userId);
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -99,7 +99,7 @@ final class PostsController extends Controller
 
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
         $formData = PostForm::fromInput($context->request->body());
         try
@@ -108,7 +108,7 @@ final class PostsController extends Controller
             return $this->jsonCreatedId($id, statusCode: 201);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 
@@ -121,7 +121,7 @@ final class PostsController extends Controller
             return $this->jsonEmpty(204);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 }

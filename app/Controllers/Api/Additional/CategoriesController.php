@@ -38,7 +38,7 @@ final class CategoriesController extends Controller
                 ]);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
     }
 }

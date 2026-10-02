@@ -29,7 +29,7 @@ final class BooksController extends Controller
         private readonly BooksService $booksService
     ){}
 
-    public function list (HttpContext $context){
+    public function list(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
@@ -56,17 +56,14 @@ final class BooksController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('library/library-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
         }
     }
 
-    public function savedList (HttpContext $context){
+    public function savedList(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
@@ -93,10 +90,37 @@ final class BooksController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('saved/saved-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+                'filterState' => $filterState
+            ]);
+        }
+    }
+
+    public function retrieve(HttpContext $context, string $bookId)
+    {
+        $bookId = (int)$bookId;
+
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect('login');
+
+        $propsQ = PropertiesQuery::fromRaw("creator+genre+category");
+
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $item = $this->booksService->retrieve($bookId, $propsQ);
+            if ($item === null)
+                return $this->renderNotFound();
+            
+            return $this->render('book/book-details', [
+                'data' => $item,
+                'user' => $userContext
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('book/book-details', [
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);

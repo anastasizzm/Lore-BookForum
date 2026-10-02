@@ -5,27 +5,34 @@ namespace App\Repositories\Publications;
 
 use App\Repositories\Publications\PublicationsRepository;
 
+use App\Extensions\ScriptBuilders\Publications\BooksScriptDirector;
+
 use PDO;
 use App\Lib\Data\Database;
 
 use App\Models\Publications\Publication;
+use App\Models\Publications\Book;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
 use App\Models\Filters\UserByPublicationFilters;
 
 final class BooksRepository extends PublicationsRepository
 {
-    public function checkType(int $publicationId) : bool
-    {
-        $stmt = $this->pdo()->prepare('SELECT 1 FROM books WHERE publication_id = :pubId');
-        $stmt->execute([':pubId' => $publicationId]);
-        return $stmt->fetchColumn() !== false;
-    }
+    private readonly BooksScriptDirector $director;
 
     public function __construct(
         Database $db
     ){
         parent::__construct($db);
+        $this->director = new BooksScriptDirector();
+    }
+
+    public function checkType(int $publicationId) : bool
+    {
+        $data = $this->director->getExistsScript($publicationId);
+        $stmt = $this->executeScript($data);
+
+        return $stmt->fetchColumn() !== false;
     }
 
     public function getList(
@@ -40,92 +47,35 @@ final class BooksRepository extends PublicationsRepository
         ?UserByPublicationFilters $userByFilters = null
     ) : array
     {
-        $whereClauses = [];
-        $joinClauses = [];
-        $selectClauses = [];
-        $params = [];
-        if (!empty($search)){
-            $whereClauses[] = 'p.title ILIKE :q';
-            $params[':q'] = '%' . $search . '%';
-        }
-        if ($genreId !== null){
-            $whereClauses[] = 'p.genre_id = :genreId';
-            $params[':genreId'] = $genreId;
-        }
+        $this->director->startTempFilter()->addPublicationSelectTemp();
+        if (!empty($search))
+            $this->director->addTitleTempFilter($search);
 
-        if ($creatorId !== null){
-            $whereClauses[] = 'p.creator_id = :creatorId';
-            $params[':creatorId'] = $creatorId;
-        }
+        if ($genreId !== null)
+            $this->director->addGenreTempFilter($genreId);
 
-        if (!empty($isbn)){
-            $whereClauses[] = 'b.isbn ILIKE :isbn';
-            $params[':isbn'] = $isbn . '%';
-        }
+        if ($creatorId !== null)
+            $this->director->addCreatorTempFilter($creatorId);
+
+        if (!empty($isbn))
+            $this->director->addIsbnTempFilter($isbn);
 
         if ($userByFilters !== null){
-            $statusWhere = match($userByFilters->getReadingStatus()){
-                ReadingStatus::None => '',
-                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
-                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
-                };
-                if (!empty($statusWhere)){
-                $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';
-                $params[':sUserId'] = $userByFilters->getUserId();
-                $whereClauses[] = $statusWhere;
-            }
+            $filterUserId = $userByFilters->getUserId();
+            $this->director->addReadingStatusTempFilter(
+                $userByFilters->getReadingStatus(),
+                $filterUserId
+            );
 
-            if ($userByFilters->getSavedOnly()){
-                $joinClauses[] = 'INNER JOIN saved_publications sp ON sp.user_id = :svUserId AND sp.publication_id = p.id';
-                $params[':svUserId'] = $userByFilters->getUserId();
-            }
+            if ($userByFilters->getSavedOnly())
+                 $this->director->addSavedOnlyTempFilter($filterUserId);
         }
 
-        foreach($includeObjects as $prop){
-            switch($prop){
-                case 'creator':
-                    $joinClauses[] = 'INNER JOIN users u ON u.id = p.creator_id';
-                    $joinClauses[] = 'INNER JOIN profiles prof ON prof.user_id = u.id';
-                    $selectClauses[] = "u.id as u_id,\nu.username as u_username,\nprof.name as u_name,\nprof.surname as u_surname,\nprof.avatar as u_avatar";
-                    break;
-                case 'genre':
-                    $joinClauses[] = 'INNER JOIN genres g ON g.id = p.genre_id';
-                    $selectClauses[] = "g.id as g_id,\ng.title as g_title";
-                    break;
-            }
-        }
+        $this->director->addIncludesTemp($includeObjects);
+        $this->director->addOrderTemp($sortBy)->setExtraPaginationTemp($page, $pageSize);
 
-        $where = implode(" AND\n", $whereClauses);
-        if (!empty($where)) $where = 'WHERE ' . $where;
-
-        $joins = implode("\n", $joinClauses);
-        $select = "SELECT p.id,\np.title,\np.creator_id,\np.icon_id,\np.created_at,\np.rating_avg,\np.comments_count,\np.genre_id";
-        if (!empty($selectClauses))
-            $select = $select . ",\n" . implode(",\n", $selectClauses);
-
-        $order = match($sortBy){
-            PublicationsSortBy::Popularity => 'ORDER BY p.rating_avg DESC',
-            PublicationsSortBy::Newest => 'ORDER BY p.created_at DESC',
-            PublicationsSortBy::Alphabet => 'ORDER BY p.title'
-        };
-        
-        $sql = "
-            $select
-            FROM publications p
-            INNER JOIN books b ON b.publication_id = p.id
-            $joins
-            $where
-            $order
-            LIMIT :limit OFFSET :offset
-        ";
-
-        $stmt = $this->pdo()->prepare($sql);
-        foreach($params as $key => $value){
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', $pageSize + 1, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (($page - 1) * $pageSize), PDO::PARAM_INT);
-        $stmt->execute();
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
 
         $items = array_map(
             static fn(array $row) => Publication::fromRow($row),
@@ -133,5 +83,18 @@ final class BooksRepository extends PublicationsRepository
         );
 
         return $items;
+    }
+
+    public function retrieve(int $bookId, array $includeObjects) : ?Book
+    {
+        $this->director->startTempFilter()->addBookSelectTemp();
+        $this->director->addIncludesTemp($includeObjects);
+        $this->director->addConcreteTempFilter($bookId)->setLimitTemp(1);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : Book::fromRow($row);
     }
 }

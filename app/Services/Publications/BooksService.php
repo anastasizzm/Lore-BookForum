@@ -12,6 +12,7 @@ use App\Models\Queries\StatusQuery;
 use App\Models\Filters\UserByPublicationFilters;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
+use App\Models\Publications\Book;
 use App\Models\Filters\ReadinguserByFilters;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
@@ -73,6 +74,15 @@ final class BooksService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $bookId, PropertiesQuery $props) : ?Book
+    {
+        $errors = [];
+        $isValid = $props->validateForType(Book::class, $errors);
+        if(!$isValid) throw new ValidationException($errors);
+
+        return $this->booksRepo->retrieve($bookId, $props->getProps());
     }
 
     public function save(int $userId, int $bookId) : void

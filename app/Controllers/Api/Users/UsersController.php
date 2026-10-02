@@ -29,7 +29,7 @@ final class UsersController extends Controller
             return $this->jsonEmpty(201);
         }
         catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
+            return $this->jsonError($e->toError(), 422);
         }
 
     }

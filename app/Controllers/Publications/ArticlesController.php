@@ -56,10 +56,7 @@ final class ArticlesController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('library/library-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessage(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
@@ -94,10 +91,7 @@ final class ArticlesController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('saved/saved-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
