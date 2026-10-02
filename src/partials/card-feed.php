@@ -16,6 +16,8 @@
  *   $likes         — число лайков
  *   $comments      — число комментариев
  *   $date          — дата строкой
+ *   $currentUserInitials — инициалы текущего пользователя (для своих комментариев)
+ *   $currentUserName     — логин текущего пользователя
  */
 
 // Безопасные значения по умолчанию
@@ -31,12 +33,20 @@ $text          = $text         ?? '';
 $likes         = $likes        ?? 0;
 $comments      = $comments     ?? 0;
 $date          = $date         ?? '';
+
+// Кто сейчас авторизован — нужно card-feed.js для вставки своего комментария
+$currentUserInitials = $currentUserInitials ?? '';
+$currentUserName     = $currentUserName     ?? '';
 ?>
-<article class="card-base card-feed" data-post-id="<?= $postId ?>">
+<article class="card-base card-feed" data-post-id="<?= $postId ?>"
+         data-cu-initials="<?= $view->e($currentUserInitials) ?>"
+         data-cu-name="<?= $view->e($currentUserName) ?>">
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
-      <img src="<?= $view->e($bookCover) ?>" alt="" class="card-feed__book-thumb">
+      <img src="<?= $view->e($bookCover !== '' ? $bookCover : '/img/book-placeholder.svg') ?>"
+           alt="" class="card-feed__book-thumb"
+           onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = '/img/book-placeholder.svg'; }">
       <h3 class="card-feed__book-title"><?= $view->e($bookTitle) ?></h3>
     </div>
   <?php endif; ?>

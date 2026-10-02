@@ -1309,3 +1309,40 @@ textarea.form-field__input {
 .feed-comments__more[hidden] {
   display: none;               /* .btn задаёт display, перебивая атрибут hidden */
 }
+
+/* Кнопки «лайк» и «ответить» под комментарием */
+.feed-comment__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: 2px;
+}
+
+.feed-comment__actions .action-btn {
+  font-size: var(--fs-small);
+  padding: 2px 0;
+}
+
+/* Форма ответа на конкретный комментарий */
+.comment-form--reply {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 2px;
+}
+
+.comment-form--reply[hidden] {
+  display: none;
+}
+
+.comment-form--reply .comment-form__input {
+  font-size: var(--fs-small);
+}
+
+.comment-form--reply p[hidden] {
+  display: none;
+}
+
+/* Аватар: если картинка не загрузилась, наследуем инициалы */
+.avatar [hidden] {
+  display: none;
+}
