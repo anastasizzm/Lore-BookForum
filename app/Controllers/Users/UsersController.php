@@ -14,6 +14,9 @@ use App\Http\Response;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
+use App\Models\Queries\SortQuery;
+use App\Models\Queries\StatusQuery;
+use App\Models\Queries\TypeQuery;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -67,14 +70,22 @@ final class UsersController extends Controller
         if (empty($currentUserId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
+        $query = $context->request->query;
+        $pageQ = PaginationQuery::fromInput($query);
         $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
+        $searchQ = (string)$context->query('q', '');
         $filterState = $context->query('f', 'closed');
+        $genreId = filter_var($context->query('genre'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
 
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
-            $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
+            $paginatedList = $this->booksService->getList(
+                $pageQ, $searchQ, $propsQ, $currentUserId,
+                sort: SortQuery::fromInput($query),
+                status: StatusQuery::fromInput($query),
+                genreId: $genreId,
+                creatorId: $userId
+            );
             return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -106,14 +117,23 @@ final class UsersController extends Controller
         if (empty($currentUserId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
+        $query = $context->request->query;
+        $pageQ = PaginationQuery::fromInput($query);
         $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
+        $searchQ = (string)$context->query('q', '');
         $filterState = $context->query('f', 'closed');
+        $genreId = filter_var($context->query('genre'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
 
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
+            $paginatedList = $this->articlesService->getList(
+                $pageQ, $searchQ, $propsQ, $currentUserId,
+                sort: SortQuery::fromInput($query),
+                status: StatusQuery::fromInput($query),
+                genreId: $genreId,
+                creatorId: $userId,
+                type: TypeQuery::fromInput($query)
+            );
             return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [

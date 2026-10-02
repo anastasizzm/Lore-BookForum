@@ -32,9 +32,11 @@ $filter_open = $filter_open ?? false;
                  placeholder="<?= $view->e($control['placeholder'] ?? '') ?>">
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
-          <button type="button" class="filter-reset" data-filter-reset>
+          <a class="filter-reset"
+             style="text-decoration:none"
+             href="<?= $view->e($control['href'] ?? '?') ?>">
             &#10005; Reset
-          </button>
+          </a>
 
         <?php endif; ?>
 

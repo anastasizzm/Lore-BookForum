@@ -1,5 +1,5 @@
 // ============================================
-// FILTER PANEL — segmented tabs, reset, genres
+// FILTER PANEL — segmented tabs, series input, genres
 // ============================================
 
 /**
@@ -33,75 +33,51 @@ document.querySelectorAll('.tabs--segmented').forEach(tabsEl => {
 });
 
 /* ============================================
-   1. TABS — clicks inside filter panel
+   1. TABS — all tabs in the filter panel are real links
+      (Books/Articles, All/Reading/Finished); the server
+      renders the active state, so no click handling needed.
+      Only legacy "#anchor" tabs are handled here.
    ============================================ */
 
 document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   tab.addEventListener('click', (e) => {
     const href = tab.getAttribute('href') || '';
-    // Real link (not #anchor) — let it work as normal navigation
     if (href && !href.startsWith('#')) return;
 
     e.preventDefault();
 
     const tabsEl = tab.closest('.tabs');
-    const panel  = tab.closest('[data-filter-panel]');
     if (!tabsEl) return;
 
-    // Active tab in this group
     tabsEl.querySelectorAll('.tab').forEach(t => t.classList.remove('is-active'));
     tab.classList.add('is-active');
 
     if (tabsEl.classList.contains('tabs--segmented')) {
       updateSegmentIndicator(tabsEl);
     }
-
-    // If tab switches rows (Books ↔ Articles)
-    const target = tab.getAttribute('data-row-target');
-    if (target && panel) {
-      panel.querySelectorAll('.filter-panel__row').forEach(row => {
-        row.hidden = row.getAttribute('data-filter-row') !== target;
-      });
-
-      // Sync active tabs in all groups with this target
-      panel.querySelectorAll('.tab[data-row-target]').forEach(t => {
-        t.classList.toggle('is-active', t.getAttribute('data-row-target') === target);
-      });
-
-      // Recalculate all segmented indicators
-      panel.querySelectorAll('.tabs--segmented').forEach(t => updateSegmentIndicator(t, true));
-    }
   });
 });
 
 /* ============================================
-   2. RESET
+   2. SERIES NUMBER — Enter applies ?series=...
+      (Reset is now a plain link rendered by the server)
    ============================================ */
 
-document.querySelectorAll('[data-filter-reset]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const panel = btn.closest('[data-filter-panel]');
-    if (!panel) return;
+document
+  .querySelectorAll('[data-filter-panel] input.filter-input[name="series"]')
+  .forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
 
-    panel.querySelectorAll('input.filter-input').forEach(i => i.value = '');
-
-    // In each group — first tab is active
-    panel.querySelectorAll('.tabs').forEach(group => {
-      const tabs = group.querySelectorAll('.tab');
-      tabs.forEach((t, i) => t.classList.toggle('is-active', i === 0));
-      if (group.classList.contains('tabs--segmented')) {
-        updateSegmentIndicator(group, true);
-      }
+      const url = new URL(window.location.href);
+      const v = inp.value.trim();
+      if (v) url.searchParams.set('series', v);
+      else   url.searchParams.delete('series');
+      url.searchParams.delete('page');
+      window.location.href = url.toString();
     });
-
-    // Show first row
-    const firstRow = panel.querySelector('.filter-panel__row');
-    if (firstRow) {
-      panel.querySelectorAll('.filter-panel__row').forEach(r => r.hidden = true);
-      firstRow.hidden = false;
-    }
   });
-});
 
 
 /* ============================================
@@ -202,15 +178,15 @@ document.querySelectorAll('[data-filter-reset]').forEach(btn => {
     url.searchParams.delete(key);
     url.searchParams.delete('page');
     const qs = url.searchParams.toString();
-    return qs ? '?' + qs : url.pathname;
+    return url.pathname + (qs ? '?' + qs : '');
   }
 
   function appendParam(key, value) {
-  const url = new URL(window.location.href);
-  url.searchParams.set(key, value);
-  url.searchParams.delete('page');
-  const qs = url.searchParams.toString();
-  return qs ? '?' + qs : url.pathname;
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, value);
+    url.searchParams.delete('page');
+    const qs = url.searchParams.toString();
+    return url.pathname + (qs ? '?' + qs : '');
   }
 
   document.addEventListener('DOMContentLoaded', function () {

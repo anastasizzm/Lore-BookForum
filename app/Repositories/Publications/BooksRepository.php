@@ -66,10 +66,10 @@ final class BooksRepository extends PublicationsRepository
         if ($userByFilters !== null){
             $statusWhere = match($userByFilters->getReadingStatus()){
                 ReadingStatus::None => '',
-                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND !ur.is_closed',
-                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND us.is_closed'
-                };
-                if (!empty($statusWhere)){
+                ReadingStatus::Reading => 'ur.publication_id IS NOT NULL AND NOT ur.is_closed',
+                ReadingStatus::Ended => 'ur.publication_id IS NOT NULL AND ur.is_closed'
+            };
+            if (!empty($statusWhere)){
                 $joinClauses[] = 'LEFT JOIN users_read ur ON ur.user_id = :sUserId AND ur.publication_id = p.id';
                 $params[':sUserId'] = $userByFilters->getUserId();
                 $whereClauses[] = $statusWhere;
