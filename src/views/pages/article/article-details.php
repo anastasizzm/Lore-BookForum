@@ -90,7 +90,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
       <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <!-- Закладка: POST/DELETE /api/articles/{id}/save (обработчик в article.js) -->
+        <!-- Закладка: POST/DELETE /api/articles/{id}/save (обработчик в app.js) -->
         <button type="button"
                 class="btn-icon btn-icon--circle<?= $isSaved ? ' is-active' : '' ?>"
                 data-save-article
@@ -320,5 +320,4 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
 <?php $view->startBlock('scripts'); ?>
   <script src="/assets/js/book.js"></script>
-  <script src="/assets/js/article.js"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -117,6 +117,10 @@ foreach ($sort_options as $key => $text) {
   <?php else: ?>
 
     <div class="grid-books">
+      <?php
+      // Знак сохранения приходит с сервера: id публикаций в закладках у пользователя
+      $savedIds = $savedIds ?? [];
+      ?>
       <?php foreach ($items as $item): ?>
         <?php
           $creator = $item->creator;
@@ -132,7 +136,9 @@ foreach ($sort_options as $key => $text) {
               'title'    => $item->title,
               'authorId' => $creator?->id ?? 0,
               'author'   => $authorName,
-              'saved'    => false,
+              'saved'    => in_array((int) $item->id, $savedIds, true),
+              // Кнопка Save должна ходить в свой эндпоинт: /api/articles/{id}/save для статей
+              'saveType' => $isArticles ? 'article' : 'book',
           ]);
         ?>
       <?php endforeach; ?>

@@ -212,7 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-/* ===== Save book: POST/DELETE /api/books/{id}/save ===== */
+/* ===== Save book / article: POST/DELETE /api/{books|articles}/{id}/save =====
+   Один обработчик на оба типа: карточки в библиотеке/сохранённых (data-save-book,
+   data-save-article) и закладки на страницах деталей book-details / article-details. */
 (function () {
   var busy = new WeakSet();
 
@@ -236,10 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(function () { el.remove(); }, 3500);
   }
 
-  function setState(btn, saved) {
+  function setState(btn, saved, type) {
     btn.classList.toggle('is-active', saved);
     btn.setAttribute('aria-pressed', String(saved));
-    btn.setAttribute('aria-label', saved ? 'Remove from saved' : 'Save book');
+    btn.setAttribute('aria-label', saved ? 'Remove from saved' : 'Save ' + type);
   }
 
   function bumpSavesCount(delta) {
@@ -248,22 +250,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.addEventListener('click', async function (e) {
-    var btn = e.target.closest('[data-save-book]');
+    var btn = e.target.closest('[data-save-book], [data-save-article]');
     if (!btn) return;
     e.preventDefault();
     if (busy.has(btn)) return;
 
-    var id = Number(btn.dataset.bookId);
+    // Книга или статья — от этого зависит эндпоинт /api/{books|articles}/{id}/save
+    var type = btn.hasAttribute('data-save-article') ? 'article' : 'book';
+    var id = Number(type === 'article' ? btn.dataset.articleId : btn.dataset.bookId);
     if (!id) {
-      console.error('Save book: data-book-id is missing');
-      toast('Could not save the book. Please reload the page.');
+      console.error('Save ' + type + ': publication id attribute is missing');
+      toast('Could not save the ' + type + '. Please reload the page.');
       return;
     }
 
     var wasSaved = btn.classList.contains('is-active');
     var willSave = !wasSaved;
 
-    setState(btn, willSave);
+    setState(btn, willSave, type);
     busy.add(btn);
     btn.disabled = true;
 
@@ -275,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
       body.set(token.name, token.value);
     }
 
-    var url = '/api/books/' + id + '/save';
+    var url = '/api/' + type + 's/' + id + '/save';
     var method = willSave ? 'POST' : 'DELETE';
 
     try {
@@ -291,24 +295,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (res.ok) {
         bumpSavesCount(willSave ? 1 : -1);
-        btn.dispatchEvent(new CustomEvent('book:save-changed', {
+        btn.dispatchEvent(new CustomEvent('save:changed', {
+          bubbles: true,
+          detail: { id: id, saved: willSave, type: type }
+        }));
+        // Старое типизированное событие — чтобы не сломать внешних слушателей
+        btn.dispatchEvent(new CustomEvent(type + ':save-changed', {
           bubbles: true,
           detail: { id: id, saved: willSave }
         }));
       } else {
-        setState(btn, wasSaved);
+        setState(btn, wasSaved, type);
         var msg = '';
         if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
         if (!msg && data && data.message) msg = data.message;
         if (!msg) {
           msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
               : res.status === 401 ? 'Please sign in again'
-              : 'Failed to update saved books (HTTP ' + res.status + ')';
+              : 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
         }
         toast(msg);
       }
     } catch (err) {
-      setState(btn, wasSaved);
+      setState(btn, wasSaved, type);
       toast('Network error. Try again.');
     } finally {
       busy.delete(btn);

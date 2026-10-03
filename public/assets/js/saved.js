@@ -2,13 +2,13 @@
 
 /* ============================================
    Страница Saved: после снятия закладки карточка исчезает из списка.
-   Событие book:save-changed приходит из app.js (POST/DELETE /api/books/{id}/save)
+   Событие save:changed приходит из app.js (POST/DELETE /api/{books|articles}/{id}/save)
    ============================================ */
 (function () {
   var grid = document.querySelector('[data-saved-grid]');
   if (!grid) return;
 
-  document.addEventListener('book:save-changed', function (e) {
+  document.addEventListener('save:changed', function (e) {
     if (!e.detail || e.detail.saved) return; // интересует только снятие закладки
 
     var card = e.target.closest('.card-book');
