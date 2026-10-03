@@ -3,16 +3,16 @@ declare(strict_types=1);
 
 namespace App\Services\Additional;
 
-use App\Repositories\Additional\CategoriesRepository;
+use App\Repositories\Additional\TypesRepository;
 use App\Models\Queries\Additional\BasicModelListQuery;
 
 use App\Models\PaginatedList;
 use App\Models\Enums\BasicModelSortBy;
 
-final class CategoriesService
+final class TypesService
 {
     public function __construct(
-        private readonly CategoriesRepository $categoriesRepo
+        private readonly TypesRepository $typesRepo
     ){}
 
     public function getList(BasicModelListQuery $query) : PaginatedList
@@ -24,7 +24,7 @@ final class CategoriesService
             ? EnumExtensions::tryResolve(BasicModelSortBy::class, $query->sort->sortString()) 
             : BasicModelSortBy::Newest;
 
-        $items = $this->categoriesRepo->getList(
+        $items = $this->typesRepo->getList(
             $page, 
             $pageSize, 
             $query->search,

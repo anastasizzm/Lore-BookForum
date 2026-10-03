@@ -13,14 +13,14 @@ readonly class Publication extends PublicationShort
     public function __construct(
         int $id,
         string $title,
-        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
+        ?Uuid $iconId,
         private int $creatorId,
         private int $genreId,
         public ?BasicModel $genre,
         public ?UserShortData $creator
     ){
-        parent::__construct($id, $title, $iconId, $createdAt);
+        parent::__construct($id, $title, $createdAt, $iconId);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 

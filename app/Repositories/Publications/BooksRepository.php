@@ -39,7 +39,7 @@ final class BooksRepository extends PublicationsRepository
         $userFilters = $criteria->userCriteria;
         
         if (!empty($filters->search))
-            $this->director->addTitleTempFilter($filters->search);
+            $this->director->addSearchTempFilter($filters->search);
 
         if ($filters->genreId !== null)
             $this->director->addGenreTempFilter($filters->genreId);

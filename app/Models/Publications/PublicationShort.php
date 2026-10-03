@@ -15,10 +15,10 @@ readonly class PublicationShort extends BasicModel
     public function __construct(
         int $id,
         string $title,
+        DateTimeImmutable $createdAt,
         public ?Uuid $iconId,
-        public DateTimeImmutable $createdAt
     ){
-        parent::__construct($id, $title);
+        parent::__construct($id, $title, $createdAt);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -27,8 +27,8 @@ readonly class PublicationShort extends BasicModel
         return new self(
             id: $parent->id,
             title: $parent->title,
+            createdAt: $parent->createdAt,
             iconId: self::uuidN($row, $prefix . 'icon_id'),
-            createdAt: self::dt($row, $prefix . 'created_at'),
         );
     }
 }

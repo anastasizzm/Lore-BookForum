@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories\Additional;
 
 use App\Repositories\Repository;
-use App\Extensions\ScriptBuilders\Additional\GenresScriptDirector;
+use App\Extensions\ScriptBuilders\Additional\TypesScriptDirector;
 
 use PDO;
 use App\Lib\Data\Database;
@@ -12,15 +12,15 @@ use App\Lib\Data\Database;
 use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 
-final class GenresRepository extends Repository
+final class TypesRepository extends Repository
 {
-    private readonly GenresScriptDirector $director;
+    private readonly TypesScriptDirector $director;
 
     public function __construct(
         Database $db
     ){
         parent::__construct($db);
-        $this->director = new GenresScriptDirector();
+        $this->director = new TypesScriptDirector();
     }
 
     public function getList(

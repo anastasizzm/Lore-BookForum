@@ -60,7 +60,7 @@ abstract class PostsScriptDirector extends ScriptDirector
     public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("users.username ILIKE :q", [':q' => ScriptParam::asStr($search)]);
+        $this->tempBuilder->addWhere("users.username ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
         return $this;
     }
 

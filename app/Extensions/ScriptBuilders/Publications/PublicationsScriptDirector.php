@@ -54,10 +54,10 @@ abstract class PublicationsScriptDirector extends ScriptDirector
         return $this;
     }
 
-    public function addTitleTempFilter(string $search) : self
+    public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("publications.title ILIKE :q", [':q' => ScriptParam::asStr($search)]);
+        $this->tempBuilder->addWhere("publications.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
         return $this;
     }
 
