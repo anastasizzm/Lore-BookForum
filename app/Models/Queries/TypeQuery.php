@@ -17,5 +17,15 @@ final class TypeQuery implements Query
         return new self($input['type'] ?? '');
     }
 
+    public function hasData() : bool 
+    {
+        return !empty($this->type);
+    }
+
+    public static function default() : self 
+    {
+        return new self('');
+    }
+
     public function type() : string { return $this->type; }
 }

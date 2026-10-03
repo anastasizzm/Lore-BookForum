@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Repositories\Publications;
 
 use App\Repositories\Publications\PublicationsRepository;
-
 use App\Extensions\ScriptBuilders\Publications\BooksScriptDirector;
 
 use PDO;
@@ -12,9 +11,7 @@ use App\Lib\Data\Database;
 
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
-use App\Models\Enums\PublicationsSortBy;
-use App\Models\Enums\ReadingStatus;
-use App\Models\Filters\UserByPublicationFilters;
+use App\Models\Criterias\Publications\BooksCriteria;
 
 final class BooksRepository extends PublicationsRepository
 {
@@ -35,44 +32,37 @@ final class BooksRepository extends PublicationsRepository
         return $stmt->fetchColumn() !== false;
     }
 
-    public function getList(
-        int $page,
-        int $pageSize,
-        string $search,
-        PublicationsSortBy $sortBy,
-        array $includeObjects,
-        ?int $genreId = null,
-        ?int $creatorId = null,
-        ?string $isbn = null,
-        ?UserByPublicationFilters $userByFilters = null
-    ) : array
+    public function getList(BooksCriteria $criteria, array $includeObjects = []) : array
     {
         $this->director->startTempFilter()->addPublicationSelectTemp();
-        if (!empty($search))
+        $filtes = $criteria->filters;
+        $userFilters = $criteria->userCriteria;
+        
+        if (!empty($filters->search))
             $this->director->addTitleTempFilter($search);
 
-        if ($genreId !== null)
+        if ($filters->genreId !== null)
             $this->director->addGenreTempFilter($genreId);
 
-        if ($creatorId !== null)
+        if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($creatorId);
 
-        if (!empty($isbn))
+        if (!empty($filters->isbn))
             $this->director->addIsbnTempFilter($isbn);
 
-        if ($userByFilters !== null){
-            $filterUserId = $userByFilters->getUserId();
+        if ($userFilters !== null){
             $this->director->addReadingStatusTempFilter(
-                $userByFilters->getReadingStatus(),
-                $filterUserId
+                $userFilters->status,
+                $userFilters->viewerId
             );
 
-            if ($userByFilters->getSavedOnly())
-                 $this->director->addSavedOnlyTempFilter($filterUserId);
+            if ($userFilters->savedOnly)
+                 $this->director->addSavedOnlyTempFilter($userFilters->viewerId);
         }
 
         $this->director->addIncludesTemp($includeObjects);
-        $this->director->addOrderTemp($sortBy)->setExtraPaginationTemp($page, $pageSize);
+        $this->director->addOrderTemp($criteria->sortBy)
+            ->setExtraPaginationTemp($criteria->page, $criteria->pageSize);
 
         $data = $this->director->buildTempFilter();
         $stmt = $this->executeScript($data);

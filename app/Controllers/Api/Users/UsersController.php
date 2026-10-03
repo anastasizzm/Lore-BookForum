@@ -9,6 +9,7 @@ use App\Services\Users\UsersService;
 
 use App\Http\HttpContext;
 use App\Exceptions\ValidationException;
+use App\Extensions\Parsers\RouteParamParser;
 
 use App\Forms\Users\UserForm;
 use App\Constants;
@@ -21,7 +22,7 @@ final class UsersController extends Controller
 
     public function edit(HttpContext $context, string $userId)
     {
-        $userId = (int)$userId;
+        $userId = RouteParamParser::int(['userId' => $userId], 'userId');
 
         $formData = $context->request->body();
         try{

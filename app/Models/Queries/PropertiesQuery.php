@@ -21,6 +21,16 @@ final class PropertiesQuery implements Query
         return self::fromRaw( $input['include'] ?? '');
     }
 
+    public function hasData() : bool 
+    {
+        return !empty($this->parsedArray);
+    }
+
+    public static function default() : self 
+    {
+        return new self([]);
+    }
+
     public function getProps() : array
     {
         return $this->parsedArray;

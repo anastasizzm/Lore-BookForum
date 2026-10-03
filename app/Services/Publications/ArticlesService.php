@@ -13,6 +13,7 @@ use App\Models\Queries\TypeQuery;
 use App\Models\Filters\UserByPublicationFilters;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
+use App\Models\Publications\Article;
 
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ArticleType;
@@ -81,6 +82,15 @@ final class ArticlesService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $articleId, PropertiesQuery $props) : ?Article
+    {
+        $errors = [];
+        $isValid = $props->validateForType(Article::class, $errors);
+        if(!$isValid) throw new ValidationException($errors);
+
+        return $this->articlesRepo->retrieve($articleId, $props->getProps());
     }
 
     public function save(int $userId, int $articleId) : void

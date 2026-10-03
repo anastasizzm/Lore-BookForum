@@ -114,7 +114,7 @@ final class BooksController extends Controller
                 return $this->renderNotFound();
             
             return $this->render('book/book-details', [
-                'data' => $item,
+                'book' => $item,
                 'user' => $userContext
             ]);
         }
