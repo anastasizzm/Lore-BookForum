@@ -1,7 +1,7 @@
 <?php $view->extends('main'); ?>
 
 <?php
-// userId вытаскиваем из URL: /users/{id}/books или /users/{id}/articles
+// userId из URL: /users/{id}/books или /users/{id}/articles
 $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 $path   = parse_url($uri, PHP_URL_PATH);
 $userId = 0;
@@ -11,7 +11,7 @@ if (preg_match('#^/users/(\d+)/(books|articles)#', $path, $m)) {
 
 $isArticles = str_contains($path, '/articles');
 
-// Имя пользователя (если передан $user и это он же)
+// Имя пользователя
 $userName = '';
 if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
     $userName = trim(($user->name ?? '') . ' ' . ($user->surname ?? ''));
@@ -19,52 +19,18 @@ if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
 }
 if ($userName === '') $userName = 'User #' . $userId;
 
-// Флаги и параметры
 $filter_open = ($filterState ?? 'closed') === 'open';
 
 parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
-$genreFilter = $q['genre'] ?? null;
-$searchQuery = $q['q']     ?? '';
+$searchQuery = $q['q'] ?? '';
 
 $view->setBlock('selectedTab', 'profile');
-
-$bookIcon = '<svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h5v16H5a2 2 0 0 0-2 2V5z"/><path d="M21 5a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2V5z"/></svg>';
-$postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
-
-// Ссылки табов — на реальные роуты
-$bookUrl     = '/users/' . $userId . '/books';
-$articlesUrl = '/users/' . $userId . '/articles';
-if ($filter_open) {
-    $bookUrl     .= '?f=open';
-    $articlesUrl .= '?f=open';
-}
-
-// Переключатель Books/Articles
-$switcher = [
-    'type'    => 'tabs',
-    'variant' => 'segmented',
-    'items' => [
-        [
-            'label'  => 'Books',
-            'href'   => $bookUrl,
-            'icon'   => $bookIcon,
-            'active' => !$isArticles,
-        ],
-        [
-            'label'  => 'Articles',
-            'href'   => $articlesUrl,
-            'icon'   => $postIcon,
-            'active' => $isArticles,
-        ],
-    ],
-];
 ?>
 
 <?php $view->startBlock('title'); ?>Publications of <?= $view->e($userName) ?> - Book App<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
-  <script src="/assets/js/profile-publications.js" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -91,9 +57,14 @@ $view->include('page-header', [
     'title'   => 'Publications',
     'actions' => $pageActions,
 ]);
-?>
-<?php
-$view->include('library-filters', ['filterState' => $filterState ?? 'closed', 'bookHref' => $view->url('users.profile.books', ['userId' => $userId]), 'articleHref' => $view->url('users.profile.articles', ['userId' => $userId])]);
+
+$view->include('library-filters', [
+    'filterState' => $filterState ?? 'closed',
+    'isArticles'  => $isArticles,
+    'basePath'    => $path,
+    'bookHref'    => $view->url('users.profile.books',    ['userId' => $userId]),
+    'articleHref' => $view->url('users.profile.articles', ['userId' => $userId]),
+]);
 ?>
 
 <section class="books-panel">
@@ -141,9 +112,6 @@ $view->include('library-filters', ['filterState' => $filterState ?? 'closed', 'b
     <div class="grid-publications">
       <?php foreach ($items as $item): ?>
         <?php
-          $creator    = $item->creator;
-          $authorName = trim(($creator?->name ?? '') . ' ' . ($creator?->surname ?? ''));
-          if ($authorName === '') $authorName = $creator?->username ?? '';
           $year = $item->createdAt ? $item->createdAt->format('Y') : '';
 
           $url = $isArticles
