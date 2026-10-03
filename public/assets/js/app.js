@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
       body.set(token.name, token.value);
     }
 
-    var url = '/api/books/' + id + '/save';
+    var url = btn.dataset.saveUrl || ('/api/books/' + id + '/save');
     var method = willSave ? 'POST' : 'DELETE';
 
     try {
