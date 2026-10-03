@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Http\Extensions\Parsers;
+namespace App\Extensions\Parsers;
 
 use App\Http\HttpException;
 

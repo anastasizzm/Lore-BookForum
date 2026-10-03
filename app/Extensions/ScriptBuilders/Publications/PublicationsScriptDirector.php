@@ -19,8 +19,6 @@ abstract class PublicationsScriptDirector extends ScriptDirector
         parent::__construct($tableName, $alias);
     }
 
-    public abstract function getExistsScript(int $publicationId) : ScriptData;
-
     public function startTempFilter() : self
     {
         $this->startTemp('publications');

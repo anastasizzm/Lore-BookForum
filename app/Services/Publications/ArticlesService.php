@@ -62,7 +62,8 @@ final class ArticlesService
                 $sortEnum,
                 $query->filters,
                 $userCriteria
-            )
+            ),
+            $query->properties->getProps()
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);

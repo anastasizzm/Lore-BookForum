@@ -32,7 +32,7 @@ final class ArticlesRepository extends PublicationsRepository
         return $stmt->fetchColumn() !== false;
     }
 
-    public function getList(ArticlesCriteria $criteria, array $includeObjects) : array
+    public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
         $this->director->startTempFilter()->addPublicationSelectTemp();
         $filtes = $criteria->filters;
@@ -45,10 +45,10 @@ final class ArticlesRepository extends PublicationsRepository
             $this->director->addGenreTempFilter($genreId);
 
         if ($filters->creatorId !== null)
-            $this->director->addCreatorTempFilter($creatorId);
+            $this->director->addCreatorTempFilter($filters->creatorId);
 
         if (!empty($filters->doi))
-            $this->director->addDoiTempFilter($doi);
+            $this->director->addDoiTempFilter($filters->doi);
 
         if ($userFilters !== null){
             $this->director->addReadingStatusTempFilter(

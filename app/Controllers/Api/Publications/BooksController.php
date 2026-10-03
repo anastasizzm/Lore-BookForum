@@ -28,18 +28,13 @@ final class BooksController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        try{
-            $query = BooksListQuery::fromInput($context->request->query, $userId);
-            $paginatedList = $this->booksService->getList($query);
-            return $this->jsonList($paginatedList->getArray(), [
-                    'page' => $paginatedList->getPage(),
-                    'pageSize' => $paginatedList->getPageSize(),
-                    'hasNext' => $paginatedList->hasNext(),
-                ]);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
+        $query = BooksListQuery::fromInput($context->request->query, $userId);
+        $paginatedList = $this->booksService->getList($query);
+        return $this->jsonList($paginatedList->getArray(), [
+                'page' => $paginatedList->getPage(),
+                'pageSize' => $paginatedList->getPageSize(),
+                'hasNext' => $paginatedList->hasNext(),
+            ]);
     }
     
     public function save(HttpContext $context, string $bookId)
@@ -49,14 +44,9 @@ final class BooksController extends Controller
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-        try
-        {
-            $this->booksService->save($userId, $bookId);
-            return $this->jsonEmpty(201);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
+    
+        $this->booksService->save($userId, $bookId);
+        return $this->jsonEmpty(201);
     }
 
     public function deleteSave(HttpContext $context, string $bookId)
@@ -66,13 +56,8 @@ final class BooksController extends Controller
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-        try
-        {
-            $this->booksService->deleteSave($userId, $bookId);
-            return $this->jsonEmpty(204);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
+
+        $this->booksService->deleteSave($userId, $bookId);
+        return $this->jsonEmpty(204);
     }
 }

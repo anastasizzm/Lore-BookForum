@@ -25,13 +25,7 @@ final class UsersController extends Controller
         $userId = RouteParamParser::int(['userId' => $userId], 'userId');
 
         $formData = $context->request->body();
-        try{
-            $this->usersService->edit($userId, UserForm::fromInput($formData));
-            return $this->jsonEmpty(201);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
-
+        $this->usersService->edit($userId, UserForm::fromInput($formData));
+        return $this->jsonEmpty(201);
     }
 }

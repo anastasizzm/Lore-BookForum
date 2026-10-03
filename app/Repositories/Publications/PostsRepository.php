@@ -4,90 +4,43 @@ declare(strict_types=1);
 namespace App\Repositories\Publications;
 
 use App\Repositories\Repository;
-
-use PDO;
+use App\Extensions\ScriptBuilders\Publications\PostsScriptDirector;
 use App\Lib\Data\Database;
-
 use App\Models\Posts\Post;
+use App\Models\Criterias\Publications\PostsCriteria;
+use PDO;
 
 final class PostsRepository extends Repository
 {
+    private readonly PostsScriptDirector $director;
+
     public function __construct(Database $db){
         parent::__construct($db);
+        $director = new PostsScriptDirector();
     }
 
-    public function getList(
-        int $page, 
-        int $pageSize, 
-        string $search,
-        array $includeObjects,
-        ?int $parentId = null, 
-        ?int $publicationId = null, 
-        ?int $creatorId = null) : array
+    public function getList(PostsCriteria $criteria, array $includeObjects = []) : array
     {
-        $whereClauses = ['c.is_active'];
-        $params = [];
-        if (!empty($search)){
-            $whereClauses[] = 'u.username ILIKE :q';
-            $params[':q'] = $search . '%';
-        }
-        if ($parentId !== null){
-            $whereClauses[] = 'c.parent_id = :parentId';
-            $params[':parentId'] = $parentId;
-        }
-        else $whereClauses[] = 'c.parent_id IS NULL';
+        $this->director->startTempFilter()->addPostSelectTemp();
+        $filters = $criteria->filters;
 
-        if ($creatorId !== null){
-            $whereClauses[] = 'c.creator_id = :creatorId';
-            $params[':creatorId'] = $creatorId;
-        }
+        if (!empty($filters->search))
+            $this->director->addSearchTempFilter($filters->search);
 
-        if ($publicationId !== null){
-            $whereClauses[] = 'c.publication_id = :publicationId';
-            $params[':publicationId'] = $publicationId; 
-        }
+        $this->director->addParentTempFilter($filters->parentId);
 
-        $joinClauses = [];
-        $selectClauses = [];
-        foreach($includeObjects as $prop){
-            switch($prop){
-                case 'creator':
-                    $joinClauses[] = 'INNER JOIN profiles prof ON prof.user_id = u.id';
-                    $selectClauses[] = "u.id as u_id,\nu.username as u_username,\nprof.name as u_name,\nprof.surname as u_surname,\nprof.avatar as u_avatar";
-                    break;
-                
-                case 'publication':
-                    $joinClauses[] = 'INNER JOIN publications p ON c.publication_id = p.id';
-                    $selectClauses[] = "p.id as pub_id,\np.title as pub_title,\np.icon_id as pub_icon_id,\np.created_at as pub_created_at";
-                    break;
-            }
-        }
+        if ($creatorId !== null)
+            $this->director->addCreatorTempFilter($filters->creatorId);
 
-        $where = implode(" AND\n", $whereClauses);
-        if (!empty($where)) $where = 'WHERE ' . $where;
+        if ($publicationId !== null)
+            $this->director->addPublicationTempFilter($filters->publicationId);
 
-        $joins = implode("\n", $joinClauses);
-        $select = "SELECT c.id,\nc.content,\nc.is_active,\nc.creator_id,\nc.publication_id,\nc.created_at,\nc.likes_count,\nc.comments_count";
-        if (!empty($selectClauses))
-            $select = $select . ",\n" . implode(",\n", $selectClauses);
+        $this->director->addIncludesTemp($includeObjects);
+        $this->director->addOrderTemp($criteria->sortBy)
+            ->setExtraPaginationTemp($criteria->page, $criteria->pageSize);
 
-        $sql = "
-            $select
-            FROM comments c
-            INNER JOIN users u ON u.id = c.creator_id
-            $joins
-            $where
-            ORDER BY c.created_at DESC
-            LIMIT :limit OFFSET :offset
-        ";
-
-        $stmt = $this->pdo()->prepare($sql);
-        foreach($params as $key => $value){
-            $stmt->bindValue($key, $value);
-        }
-        $stmt->bindValue(':limit', $pageSize + 1, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (($page - 1) * $pageSize), PDO::PARAM_INT);
-        $stmt->execute();
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
 
         $items = array_map(
             static fn(array $row) => Post::fromRow($row),

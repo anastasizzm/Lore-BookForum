@@ -71,4 +71,6 @@ abstract class ScriptDirector
         $params = $this->tempBuilder->getParams();
         return new ScriptData($sql, $params);
     }
+
+    public abstract function getExistsScript(int $publicationId) : ScriptData;
 }
