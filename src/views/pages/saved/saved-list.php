@@ -147,6 +147,8 @@ $view->include('page-header', [
         <?php foreach ($cards as $card): ?>
           <?php $view->include('card-book', $card + [
               'saved' => true, // на странице Saved все книги сохранены
+              // кнопка Save: /api/articles/{id}/save для статей, /api/books/{id}/save для книг
+              'saveType' => ($meta['type'] ?? 'book') === 'article' ? 'article' : 'book',
           ]); ?>
         <?php endforeach; ?>
       </div>

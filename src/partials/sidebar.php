@@ -68,7 +68,13 @@
         <div class="settings-menu" data-settings-menu hidden>
             <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
                 <?= $view->csrfField() ?>
-                <button type="submit" class="settings-menu__item">
+                <!-- Подтверждение Log out — универсальная плашка confirm-modal (см. modal.js) -->
+                <button type="submit"
+                        class="settings-menu__item"
+                        data-confirm="You will need to sign in again to continue."
+                        data-confirm-title="Log out?"
+                        data-confirm-ok="Log out"
+                        data-confirm-danger>
                     <span class="settings-menu__icon">↩</span>
                     <span>Log out</span>
                 </button>
