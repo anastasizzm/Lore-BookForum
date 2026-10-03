@@ -1,6 +1,7 @@
 <?php
 $view->extends('main');
 
+// $items больше не нужен для рендера, но оставим на случай SSR-fallback
 $items = $items ?? [];
 
 // Определяем раздел по meta.type
@@ -13,15 +14,17 @@ if ($type === null) {
 }
 
 $pageTitle  = $isArticles ? 'All articles' : 'All books';
-$tabKey     = $isArticles ? 'articles'     : 'library';
+$tabKey     = $isArticles ? 'articles'      : 'library';
 $emptyText  = $isArticles ? 'No articles yet.' : 'No books yet.';
 $searchHint = $isArticles ? 'Search articles'  : 'Search books';
+$apiBase    = $isArticles ? '/api/articles'  : '/api/books';
 
 $view->setBlock('selectedTab', $tabKey);
 $view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - Book App<?php $view->endBlock('title');
 
 $view->startBlock('content');
 
+// ---- Поиск + кнопка фильтров в шапке страницы ----
 ob_start();
 $view->include('input', [
     'type'        => 'search',
@@ -44,28 +47,37 @@ $view->include('page-header', [
     'actions' => $pageActions,
 ]);
 
-$view->include('library-filters', ['filterState' => $filterState ?? 'closed']);
+// ---- Панель фильтров ----
+$view->include('library-filters', [
+    'filterState' => $filterState ?? 'closed',
+]);
 
-// Sort options (контроллер пока не передаёт — статика)
+// ---- Сортировка ----
+// ВНИМАНИЕ: если чинишь PublicationsSortBy на бэке (populatiry→popularity),
+// можно вернуть 'popularity' как дефолт. Пока бэк не починен — 'newest' безопаснее.
 $sort_options = $sortOptions ?? [
-    'popularity' => 'Popularity',
     'newest'     => 'Newest',
+    'popularity' => 'Popularity',
     'title'      => 'A to Z',
 ];
 
-$current_sort  = $currentSort ?? 'popularity';
-$current_label = $sort_options[$current_sort] ?? 'Popularity';
+$current_sort  = $currentSort ?? 'newest';
+if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
+$current_label = $sort_options[$current_sort];
 
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
     $dropdownOptions[] = [
         'label' => $text,
         'href'  => '?sort=' . urlencode($key),
+        'value' => $key,
     ];
 }
 ?>
 
-<section class="books-panel">
+<section class="books-panel"
+         data-library
+         data-api="<?= $view->e($apiBase) ?>">
 
   <div hidden data-csrf><?= $view->csrfField() ?></div>
 
@@ -95,7 +107,7 @@ foreach ($sort_options as $key => $text) {
       <div>
         <h2 class="books-panel__title"><?= $view->e($pageTitle) ?></h2>
         <p class="books-panel__meta">
-          <?= $view->e(count($items)) ?> items
+          <span data-library-count>0</span> items
         </p>
       </div>
     </div>
@@ -103,50 +115,27 @@ foreach ($sort_options as $key => $text) {
     <?php
     $view->include('dropdown', [
         'label'   => 'Sort: ' . $current_label,
+        'key'     => 'sort',
         'options' => $dropdownOptions,
     ]);
     ?>
   </header>
 
-  <?php if (empty($items)): ?>
+  <div class="empty-state" data-library-empty hidden>
+    <p class="empty-state__text"><?= $view->e($emptyText) ?></p>
+  </div>
 
-    <div class="empty-state">
-      <p class="empty-state__text"><?= $view->e($emptyText) ?></p>
-    </div>
+  <?php /* Пустой контейнер — карточки отрисует JS из ответа API */ ?>
+  <div class="grid-books" data-library-grid></div>
 
-  <?php else: ?>
-
-    <div class="grid-books">
-      <?php foreach ($items as $item): ?>
-        <?php
-          $creator = $item->creator;
-
-          $authorName = trim(($creator?->name ?? '') . ' ' . ($creator?->surname ?? ''));
-          if ($authorName === '') $authorName = $creator?->username ?? '';
-
-          $cover = '';
-
-          $view->include('card-book', [
-              'id'       => $item->id,
-              'cover'    => $cover,
-              'title'    => $item->title,
-              'authorId' => $creator?->id ?? 0,
-              'author'   => $authorName,
-              'saved'    => false,
-          ]);
-        ?>
-      <?php endforeach; ?>
-    </div>
-
-    <?php if (($meta['hasNext'] ?? false)): ?>
-      <div class="feed-panel__load-more">
-        <a href="?page=<?= ($meta['page'] ?? 1) + 1 ?><?= !empty($searchQuery) ? '&q=' . urlencode($searchQuery) : '' ?>"
-           class="btn btn--secondary">Load more</a>
-      </div>
-    <?php endif; ?>
-
-  <?php endif; ?>
+  <div class="feed-panel__load-more" data-library-more hidden>
+    <button type="button" class="btn btn--secondary" data-load-more>Load more</button>
+  </div>
 
 </section>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+<script src="<?= $view->asset('js/library-filters.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

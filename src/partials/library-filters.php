@@ -53,6 +53,15 @@ $switcher = [
     ],
 ];
 
+// Genre dropdown — переиспользуется в books и articles рядах
+$genreDropdown = [
+    'type'    => 'dropdown',
+    'label'   => 'Genre',
+    'key'     => 'genre',
+    'dynamic' => 'genres',
+    'options' => [],
+];
+
 // Reset clears filters but keeps search (q) and panel state (f)
 $resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'type', 'sort']);
 
@@ -62,14 +71,15 @@ $filter_rows = [
         'hidden' => $isArticles,
         'controls' => [
             $switcher,
-            ['type' => 'dropdown', 'label' => 'Genre', 'dynamic' => 'genres', 'options' => []],
+            $genreDropdown,
             [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
-                    ['label' => 'All',      'href' => $link([], ['status']),          'active' => $status === ''],
-                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']), 'active' => $status === 'reading'],
-                    ['label' => 'Finished', 'href' => $link(['status' => 'ended']),   'active' => $status === 'ended'],
+                    // 'value' => 'finished' (UI), JS маппит в 'ended' (API) через STATUS_VALUES
+                    ['label' => 'All',      'href' => $link([], ['status']),           'key' => 'status', 'value' => 'all',      'active' => $status === ''],
+                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']),  'key' => 'status', 'value' => 'reading',  'active' => $status === 'reading'],
+                    ['label' => 'Finished', 'href' => $link(['status' => 'finished']), 'key' => 'status', 'value' => 'finished', 'active' => $status === 'finished'],
                 ],
             ],
             [
@@ -89,17 +99,13 @@ $filter_rows = [
         'hidden' => !$isArticles,
         'controls' => [
             $switcher,
-            ['type' => 'dropdown', 'label' => 'Genre', 'dynamic' => 'genres', 'options' => []],
+            $genreDropdown,
             [
                 'type'    => 'dropdown',
-                'label'   => $type !== '' ? 'Type: ' . ucfirst($type) : 'Type: All',
-                'options' => [
-                    ['label' => 'All',      'href' => $link([], ['type'])],
-                    ['label' => 'Review',   'href' => $link(['type' => 'review'])],
-                    ['label' => 'Critique', 'href' => $link(['type' => 'critique'])],
-                    ['label' => 'Essay',    'href' => $link(['type' => 'essay'])],
-                    ['label' => 'Note',     'href' => $link(['type' => 'note'])],
-                ],
+                'label'   => 'Type',
+                'key'     => 'kind',
+                'dynamic' => 'article-types',
+                'options' => [],
             ],
             [
                 'type'        => 'input',
