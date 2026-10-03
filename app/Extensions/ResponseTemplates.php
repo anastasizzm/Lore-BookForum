@@ -3,14 +3,14 @@ declare(strict_types=1);
 
 namespace App\Extensions;
 
+use App\Models\Error;
+
 final class ResponseTemplates
 {
-    public static function errors(array $errors, int $statusCode, string $message)
+    public static function error(Error $error)
     {
         return [
-            'errors' => $errors,
-            'code' => $statusCode,
-            'message' => $message
+            'error' => $error
         ];
     }
 
@@ -22,11 +22,10 @@ final class ResponseTemplates
         ];
     }
 
-    public static function object(object $object, array $meta)
+    public static function object(object $data)
     {
         return [
-            'content' => $object,
-            'meta' => $meta
+            'data' => $data,
         ];
     }
 }

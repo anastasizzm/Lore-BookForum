@@ -9,8 +9,8 @@ final class GoneException extends HttpException
 {
     public function __construct(
         string $message,
-        array $extra = []
+        string $errorCode = "gone"
     ){
-        parent::__construct($message, 410, $extra);
+        parent::__construct($message, 410, $errorCode);
     }
 }

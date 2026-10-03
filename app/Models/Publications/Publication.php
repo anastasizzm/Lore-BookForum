@@ -2,8 +2,8 @@
 namespace App\Models\Publications;
 
 use DateTimeImmutable;
-use Uuid;
 
+use App\Models\Uuid;
 use App\Models\Users\UserShortData;
 use App\Models\Publications\PublicationShort;
 use App\Models\BasicModel;
@@ -13,16 +13,14 @@ readonly class Publication extends PublicationShort
     public function __construct(
         int $id,
         string $title,
-        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
-        public int $commentsCount,
-        public int $rating, // avg rating * 10
+        ?Uuid $iconId,
         private int $creatorId,
         private int $genreId,
         public ?BasicModel $genre,
         public ?UserShortData $creator
     ){
-        parent::__construct($id, $title, $iconId, $createdAt);
+        parent::__construct($id, $title, $createdAt, $iconId);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -35,11 +33,9 @@ readonly class Publication extends PublicationShort
             id: $parent->id,
             title: $parent->title,
             iconId: $parent->iconId,
-            createdAt: $parent->createdAt,
+            createdAt: $parent->createdAt,  
             creatorId: self::int($row, $prefix . 'creator_id'),
             genreId: self::int($row, $prefix . 'genre_id'),
-            commentsCount: self::int($row, $prefix . 'comments_count'),
-            rating: self::int($row, $prefix . 'rating_avg'),
             creator: self::hasGroup($row, $prefix . $u, 'id')
                 ? UserShortData::fromRow($row, $prefix . $u) : NULL,
             genre: self::hasGroup($row, $prefix . $g, 'id')

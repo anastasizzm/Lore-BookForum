@@ -23,7 +23,6 @@ use App\Constants;
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
 
-use App\Models\InnerMessageType;
 use App\Models\InnerMessage;
 
 use App\Services\Users\UsersService;
@@ -66,7 +65,7 @@ final class AuthController extends Controller
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
         catch(UnauthorizedException $e){
-            return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [new InnerMessage(InnerMessageType::Error, "Authentication failed", $e->getMessage())]]);
+            return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [InnerMessage::asError("Authentication failed", $e->getMessage())]]);
         }
         catch(ForbiddenException $e){
             return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login'), 'actionTitle' => 'Understood']);

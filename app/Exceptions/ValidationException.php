@@ -5,28 +5,34 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-use App\Models\ValidationError;
+use App\Models\Errors\ValidationError;
+use App\Models\Errors\ToErrorConvertible;
+use App\Models\Errors\Error;
+use App\Models\Errors\InnerMessage;
 
-final class ValidationException extends RuntimeException
+final class ValidationException extends RuntimeException implements ToErrorConvertible
 {
-    private array $errors;
-
     public function __construct(
-        private readonly array $errorsArray = [],
-        string $message = 'Validation failed',
+        private readonly array $errors = [],
+        string $message = "The given data was invalid",
     ) {
         parent::__construct($message);
     }
 
     /** @return array<string, list<string>> */
-    public function errors(): array
-    {
-        if (isset($this->errors)) return $this->errors;
-        
-        $this->errors = [];
-        foreach($this->errorsArray as $element => $errors)
-            $this->errors[] = new ValidationError($element, $errors);
+    public function errors(): array { return $this->errors; }
 
-        return $this->errors;
+    public function toError() : Error
+    {
+        return new ValidationError($this->errors, $this->message);
+    }
+
+    public function toMessages() : array 
+    {
+        $msgs = [];
+        foreach($this->errors as $key => $fails)
+            $msgs[] = InnerMessage::fromValidation($key, $fails);
+
+        return $msgs;
     }
 }
