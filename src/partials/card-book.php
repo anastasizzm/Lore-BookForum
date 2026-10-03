@@ -1,6 +1,8 @@
 <?php
 /**
  * card-book - vertical book card.
+ *
+ * @param string $saveBase - API base for save/unsave ('/api/books' or '/api/articles')
  */
 $id       = (int)($id       ?? 0);
 $cover    = (string)($cover    ?? '');
@@ -8,6 +10,7 @@ $title    = (string)($title    ?? '');
 $authorId = (int)($authorId ?? 0);
 $author   = (string)($author   ?? '');
 $saved    = (bool)($saved    ?? false);
+$saveBase = (string)($saveBase ?? '/api/books');
 
 $coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
 
@@ -27,6 +30,7 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
             class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
             data-save-book
             data-book-id="<?= $id ?>"
+            data-save-url="<?= $view->e($saveBase . '/' . $id . '/save') ?>"
             aria-pressed="<?= $saved ? 'true' : 'false' ?>"
             aria-label="<?= $saved ? 'Remove from saved' : 'Save book' ?>">
       <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

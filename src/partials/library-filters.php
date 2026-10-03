@@ -16,6 +16,11 @@ $isArticles  = str_starts_with($currentPath, '/articles');
 $bookHref ??= '/books';
 $articleHref ??= '/articles';
 
+// текущие значения фильтров из URL (для подсветки без «мигания»)
+$statusRaw  = (string)($_GET['status'] ?? '');
+$curStatus  = in_array($statusRaw, ['reading', 'finished'], true) ? $statusRaw : 'all';
+$curIsbn    = (string)($_GET['isbn'] ?? '');
+
 $switcher = [
     'type'    => 'tabs',
     'variant' => 'segmented',
@@ -35,28 +40,31 @@ $switcher = [
     ],
 ];
 
+$genreDropdown = [
+    'type'    => 'dropdown',
+    'label'   => 'Genre',
+    'key'     => 'genre',
+    'dynamic' => 'genres',
+    'options' => [],
+];
+
 $filter_rows = [
     [
         'id'     => 'books',
         'hidden' => $isArticles,
         'controls' => [
             $switcher,
-            [
-                'type'    => 'dropdown',
-                'label'   => 'Genre',
-                'dynamic' => 'genres',
-                'options' => [],
-            ],
+            $genreDropdown,
             [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
-                    ['label' => 'All',      'href' => '#all',     'active' => true],
-                    ['label' => 'Reading',  'href' => '#reading'],
-                    ['label' => 'Finished', 'href' => '#finished'],
+                    ['label' => 'All',      'href' => '?status=all',      'key' => 'status', 'value' => 'all',      'active' => $curStatus === 'all'],
+                    ['label' => 'Reading',  'href' => '?status=reading',  'key' => 'status', 'value' => 'reading',  'active' => $curStatus === 'reading'],
+                    ['label' => 'Finished', 'href' => '?status=finished', 'key' => 'status', 'value' => 'finished', 'active' => $curStatus === 'finished'],
                 ],
             ],
-            ['type' => 'input', 'name' => 'series', 'placeholder' => 'Series number'],
+            ['type' => 'input', 'name' => 'isbn', 'placeholder' => 'ISBN', 'value' => $curIsbn],
             ['type' => 'reset'],
         ],
     ],
@@ -65,22 +73,13 @@ $filter_rows = [
         'hidden' => !$isArticles,
         'controls' => [
             $switcher,
-            [
-                'type'    => 'dropdown',
-                'label'   => 'Genre',
-                'dynamic' => 'genres',
-                'options' => [],
-            ],
+            $genreDropdown,
             [
                 'type'    => 'dropdown',
                 'label'   => 'Type',
-                'options' => [
-                    ['label' => 'All',      'href' => '?kind=all'],
-                    ['label' => 'Review',   'href' => '?kind=review'],
-                    ['label' => 'Critique', 'href' => '?kind=critique'],
-                    ['label' => 'Essay',    'href' => '?kind=essay'],
-                    ['label' => 'Note',     'href' => '?kind=note'],
-                ],
+                'key'     => 'kind',
+                'dynamic' => 'article-types',
+                'options' => [],
             ],
             ['type' => 'reset'],
         ],
