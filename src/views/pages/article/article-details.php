@@ -1,25 +1,38 @@
 <?php
 /**
+ * article-details — страница статьи (по аналогии с book/book-details.php).
+ *
  * Ожидаемые переменные от контроллера:
- *   $book      — ['publicationId','cover','title','author','createdAt','genre','category','series',
- *                 'isbn', 'rating' (float 0-5), 'savesCount', 'annotation', 'authorNote', 'tableOfContents']
- *   $comments  — массив постов (те же поля, что в feed-list.php)
+ *   $article  — ['id','publicationId','cover','title','author','createdAt','genre',
+ *                'doi' (string|null), 'type' ('content'|'book'),
+ *                'bookTitle','pageStart','pageEnd',
+ *                'annotation' (= publications.description), 'authorNote',
+ *                'content' (текст статьи, для type='book' — null),
+ *                'rating' (float 0-5), 'savesCount', 'isSaved']
+ *   $comments — массив постов (те же поля, что в feed-list.php)
+ *
+ * DEV: пока нет контроллера страницы, всё рендерится с заглушками;
+ *      id можно передать в адресе — ?article=<id>&pub=<id>.
  */
-$book = $book ?? [
-    'publicationId'   => 0,
-    'cover'           => 'https://placehold.co/400x560?text=Cover',
-    'title'           => 'Full name of book',
-    'author'          => 'Name Surname',
-    'createdAt'       => '10.09.2026',
-    'genre'           => 'Drama',
-    'category'        => 'Artistic literature',
-    'series'          => '10.09.2026',
-    'isbn'            => '978-5-123-45678-9',
-    'rating'          => 4.6,
-    'savesCount'      => 121,
-    'annotation'      => "After the destruction of most of humanity, Grigory takes up a profession that never existed before: taxidermist of extraterrestrial fauna.\nDo you want a stuffed \"Root-Jumper\" from a distant star system, or perhaps one of the very last Glass Serpents? Nothing is impossible; Grigory will fulfill your request.\nThe job seems simple enough-until each new order begins to pull him deeper and deeper into the alien cosmos...",
-    'authorNote'      => 'By the way, the series has a standalone prequel; you can read it here: https://author.today/work/627498',
-    'tableOfContents' => [],
+$article = $article ?? [
+    'id'            => 1,
+    'publicationId' => 1,
+    'cover'         => '/img/book-placeholder.svg',
+    'title'         => 'Notes on the Craft of Worldbuilding',
+    'author'        => 'Name Surname',
+    'createdAt'     => '10.09.2026',
+    'genre'         => 'Art',
+    'doi'           => '10.1234/lore.2026.0042',
+    'type'          => 'content',          // content | book
+    'bookTitle'     => '',
+    'pageStart'     => null,
+    'pageEnd'       => null,
+    'annotation'    => "Every world begins as a question: what do people here believe, and what do they refuse to discuss?\nThis essay breaks worldbuilding into three layers — geography, institutions and everyday habits — and shows how a detail from any layer makes the other two believable. Practical advice for authors, editors and game designers.",
+    'authorNote'    => 'A shorter version of this article was presented at the Lore conference in May.',
+    'content'       => "Start with the constraint, not with the map.\nA world becomes believable the moment its inhabitants can't have everything they want: a river that floods every spring, a law nobody dares to break, a spice that only grows on one island. Constraints create routine, routine creates culture.\n\nThe second step is inheritance. Ask what the previous generation handed down — a debt, a ruin, a recipe, a grudge — and you get history without writing a chronicle.\n\nThe last step is friction between layers. Geography should contradict institutions, institutions should contradict beliefs, and everyday habits should be the small compromises people invent to live with both.",
+    'rating'        => 4.6,
+    'savesCount'    => 121,
+    'isSaved'       => false,
 ];
 
 $comments = $comments ?? [
@@ -28,61 +41,36 @@ $comments = $comments ?? [
         'userName'     => 'sername',
         'userAvatar'   => null,
         'date'         => '10.09.2026',
-        'text'         => "some text about life and many more things some text about life and many more things some text about life and many more things\nsome text about life and many more things some text about life and many more things some text about life and many more things\nsome text about life and many more things",
+        'text'         => 'The part about friction between layers finally made my outline click. Thanks!',
         'likes'        => 0,
         'comments'     => 0,
     ],
 ];
 
-/**
- * id публикации для формы комментария.
- * Берётся из контроллера ($book['publicationId']).
- * DEV: пока нет контроллера страницы, можно передать ?pub=<id> в адресе.
- */
-$publicationId = (int) ($book['publicationId'] ?? 0);
+/** id публикации — для формы комментария (POST /api/posts). */
+$publicationId = (int) ($article['publicationId'] ?? 0);
 if ($publicationId === 0) {
     $publicationId = (int) ($_GET['pub'] ?? 0);
 }
 
-/**
- * id книги (books.id) и состояние закладки — для кнопки Save.
- * Берутся из контроллера ($book['id'], $book['isSaved']).
- * DEV: пока нет контроллера страницы, можно передать ?book=<id> в адресе.
- */
-$bookId = (int) ($book['id'] ?? 0);
-if ($bookId === 0) {
-    $bookId = (int) ($_GET['book'] ?? 0);
+/** id статьи (articles.id) — для кнопки Save (POST/DELETE /api/articles/{id}/save). */
+$articleId = (int) ($article['id'] ?? 0);
+if ($articleId === 0) {
+    $articleId = (int) ($_GET['article'] ?? 0);
 }
-$isSaved = (bool) ($book['isSaved'] ?? false);
+$isSaved = (bool) ($article['isSaved'] ?? false);
 
-/**
- * Статус чтения текущего пользователя (передаёт контроллер):
- *   'new'         — ещё не начинал      -> Start reading
- *   'in_progress' — читает              -> Resume reading
- *   'finished'    — дочитал             -> Read again
- */
-$readingStatus  = $book['readingStatus'] ?? $readingStatus ?? 'new';
-// DEV-предпросмотр: ?reading=in_progress или ?reading=finished
-//$readingStatus = $_GET['reading'] ?? $readingStatus;
+/** Тип статьи: content — собственный текст, book — отрывок из книги. */
+$isBookExcerpt = ($article['type'] ?? 'content') === 'book';
 
-$readingButtons = [
-    'new'         => ['label' => 'Start reading',  'modifier' => 'start'],
-    'in_progress' => ['label' => 'Resume reading', 'modifier' => 'resume'],
-    'finished'    => ['label' => 'Read again',     'modifier' => 'again'],
-];
-if (!isset($readingButtons[$readingStatus])) {
-    $readingStatus = 'new'; // неизвестное значение -> безопасный вариант
-}
-$readingBtn = $readingButtons[$readingStatus];
-
-$rating  = (float) ($book['rating'] ?? 0);
+$rating  = (float) ($article['rating'] ?? 0);
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 ?>
 <?php $view->extends('main'); ?>
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
 
-<?php $view->startBlock('title'); ?>Book details<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?>Article details<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
@@ -91,32 +79,32 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
-    <h1 class="book-page-title">Book details</h1>
+    <h1 class="book-page-title">Article details</h1>
   </div>
 
   <div class="book-details">
     <div class="book-details__cover-col">
       <div class="book-details__cover">
-        <img src="<?= $view->e($book['cover']) ?>" alt="<?= $view->e($book['title']) ?> cover">
+        <img src="<?= $view->e($article['cover']) ?>" alt="<?= $view->e($article['title']) ?>">
       </div>
 
       <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <!-- Закладка: POST/DELETE /api/books/{id}/save (обработчик в app.js) -->
+        <!-- Закладка: POST/DELETE /api/articles/{id}/save (обработчик в article.js) -->
         <button type="button"
                 class="btn-icon btn-icon--circle<?= $isSaved ? ' is-active' : '' ?>"
-                data-save-book
-                data-book-id="<?= $bookId ?>"
+                data-save-article
+                data-article-id="<?= $articleId ?>"
                 aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
-                aria-label="<?= $isSaved ? 'Remove from saved' : 'Save book' ?>">
+                aria-label="<?= $isSaved ? 'Remove from saved' : 'Save article' ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
         </button>
-        <button type="button"
-                class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
-                data-start-reading
-                data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></button>
+        <a class="btn btn--primary btn--pill"
+           href="<?= $isBookExcerpt && !empty($article['bookTitle']) ? '#' : '#annotation' ?>">
+          <?= $isBookExcerpt ? 'Open book' : 'Read article' ?>
+        </a>
       </div>
 
       <!-- Блок рейтинга и сохранений -->
@@ -134,12 +122,12 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H10C10.5523 1 11 1.44772 11 2V14.5273C11 14.928 10.5574 15.1704 10.2039 14.9631L6 12.5L1.79612 14.9631C1.44265 15.1704 1 14.928 1 14.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
-          <span data-saves-count><?= (int) $book['savesCount'] ?></span>
+          <span data-saves-count><?= (int) $article['savesCount'] ?></span>
         </span>
       </div>
 
       <!-- Оценка пользователя -->
-      <div class="rate" data-rate role="radiogroup" aria-label="Rate this book">
+      <div class="rate" data-rate role="radiogroup" aria-label="Rate this article">
         <span class="rate__label">Click to Rate:</span>
         <div class="rate__stars">
           <?php for ($i = 1; $i <= 5; $i++): ?>
@@ -150,7 +138,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                     aria-checked="false"
                     aria-label="<?= $i ?> out of 5">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
+                <path d="M12.5 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
               </svg>
             </button>
           <?php endfor; ?>
@@ -158,16 +146,29 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       </div>
     </div>
 
-    <!-- Инфо-карточка книги -->
+    <!-- Инфо-карточка статьи -->
     <div class="card-base info-box">
-      <h2 class="info-box__title"><?= $view->e($book['title']) ?></h2>
-      <p class="info-box__meta"><?= $view->e($book['author']) ?></p>
-      <p class="info-box__meta">Creation date: <?= $view->e($book['createdAt']) ?></p>
-      <p class="info-box__meta">Genre: <?= $view->e($book['genre']) ?></p>
-      <p class="info-box__meta">Category: <?= $view->e($book['category']) ?></p>
-      <p class="info-box__meta">Book series: <?= $view->e($book['series']) ?></p>
-      <?php if (!empty($book['isbn'])): ?>
-        <p class="info-box__meta">ISBN: <span class="info-box__id"><?= $view->e($book['isbn']) ?></span></p>
+      <h2 class="info-box__title"><?= $view->e($article['title']) ?></h2>
+      <p class="info-box__meta"><?= $view->e($article['author']) ?></p>
+      <p class="info-box__meta">Creation date: <?= $view->e($article['createdAt']) ?></p>
+      <p class="info-box__meta">Genre: <?= $view->e($article['genre']) ?></p>
+
+      <?php if (!empty($article['doi'])): ?>
+        <p class="info-box__meta">DOI: <span class="info-box__id"><?= $view->e($article['doi']) ?></span></p>
+      <?php endif; ?>
+
+      <?php if ($isBookExcerpt): ?>
+        <p class="info-box__meta">Type: Article from the book</p>
+        <?php if (!empty($article['bookTitle'])): ?>
+          <p class="info-box__meta">
+            Book: <?= $view->e($article['bookTitle']) ?>
+            <?php if (!empty($article['pageStart'])): ?>
+              (pp. <?= (int) $article['pageStart'] ?>–<?= (int) ($article['pageEnd'] ?? $article['pageStart']) ?>)
+            <?php endif; ?>
+          </p>
+        <?php endif; ?>
+      <?php else: ?>
+        <p class="info-box__meta">Type: Standalone article</p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
@@ -176,31 +177,43 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
               'variant' => 'outline',
               'items'   => [
                   ['label' => 'Annotation', 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => 'Table of contents', 'href' => '#toc', 'active' => false, 'row' => 'toc'],
+                  ['label' => $isBookExcerpt ? 'Excerpt' : 'Content', 'href' => '#content', 'active' => false, 'row' => 'content'],
               ],
           ]);
         ?>
 
         <div class="card-base book-tabs-panel__content" data-row="annotation">
-          <p class="info-box__body"><?= nl2br($view->e($book['annotation'])) ?></p>
+          <p class="info-box__body" id="annotation"><?= nl2br($view->e($article['annotation'])) ?></p>
 
-          <?php if (!empty($book['authorNote'])): ?>
+          <?php if (!empty($article['authorNote'])): ?>
             <div class="book-tabs-panel__note">
               <strong>Author's Note:</strong><br>
-              <?= nl2br($view->e($book['authorNote'])) ?>
+              <?= nl2br($view->e($article['authorNote'])) ?>
             </div>
           <?php endif; ?>
         </div>
 
-        <div class="card-base book-tabs-panel__content" data-row="toc" hidden>
-          <?php if (empty($book['tableOfContents'])): ?>
-            <p class="info-box__body">Table of contents is not available yet.</p>
+        <div class="card-base book-tabs-panel__content" data-row="content" hidden>
+          <?php if ($isBookExcerpt): ?>
+            <p class="info-box__body">
+              The full text is taken from the book
+              <strong><?= $view->e($article['bookTitle'] ?: 'Untitled') ?></strong><?php
+                if (!empty($article['pageStart'])):
+                  ?>, pages <?= (int) $article['pageStart'] ?>–<?= (int) ($article['pageEnd'] ?? $article['pageStart']) ?><?php
+                endif;
+              ?>.
+            </p>
+            <!-- TODO: route for single book is not added yet -->
+            <p><a class="link" href="#">Go to the book</a></p>
+          <?php elseif (empty($article['content'])): ?>
+            <p class="info-box__body">The article text is not available yet.</p>
           <?php else: ?>
-            <ol class="info-box__body">
-              <?php foreach ($book['tableOfContents'] as $chapter): ?>
-                <li><?= $view->e($chapter) ?></li>
+            <div class="info-box__body article-content">
+              <?php foreach (preg_split('/\R{2,}/u', trim((string) $article['content']) ?: '') as $para): ?>
+                <?php if (trim($para) === '') continue; ?>
+                <p><?= nl2br($view->e(trim($para))) ?></p>
               <?php endforeach; ?>
-            </ol>
+            </div>
           <?php endif; ?>
         </div>
       </div>
@@ -244,16 +257,16 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     <?php else: ?>
       <div class="stack">
         <?php foreach ($comments as $comment): ?>
-          
+
           <!-- Карточка комментария -->
           <div class="comment-card">
             <div class="comment-card__inner">
               <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
-              
+
               <div class="comment-card__content">
                 <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
                 <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
-                
+
                 <div class="comment-card__footer">
                   <button type="button" class="btn-icon-small btn-like" data-comment-like aria-pressed="false" aria-label="Like">
                     <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -286,7 +299,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
               </div>
             </div>
           </div>
-          
+
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
@@ -307,4 +320,5 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
 <?php $view->startBlock('scripts'); ?>
   <script src="/assets/js/book.js"></script>
+  <script src="/assets/js/article.js"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -50,6 +50,14 @@
   line-height: 1.2;
 }
 
+/* Подпись-подсказка под заголовком (password-email / password-reset) */
+.login-card__text {
+  margin: calc(-1 * var(--space-3)) 0 var(--space-4);
+  font-size: var(--fs-body, 14px);
+  line-height: var(--lh-normal, 1.5);
+  color: var(--color-text-muted, #6F84A5);
+}
+
 .login-form .form-field + .form-field {
   margin-top: var(--space-2);
 }
