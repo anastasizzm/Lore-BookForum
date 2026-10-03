@@ -154,7 +154,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       <p class="info-box__meta">Genre: <?= $view->e($article['genre']) ?></p>
 
       <?php if (!empty($article['doi'])): ?>
-        <p class="info-box__meta">DOI: <span class="info-box__id"><?= $view->e($article['doi']) ?></span></p>
+        <p class="info-box__meta">DOI: <?= $view->e($article['doi']) ?></p>
       <?php endif; ?>
 
       <?php if ($isBookExcerpt): ?>

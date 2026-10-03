@@ -167,7 +167,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       <p class="info-box__meta">Category: <?= $view->e($book['category']) ?></p>
       <p class="info-box__meta">Book series: <?= $view->e($book['series']) ?></p>
       <?php if (!empty($book['isbn'])): ?>
-        <p class="info-box__meta">ISBN: <span class="info-box__id"><?= $view->e($book['isbn']) ?></span></p>
+        <p class="info-box__meta">ISBN: <?= $view->e($book['isbn']) ?></p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
