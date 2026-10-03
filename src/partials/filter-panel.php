@@ -22,12 +22,14 @@ $filter_open = $filter_open ?? false;
               'label'   => $control['label']   ?? 'Select',
               'options' => $control['options'] ?? [],
               'dynamic' => $control['dynamic'] ?? null,
+              'key'     => $control['key']     ?? null,
           ]); ?>
 
         <?php elseif (($control['type'] ?? '') === 'input'): ?>
           <input type="text"
                  class="filter-input"
                  name="<?= $view->e($control['name'] ?? '') ?>"
+                 data-filter-key="<?= $view->e($control['name'] ?? '') ?>"
                  value="<?= $view->e($control['value'] ?? '') ?>"
                  placeholder="<?= $view->e($control['placeholder'] ?? '') ?>"
                  autocomplete="off"

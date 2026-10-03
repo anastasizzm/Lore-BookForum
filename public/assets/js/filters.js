@@ -1,10 +1,10 @@
 // ============================================
-// FILTER PANEL — segmented tabs, search, ISBN / DOI inputs, genres
+// FILTER PANEL — segmented tabs, dynamic dropdowns (genres, article-types)
 // ============================================
 
 /**
- * Positions the white indicator inside a segmented control.
- * instant=true — no animation (for first render / showing hidden row).
+ * Позиционирует белый индикатор внутри segmented-контрола.
+ * instant=true — без анимации (первый рендер / показ скрытого ряда).
  */
 function updateSegmentIndicator(tabsEl, instant = false) {
   const active = tabsEl.querySelector('.tab.is-active');
@@ -32,16 +32,15 @@ document.querySelectorAll('.tabs--segmented').forEach(tabsEl => {
   window.addEventListener('resize', () => updateSegmentIndicator(tabsEl, true));
 });
 
+
 /* ============================================
-   1. TABS — all tabs in the filter panel are real links
-      (Books/Articles, All/Reading/Finished); the server
-      renders the active state. Only legacy "#anchor" tabs
-      are handled here.
+   TABS — clicks inside filter panel
    ============================================ */
 
 document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   tab.addEventListener('click', (e) => {
     const href = tab.getAttribute('href') || '';
+    // Реальная ссылка (не #anchor) — пусть работает как обычная навигация
     if (href && !href.startsWith('#')) return;
 
     e.preventDefault();
@@ -55,16 +54,46 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     if (tabsEl.classList.contains('tabs--segmented')) {
       updateSegmentIndicator(tabsEl);
     }
+
+    // Переключение рядов (Books ↔ Articles)
+    const target = tab.getAttribute('data-row-target');
+    if (target && panel) {
+      panel.querySelectorAll('.filter-panel__row').forEach(row => {
+        row.hidden = row.getAttribute('data-filter-row') !== target;
+      });
+
+      panel.querySelectorAll('.tab[data-row-target]').forEach(t => {
+        t.classList.toggle('is-active', t.getAttribute('data-row-target') === target);
+      });
+
+      panel.querySelectorAll('.tabs--segmented').forEach(t => updateSegmentIndicator(t, true));
+    }
   });
 });
 
 
 /* ============================================
-   2. SEARCH (?q=), ISBN (?isbn=) and DOI (?doi=)
+   DYNAMIC DROPDOWNS — genres, article-types
    ============================================ */
 
 (function () {
   'use strict';
+
+  // Какие динамические источники бывают, где их API и как звать query-параметр
+  const SOURCES = {
+    genres: {
+      url:      '/api/additional/genres',
+      param:    'genre',         // ?genre=<id> в URL страницы
+      allLabel: 'All genres',
+    },
+    'article-types': {
+      url:      '/api/additional/article-types',
+      param:    'kind',          // ?kind=<value> в URL страницы
+      allLabel: 'All types',
+    },
+  };
+
+  const cache = new Map(); // url -> array
 
   // true  — a wrong ISBN check digit blocks the search
   // false — only shows a warning, search still runs (handy with test data)
@@ -287,87 +316,104 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   }
 })();
 
-
-/* ============================================
-   LIBRARY FILTERS — dynamic genre dropdown
-   ============================================ */
-
-(function () {
-  'use strict';
-
-  let genresCache = null;
-
-  async function fetchGenres() {
-    if (genresCache) return genresCache;
-
-    const res = await fetch('/api/additional/genres', {
-      headers: { 'Accept': 'application/json' },
-      credentials: 'same-origin',
-    });
-
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    const data = await res.json();
-    const list = Array.isArray(data)
-      ? data
-      : (Array.isArray(data.items) ? data.items : []);
-
-    genresCache = list;
-    return list;
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
-  async function populateGenres(dropdown) {
+  function stripParam(key) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete(key);
+    url.searchParams.delete('page');
+    const qs = url.searchParams.toString();
+    return qs ? '?' + qs : url.pathname;
+  }
+
+  function appendParam(key, value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(key, value);
+    url.searchParams.delete('page');
+    const qs = url.searchParams.toString();
+    return qs ? '?' + qs : url.pathname;
+  }
+
+  async function fetchAll(url) {
+    if (cache.has(url)) return cache.get(url);
+
+    const all = [];
+    for (let p = 1; p <= 20; p++) {
+      const res = await fetch(url + '?page=' + p, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const data = await res.json();
+      const list = Array.isArray(data)
+        ? data
+        : (Array.isArray(data.items) ? data.items : []);
+
+      all.push(...list);
+
+      // Если сервер отдал плоский массив — пагинации нет, выходим
+      // Если отдал объект {items, meta} — идём дальше только при hasNext
+      if (Array.isArray(data) || !(data.meta && data.meta.hasNext)) break;
+    }
+
+    cache.set(url, all);
+    return all;
+  }
+
+  async function populateDynamic(dropdown) {
+    const kind = dropdown.dataset.dynamic;
+    const src  = SOURCES[kind];
+    if (!src) return;
+
     const menu = dropdown.querySelector('.dropdown__menu');
     if (!menu) return;
 
     menu.innerHTML = '<li class="dropdown__loading">Loading...</li>';
 
     try {
-      const genres = await fetchGenres();
+      const list = await fetchAll(src.url);
 
-      if (genres.length === 0) {
-        menu.innerHTML = '<li class="dropdown__empty">No genres</li>';
-        return;
-      }
-
-      const params = new URLSearchParams(window.location.search);
-      const currentGenre = params.get('genre');
-      const isAllActive = !currentGenre;
+      const params  = new URLSearchParams(window.location.search);
+      const current = params.get(src.param);
+      const isAll   = !current;
 
       const items = [
         {
-          id: 'all',
-          title: 'All genres',
-          href: stripParam('genre'),
-          active: isAllActive,
+          id:     'all',
+          title:  src.allLabel,
+          href:   stripParam(src.param),
+          active: isAll,
         },
-        ...genres.map(g => ({
-          id: String(g.id),
-          title: g.title,
-          href: appendParam('genre', String(g.id)),
-          active: String(g.id) === currentGenre,
+        ...list.map(entry => ({
+          id:     String(entry.id ?? entry.value ?? ''),
+          title:  String(entry.title ?? entry.label ?? entry.id ?? ''),
+          href:   appendParam(src.param, String(entry.id ?? entry.value ?? '')),
+          active: String(entry.id ?? entry.value ?? '') === current,
         })),
       ];
 
       menu.innerHTML = items.map(item =>
         '<li>' +
-          '<a href="' + item.href + '" class="dropdown__item ' + (item.active ? 'is-active' : '') + '">' +
+          '<a href="' + item.href + '" ' +
+             'class="dropdown__item ' + (item.active ? 'is-active' : '') + '" ' +
+             'data-filter-value="' + escapeHtml(item.id) + '">' +
             escapeHtml(item.title) +
           '</a>' +
         '</li>'
       ).join('');
 
-      const label = dropdown.querySelector('[data-dropdown-label]');
-      if (label) {
-        if (currentGenre) {
-          const current = genres.find(g => String(g.id) === currentGenre);
-          label.textContent = 'Genre: ' + (current ? current.title : 'All genres');
-        } else {
-          label.textContent = 'Genre: All genres';
-        }
-      }
+      // library-filters.js слушает это событие и обновляет подпись кнопки
+      dropdown.dispatchEvent(new CustomEvent('dropdown:populated', { bubbles: true }));
     } catch (e) {
-      console.error('[library-filters] genres load failed:', e);
+      console.error('[filters] dynamic load failed:', kind, e);
       menu.innerHTML = '<li class="dropdown__error">Failed to load</li>';
     }
   }
@@ -399,7 +445,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   document.addEventListener('DOMContentLoaded', function () {
     document
-      .querySelectorAll('[data-dropdown][data-dynamic="genres"]')
-      .forEach(function (dd) { populateGenres(dd); });
+      .querySelectorAll('[data-dropdown][data-dynamic]')
+      .forEach(function (dd) { populateDynamic(dd); });
   });
 })();

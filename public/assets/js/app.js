@@ -279,7 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
       body.set(token.name, token.value);
     }
 
-    var url = '/api/' + type + 's/' + id + '/save';
+    // data-save-url задаётся снаружи (library-filters.js), иначе эндпоинт
+    // выводится из типа публикации: /api/books|articles/{id}/save
+    var url = btn.dataset.saveUrl || ('/api/' + type + 's/' + id + '/save');
     var method = willSave ? 'POST' : 'DELETE';
 
     try {

@@ -11,6 +11,8 @@
  *       'active' => true,
  *       'icon'   => '<svg>…</svg>',   // опционально
  *       'row'    => 'books',           // опционально, для data-row-target
+ *       'key'    => 'status',          // опционально, для фильтрации через fetch
+ *       'value'  => 'reading',         // опционально, для фильтрации через fetch
  *     ]
  */
 $variant = $variant ?? 'filled';
@@ -20,7 +22,9 @@ $items   = $items   ?? [];
   <?php foreach ($items as $item): ?>
     <a href="<?= $view->e($item['href'] ?? '#') ?>"
        class="tab <?= !empty($item['active']) ? 'is-active' : '' ?>"
-       <?= isset($item['row']) ? 'data-row-target="' . $view->e($item['row']) . '"' : '' ?>>
+       <?= isset($item['row']) ? 'data-row-target="' . $view->e($item['row']) . '"' : '' ?>
+       <?= isset($item['key']) ? 'data-filter-key="' . $view->e($item['key']) . '"' : '' ?>
+       <?= isset($item['value']) ? 'data-filter-value="' . $view->e($item['value']) . '"' : '' ?>>
 
       <?php if (!empty($item['icon'])): ?>
         <span class="tab__icon"><?= $item['icon'] ?></span>
