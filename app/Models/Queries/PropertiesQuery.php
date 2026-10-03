@@ -51,7 +51,9 @@ final class PropertiesQuery implements Query
         return $ok;
     }
 
-    private static function parseRaw($raw){
+    private static function parseRaw(string $raw){
+        if (empty($raw)) return [];
+
         return explode(self::PROPS_DELIMITER, strtolower($raw));
     }
 

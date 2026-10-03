@@ -28,7 +28,7 @@ final class PostsRepository extends Repository
         $whereClauses = ['c.is_active'];
         $params = [];
         if (!empty($search)){
-            $whereClauses = 'u.username ILIKE :q';
+            $whereClauses[] = 'u.username ILIKE :q';
             $params[':q'] = $search . '%';
         }
         if ($parentId !== null){
