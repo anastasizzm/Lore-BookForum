@@ -47,6 +47,9 @@ final class BooksRepository extends PublicationsRepository
         if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($filters->creatorId);
 
+        if ($filters->categoryId !== null)
+            $this->director->addCategoryTempFilter($filters->categoryId);
+
         if (!empty($filters->isbn))
             $this->director->addIsbnTempFilter($filters->isbn);
 

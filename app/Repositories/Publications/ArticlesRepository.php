@@ -39,13 +39,16 @@ final class ArticlesRepository extends PublicationsRepository
         $userFilters = $criteria->userCriteria;
         
         if (!empty($filters->search))
-            $this->director->addSearchTempFilter($search);
+            $this->director->addSearchTempFilter($filters->search);
 
         if ($filters->genreId !== null)
-            $this->director->addGenreTempFilter($genreId);
+            $this->director->addGenreTempFilter($filters->genreId);
 
         if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($filters->creatorId);
+
+        if ($filters->typeId !== null)
+            $this->director->addTypeTempFilter($filters->typeId);
 
         if (!empty($filters->doi))
             $this->director->addDoiTempFilter($filters->doi);

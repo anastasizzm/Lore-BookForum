@@ -12,7 +12,7 @@ final readonly class ScriptParam
         private int $type = PDO::PARAM_STR
     ){}
 
-    public function getValue() { return $this->value; }
+    public function getValue() : mixed { return $this->value; }
     public function getType() : int { return $this->type; }
 
     public static function asStr(mixed $value) : self { return new self($value, PDO::PARAM_STR); }

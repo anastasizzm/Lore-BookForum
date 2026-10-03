@@ -7,7 +7,7 @@ use App\Extensions\ScriptBuilders\ScriptBuilder;
 use App\Extensions\ScriptBuilders\ScriptDirector;
 
 use App\Models\Scripts\ScriptData;
-use App\Models\Scripts\ScripParam;
+use App\Models\Scripts\ScriptParam;
 
 use App\Models\Enums\ReadingStatus;
 
@@ -47,6 +47,13 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("articles.doi ILIKE :doi", [':doi' => ScriptParam::asStr($doi)]);
+        return $this;
+    }
+
+    public function addTypeTempFilter(int $typeId) : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("articles.type_id = :typeId", [':typeId' => ScriptParam::asInt($typeId)]);
         return $this;
     }
 
