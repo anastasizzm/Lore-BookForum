@@ -21,6 +21,7 @@ body {
   font-weight: var(--fw-medium);
   font-size: var(--fs-body);
   line-height: 1.2;
+  text-decoration: none;           /* <a class="btn"> не должен выглядеть как ссылка */
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
