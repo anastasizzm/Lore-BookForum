@@ -6,6 +6,7 @@ namespace App\Services\Publications;
 use App\Repositories\Publications\ArticlesRepository;
 
 use App\Models\Criterias\Publications\ArticlesCriteria;
+use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 

@@ -11,7 +11,7 @@ use App\Models\Scripts\ScriptParam;
 
 use App\Models\Enums\PostsSortBy;
 
-abstract class PostsScriptDirector extends ScriptDirector
+final class PostsScriptDirector extends ScriptDirector
 {
     public function __construct()
     {
@@ -105,7 +105,7 @@ abstract class PostsScriptDirector extends ScriptDirector
                 
                 case 'publication':
                     $this->tempBuilder->addJoin('INNER JOIN publications ON publications.id = comments.publication_id')
-                        ->addSelect("publications.id as pub_id,\publications.title as pub_title,\npublications.icon_id as pub_icon_id,\npublications.created_at as pub_created_at");
+                        ->addSelect("publications.id as pub_id,\npublications.title as pub_title,\npublications.icon_id as pub_icon_id,\npublications.created_at as pub_created_at");
                     break;
                 default:
                     $this->handleFallbackIncluding($prop);

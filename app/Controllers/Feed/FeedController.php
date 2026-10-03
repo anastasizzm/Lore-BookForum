@@ -35,6 +35,7 @@ final class FeedController extends Controller
             return Response::redirect('login');
 
         $userContext = $this->usersService->loadContext($userId);
+        $q = $context->request->query;
         try{
             $query = new PostsListQuery(
                 pagination: PaginationQuery::fromInput($q),

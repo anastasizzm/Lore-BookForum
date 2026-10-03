@@ -39,8 +39,8 @@ final class BooksController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        
-        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
             $query = new BooksListQuery(
@@ -78,8 +78,8 @@ final class BooksController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        
-        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
             $query = new BooksListQuery(

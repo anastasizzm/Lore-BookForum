@@ -13,8 +13,8 @@ final readonly class Book extends PublicationExtended
     public function __construct(
         int $id,
         string $title,
-        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
+        ?Uuid $iconId,
         int $creatorId,
         int $genreId,
         ?BasicModel $genre,
@@ -34,8 +34,8 @@ final readonly class Book extends PublicationExtended
         parent::__construct(
             $id, 
             $title, 
-            $iconId, 
             $createdAt,
+            $iconId, 
             $creatorId,
             $genreId,
             $genre,
@@ -56,8 +56,8 @@ final readonly class Book extends PublicationExtended
         return new self(
             id: $parent->id,
             title: $parent->title,
-            iconId: $parent->iconId,
             createdAt: $parent->createdAt,
+            iconId: $parent->iconId,
             description: $parent->description,
             authorNotes: $parent->authorNotes,
             commentsCount: $parent->commentsCount,

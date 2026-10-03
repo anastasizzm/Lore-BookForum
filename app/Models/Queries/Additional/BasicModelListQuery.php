@@ -13,7 +13,7 @@ final readonly class BasicModelListQuery
     public function __construct(
         public PaginationQuery $pagination,
         public SortQuery $sort,
-        public string $search,
+        public ?string $search,
     ) {}
 
     /** @param array<string, mixed> $q */

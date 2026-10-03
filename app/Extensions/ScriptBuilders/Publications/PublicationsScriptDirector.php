@@ -131,7 +131,7 @@ abstract class PublicationsScriptDirector extends ScriptDirector
                 
                 case 'genre':
                     $this->tempBuilder->addJoin('INNER JOIN genres ON genres.id = publications.genre_id')
-                        ->addSelect("genres.id as g_id,\ngenres.title as g_title");
+                        ->addSelect("genres.id as g_id,\ngenres.title as g_title,\ngenres.created_at as g_created_at");
                     break;
                 default:
                     $this->handleFallbackIncluding($prop);

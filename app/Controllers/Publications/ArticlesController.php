@@ -17,9 +17,10 @@ use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
-use App\Models\Filters\Publications\BooksFilters;
+use App\Models\Filters\Publications\ArticlesFilters;
 use App\Models\Filters\Publications\UserRelationFilters;
 use App\Extensions\Parsers\RouteParamParser;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -38,15 +39,15 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        
-        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $query = new BooksListQuery(
+            $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
-                filters: BooksFilters::fromInput($q),
+                filters: ArticlesFilters::fromInput($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId)
             );
 
@@ -78,15 +79,15 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        
-        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $query = new BooksListQuery(
+            $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
-                filters: BooksFilters::fromInput($q),
+                filters: ArticlesFilters::fromInput($q),
                 userFilters: UserRelationFilters::fromSaved($q, $userId)
             );
 

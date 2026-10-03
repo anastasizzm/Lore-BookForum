@@ -12,6 +12,7 @@ use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
 
 use App\Models\Criterias\Publications\BooksCriteria;
+use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\PropertiesQuery;
 

@@ -16,7 +16,7 @@ final class PostsRepository extends Repository
 
     public function __construct(Database $db){
         parent::__construct($db);
-        $director = new PostsScriptDirector();
+        $this->director = new PostsScriptDirector();
     }
 
     public function getList(PostsCriteria $criteria, array $includeObjects = []) : array
@@ -29,10 +29,10 @@ final class PostsRepository extends Repository
 
         $this->director->addParentTempFilter($filters->parentId);
 
-        if ($creatorId !== null)
+        if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($filters->creatorId);
 
-        if ($publicationId !== null)
+        if ($filters->publicationId !== null)
             $this->director->addPublicationTempFilter($filters->publicationId);
 
         $this->director->addIncludesTemp($includeObjects);

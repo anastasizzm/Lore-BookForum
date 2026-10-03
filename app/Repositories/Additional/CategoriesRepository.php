@@ -26,8 +26,8 @@ final class CategoriesRepository extends Repository
     public function getList(
         int $page,
         int $pageSize,
-        string $search,
-        BasicModelSortBy $sortBy
+        BasicModelSortBy $sortBy,
+        ?string $search = NULL,
     ) : array
     {
         $this->director->startTempFilter()->addCategorySelectTemp();

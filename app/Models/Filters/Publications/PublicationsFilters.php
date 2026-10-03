@@ -5,7 +5,7 @@ namespace App\Models\Filters\Publications;
 
 use App\Extensions\Parsers\QueryParser;
 
-final readonly class PublicationsFilters
+readonly class PublicationsFilters
 {
     public function __construct(
         public ?int $genreId = null,

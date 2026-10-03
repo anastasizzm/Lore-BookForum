@@ -13,8 +13,8 @@ readonly class PublicationExtended extends Publication
     public function __construct(
         int $id,
         string $title,
-        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
+        ?Uuid $iconId,
         int $creatorId,
         int $genreId,
         ?BasicModel $genre,
@@ -28,8 +28,8 @@ readonly class PublicationExtended extends Publication
         parent::__construct(
             $id, 
             $title, 
-            $iconId, 
             $createdAt,
+            $iconId, 
             $creatorId,
             $genreId,
             $genre,

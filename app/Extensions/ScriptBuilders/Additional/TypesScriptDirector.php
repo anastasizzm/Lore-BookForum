@@ -11,7 +11,7 @@ use App\Models\Scripts\ScriptParam;
 
 use App\Models\Enums\BasicModelSortBy;
 
-abstract class TypesScriptDirector extends ScriptDirector
+final class TypesScriptDirector extends ScriptDirector
 {
     public function __construct()
     {

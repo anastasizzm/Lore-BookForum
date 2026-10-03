@@ -27,8 +27,8 @@ final class GenresService
         $items = $this->genresRepo->getList(
             $page, 
             $pageSize, 
+            $sortEnum,
             $query->search,
-            $sortEnum
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);

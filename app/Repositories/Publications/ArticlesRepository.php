@@ -35,7 +35,7 @@ final class ArticlesRepository extends PublicationsRepository
     public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
         $this->director->startTempFilter()->addPublicationSelectTemp();
-        $filtes = $criteria->filters;
+        $filters = $criteria->filters;
         $userFilters = $criteria->userCriteria;
         
         if (!empty($filters->search))
