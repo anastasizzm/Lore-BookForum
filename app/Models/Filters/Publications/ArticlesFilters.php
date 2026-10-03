@@ -5,14 +5,14 @@ namespace App\Models\Filters\Publications;
 
 use App\Extensions\Parsers\QueryParser;
 
-final readonly class BooksFilters extends PublicationsFilters
+final readonly class ArticlesFilters extends PublicationsFilters
 {
     public function __construct(
         ?int $genreId = null,
         ?int $creatorId = null,
         ?string $search = null,
-        public ?int $categoryId = null,
-        public ?string $isbn = null,
+        public ?int $typeId = null,
+        public ?string $doi = null,
     ) {
         parent::__construct($genreId, $creatorId, $search);
     }
@@ -25,8 +25,8 @@ final readonly class BooksFilters extends PublicationsFilters
             genreId: $parent->genreId,
             creatorId: $parent->creatorId,
             search: $parent->search,
-            categoryId: QueryParser::optionalPositiveInt($q, 'category'),
-            isbn: QueryParser::optionalString($q, 'isbn'),
+            typeId: QueryParser::optionalPositiveInt($q, 'type'),
+            doi: QueryParser::optionalString($q, 'doi'),
         );
     }
 }

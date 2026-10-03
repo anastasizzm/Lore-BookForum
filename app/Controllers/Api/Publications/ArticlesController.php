@@ -5,11 +5,8 @@ namespace App\Controllers\Api\Publications;
 
 use App\Services\Publications\ArticlesService;
 
-use App\Models\Queries\PaginationQuery;
-use App\Models\Queries\PropertiesQuery;
-use App\Models\Queries\SortQuery;
-use App\Models\Queries\TypeQuery;
-use App\Models\Queries\StatusQuery;
+use App\Models\Queries\Publications\ArticlesListQuery;
+use App\Extensions\Parsers\RouteParamParser;
 
 use App\Controllers\Controller;
 
@@ -31,67 +28,9 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromInput($context->request->query);
-        $sortQ = SortQuery::fromInput($context->request->query);
-        $statusQ = StatusQuery::fromInput($context->request->query);
-        $typeQ = TypeQuery::fromInput($context->request->query);
-        $searchQ = $context->query('q', '');
-        $doi = $context->query('doi', NULL);
-
-        $genreId = $context->query('genre', 0);
-        if (!is_int($genreId) || $genreId == 0)
-            $genreId = NULL;
-
-        $creatorId = $context->query('creator', 0);
-        if (!is_int($creatorId) || $creatorId == 0)
-            $creatorId = NULL;
-
-        $bookId = $context->query('book', 0);
-        if (!is_int($bookId) || $bookId == 0)
-            $bookId = NULL;
-
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId, false, $sortQ, $statusQ, $genreId, $creatorId, $bookId, $doi, $typeQ);
-            return $this->jsonList($paginatedList->getArray(), [
-                    'page' => $paginatedList->getPage(),
-                    'pageSize' => $paginatedList->getPageSize(),
-                    'hasNext' => $paginatedList->hasNext(),
-                ]);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
-    }
-
-    public function savedList(HttpContext $context)
-    {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromInput($context->request->query);
-        $sortQ = SortQuery::fromInput($context->request->query);
-        $statusQ = StatusQuery::fromInput($context->request->query);
-        $typeQ = TypeQuery::fromInput($context->request->query);
-        $searchQ = $context->query('q', '');
-        $doi = $context->query('doi', NULL);
-
-        $genreId = $context->query('genre', 0);
-        if (!is_int($genreId) || $genreId == 0)
-            $genreId = NULL;
-
-        $creatorId = $context->query('creator', 0);
-        if (!is_int($creatorId) || $creatorId == 0)
-            $creatorId = NULL;
-
-        $bookId = $context->query('book', 0);
-        if (!is_int($bookId) || $bookId == 0)
-            $bookId = NULL;
-
-        try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId, true, $sortQ, $statusQ, $genreId, $creatorId, $bookId, $doi, $typeQ);
+            $query = ArticlesListQuery::fromInput($context->request->query, $userId);
+            $paginatedList = $this->articlesService->getList($query);
             return $this->jsonList($paginatedList->getArray(), [
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
@@ -105,7 +44,7 @@ final class ArticlesController extends Controller
 
     public function save(HttpContext $context, string $articleId)
     {
-        $articleId = (int)$articleId;
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
@@ -122,7 +61,7 @@ final class ArticlesController extends Controller
 
     public function deleteSave(HttpContext $context, string $articleId)
     {
-        $articleId = (int)$articleId;
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);

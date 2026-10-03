@@ -31,7 +31,7 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.creator_id,\npublications.icon_id,\npublications.created_at,\npublications.genre_id,\npublications.comments_count,\npublications.saved_count,\npublications.rating_avg,\npublications.description,\npublications.author_notes")
-            ->addSelect("articles.book_id,\narticles.page_start,\narticles.page_end,\narticles.type,\narticles.doi,\narticles.content");
+            ->addSelect("articles.book_id,\narticles.page_start,\narticles.page_end,\narticles.type_id,\narticles.doi,\narticles.content");
         return $this;
     }
 

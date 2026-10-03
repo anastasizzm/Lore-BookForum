@@ -28,8 +28,8 @@ final class BooksController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $query = BooksListQuery::fromInput($context->request->query, $userId);
         try{
+            $query = BooksListQuery::fromInput($context->request->query, $userId);
             $paginatedList = $this->booksService->getList($query);
             return $this->jsonList($paginatedList->getArray(), [
                     'page' => $paginatedList->getPage(),
@@ -41,30 +41,10 @@ final class BooksController extends Controller
             return $this->jsonError($e->toError(), 422);
         }
     }
-
-    public function savedList(HttpContext $context)
-    {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-
-        $query = BooksListQuery::fromInput($context->request->query, $userId);
-        try{
-            $paginatedList = $this->booksService->getList($query);
-            return $this->jsonList($paginatedList->getArray(), [
-                    'page' => $paginatedList->getPage(),
-                    'pageSize' => $paginatedList->getPageSize(),
-                    'hasNext' => $paginatedList->hasNext(),
-                ]);
-        }
-        catch(ValidationException $e){
-            return $this->jsonError($e->toError(), 422);
-        }
-    }
-
+    
     public function save(HttpContext $context, string $bookId)
     {
-        $bookId = RouteParamParser::int(['bookId' => $bookId], 'bookId');
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
         
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
@@ -81,7 +61,7 @@ final class BooksController extends Controller
 
     public function deleteSave(HttpContext $context, string $bookId)
     {
-        $bookId = RouteParamParser::int(['bookId' => $bookId], 'bookId');
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
 
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))

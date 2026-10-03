@@ -13,9 +13,14 @@ use App\Models\Publications\PublicationShort;
 use App\Http\HttpContext;
 use App\Http\Response;
 
+use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\PaginationQuery;
-use App\Models\Queries\PropertiesQuery;
 use App\Models\Queries\SortQuery;
+use App\Models\Queries\PropertiesQuery;
+use App\Models\Filters\Publications\BooksFilters;
+use App\Models\Filters\Publications\UserRelationFilters;
+use App\Extensions\Parsers\RouteParamParser;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -34,14 +39,19 @@ final class BooksController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
         
+        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $userId);
+            $query = new BooksListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: BooksFilters::fromInput($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId)
+            );
+
+            $paginatedList = $this->booksService->getList($query);
             return $this->render('library/library-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -68,14 +78,19 @@ final class BooksController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
         
+        $filterState = QueryParser::optionalString($context->request->query, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $userId, true);
+            $query = new BooksListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: BooksFilters::fromInput($q),
+                userFilters: UserRelationFilters::fromSaved($q, $userId)
+            );
+
+            $paginatedList = $this->booksService->getList($query);
             return $this->render('saved/saved-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -94,13 +109,12 @@ final class BooksController extends Controller
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
-        }
+        }    
     }
 
     public function retrieve(HttpContext $context, string $bookId)
     {
-        $bookId = (int)$bookId;
-
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
@@ -122,7 +136,6 @@ final class BooksController extends Controller
             return $this->render('book/book-details', [
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
-                'filterState' => $filterState
             ]);
         }
     }

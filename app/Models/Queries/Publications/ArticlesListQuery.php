@@ -6,16 +6,16 @@ namespace App\Models\Queries\Publications;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
-use App\Models\Filters\Publications\BooksFilters;
+use App\Models\Filters\Publications\ArticlesFilters;
 use App\Models\Filters\Publications\UserRelationFilters;
 
-final readonly class BooksListQuery
+final readonly class ArticlesListQuery
 {
     public function __construct(
         public PaginationQuery $pagination,
         public SortQuery $sort,
         public PropertiesQuery $properties,
-        public BooksFilters $filters,
+        public ArticlesFilters $filters,
         public ?UserRelationFilters $userFilters
     ) {}
 
@@ -26,7 +26,7 @@ final readonly class BooksListQuery
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromInput($q),
-            filters: BooksFilters::fromInput($q),
+            filters: ArticlesFilters::fromInput($q),
             userFilters: $viewerId !== null
                 ? UserRelationFilters::fromInput($q, $viewerId)
                 : null,

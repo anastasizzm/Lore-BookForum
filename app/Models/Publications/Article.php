@@ -27,13 +27,14 @@ final readonly class Article extends PublicationExtended
         int $rating, // avg rating * 10
         string $description,
         string $authorNotes,
-        public ArticleType $modelType,
         private ?int $book_id,
         public ?PublicationShort $book,
+        private int $type_id,
+        public ?BasicModel $type,
         public int $pageStart,
         public int $pageEnd,
         public string $doi,
-        public string $content
+        public ?string $content
     ){
         parent::__construct(
             $id, 
@@ -55,9 +56,9 @@ final readonly class Article extends PublicationExtended
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $b = PublicationShort::ROW_PREFIX;
+        $t = 't_';
 
         $parent = parent::fromRow($row, $prefix);
-        $bookId = self::int($row, $prefix . 'book_id');
         return new self(
             id: $parent->id,
             title: $parent->title,
@@ -72,15 +73,20 @@ final readonly class Article extends PublicationExtended
             genreId: $parent->getGenreId(),
             genre: $parent->genre,
             creator: $parent->creator,
-            bookId: $bookId,
-            modelType: $bookId === null ? ArticleType::Content : ArticleType::Book,
+            bookId: self::intN($row, $prefix . 'book_id'),
             book: self::hasGroup($row, $b, 'id')
                 ? PublicationShort::fromRow($row, $prefix . $b) : NULL,
-            pagesCount: self::int($row, $prefix . 'pages'),
+            typeId: self::int($row, $prefix . 'type_id'),
+            type: self::hasGroup($row, $t, 'id')
+                ? BasicModel::fromRow($row, $prefix . $t) : NULL,
             doi: self::str($row, $prefix . 'doi'),
             contentId: self::uuid($row, $prefix . 'content_id')
         );
     }
 
     public function getBookId() { return $this->bookId; }
+    public function getTypeId() { return $this->typeId; }
+
+    public function isBookBased() { return $this->book_id !== null; }
+    public function isContentBased() { return $this->content !== null; }
 }

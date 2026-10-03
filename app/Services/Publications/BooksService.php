@@ -8,9 +8,9 @@ use App\Repositories\Publications\BooksRepository;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
-use App\Models\Filters\ReadinguserByFilters;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
+
 use App\Models\Criterias\Publications\BooksCriteria;
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\PropertiesQuery;
@@ -39,7 +39,7 @@ final class BooksService
         if(!$isValid) throw new ValidationException($errors);
         
         $sortEnum = $query->sort->hasData() 
-            ? EnumExtensions::tryResolve(PublicationsSortBy::class, $this->query->sort->sortString()) 
+            ? EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString()) 
             : PublicationsSortBy::Newest;
         
         $userCriteria = $query->userFilters == NULL || $query->userFilters->isEmpty()
@@ -47,7 +47,7 @@ final class BooksService
             : new UserRelationCriteria(
                 $query->userFilters->viewerId,
                 $query->userFilters->status->hasData() 
-                    ? EnumExtensions::tryResolve(ReadingStatus::class, $this->query->status->status())
+                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->status->status())
                     : ReadingStatus::None,
                 $query->userFilters->savedOnly,
             );

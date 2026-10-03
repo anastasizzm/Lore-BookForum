@@ -28,6 +28,24 @@ final readonly class UserRelationFilters
         );
     }
 
+    public static function fromAll(array $q, int $viewerId) : self
+    {
+        return new self(
+            viewerId:  $viewerId,
+            status: StatusQuery::fromInput($q),
+            savedOnly: false
+        );
+    }
+
+    public static function fromSaved(array $q, int $viewerId) : self
+    {
+        return new self(
+            viewerId:  $viewerId,
+            status: StatusQuery::fromInput($q),
+            savedOnly: true
+        );
+    }
+
     public function isEmpty(): bool
     {
         return !$this->status->hasData() && !$this->savedOnly;
