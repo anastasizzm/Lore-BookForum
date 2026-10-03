@@ -44,11 +44,6 @@ $type   = strtolower($str('type'));
 $isbn   = $str('isbn');
 $doi    = $str('doi');
 
-// текущие значения фильтров из URL (для подсветки без «мигания»)
-$statusRaw  = (string)($_GET['status'] ?? '');
-$curStatus  = in_array($statusRaw, ['reading', 'finished'], true) ? $statusRaw : 'all';
-$curIsbn    = (string)($_GET['isbn'] ?? '');
-
 $switcher = [
     'type'    => 'tabs',
     'variant' => 'segmented',
@@ -58,6 +53,7 @@ $switcher = [
     ],
 ];
 
+// Genre dropdown — переиспользуется в books и articles рядах
 $genreDropdown = [
     'type'    => 'dropdown',
     'label'   => 'Genre',
@@ -65,6 +61,7 @@ $genreDropdown = [
     'dynamic' => 'genres',
     'options' => [],
 ];
+
 // Reset clears filters but keeps search (q) and panel state (f)
 $resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'type', 'sort']);
 
@@ -79,16 +76,10 @@ $filter_rows = [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
-                    ['label' => 'All',      'href' => '?status=all',      'key' => 'status', 'value' => 'all',      'active' => $curStatus === 'all'],
-                    ['label' => 'Reading',  'href' => '?status=reading',  'key' => 'status', 'value' => 'reading',  'active' => $curStatus === 'reading'],
-                    ['label' => 'Finished', 'href' => '?status=finished', 'key' => 'status', 'value' => 'finished', 'active' => $curStatus === 'finished'],
-                ],
-            ],
-            ['type' => 'input', 'name' => 'isbn', 'placeholder' => 'ISBN', 'value' => $curIsbn],
-            ['type' => 'reset'],
-                    ['label' => 'All',      'href' => $link([], ['status']),          'active' => $status === ''],
-                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']), 'active' => $status === 'reading'],
-                    ['label' => 'Finished', 'href' => $link(['status' => 'ended']),   'active' => $status === 'ended'],
+                    // 'value' => 'finished' (UI), JS маппит в 'ended' (API) через STATUS_VALUES
+                    ['label' => 'All',      'href' => $link([], ['status']),           'key' => 'status', 'value' => 'all',      'active' => $status === ''],
+                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']),  'key' => 'status', 'value' => 'reading',  'active' => $status === 'reading'],
+                    ['label' => 'Finished', 'href' => $link(['status' => 'finished']), 'key' => 'status', 'value' => 'finished', 'active' => $status === 'finished'],
                 ],
             ],
             [
