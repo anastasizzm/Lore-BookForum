@@ -12,7 +12,8 @@ $author   = (string)($author   ?? '');
 $saved    = (bool)($saved    ?? false);
 $saveBase = (string)($saveBase ?? '/api/books');
 
-$coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
+// ИСПРАВЛЕНО: Правильный путь к заглушке через папку /assets
+$coverSrc = $cover !== '' ? $cover : '/assets/img/book-placeholder.svg';
 
 // TODO: route for single book is not added yet
 $bookUrl = '#';

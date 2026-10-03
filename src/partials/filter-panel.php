@@ -31,12 +31,25 @@ $filter_open = $filter_open ?? false;
                  name="<?= $view->e($control['name'] ?? '') ?>"
                  data-filter-key="<?= $view->e($control['name'] ?? '') ?>"
                  value="<?= $view->e($control['value'] ?? '') ?>"
-                 placeholder="<?= $view->e($control['placeholder'] ?? '') ?>">
+                 placeholder="<?= $view->e($control['placeholder'] ?? '') ?>"
+                 autocomplete="off"
+                 spellcheck="false"
+                 <?php if (!empty($control['format'])): ?>
+                   data-format="<?= $view->e($control['format']) ?>"
+                 <?php endif; ?>
+                 <?php if (!empty($control['maxlength'])): ?>
+                   maxlength="<?= (int)$control['maxlength'] ?>"
+                 <?php endif; ?>
+                 <?php if (!empty($control['inputmode'])): ?>
+                   inputmode="<?= $view->e($control['inputmode']) ?>"
+                 <?php endif; ?>>
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
-          <button type="button" class="filter-reset" data-filter-reset>
+          <a class="filter-reset"
+             style="text-decoration:none"
+             href="<?= $view->e($control['href'] ?? '?') ?>">
             &#10005; Reset
-          </button>
+          </a>
 
         <?php endif; ?>
 

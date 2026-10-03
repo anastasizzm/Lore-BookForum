@@ -99,11 +99,27 @@ $view->include('page-header', [
               ? $post->getPublicationId()
               : 0;
 
+          // Обложка: iconId — объект (Uuid), ссылки на файлы в API нет,
+          // поэтому собираем путь как на странице Saved + плейсхолдер в card-feed.php.
+          $iconId = $publication?->iconId ?? null;
+          $iconStr = (is_string($iconId) || (is_object($iconId) && method_exists($iconId, '__toString')))
+              ? (string) $iconId : '';
+          $coverUrl = $iconStr !== '' ? '/uploads/covers/' . $iconStr : '';
+
+          // Текущий пользователь — для оптимистичной вставки своего комментария
+          $cu = $user ?? null;
+          $cuInitials = mb_strtoupper(
+              mb_substr($cu?->name ?? '', 0, 1) . mb_substr($cu?->surname ?? '', 0, 1)
+          );
+          if ($cuInitials === '') {
+              $cuInitials = mb_strtoupper(mb_substr($cu?->username ?? '', 0, 1));
+          }
+
           $view->include('card-feed', [
               'postId'        => $post->id ?? 0,
               'publicationId' => $publicationId,
               'withBook'      => $publication !== null,
-              'bookCover'     => $publication?->iconId ?? '',
+              'bookCover'     => $coverUrl,
               'bookTitle'     => $publication?->title  ?? '',
               'userInitials'  => $initials,
               'userName'      => $creator?->username   ?? '',
@@ -112,6 +128,8 @@ $view->include('page-header', [
               'likes'         => $post->likesCount ?? 0,
               'comments'      => $post->commentsCount ?? 0,
               'date'          => $post->createdAt->format('d.m.Y'),
+              'currentUserInitials' => $cuInitials,
+              'currentUserName'     => $cu?->username ?? '',
           ]);
         ?>
       <?php endforeach; ?>
@@ -133,7 +151,7 @@ $view->include('page-header', [
   <div class="feed-comment">
     <div class="feed-comment__avatar">
       <div data-fc-avatar-initials hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => null]); ?></div>
-      <div data-fc-avatar-img hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '', 'src' => '__SRC__']); ?></div>
+      <div data-fc-avatar-img hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => '__SRC__']); ?></div>
     </div>
     <div class="feed-comment__body">
       <div class="feed-comment__head">
@@ -141,6 +159,23 @@ $view->include('page-header', [
         <span class="feed-comment__date" data-fc-date></span>
       </div>
       <div class="feed-comment__text" data-fc-text></div>
+
+      <div class="feed-comment__actions">
+        <button type="button" class="action-btn action-like" data-like-btn data-like-id="" aria-pressed="false" aria-label="Like">
+          <svg width="16" height="14" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span data-like-count>0</span>
+        </button>
+        <button type="button" class="action-btn action-comment" data-fc-reply aria-expanded="false">Reply</button>
+      </div>
+
+      <form class="comment-form comment-form--reply" data-fc-reply-form hidden novalidate>
+        <input type="text" class="comment-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
+        <button type="submit" class="comment-form__submit" disabled>Reply</button>
+        <p data-comment-error role="alert" hidden></p>
+        <p data-comment-status role="status" hidden></p>
+      </form>
     </div>
   </div>
 </template>
