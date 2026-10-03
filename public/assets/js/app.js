@@ -202,6 +202,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !menu.hidden) closeSettings();
     });
+
+    // Элемент с data-confirm открывает плашку подтверждения — меню закрываем,
+    // чтобы оно не оставалось открытым под затемнённым фоном
+    menu.querySelectorAll('[data-confirm]').forEach(function (el) {
+      el.addEventListener('click', closeSettings);
+    });
   })();
 });
 

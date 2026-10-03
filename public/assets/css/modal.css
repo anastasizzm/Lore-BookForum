@@ -1,0 +1,91 @@
+/* ============================================
+   CONFIRM MODAL — универсальная плашка подтверждения
+   «Вы уверены?» по центру экрана, фон затемнён.
+   Используется для: Log out, удаление поста и т.п.
+   Разметка: src/partials/confirm-modal.php
+   Логика:   public/assets/js/modal.js (window.ConfirmModal)
+   ============================================ */
+
+body.is-modal-open {
+  overflow: hidden;             /* фон не прокручивается, пока открыта плашка */
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;                /* выше сайдбара, дропдаунов и тостов */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+/* Затемнённый фон; клик по нему закрывает плашку (отмена) */
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.modal__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+}
+
+.modal__title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.modal__text {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text-muted);
+}
+
+.modal__text[hidden] {
+  display: none;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* Опасное действие (Log out, Delete) — кнопка красная */
+.btn--danger {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-white);
+}
+
+.btn--danger:hover {
+  background: #d33b41;
+  border-color: #d33b41;
+}
+
+@media (max-width: 480px) {
+  .modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .modal__actions .btn {
+    width: 100%;
+  }
+}
