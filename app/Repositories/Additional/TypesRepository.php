@@ -30,7 +30,7 @@ final class TypesRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addGenreSelectTemp();
+        $this->director->startTempFilter()->addTypeSelectTemp();
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);

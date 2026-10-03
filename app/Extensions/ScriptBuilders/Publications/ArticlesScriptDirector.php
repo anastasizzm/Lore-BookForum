@@ -56,7 +56,11 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
         {
             case 'book':
                 $this->tempBuilder->addJoin("LEFT JOIN publications book ON book.id = articles.publication_id")
-                    ->addSelect("book.id as pub_id,\nbook.title as pub_title,\nbook.icon_id as pub_icon_id,\nbook.created_at");
+                    ->addSelect("book.id as pub_id,\nbook.title as pub_title,\nbook.icon_id as pub_icon_id,\nbook.created_at as pub_created_at");
+                break;
+            case 'type':
+                $this->tempBuilder->addJoin("LEFT JOIN types ON types.id = articles.type_id")
+                    ->addSelect("types.id as t_id,\ntypes.title as t_title,\ntypes.created_at as t_created_at");
                 break;
         }
     }

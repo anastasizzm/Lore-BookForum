@@ -11,6 +11,45 @@ use App\Models\BasicModel;
 
 use App\Models\Enums\ArticleType;
 
+enum ArticleContentType
+{
+    case None;
+    case Book;
+    case Content;
+}
+
+final readonly class BookData
+{
+    public function __construct(
+        public int $bookId,
+        public ?PublicationShort $book,
+        public int $pageStart,
+        public int $pageEnd
+    ){}
+}
+
+final readonly class ContentData
+{
+    public function __construct(
+        private readonly ?BookData $bookData,
+        private readonly ?string $content
+    ){}
+
+    public function getBookData() : ?BookData { return $this->bookData; }
+    public function getContent() : ?string { return $this->content; }
+
+    public static function fromBook(BookData $book) : self {return new self ($book, NULL);}
+    public static function fromContent(string $content) : self {return new self (NULL, $content);}
+    public static function fromEmpty() : self {return new self (NULL, NULL);}
+
+    public function getType() : ArticleContentType
+    {
+        if ($this->bookData === NULL && $this->content === NULL)return ArticleContentType::None;
+        if ($this->content === NULL) return ArticleContentType::Book;
+        return ArticleContentType::Content;
+    }
+}
+
 final readonly class Article extends PublicationExtended
 {
     public function __construct(
@@ -27,20 +66,16 @@ final readonly class Article extends PublicationExtended
         int $rating, // avg rating * 10
         string $description,
         string $authorNotes,
-        private ?int $book_id,
-        public ?PublicationShort $book,
-        private int $type_id,
+        private int $typeId,
         public ?BasicModel $type,
-        public int $pageStart,
-        public int $pageEnd,
         public string $doi,
-        public ?string $content
+        public ContentData $contentData
     ){
         parent::__construct(
             $id, 
             $title, 
-            $iconId, 
             $createdAt,
+            $iconId, 
             $creatorId,
             $genreId,
             $genre,
@@ -59,6 +94,24 @@ final readonly class Article extends PublicationExtended
         $t = 't_';
 
         $parent = parent::fromRow($row, $prefix);
+        $bookId = self::intN($row, $prefix . 'book_id');
+        $content = self::strN($row, $prefix . 'content');
+
+        $contentData = $bookId !== NULL
+            ? ContentData::fromBook(
+                new BookData(
+                    $bookId,
+                    self::hasGroup($row, $b, 'id')
+                        ? PublicationShort::fromRow($row, $prefix . $b) 
+                        : NULL,
+                    self::int($row, $prefix . 'page_start'),
+                    self::int($row, $prefix . 'page_end')
+                )
+            ) 
+            : ($content !== NULL
+                ? ContentData::fromContent($content)
+                : ContentData::fromEmpty());
+
         return new self(
             id: $parent->id,
             title: $parent->title,
@@ -73,20 +126,14 @@ final readonly class Article extends PublicationExtended
             genreId: $parent->getGenreId(),
             genre: $parent->genre,
             creator: $parent->creator,
-            bookId: self::intN($row, $prefix . 'book_id'),
-            book: self::hasGroup($row, $b, 'id')
-                ? PublicationShort::fromRow($row, $prefix . $b) : NULL,
             typeId: self::int($row, $prefix . 'type_id'),
             type: self::hasGroup($row, $t, 'id')
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
             doi: self::str($row, $prefix . 'doi'),
-            contentId: self::uuid($row, $prefix . 'content_id')
+            contentData: $contentData
         );
     }
 
-    public function getBookId() { return $this->bookId; }
-    public function getTypeId() { return $this->typeId; }
-
-    public function isBookBased() { return $this->book_id !== null; }
-    public function isContentBased() { return $this->content !== null; }
+    public function isBookBased() { return $this->contentData->getType === ArticleContentType::Book; }
+    public function isContentBased() { return $this->contentData->getType === ArticleContentType::Content; }
 }

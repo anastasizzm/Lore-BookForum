@@ -77,7 +77,7 @@ final class ArticlesRepository extends PublicationsRepository
 
     public function retrieve(int $articleid, array $includeObjects) : ?Article
     {
-        $this->director->startTempFilter()->addBookSelectTemp();
+        $this->director->startTempFilter()->addArticleSelectTemp();
         $this->director->addIncludesTemp($includeObjects);
         $this->director->addConcreteTempFilter($articleid)->setLimitTemp(1);
 
