@@ -12,34 +12,42 @@ use App\Extensions\ResponseTemplates;
 
 abstract class Controller
 {
+    // WEB
     protected function render(string $template, array $data = []) : Response
     {
         return Response::html(View::render($template, $data));
     } 
 
-    protected function jsonError(Error $error, int $statusCode, string $message) : Response
+    protected function renderNotFound(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return $this->jsonErrors([$error], $statusCode, $message);
+        return $this->render('message', ['statusCode' => 404, 'message' => 'Not Found', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
     }
 
-    protected function jsonErrors(array $errors, int $statusCode, string $message) : Response
+    protected function renderForbid(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return Response::json(ResponseTemplates::errors($errors, $statusCode, $message), $statusCode);
+        return $this->render('message', ['statusCode' => 403, 'message' => 'You dont have access to this', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
     }
 
-    protected function jsonValidationErrors(array $errors) : Response
+    protected function renderUnauthorized(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return $this->jsonErrors($errors, 422, "Can't process the input data");
-    }    
+        return $this->render('message', ['statusCode' => 401, 'message' => 'Please authenticate first', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
+    }
+
+
+    // JSON
+    protected function jsonError(Error $error, int $statusCode) : Response
+    {
+        return Response::json(ResponseTemplates::error($error), $statusCode);
+    }
 
     protected function jsonList(array $items, array $meta = [], int $statusCode = 200) : Response
     {
         return Response::json(ResponseTemplates::list($items, $meta), $statusCode);
     }
 
-    protected function jsonObject(object $obj, array $meta = [], int $statusCode = 200) : Response
+    protected function jsonObject(object $obj, int $statusCode = 200) : Response
     {
-        return Response::json(ResponseTemplates::object($obj, $meta), $statusCode);
+        return Response::json(ResponseTemplates::object($obj), $statusCode);
     }
 
     protected function jsonCreatedId(mixed $id, int $statusCode = 201) : Response

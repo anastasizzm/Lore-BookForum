@@ -8,14 +8,17 @@ use App\Controllers\Controller;
 use App\Services\Users\UsersService;
 use App\Services\Publications\PostsService;
 
+
 use App\Http\HttpContext;
 use App\Http\Response;
 
+use App\Models\Queries\Publications\PostsListQuery;
+use App\Models\Filters\Publications\PostsFilters;
 use App\Models\Queries\PaginationQuery;
+use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Exceptions\ValidationException;
-use App\Exceptions\UnauthorizedException;
 
 use App\Constants;
 
@@ -31,13 +34,16 @@ final class FeedController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator+publication");
-        $searchQ = $context->query('q', '');
-        
         $userContext = $this->usersService->loadContext($userId);
+        $q = $context->request->query;
         try{
-            $paginatedList = $this->postsService->getList($pageQ, $searchQ, $propsQ);
+            $query = new PostsListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator+publication"),
+                filters: PostsFilters::fromInput($q),
+            );
+            $paginatedList = $this->postsService->getList($query);
             return $this->render('feed/feed-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -50,10 +56,7 @@ final class FeedController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('feed/feed-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext
             ]);
         }

@@ -39,7 +39,7 @@ final class UsersController extends Controller
         $userContext = $this->usersService->loadContext($currentUserId);
         $userData = $this->usersService->retrieve($userId);
         if ($userData === null)
-            return $this->render('message', ['message' => 'The profile is not found', 'statusCode' => 404]);
+            return $this->renderNotFound();
 
         return $this->render('profile/profile', ['user' => $userContext, 'userData' => $userData]);
     }
@@ -55,7 +55,7 @@ final class UsersController extends Controller
         $userContext = $this->usersService->loadContext($currentUserId);
         $userData = $this->usersService->retrieve($userId);
         if ($userData === null)
-            return $this->render('message', ['message' => 'The profile is not found', 'statusCode' => 404]);
+            return $this->renderNotFound();
 
         return $this->render('profile/profile-edit', ['user' => $userContext, 'userData' => $userData]);
     }
@@ -89,10 +89,7 @@ final class UsersController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('profile/profile-publications', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
@@ -128,10 +125,7 @@ final class UsersController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('profile/profile-publications', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);

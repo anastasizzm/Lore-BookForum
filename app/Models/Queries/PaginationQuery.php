@@ -24,6 +24,16 @@ final class PaginationQuery implements Query
         );
     }
 
+    public static function default() : self 
+    {
+        return new self(1, 25);
+    }
+
+    public function hasData() : bool 
+    {
+        return true;
+    }
+
     public function page() :int { return $this->page; }
     public function pageSize() :int { return $this->pageSize; }
 }

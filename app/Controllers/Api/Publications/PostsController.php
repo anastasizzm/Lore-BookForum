@@ -7,11 +7,13 @@ use App\Services\Publications\PostsService;
 
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\PropertiesQuery;
+use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Error;
 use App\Exceptions\ValidationException;
 use App\Controllers\Controller;
 
 use App\Forms\Publications\PostForm;
+use App\Extensions\Parsers\RouteParamParser;
 use App\Http\HttpContext;
 
 use App\ErrorCodes;
@@ -28,100 +30,56 @@ final class PostsController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromInput($context->request->query);
-        $searchQ = $context->query('q', '');
-        $isbnQ = $context->query('isbn', NULL);
-
-        $parentId = $context->query('parent', 0);
-        if (!is_int($parentId) || $parentId == 0)
-            $parentId = NULL;
-
-        $publicationId = $context->query('pub', 0);
-        if (!is_int($publicationId) || $publicationId == 0)
-            $publicationId = NULL;
-
-        $creatorId = $context->query('creator', 0);
-        if (!is_int($creatorId) || $creatorId == 0)
-            $creatorId = NULL;
-
-        try{
-            $paginatedList = $this->postsService->getList($pageQ, $searchQ, $propsQ, $parentId, $publicationId, $creatorId);
-            return $this->jsonList($paginatedList->getArray(), [
-                    'page' => $paginatedList->getPage(),
-                    'pageSize' => $paginatedList->getPageSize(),
-                    'hasNext' => $paginatedList->hasNext(),
-                ]);
-        }
-        catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
-        }
+        $query = PostsListQuery::fromInput($context->request->query);
+        $paginatedList = $this->postsService->getList($query);
+        return $this->jsonList($paginatedList->getArray(), [
+                'page' => $paginatedList->getPage(),
+                'pageSize' => $paginatedList->getPageSize(),
+                'hasNext' => $paginatedList->hasNext(),
+            ]);
     }
 
     public function setLike(HttpContext $context, string $postId)
     {
-        $postId = (int)$postId;
+        $postId = RouteParamParser::positiveInt(['p' => $postId], 'p');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
-        try{
-            $this->postsService->setLike($postId, $userId);
-            return $this->jsonEmpty(201);
-        }
-        catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
-        }
+        $this->postsService->setLike($postId, $userId);
+        return $this->jsonEmpty(201);
     }
 
     public function removeLike(HttpContext $context, string $postId)
     {
-        $postId = (int)$postId;
+        $postId = RouteParamParser::positiveInt(['p' => $postId], 'p');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
-        try{
-            $this->postsService->removeLike($postId, $userId);
-            return $this->jsonEmpty(204);
-        }
-        catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
-        }
+        $this->postsService->removeLike($postId, $userId);
+        return $this->jsonEmpty(204);
     }
 
-    public function addComment(HttpContext $context, string $postId = '')
+    public function addComment(HttpContext $context, ?string $postId = NULL)
     {
-        if (!empty($postId)) $postId = (int)$postId;
-        else $postId = NULL;
+        $postId = RouteParamParser::optionalPositiveInt(['p' => $postId], 'p');
 
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"));
 
         $formData = PostForm::fromInput($context->request->body());
-        try
-        {
-            $id = $this->postsService->addComment($userId, $formData, $postId);
-            return $this->jsonCreatedId($id, statusCode: 201);
-        }
-        catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
-        }
+        $id = $this->postsService->addComment($userId, $formData, $postId);
+        return $this->jsonCreatedId($id, statusCode: 201);
     }
 
     public function removeComment(HttpContext $context, string $postId)
     {
-        $postId = (int)$postId;
-        try
-        {
-            $id = $this->postsService->removeComment($postId);
-            return $this->jsonEmpty(204);
-        }
-        catch(ValidationException $e){
-            return $this->jsonValidationErrors($e->errors());
-        }
+        $postId = RouteParamParser::positiveInt(['p' => $postId], 'p');
+        $id = $this->postsService->removeComment($postId);
+        return $this->jsonEmpty(204);
     }
 }

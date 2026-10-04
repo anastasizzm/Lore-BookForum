@@ -4,13 +4,15 @@ declare(strict_types=1);
 namespace App\Http;
 
 use RuntimeException;
+use App\Models\Errors\ToErrorConvertible;
+use App\Models\Errors\Error;
 
-class HttpException extends RuntimeException
+class HttpException extends RuntimeException implements ToErrorConvertible
 {
     public function __construct(
         string $message,
         public readonly int $status = 400,
-        public readonly array $extra = [],
+        public readonly string $errorCode = "bad_request"
     ) {
         parent::__construct($message);
     }
@@ -20,8 +22,8 @@ class HttpException extends RuntimeException
         return $this->status;
     }
 
-    public function getExtra(): array
+    public function toError() : Error 
     {
-        return $this->extra;
+        return new Error($this->errorCode, $this->getMessage());
     }
 }
