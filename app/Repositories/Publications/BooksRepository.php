@@ -44,6 +44,7 @@ final class BooksRepository extends PublicationsRepository
         $joinClauses = [];
         $selectClauses = [];
         $params = [];
+        $savedSelect = '';
         if (!empty($search)){
             $whereClauses[] = 'p.title ILIKE :q';
             $params[':q'] = '%' . $search . '%';
@@ -79,6 +80,11 @@ final class BooksRepository extends PublicationsRepository
                 $joinClauses[] = 'INNER JOIN saved_publications sp ON sp.user_id = :svUserId AND sp.publication_id = p.id';
                 $params[':svUserId'] = $userByFilters->getUserId();
             }
+
+            // Знак сохранения в карточке: публикация уже в закладках у пользователя
+            $joinClauses[] = 'LEFT JOIN saved_publications usp ON usp.user_id = :uspUserId AND usp.publication_id = p.id';
+            $params[':uspUserId'] = $userByFilters->getUserId();
+            $savedSelect = ",\nusp.publication_id IS NOT NULL AS saved";
         }
 
         foreach($includeObjects as $prop){
@@ -102,6 +108,7 @@ final class BooksRepository extends PublicationsRepository
         $select = "SELECT p.id,\np.title,\np.creator_id,\np.icon_id,\np.created_at,\np.rating_avg,\np.comments_count,\np.genre_id";
         if (!empty($selectClauses))
             $select = $select . ",\n" . implode(",\n", $selectClauses);
+        $select .= $savedSelect;
 
         $order = match($sortBy){
             PublicationsSortBy::Popularity => 'ORDER BY p.rating_avg DESC',

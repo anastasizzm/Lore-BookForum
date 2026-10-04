@@ -20,7 +20,9 @@ readonly class Publication extends PublicationShort
         private int $creatorId,
         private int $genreId,
         public ?BasicModel $genre,
-        public ?UserShortData $creator
+        public ?UserShortData $creator,
+        /** В закладках у текущего пользователя (см. saved_publications в getList) */
+        public bool $saved = false
     ){
         parent::__construct($id, $title, $iconId, $createdAt);
     }
@@ -40,6 +42,7 @@ readonly class Publication extends PublicationShort
             genreId: self::int($row, $prefix . 'genre_id'),
             commentsCount: self::int($row, $prefix . 'comments_count'),
             rating: self::int($row, $prefix . 'rating_avg'),
+            saved: self::boolN($row, $prefix . 'saved') ?? false,
             creator: self::hasGroup($row, $prefix . $u, 'id')
                 ? UserShortData::fromRow($row, $prefix . $u) : NULL,
             genre: self::hasGroup($row, $prefix . $g, 'id')
