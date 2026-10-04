@@ -38,9 +38,7 @@ final class AuthorizationMiddleware implements Middleware
     private function deny(HttpContext $ctx, Decision $decision): Response
     {
         if ($ctx->isApi()) {
-            return Response::json(ResponseTemplates::errors([
-                Error::fromMessage($decision->errorCode, $decision->reason)
-            ], $decision->status, "Forbidden"), $decision->status);
+            return Response::json(ResponseTemplates::error(new Error($decision->errorCode, $decision->reason)), $decision->status);
         }
 
         return match ($decision->status) {

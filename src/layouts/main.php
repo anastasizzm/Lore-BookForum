@@ -14,6 +14,9 @@
 
   <?php $view->include('sidebar'); ?>
 
+  <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
+  <?php $view->include('confirm-modal'); ?>
+
   <main class="content">
     <div class="content__inner">
 
@@ -34,6 +37,7 @@
     </div>
   </main>
 
+  <script src="<?= $view->asset('js/modal.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>
   <?= $view->block('scripts') ?>

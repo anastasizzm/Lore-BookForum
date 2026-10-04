@@ -13,9 +13,14 @@ use App\Models\Publications\PublicationShort;
 use App\Http\HttpContext;
 use App\Http\Response;
 
+use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PaginationQuery;
-use App\Models\Queries\PropertiesQuery;
 use App\Models\Queries\SortQuery;
+use App\Models\Queries\PropertiesQuery;
+use App\Models\Filters\Publications\ArticlesFilters;
+use App\Models\Filters\Publications\UserRelationFilters;
+use App\Extensions\Parsers\RouteParamParser;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -34,21 +39,26 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
-        
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId);
+            $query = new ArticlesListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: ArticlesFilters::fromInput($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId)
+            );
+
+            $paginatedList = $this->articlesService->getList($query);
             return $this->render('library/library-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
-                    'type' => 'article'
+                    'type' => 'book'
                 ], 
                 'user' => $userContext,
                 'filterState' => $filterState
@@ -56,14 +66,11 @@ final class ArticlesController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('library/library-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
             ]);
-        }
+        }    
     }
 
     public function savedList(HttpContext $context)
@@ -72,21 +79,26 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
-        
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $userId, true);
+            $query = new ArticlesListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: ArticlesFilters::fromInput($q),
+                userFilters: UserRelationFilters::fromSaved($q, $userId)
+            );
+
+            $paginatedList = $this->articlesService->getList($query);
             return $this->render('saved/saved-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
-                    'type' => 'article'
+                    'type' => 'book'
                 ], 
                 'user' => $userContext,
                 'filterState' => $filterState
@@ -94,12 +106,37 @@ final class ArticlesController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('saved/saved-list', [
-                'innerMessages' => array_map(
-                    static fn(string $item, array $fails) => new InnerMessage(InnerMessageType::Error, $item, implode("\n", $fails)), 
-                    array_keys($e->errors), 
-                    $e->errors), 
+                'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState
+            ]);
+        }   
+    }
+
+    public function retrieve(HttpContext $context, string $articleId)
+    {
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect('login');
+
+        $propsQ = PropertiesQuery::fromRaw("creator+genre+type");
+
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $item = $this->articlesService->retrieve($articleId, $propsQ);
+            if ($item === null)
+                return $this->renderNotFound();
+            
+            return $this->render('article/article-details', [
+                'article' => $item,
+                'user' => $userContext
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('article/article-details', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
             ]);
         }
     }

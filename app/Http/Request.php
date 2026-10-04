@@ -5,6 +5,7 @@ namespace App\Http;
 
 use JsonException;
 use HttpException;
+use App\ErrorCodes;
 
 final class Request
 {
@@ -62,7 +63,7 @@ final class Request
                 $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
                 $this->bodyCache = is_array($decoded) ? $decoded : [];
             } catch (JsonException) {
-                throw new HttpException('Malformed JSON body', 400);
+                throw new HttpException('Malformed JSON body', 400, ErrorCodes::JSON_BAD_BODY);
             }
         } elseif ($raw !== '' && str_contains($type, 'application/x-www-form-urlencoded')) {
             parse_str($raw, $parsed);

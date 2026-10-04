@@ -17,5 +17,15 @@ final class StatusQuery implements Query
         return new self($input['status'] ?? '');
     }
 
+    public function hasData() : bool 
+    {
+        return !empty($this->status);
+    }
+
+    public static function default() : self 
+    {
+        return new self('');
+    }
+
     public function status() : string { return $this->status; }
 }

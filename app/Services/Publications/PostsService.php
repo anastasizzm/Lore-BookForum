@@ -4,15 +4,15 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\PostsRepository;
-use App\Models\Queries\PaginationQuery;
-use App\Models\Queries\PropertiesQuery;
 
 use App\Forms\Publications\PostForm;
 
 use App\Extensions\PdoExtensions;
 
+use App\Models\Criterias\Publications\PostsCriteria;
+use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Posts\Post;
-
+use App\Models\Enums\PostsSortBy;
 use App\Models\PaginatedList;
 
 use Throwable;
@@ -26,30 +26,27 @@ final class PostsService
         private readonly PostExceptionTranslator $translator
     ){}
 
-    public function getList(
-        PaginationQuery $pageQ,
-        string $search,
-        PropertiesQuery $props,
-        ?int $parentId = null,
-        ?int $publicationId = null,
-        ?int $creatorId = null
-    ) : PaginatedList
+    public function getList(PostsListQuery $query) : PaginatedList
     {
         $errors = [];
-        $isValid = $props->validateForType(Post::class, $errors);
+        $isValid = $query->properties->validateForType(Post::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
 
-        $page = $pageQ->page();
-        $pageSize = $pageQ->pageSize();
+        $sortEnum = $query->sort->hasData() 
+            ? EnumExtensions::tryResolve(PostsSortBy::class, $query->sort->sortString()) 
+            : PostsSortBy::Newest;
+
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
 
         $items = $this->postsRepo->getList(
-            $page, 
-            $pageSize, 
-            $search, 
-            $props->getProps(),
-            $parentId, 
-            $publicationId,
-            $creatorId
+            new PostsCriteria(
+                $page,
+                $pageSize,
+                $sortEnum,
+                $query->filters
+            ),
+            $query->properties->getProps()
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);

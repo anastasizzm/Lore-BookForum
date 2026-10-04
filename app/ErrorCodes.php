@@ -5,20 +5,24 @@ namespace App;
 
 final class ErrorCodes
 {
-    public const INVALID_REQUIREMENT = 'invalidRequirement';
+    public const JSON_BAD_BODY = 'json_bad_body';
+    public const METHOD_NOT_ALLOWED = 'method_not_allowed';
+
+    public const VALIDATION_FAIL = 'validation_fail';
+    public const CSRF_FAIL = 'csrf_fail';
+    public const TOKEN_FAIL = 'jwt_fail';
+    public const OP_FAIL = 'op_fail';
+    public const PATH_FAIL = 'path_fail';
+
+    public const INVALID_REQUIREMENT = 'invalid_requirement';
     
+    public const NOT_FOUND = 'not_found';
+    public const UNAUTHORIZED = 'unauthorized';
     public const FORBIDDEN = 'forbidden';
     public const ACCOUNT_BLOCKED = 'accountBlocked';
-    public const INSUFFICIENT_PERMS = 'insufficientPermissions';
+    public const INSUFFICIENT_PERMS = 'insufficient_permissions';
+    
+    public const UNHANDLED_EX = 'unhandled';
 
-    public const CSRF_FAIL = 'csrfFail';
-    public const TOKEN_FAIL = 'jwtFail';
-    public const OP_FAIL = 'opFail';
-    public const PATH_FAIL = 'pathFail';
-
-    public const VALIDATION_FAIL = 'validationFail';
-    public const UNHANDLED_EX = 'unhandledEx';
-
-    public const UNAUTH_TRY = 'unauthorizedTry';
-    public const ALREADY_DONE = 'alreadyDone';
+    public const ALREADY_DONE = 'already_done';
 }

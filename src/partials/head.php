@@ -6,5 +6,6 @@
   <link rel="stylesheet" href="<?= $view->asset('css/base.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/layout.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/component.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modal.css') ?>">
   <?= $view->block('head_extra') ?>
 </head>

@@ -9,8 +9,8 @@ final class NotFoundException extends HttpException
 {
     public function __construct(
         string $message,
-        array $extra = []
+        string $errorCode = "not_found"
     ){
-        parent::__construct($message, 404, $extra);
+        parent::__construct($message, 404, $errorCode);
     }
 }

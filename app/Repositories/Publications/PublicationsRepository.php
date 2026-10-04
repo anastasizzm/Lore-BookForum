@@ -33,5 +33,5 @@ abstract class PublicationsRepository extends Repository
             'DELETE FROM saved_publications WHERE user_id = :userId AND publication_id = :publicationId'
         );
         $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
-    }
+    }   
 }

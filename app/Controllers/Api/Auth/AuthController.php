@@ -30,14 +30,14 @@ final class AuthController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $isVerified = $context->attribute(Constants::VERIFIED_ATTR);
-        if ($isVerified) return $this->jsonError(new Error(ErrorCodes::ALREADY_DONE, "You have already verified your email"), 409, "Mail already verified");
+        if ($isVerified) return $this->jsonError(new Error(ErrorCodes::ALREADY_DONE, "You have already verified your email"), 409);
 
         $data = $this->usersService->retrieve($userId);
         if ($data === null)
-            return $this->jsonError(Error::fromMessage(ErrorCodes::UNAUTH_TRY, "Authorize first"), 401, "Authorize first");
+            return $this->jsonError(new Error(ErrorCodes::NOT_FOUND, "Account not found. Register first"), 401);
 
         $this->emailService->send($userId, $data->email);
         return $this->jsonEmpty();

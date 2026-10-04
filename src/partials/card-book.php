@@ -2,7 +2,7 @@
 /**
  * card-book - vertical book card.
  *
- * @param string $saveBase - API base for save/unsave ('/api/books' or '/api/articles')
+ * @param string $saveType - 'book' | 'article' — куда уходит Save (/api/books|articles/{id}/save)
  */
 $id       = (int)($id       ?? 0);
 $cover    = (string)($cover    ?? '');
@@ -10,7 +10,13 @@ $title    = (string)($title    ?? '');
 $authorId = (int)($authorId ?? 0);
 $author   = (string)($author   ?? '');
 $saved    = (bool)($saved    ?? false);
-$saveBase = (string)($saveBase ?? '/api/books');
+
+// Тип публикации для кнопки Save: книги и статьи сохраняются на разные эндпоинты
+$saveType = ($saveType ?? 'book') === 'article' ? 'article' : 'book';
+$isArticle = $saveType === 'article';
+$saveAttr  = $isArticle ? 'data-save-article' : 'data-save-book';
+$idAttr    = $isArticle ? 'data-article-id'   : 'data-book-id';
+$saveLabel = $saved ? 'Remove from saved' : 'Save ' . $saveType;
 
 // ИСПРАВЛЕНО: Правильный путь к заглушке через папку /assets
 $coverSrc = $cover !== '' ? $cover : '/assets/img/book-placeholder.svg';
@@ -29,11 +35,11 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
 
     <button type="button"
             class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
-            data-save-book
-            data-book-id="<?= $id ?>"
-            data-save-url="<?= $view->e($saveBase . '/' . $id . '/save') ?>"
+            <?= $saveAttr ?>
+            <?= $idAttr ?>="<?= $id ?>"
+            data-save-url="<?= $view->e(($isArticle ? '/api/articles' : '/api/books') . '/' . $id . '/save') ?>"
             aria-pressed="<?= $saved ? 'true' : 'false' ?>"
-            aria-label="<?= $saved ? 'Remove from saved' : 'Save book' ?>">
+            aria-label="<?= $view->e($saveLabel) ?>">
       <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
       </svg>
