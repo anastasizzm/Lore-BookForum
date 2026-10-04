@@ -5,7 +5,7 @@ namespace App\Models\Enums;
 
 enum PublicationsSortBy : string
 {
-    case Popularity = 'populatiry';
+    case Popularity = 'popularity';
     case Newest = 'newest';
     case Alphabet = 'alpha';
 }
