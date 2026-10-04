@@ -8,10 +8,10 @@
 
 <?php
 /**
- * Данные от BooksController::savedList:
+ * Данные от BooksController::savedList / ArticlesController::savedList:
  *   $items — массив Publication (id, title, iconId, creator, getCreatorId()...)
  *   $meta  — ['page', 'pageSize', 'hasNext', 'type']
- * Необязательно: $searchQuery, $currentFilter (иначе берутся из ?q= и ?filter=)
+ * Необязательно: $searchQuery, $currentFilter (иначе берутся из ?q= и ?rf=)
  */
 $items    = $items ?? [];
 $meta     = $meta  ?? [];
@@ -22,9 +22,10 @@ $hasNext  = (bool) ($meta['hasNext'] ?? false);
 $q = $searchQuery ?? ($_GET['q'] ?? '');
 $q = is_string($q) ? trim($q) : '';
 
+// ВАЖНО: 'f' занят под состояние панели фильтров (open/closed) в app.js.
+// Для табов Saved используем отдельный параметр 'rf'.
 // all -> все сохранённые, to-read -> в процессе чтения, finished -> дочитанные
-// ИСПРАВЛЕНО: 'filter' заменен на 'f'
-$f = $currentFilter ?? ($_GET['f'] ?? 'all');
+$f = $currentFilter ?? ($_GET['rf'] ?? 'all');
 if (!in_array($f, ['all', 'to-read', 'finished'], true)) $f = 'all';
 
 // TODO: уточнить у бэка, как отдаются обложки по icon_id (files.id)
@@ -63,23 +64,22 @@ $shown = ($page - 1) * $pageSize + count($cards);
 ?>
 
 <?php
-// В page-header оставляем только поиск.
-// ИСПРАВЛЕНО: Обернули input в form для работы по нажатию Enter.
+// В page-header кладём поиск + кнопку фильтров.
+// Enter в поле поиска ловит filters.js::setupSearch и сохраняет остальные параметры.
 ob_start();
+$view->include('input', [
+    'type'        => 'search',
+    'name'        => 'q',
+    'placeholder' => 'Search saved books',
+    'value'       => $q,
+]);
 ?>
-<form method="get" action="">
-    <?php if ($filterParam): ?>
-        <input type="hidden" name="f" value="<?= htmlspecialchars($filterParam) ?>">
-    <?php endif; ?>
-    <?php
-    $view->include('input', [
-        'type'        => 'search',
-        'name'        => 'q',
-        'placeholder' => 'Search saved books',
-        'value'       => $q,
-    ]);
-    ?>
-</form>
+<button type="button"
+        class="btn-icon filter-toggle"
+        data-filter-toggle
+        aria-label="Filters">
+  <span>&#9776;</span>
+</button>
 <?php
 $pageActions = ob_get_clean();
 
@@ -87,6 +87,14 @@ $view->include('page-header', [
     'title'    => 'Saved',
     'subtitle' => 'Your bookmarked books, discussions, and reading lists.',
     'actions'  => $pageActions,
+]);
+
+// Панель фильтров: Books ↔ Articles + Genre / Status / Type
+// bookHref/articleHref ведут на saved-варианты, чтобы табы не уводили в общую библиотеку
+$view->include('library-filters', [
+    'filterState' => $filterState ?? 'closed',
+    'bookHref'    => '/books/saved',
+    'articleHref' => '/articles/saved',
 ]);
 ?>
 
@@ -123,13 +131,13 @@ $view->include('page-header', [
       </div>
 
       <?php
-      // ИСПРАВЛЕНО: 'filter' заменен на 'f' в параметрах ссылок
+      // Табы фильтра Saved: 'rf' — отдельный параметр, не конфликтует с f=open/closed
       $view->include('tabs', [
           'variant' => 'filled',
           'items'   => [
-              ['label' => 'All',      'href' => $link(['q' => $q]),                     'active' => $f === 'all'],
-              ['label' => 'To read',  'href' => $link(['q' => $q, 'f' => 'to-read']),  'active' => $f === 'to-read'],
-              ['label' => 'Finished', 'href' => $link(['q' => $q, 'f' => 'finished']), 'active' => $f === 'finished'],
+              ['label' => 'All',      'href' => $link(['q' => $q]),                      'active' => $f === 'all'],
+              ['label' => 'To read',  'href' => $link(['q' => $q, 'rf' => 'to-read']),   'active' => $f === 'to-read'],
+              ['label' => 'Finished', 'href' => $link(['q' => $q, 'rf' => 'finished']),  'active' => $f === 'finished'],
           ],
       ]);
       ?>
@@ -139,7 +147,7 @@ $view->include('page-header', [
       <p class="empty-state__text">
         <?= $q !== '' ? 'Nothing found for your search.' : 'No books here yet.' ?>
         <?php if ($page > 1): ?>
-          <a href="<?= $view->e($link(['q' => $q, 'f' => $filterParam])) ?>" class="link">Back to the first page</a>
+          <a href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam])) ?>" class="link">Back to the first page</a>
         <?php endif; ?>
       </p>
     <?php else: ?>
@@ -157,18 +165,18 @@ $view->include('page-header', [
     <!-- Показывается из saved.js, когда на странице сняли закладки со всех книг -->
     <p class="empty-state__text" data-saved-empty hidden>
       No saved books left on this page.
-      <a href="<?= $view->e($link(['q' => $q, 'f' => $filterParam])) ?>" class="link">Reload</a>
+      <a href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam])) ?>" class="link">Reload</a>
     </p>
 
     <?php if ($page > 1 || $hasNext): ?>
       <nav class="books-panel__pager" aria-label="Pagination">
         <?php if ($page > 1): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'f' => $filterParam, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
+             href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
         <?php endif; ?>
         <?php if ($hasNext): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'f' => $filterParam, 'page' => $page + 1])) ?>">Next</a>
+             href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam, 'page' => $page + 1])) ?>">Next</a>
         <?php endif; ?>
       </nav>
     <?php endif; ?>
@@ -180,5 +188,5 @@ $view->include('page-header', [
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-  <script src="/assets/js/saved.js"></script>
+  <script src="<?= $view->asset('js/saved.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>
