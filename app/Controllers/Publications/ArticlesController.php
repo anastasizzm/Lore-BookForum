@@ -58,7 +58,7 @@ final class ArticlesController extends Controller
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
-                    'type' => 'book'
+                    'type' => 'article'
                 ], 
                 'user' => $userContext,
                 'filterState' => $filterState
@@ -98,7 +98,7 @@ final class ArticlesController extends Controller
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
-                    'type' => 'book'
+                    'type' => 'article'
                 ], 
                 'user' => $userContext,
                 'filterState' => $filterState
