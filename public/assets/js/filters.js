@@ -82,14 +82,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- dynamic dropdowns ----------
 
-  const SOURCES = {
+    const SOURCES = {
     genres: {
       url:      '/api/additional/genres',
       param:    'genre',
       allLabel: 'All genres',
     },
-    'article-types': {
-      url:      '/api/additional/article-types',
+    types: {
+      url:      '/api/additional/types',
       param:    'kind',
       allLabel: 'All types',
     },
@@ -417,7 +417,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     document
       .querySelectorAll('[data-dropdown][data-dynamic]')
-      .forEach(populateDynamic);
+      .forEach(function (dd) {
+        const row = dd.closest('.filter-panel__row');
+        // Пропускаем dropdown'ы в скрытых рядах (books/ articles)
+        if (row && row.hidden) return;
+        populateDynamic(dd);
+      });
   }
 
   if (document.readyState === 'loading') {
