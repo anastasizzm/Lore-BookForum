@@ -40,7 +40,8 @@ $tabHref = static function (string $href) use ($keep): string {
 $str = static fn(string $key): string => is_string($params[$key] ?? null) ? $params[$key] : '';
 
 $status = strtolower($str('status'));
-$type   = strtolower($str('type'));
+$genre  = $str('genre');
+$kind   = strtolower($str('kind'));
 $isbn   = $str('isbn');
 $doi    = $str('doi');
 
@@ -53,7 +54,7 @@ $switcher = [
     ],
 ];
 
-// Genre dropdown — переиспользуется в books и articles рядах
+// Genre dropdown — динамический, из /api/additional/genres
 $genreDropdown = [
     'type'    => 'dropdown',
     'label'   => 'Genre',
@@ -62,8 +63,20 @@ $genreDropdown = [
     'options' => [],
 ];
 
+// Type dropdown — статический, значения совпадают с enum ArticleType
+$typeDropdown = [
+    'type'    => 'dropdown',
+    'label'   => 'Type',
+    'key'     => 'kind',
+    'options' => [
+        ['label' => 'All',     'href' => $link([], ['kind']),           'value' => 'all',     'active' => $kind === ''],
+        ['label' => 'Book',    'href' => $link(['kind' => 'book']),     'value' => 'book',    'active' => $kind === 'book'],
+        ['label' => 'Content', 'href' => $link(['kind' => 'content']),  'value' => 'content', 'active' => $kind === 'content'],
+    ],
+];
+
 // Reset clears filters but keeps search (q) and panel state (f)
-$resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'type', 'sort']);
+$resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'kind', 'sort']);
 
 $filter_rows = [
     [
@@ -100,13 +113,7 @@ $filter_rows = [
         'controls' => [
             $switcher,
             $genreDropdown,
-            [
-                'type'    => 'dropdown',
-                'label'   => 'Type',
-                'key'     => 'kind',
-                'dynamic' => 'article-types',
-                'options' => [],
-            ],
+            $typeDropdown,
             [
                 'type'        => 'input',
                 'name'        => 'doi',
