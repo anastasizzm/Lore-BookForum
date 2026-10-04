@@ -68,11 +68,8 @@ $typeDropdown = [
     'type'    => 'dropdown',
     'label'   => 'Type',
     'key'     => 'kind',
-    'options' => [
-        ['label' => 'All',     'href' => $link([], ['kind']),           'value' => 'all',     'active' => $kind === ''],
-        ['label' => 'Book',    'href' => $link(['kind' => 'book']),     'value' => 'book',    'active' => $kind === 'book'],
-        ['label' => 'Content', 'href' => $link(['kind' => 'content']),  'value' => 'content', 'active' => $kind === 'content'],
-    ],
+    'dynamic' => 'types',       // ← теперь грузим через fetch
+    'options' => [],
 ];
 
 // Reset clears filters but keeps search (q) and panel state (f)

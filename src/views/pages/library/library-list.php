@@ -53,12 +53,11 @@ $view->include('library-filters', [
 ]);
 
 // ---- Сортировка ----
-// ВНИМАНИЕ: если чинишь PublicationsSortBy на бэке (populatiry→popularity),
-// можно вернуть 'popularity' как дефолт. Пока бэк не починен — 'newest' безопаснее.
+// Дефолт синхронизирован с library-filters.js (DEFAULTS.sort = 'popularity').
 $sort_options = $sortOptions ?? [
     'newest'     => 'Newest',
     'popularity' => 'Popularity',
-    'title'      => 'A to Z',
+    'alpha'      => 'A to Z',
 ];
 
 $current_sort  = $currentSort ?? 'newest';
