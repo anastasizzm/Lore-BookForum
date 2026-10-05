@@ -4,9 +4,10 @@ declare(strict_types=1);
 namespace App\Services\Additional;
 
 use App\Repositories\Additional\CategoriesRepository;
-use App\Models\Queries\PaginationQuery;
+use App\Models\Queries\Additional\BasicModelListQuery;
 
 use App\Models\PaginatedList;
+use App\Models\Enums\BasicModelSortBy;
 
 final class CategoriesService
 {
@@ -14,18 +15,20 @@ final class CategoriesService
         private readonly CategoriesRepository $categoriesRepo
     ){}
 
-    public function getList(
-        PaginationQuery $pageQ,
-        string $search,
-    ) : PaginatedList
+    public function getList(BasicModelListQuery $query) : PaginatedList
     {
-        $page = $pageQ->page();
-        $pageSize = $pageQ->pageSize();
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
+
+        $sortEnum = $query->sort->hasData() 
+            ? EnumExtensions::tryResolve(BasicModelSortBy::class, $query->sort->sortString()) 
+            : BasicModelSortBy::Newest;
 
         $items = $this->categoriesRepo->getList(
             $page, 
             $pageSize, 
-            $search, 
+            $sortEnum,
+            $query->search,
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);

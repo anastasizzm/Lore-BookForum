@@ -33,9 +33,7 @@ final class CsrfMiddleware implements Middleware
         {
             if (!$isCsrfSet || !CsrfManager::verify($ctx->request, $csrf))
                 return $ctx->isApi()
-                ? Response::json(ResponseTemplates::errors([
-                    Error::fromMessage(ErrorCodes::CSRF_FAIL, "CSRF token mismatch")
-                ], 419, "CSRF mismatch"), 419)
+                ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::CSRF_FAIL, "CSRF token mismatch")), 419)
                 : Response::html('<h1>CSRF token mismatch</h1><p>Please reload the page and try again.</p>', 419);
                 
             $ctx->request->setAttribute(Constants::CSRF_ATTR, $csrf);

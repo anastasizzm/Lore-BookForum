@@ -9,8 +9,8 @@ final class UnauthorizedException extends HttpException
 {
     public function __construct(
         string $message,
-        array $extra = []
+        string $errorCode = "unauthorized"
     ){
-        parent::__construct($message, 401, $extra);
+        parent::__construct($message, 401, $errorCode);
     }
 }

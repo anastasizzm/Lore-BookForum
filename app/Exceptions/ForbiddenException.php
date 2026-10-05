@@ -9,8 +9,8 @@ final class ForbiddenException extends HttpException
 {
     public function __construct(
         string $message,
-        array $extra = []
+        string $errorCode = "forbid"
     ){
-        parent::__construct($message, 403, $extra);
+        parent::__construct($message, 403, $errorCode);
     }
 }

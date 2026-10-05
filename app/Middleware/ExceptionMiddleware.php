@@ -28,10 +28,8 @@ final class ExceptionMiddleware implements Middleware
         }
         catch(HttpException $e){
             if ($ctx->isApi())
-                return Response::json(ResponseTemplates::errors([
-                    Error::fromMessage(ErrorCodes::UNHANDLED_EX, $e->getMessage())
-                ], $e->getStatus(), "Unhandled exception occured"), $e->getStatus());
-            else return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Continue']));
+                return Response::json(ResponseTemplates::error($e->toError()), $e->getStatus());
+            else return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'To Home']));
         }
     }
 }

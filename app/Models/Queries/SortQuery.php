@@ -22,5 +22,15 @@ final class SortQuery implements Query
         return new self($input['sort'] ?? '');
     }
 
+    public function hasData() : bool 
+    {
+        return !empty($this->sortString);
+    }
+
+    public static function default() : self 
+    {
+        return new self('');
+    }
+
     public function sortString() :string { return $this->sortString; }
 }

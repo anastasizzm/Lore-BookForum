@@ -14,6 +14,7 @@ use RuntimeException;
 
 use App\Lib\Container;
 use App\Lib\Auth\AuthPolicy;
+use App\ErrorCodes;
 
 final class Router
 {
@@ -84,7 +85,7 @@ final class Router
         }
 
         if ($pathMatched) {
-            throw new HttpException('Method Not Allowed', 405);
+            throw new HttpException('Method Not Allowed', 405, ErrorCodes::METHOD_NOT_ALLOWED);
         }
 
         return null;

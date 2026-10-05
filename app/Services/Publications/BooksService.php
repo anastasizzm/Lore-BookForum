@@ -5,22 +5,23 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\BooksRepository;
 
-use App\Models\Queries\PaginationQuery;
-use App\Models\Queries\PropertiesQuery;
-use App\Models\Queries\SortQuery;
-use App\Models\Queries\StatusQuery;
-use App\Models\Filters\UserByPublicationFilters;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
-use App\Models\Filters\ReadinguserByFilters;
+use App\Models\Publications\Book;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
+
+use App\Models\Criterias\Publications\BooksCriteria;
+use App\Models\Criterias\Publications\UserRelationCriteria;
+use App\Models\Queries\Publications\BooksListQuery;
+use App\Models\Queries\PropertiesQuery;
 
 use App\Extensions\EnumExtensions;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
+
 
 use PDO;
 
@@ -32,47 +33,50 @@ final class BooksService
         private readonly UnitOfWork $uow
     ){}
 
-    public function getList(
-        PaginationQuery $pageQ,
-        string $search,
-        PropertiesQuery $props,
-        int $currentUserId,
-        bool $savedOnly = false,
-        ?SortQuery $sort = null,
-        ?StatusQuery $status = null,
-        ?int $genreId = null,
-        ?int $creatorId = null,
-        ?string $isbn = null
-    ) : PaginatedList
+    public function getList(BooksListQuery $query) : PaginatedList
     {
         $errors = [];
-        $isValid = $props->validateForType(Publication::class, $errors);
+        $isValid = $query->properties->validateForType(Publication::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
-        $sortEnum = $sort == null ? null : EnumExtensions::tryResolve(PublicationsSortBy::class, $sort->sortString());
-        $sortEnum ??= PublicationsSortBy::Newest;
+        $sortEnum = $query->sort->hasData() 
+            ? EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString()) 
+            : PublicationsSortBy::Newest;
         
-        $statusEnum = $status == null ? null : EnumExtensions::tryResolve(ReadingStatus::class, $status->status());
-        $statusEnum ??= ReadingStatus::None;
+        $userCriteria = $query->userFilters == NULL
+            ? NULL
+            : new UserRelationCriteria(
+                $query->userFilters->viewerId,
+                $query->userFilters->status->hasData() 
+                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->status->status())
+                    : ReadingStatus::None,
+                $query->userFilters->savedOnly,
+            );
 
-        $userByFilter = new UserByPublicationFilters($currentUserId, $statusEnum, $savedOnly);
-
-        $page = $pageQ->page();
-        $pageSize = $pageQ->pageSize();
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
 
         $items = $this->booksRepo->getList(
-            $page, 
-            $pageSize, 
-            $search, 
-            $sortEnum,
-            $props->getProps(),
-            $genreId, 
-            $creatorId,
-            $isbn,
-            $userByFilter
+            new BooksCriteria(
+                $page,
+                $pageSize,
+                $sortEnum,
+                $query->filters,
+                $userCriteria
+            ),
+            $query->properties->getProps()
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $bookId, PropertiesQuery $props) : ?Book
+    {
+        $errors = [];
+        $isValid = $props->validateForType(Book::class, $errors);
+        if(!$isValid) throw new ValidationException($errors);
+
+        return $this->booksRepo->retrieve($bookId, $props->getProps());
     }
 
     public function save(int $userId, int $bookId) : void

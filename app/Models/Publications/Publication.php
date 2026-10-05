@@ -2,8 +2,8 @@
 namespace App\Models\Publications;
 
 use DateTimeImmutable;
-use Uuid;
 
+use App\Models\Uuid;
 use App\Models\Users\UserShortData;
 use App\Models\Publications\PublicationShort;
 use App\Models\BasicModel;
@@ -13,10 +13,8 @@ readonly class Publication extends PublicationShort
     public function __construct(
         int $id,
         string $title,
-        ?Uuid $iconId,
         DateTimeImmutable $createdAt,
-        public int $commentsCount,
-        public int $rating, // avg rating * 10
+        ?Uuid $iconId,
         private int $creatorId,
         private int $genreId,
         public ?BasicModel $genre,
@@ -24,10 +22,10 @@ readonly class Publication extends PublicationShort
         /** В закладках у текущего пользователя (см. saved_publications в getList) */
         public bool $saved = false
     ){
-        parent::__construct($id, $title, $iconId, $createdAt);
+        parent::__construct($id, $title, $createdAt, $iconId);
     }
 
-    public static function fromRow(array $row, string $prefix = '') : self 
+    public static function fromRow(array $row, string $prefix = '') : self
     {
         $u = UserShortData::ROW_PREFIX;
         $g = 'g_';
@@ -40,8 +38,6 @@ readonly class Publication extends PublicationShort
             createdAt: $parent->createdAt,
             creatorId: self::int($row, $prefix . 'creator_id'),
             genreId: self::int($row, $prefix . 'genre_id'),
-            commentsCount: self::int($row, $prefix . 'comments_count'),
-            rating: self::int($row, $prefix . 'rating_avg'),
             saved: self::boolN($row, $prefix . 'saved') ?? false,
             creator: self::hasGroup($row, $prefix . $u, 'id')
                 ? UserShortData::fromRow($row, $prefix . $u) : NULL,
