@@ -1,69 +1,89 @@
 <?php
 /**
  * Ожидаемые переменные от контроллера:
- *   $book      — ['publicationId','cover','title','author','createdAt','genre','category','series',
- *                 'isbn', 'rating' (float 0-5), 'savesCount', 'annotation', 'authorNote', 'tableOfContents']
- *   $comments  — массив постов (те же поля, что в feed-list.php)
+ *   $book — объект App\Models\Publications\Book
+ *           (id, title, createdAt, iconId, creator, genre + опционально: rating, savesCount,
+ *            isbn, annotation, authorNote, series, category, tableOfContents, isSaved, readingStatus)
+ *   $comments — массив постов (те же поля, что в feed-list.php)
+ *
+ * Поля, которых может не быть в модели, читаются через ?? — чтобы страница не падала.
+ * Объекты (genre, category, series) приводятся к строке через хелпер $str — чтобы
+ * не ловить "Object of class BasicModel could not be converted to string".
  */
-$book = $book ?? [
-    'publicationId'   => 0,
-    'cover'           => 'https://placehold.co/400x560?text=Cover',
-    'title'           => 'Full name of book',
-    'author'          => 'Name Surname',
-    'createdAt'       => '10.09.2026',
-    'genre'           => 'Drama',
-    'category'        => 'Artistic literature',
-    'series'          => '10.09.2026',
-    'isbn'            => '978-5-123-45678-9',
-    'rating'          => 4.6,
-    'savesCount'      => 121,
-    'annotation'      => "After the destruction of most of humanity, Grigory takes up a profession that never existed before: taxidermist of extraterrestrial fauna.\nDo you want a stuffed \"Root-Jumper\" from a distant star system, or perhaps one of the very last Glass Serpents? Nothing is impossible; Grigory will fulfill your request.\nThe job seems simple enough-until each new order begins to pull him deeper and deeper into the alien cosmos...",
-    'authorNote'      => 'By the way, the series has a standalone prequel; you can read it here: https://author.today/work/627498',
-    'tableOfContents' => [],
-];
 
-$comments = $comments ?? [
-    [
-        'userInitials' => 'SN',
-        'userName'     => 'sername',
-        'userAvatar'   => null,
-        'date'         => '10.09.2026',
-        'text'         => "some text about life and many more things some text about life and many more things some text about life and many more things\nsome text about life and many more things some text about life and many more things some text about life and many more things\nsome text about life and many more things",
-        'likes'        => 0,
-        'comments'     => 0,
-    ],
-];
-
-/**
- * id публикации для формы комментария.
- * Берётся из контроллера ($book['publicationId']).
- * DEV: пока нет контроллера страницы, можно передать ?pub=<id> в адресе.
- */
-$publicationId = (int) ($book['publicationId'] ?? 0);
-if ($publicationId === 0) {
-    $publicationId = (int) ($_GET['pub'] ?? 0);
+$book = $book ?? null;
+if ($book === null) {
+    return;
 }
 
-/**
- * id книги (books.id) и состояние закладки — для кнопки Save.
- * Берутся из контроллера ($book['id'], $book['isSaved']).
- * DEV: пока нет контроллера страницы, можно передать ?book=<id> в адресе.
- */
-$bookId = (int) ($book['id'] ?? 0);
-if ($bookId === 0) {
-    $bookId = (int) ($_GET['book'] ?? 0);
-}
-$isSaved = (bool) ($book['isSaved'] ?? false);
+/* ---------- Универсальное приведение к строке ---------- */
+$str = static function ($v): string {
+    if ($v === null) return '';
+    if (is_string($v)) return $v;
+    if (is_scalar($v)) return (string) $v;
+    if (is_object($v)) {
+        if (method_exists($v, '__toString')) return (string) $v;
+        if (isset($v->title)) return (string) $v->title;
+        if (isset($v->name))  return (string) $v->name;
+    }
+    return '';
+};
 
-/**
- * Статус чтения текущего пользователя (передаёт контроллер):
- *   'new'         — ещё не начинал      -> Start reading
- *   'in_progress' — читает              -> Resume reading
- *   'finished'    — дочитал             -> Read again
- */
-$readingStatus  = $book['readingStatus'] ?? $readingStatus ?? 'new';
-// DEV-предпросмотр: ?reading=in_progress или ?reading=finished
-//$readingStatus = $_GET['reading'] ?? $readingStatus;
+/* ---------- Скалярные значения ---------- */
+
+$publicationId = (int)    ($book->id ?? 0);
+$bookId        = (int)    ($book->id ?? 0);
+$isSaved       = (bool)   ($book->isSaved       ?? false);
+$readingStatus = (string) ($book->readingStatus ?? 'new');
+$rating        = (float)  ($book->rating        ?? 0);
+$savesCount    = (int)    ($book->savesCount    ?? 0);
+
+$percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
+
+/* ---------- Даты ---------- */
+
+$createdAt = '';
+if (($book->createdAt ?? null) instanceof \DateTimeInterface) {
+    $createdAt = $book->createdAt->format('d.m.Y');
+} elseif (is_string($book->createdAt ?? null)) {
+    $createdAt = $book->createdAt;
+}
+
+/* ---------- Автор ---------- */
+
+$authorName = '';
+if (($book->creator ?? null) !== null) {
+    $authorName = trim(($book->creator->name ?? '') . ' ' . ($book->creator->surname ?? ''));
+    if ($authorName === '') {
+        $authorName = (string) ($book->creator->username ?? '');
+    }
+}
+
+/* ---------- Жанр / категория / серия / ISBN ---------- */
+
+$genreTitle    = $str($book->genre    ?? null);
+$categoryTitle = $str($book->category ?? null);
+$seriesTitle   = $str($book->series   ?? null);
+$isbn          = $str($book->isbn     ?? null);
+
+/* ---------- Аннотация / заметка автора / TOC ---------- */
+
+$annotation      = (string) ($book->annotation      ?? '');
+$authorNote      = (string) ($book->authorNote      ?? '');
+$tableOfContents = (array)  ($book->tableOfContents ?? []);
+
+/* ---------- Обложка ---------- */
+
+$coverUrl = 'https://placehold.co/400x560?text=Cover';
+if (!empty($book->iconId)) {
+    if ($book->iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $book->iconId;
+    } elseif (is_string($book->iconId)) {
+        $coverUrl = '/uploads/covers/' . $book->iconId;
+    }
+}
+
+/* ---------- Статус чтения -> кнопка ---------- */
 
 $readingButtons = [
     'new'         => ['label' => 'Start reading',  'modifier' => 'start'],
@@ -71,12 +91,9 @@ $readingButtons = [
     'finished'    => ['label' => 'Read again',     'modifier' => 'again'],
 ];
 if (!isset($readingButtons[$readingStatus])) {
-    $readingStatus = 'new'; // неизвестное значение -> безопасный вариант
+    $readingStatus = 'new';
 }
 $readingBtn = $readingButtons[$readingStatus];
-
-$rating  = (float) ($book['rating'] ?? 0);
-$percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 ?>
 <?php $view->extends('main'); ?>
 
@@ -97,16 +114,15 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
   <div class="book-details">
     <div class="book-details__cover-col">
       <div class="book-details__cover">
-        <img src="<?= $view->e($book['cover']) ?>" alt="<?= $view->e($book['title']) ?> cover">
+        <img src="<?= $view->e($coverUrl) ?>" alt="<?= $view->e($book->title ?? '') ?> cover">
       </div>
 
-      <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <!-- Закладка: POST/DELETE /api/books/{id}/save (обработчик в app.js) -->
         <button type="button"
                 class="btn-icon btn-icon--circle<?= $isSaved ? ' is-active' : '' ?>"
                 data-save-book
                 data-book-id="<?= $bookId ?>"
+                data-save-url="/api/books/<?= $bookId ?>/save"
                 aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
                 aria-label="<?= $isSaved ? 'Remove from saved' : 'Save book' ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -119,7 +135,6 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                 data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></button>
       </div>
 
-      <!-- Блок рейтинга и сохранений -->
       <div class="book-rating">
         <div class="book-rating__group">
           <span class="book-rating__stars"
@@ -134,11 +149,10 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H10C10.5523 1 11 1.44772 11 2V14.5273C11 14.928 10.5574 15.1704 10.2039 14.9631L6 12.5L1.79612 14.9631C1.44265 15.1704 1 14.928 1 14.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
-          <span data-saves-count><?= (int) $book['savesCount'] ?></span>
+          <span data-saves-count><?= $savesCount ?></span>
         </span>
       </div>
 
-      <!-- Оценка пользователя -->
       <div class="rate" data-rate role="radiogroup" aria-label="Rate this book">
         <span class="rate__label">Click to Rate:</span>
         <div class="rate__stars">
@@ -158,16 +172,21 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       </div>
     </div>
 
-    <!-- Инфо-карточка книги -->
     <div class="card-base info-box">
-      <h2 class="info-box__title"><?= $view->e($book['title']) ?></h2>
-      <p class="info-box__meta"><?= $view->e($book['author']) ?></p>
-      <p class="info-box__meta">Creation date: <?= $view->e($book['createdAt']) ?></p>
-      <p class="info-box__meta">Genre: <?= $view->e($book['genre']) ?></p>
-      <p class="info-box__meta">Category: <?= $view->e($book['category']) ?></p>
-      <p class="info-box__meta">Book series: <?= $view->e($book['series']) ?></p>
-      <?php if (!empty($book['isbn'])): ?>
-        <p class="info-box__meta">ISBN: <?= $view->e($book['isbn']) ?></p>
+      <h2 class="info-box__title"><?= $view->e($book->title ?? '') ?></h2>
+      <p class="info-box__meta"><?= $view->e($authorName) ?></p>
+      <p class="info-box__meta">Creation date: <?= $view->e($createdAt) ?></p>
+      <?php if ($genreTitle !== ''): ?>
+        <p class="info-box__meta">Genre: <?= $view->e($genreTitle) ?></p>
+      <?php endif; ?>
+      <?php if ($categoryTitle !== ''): ?>
+        <p class="info-box__meta">Category: <?= $view->e($categoryTitle) ?></p>
+      <?php endif; ?>
+      <?php if ($seriesTitle !== ''): ?>
+        <p class="info-box__meta">Book series: <?= $view->e($seriesTitle) ?></p>
+      <?php endif; ?>
+      <?php if ($isbn !== ''): ?>
+        <p class="info-box__meta">ISBN: <?= $view->e($isbn) ?></p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
@@ -182,22 +201,26 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
         ?>
 
         <div class="card-base book-tabs-panel__content" data-row="annotation">
-          <p class="info-box__body"><?= nl2br($view->e($book['annotation'])) ?></p>
+          <?php if ($annotation !== ''): ?>
+            <p class="info-box__body"><?= nl2br($view->e($annotation)) ?></p>
+          <?php else: ?>
+            <p class="info-box__body">Annotation is not available yet.</p>
+          <?php endif; ?>
 
-          <?php if (!empty($book['authorNote'])): ?>
+          <?php if ($authorNote !== ''): ?>
             <div class="book-tabs-panel__note">
               <strong>Author's Note:</strong><br>
-              <?= nl2br($view->e($book['authorNote'])) ?>
+              <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
         </div>
 
         <div class="card-base book-tabs-panel__content" data-row="toc" hidden>
-          <?php if (empty($book['tableOfContents'])): ?>
+          <?php if (empty($tableOfContents)): ?>
             <p class="info-box__body">Table of contents is not available yet.</p>
           <?php else: ?>
             <ol class="info-box__body">
-              <?php foreach ($book['tableOfContents'] as $chapter): ?>
+              <?php foreach ($tableOfContents as $chapter): ?>
                 <li><?= $view->e($chapter) ?></li>
               <?php endforeach; ?>
             </ol>
@@ -207,20 +230,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     </div>
   </div>
 
-  <!-- Блок комментариев -->
   <section class="comments-section">
     <h2 class="comments-section__title">
-      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments)) ?></span>
+      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments ?? [])) ?></span>
     </h2>
 
-    <!--
-      Форма написания комментария (стилизована как карточка).
-      Контракт: POST /api/posts, application/x-www-form-urlencoded
-        поля: content, publicationId, csrf-поле
-        успех: 201 {"createdId": N}
-        ошибка: не-201, JSON с errors / message
-      Отправку делает book.js (fetch).
-    -->
     <form class="comment-card" action="/api/posts" method="POST" data-comment-form novalidate>
       <?= $view->csrfField() ?>
       <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
@@ -244,16 +258,14 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     <?php else: ?>
       <div class="stack">
         <?php foreach ($comments as $comment): ?>
-          
-          <!-- Карточка комментария -->
           <div class="comment-card">
             <div class="comment-card__inner">
               <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
-              
+
               <div class="comment-card__content">
                 <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
                 <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
-                
+
                 <div class="comment-card__footer">
                   <button type="button" class="btn-icon-small btn-like" data-comment-like aria-pressed="false" aria-label="Like">
                     <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -272,7 +284,6 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                   </div>
                 </div>
 
-                <!-- Форма ответа -->
                 <form class="comment-reply-form" data-reply-form hidden>
                   <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
                   <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
@@ -286,13 +297,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
               </div>
             </div>
           </div>
-          
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
   </section>
 
-  <!-- Шаблон нового ответа (клонируется из book.js) -->
   <template id="reply-template">
     <div class="comment-reply">
       <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
