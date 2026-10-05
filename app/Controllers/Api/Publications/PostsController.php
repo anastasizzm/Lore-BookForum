@@ -33,7 +33,7 @@ final class PostsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $query = PostsListQuery::fromInput($context->request->query);
-        $paginatedList = $this->postsService->getList($query);
+        $paginatedList = $this->postsService->getListWithContext($query, $userId);
         return $this->jsonList($paginatedList->getArray(), [
                 'page' => $paginatedList->getPage(),
                 'pageSize' => $paginatedList->getPageSize(),

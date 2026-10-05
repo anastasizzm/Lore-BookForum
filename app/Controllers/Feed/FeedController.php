@@ -42,7 +42,7 @@ final class FeedController extends Controller
                 properties: PropertiesQuery::fromRaw("creator+publication"),
                 filters: PostsFilters::fromInput($q),
             );
-            $paginatedList = $this->postsService->getList($query);
+            $paginatedList = $this->postsService->getListWithContext($query, $userId);
             return $this->render('feed/feed-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [

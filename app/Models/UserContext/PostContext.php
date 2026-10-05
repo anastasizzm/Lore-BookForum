@@ -23,7 +23,7 @@ final readonly class PostContext extends Dto implements UserContextInterface
     {
         return new self(
             isLiked: self::bool($row, $prefix . 'is_liked'),
-            isEditor: self::bool($row, $prefix . 'is_redactor'),
+            isEditor: self::bool($row, $prefix . 'is_editor'),
         );
     }
 }
