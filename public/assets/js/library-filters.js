@@ -8,6 +8,7 @@
     q:      'q',
     genre:  'genre',
     isbn:   'isbn',
+    doi:    'doi',
     sort:   'sort',
     status: 'status',
     type:   'type',
@@ -35,7 +36,9 @@
   const search = document.querySelector('input[name="q"]');
 
   // 'f' намеренно отсутствует: им управляет app.js
-  const KEYS = ['genre', 'status', 'isbn', 'sort', 'kind', 'q'];
+  // 'doi' обязателен: без него значение из ?doi= не восстанавливается
+  // после перезагрузки, а поле стирается в syncUi()
+  const KEYS = ['genre', 'status', 'isbn', 'doi', 'sort', 'kind', 'q'];
   const DEFAULTS = { sort: 'newest' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
@@ -69,6 +72,8 @@
     if (IS_ARTICLES) {
       // Вариант B: без маппинга, значение из state.kind уходит как есть
       if (state.kind) p.set(PARAM.type, state.kind);
+      // Фильтр по DOI — бэкенд читает ?doi= (ArticlesFilters::fromInput)
+      if (state.doi) p.set(PARAM.doi, state.doi);
     } else if (state.isbn) {
       p.set(PARAM.isbn, state.isbn);
     }
@@ -235,7 +240,7 @@
     }
 
     if (e.target.closest('[data-filter-reset]')) {
-      ['genre', 'status', 'isbn', 'kind'].forEach(k => delete state[k]);
+      ['genre', 'status', 'isbn', 'doi', 'kind'].forEach(k => delete state[k]);
       syncUi(); pushUrl(); load();
       return;
     }
@@ -252,7 +257,12 @@
   };
 
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
-    inp.addEventListener('input', debounce(() => setFilter(inp.dataset.filterKey, inp.value.trim()), 350)));
+    inp.addEventListener('input', debounce(() => {
+      // filters.js помечает неверный ISBN/DOI классом is-invalid — бэкенд
+      // всё равно ничего не найдёт, поэтому не пишем его в URL и не дёргаем API
+      if (inp.classList.contains('is-invalid')) return;
+      setFilter(inp.dataset.filterKey, inp.value.trim());
+    }, 350)));
 
   search?.addEventListener('input', debounce(() => setFilter('q', search.value.trim()), 350));
 
