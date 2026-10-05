@@ -31,5 +31,15 @@ final class ExceptionMiddleware implements Middleware
                 return Response::json(ResponseTemplates::error($e->toError()), $e->getStatus());
             else return Response::html(View::render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'To Home']));
         }
+        catch(ValidationException $e)
+        {
+            if ($ctx->isApi())
+                return Response::json(ResponseTemplates::error($e->toError()), 422);
+            else return Response::html(View::render('message', [
+                'statusCode' => 422, 
+                'message' => 'Some validation errors occured',
+                'innerMessages' => $e->toMessages()
+            ]));
+        }
     }
 }

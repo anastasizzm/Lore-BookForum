@@ -62,7 +62,7 @@ final class BooksScriptDirector extends PublicationsScriptDirector
         switch($prop)
         {
             case 'category':
-                $this->tempBuilder->addJoin("INNER JOIN categories ON categories.id = publications.id")
+                $this->tempBuilder->addJoin("INNER JOIN categories ON categories.id = books.category_id")
                     ->addSelect("categories.id as c_id,\ncategories.title as c_title,\ncategories.created_at as c_created_at");
                 break;
         }
