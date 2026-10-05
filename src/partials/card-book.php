@@ -18,11 +18,14 @@ $saveAttr  = $isArticle ? 'data-save-article' : 'data-save-book';
 $idAttr    = $isArticle ? 'data-article-id'   : 'data-book-id';
 $saveLabel = $saved ? 'Remove from saved' : 'Save ' . $saveType;
 
-// ИСПРАВЛЕНО: Правильный путь к заглушке через папку /assets
-$coverSrc = $cover !== '' ? $cover : '/assets/img/book-placeholder.svg';
+// ИСПРАВЛЕНО: Правильный путь к заглушке (лежит в public/img/, а не в public/assets/img/)
+$coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
 
-// TODO: route for single book is not added yet
-$bookUrl = '#';
+// P1-6: карточка ведёт на страницу публикации (раньше было href="#",
+// из-за чего клик по карточке ничего не делал)
+$bookUrl = $id > 0
+    ? '/' . ($isArticle ? 'articles' : 'books') . '/' . $id
+    : '#';
 
 $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
 ?>
@@ -31,7 +34,8 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
   <div class="card-book__cover">
     <img src="<?= $view->e($coverSrc) ?>"
          alt="<?= $view->e($title) ?>"
-         loading="lazy">
+         loading="lazy"
+         onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
 
     <button type="button"
             class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
@@ -49,7 +53,7 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
   <h3 class="card-book__title">
     <a class="card-book__link"
        href="<?= $view->e($bookUrl) ?>"
-       aria-label="Open book: <?= $view->e($title) ?>">
+       aria-label="Open <?= $view->e($saveType) ?>: <?= $view->e($title) ?>">
       <?= $view->e($title) ?>
     </a>
   </h3>

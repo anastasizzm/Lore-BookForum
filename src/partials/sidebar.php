@@ -1,10 +1,16 @@
 <?php $selectedTab = $view->block('selectedTab'); ?>
+<?php
+  // P1-5: без id (гость / шаринг не отработал) ссылка вела на /users/0 -> 404.
+  $profileId  = (int) ($currentUserId ?? 0);
+  $profileUrl = $profileId > 0 ? '/users/' . $profileId : $view->url('login');
+?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
         <!-- Профиль -->
-        <a href="/users/<?= (int)($currentUserId ?? 0) ?>"
+        <a href="<?= $view->e($profileUrl) ?>"
            class="nav-item mobile-nav-btn nav-profile <?= $selectedTab === 'profile' ? 'active' : '' ?>"
-           title="Profile">
+           title="Profile"
+           <?= $selectedTab === 'profile' ? 'aria-current="page"' : '' ?>>
             <span class="nav-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>

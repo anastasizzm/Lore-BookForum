@@ -26,6 +26,8 @@
 
   const API         = root.dataset.api;
   const IS_ARTICLES = API.endsWith('/articles');
+  // P1-6: страница публикации, куда ведёт клик по карточке
+  const DETAIL_BASE = IS_ARTICLES ? '/articles' : '/books';
   const grid   = root.querySelector('[data-library-grid]');
   const empty  = root.querySelector('[data-library-empty]');
   const more   = root.querySelector('[data-library-more]');
@@ -140,6 +142,8 @@
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
       : '';
     const id = Number(b.id);
+    // P1-6: карточка ведёт на страницу книги/статьи (раньше href="#" — клик молчал)
+    const href = id > 0 ? `${DETAIL_BASE}/${id}` : '#';
 
     // На странице статей кнопка помечается как article — app.js по этому
     // атрибуту выбирает тип и событие (data-save-url дублирует эндпоинт).
@@ -149,7 +153,8 @@
     return `
 <article class="card-base card-book">
   <div class="card-book__cover">
-    <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy">
+    <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy"
+         onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
     <button type="button" class="btn-icon btn-icon--circle card-book__save${b.saved ? ' is-active' : ''}"
             ${saveAttr}="${id}"
             data-save-url="${esc(API + '/' + id + '/save')}"
@@ -160,7 +165,7 @@
       </svg>
     </button>
   </div>
-  <h3 class="card-book__title"><a class="card-book__link" href="#">${esc(b.title)}</a></h3>
+  <h3 class="card-book__title"><a class="card-book__link" href="${esc(href)}">${esc(b.title)}</a></h3>
   ${author}
 </article>`;
   }

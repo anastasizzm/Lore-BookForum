@@ -121,7 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (burgerTarget) {
       e.preventDefault();
       e.stopPropagation();
-      openMenu();
+      // Toggle: пока бургер поднят выше открытого меню (layout.css, z-index 45),
+      // он остаётся нажимаемым и закрывает меню (раньше его «съедал» sidebar).
+      if (body.classList.contains('is-menu-open')) closeMenu();
+      else openMenu();
     }
   });
 
