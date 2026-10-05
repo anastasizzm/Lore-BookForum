@@ -21,6 +21,17 @@ final readonly class BooksFilters extends PublicationsFilters
     public static function fromInput(array $q): self
     {
         $parent = parent::fromInput($q);
+        return self::fromParent($q, $parent);
+    }
+
+    public static function fromCreator(array $q, int $creatorId) : self
+    {
+        $parent = parent::fromCreator($q, $creatorId);
+        return self::fromParent($q, $parent);
+    }
+
+    private static function fromParent(array $q, parent $parent) : self 
+    {
         return new self(
             genreId: $parent->genreId,
             creatorId: $parent->creatorId,
