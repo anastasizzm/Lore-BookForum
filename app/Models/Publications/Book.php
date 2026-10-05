@@ -72,7 +72,7 @@ readonly class Book extends PublicationExtended
                 ? BasicModel::fromRow($row, $prefix . $c) : NULL,
             publisher: self::str($row, $prefix . 'publisher'),
             pagesCount: self::int($row, $prefix . 'pages'),
-            isbn: self::str($row, $prefix . 'isbn'),
+            isbn: self::strN($row, $prefix . 'isbn'),
             contentId: self::uuid($row, $prefix . 'content_id')
         );
     }

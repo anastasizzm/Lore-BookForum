@@ -13,24 +13,24 @@ use App\Extensions\ResponseTemplates;
 abstract class Controller
 {
     // WEB
-    protected function render(string $template, array $data = []) : Response
+    protected function render(string $template, array $data = [], int $statusCode = 200) : Response
     {
-        return Response::html(View::render($template, $data));
+        return Response::html(View::render($template, $data), $statusCode);
     } 
 
     protected function renderNotFound(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return $this->render('message', ['statusCode' => 404, 'message' => 'Not Found', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
+        return $this->render('message', ['statusCode' => 404, 'message' => 'Not Found', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle], 404);
     }
 
     protected function renderForbid(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return $this->render('message', ['statusCode' => 403, 'message' => 'You dont have access to this', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
+        return $this->render('message', ['statusCode' => 403, 'message' => 'You dont have access to this', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle], 403);
     }
 
     protected function renderUnauthorized(?string $actionUrl = null, ?string $actionTitle = null)
     {
-        return $this->render('message', ['statusCode' => 401, 'message' => 'Please authenticate first', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle]);
+        return $this->render('message', ['statusCode' => 401, 'message' => 'Please authenticate first', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle], 401);
     }
 
 
