@@ -12,8 +12,16 @@ use App\Services\Publications\ArticlesService;
 use App\Http\HttpContext;
 use App\Http\Response;
 
+use App\Models\Queries\Publications\BooksListQuery;
+use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PaginationQuery;
+use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
+use App\Models\Filters\Publications\BooksFilters;
+use App\Models\Filters\Publications\ArticlesFilters;
+use App\Models\Filters\Publications\UserRelationFilters;
+use App\Extensions\Parsers\RouteParamParser;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -30,7 +38,7 @@ final class UsersController extends Controller
 
     public function retrieve(HttpContext $context, string $userId)
     {
-        $userId = (int)$userId;
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
@@ -46,7 +54,7 @@ final class UsersController extends Controller
 
     public function getEdit(HttpContext $context, string $userId)
     {
-        $userId = (int)$userId;
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
@@ -62,19 +70,25 @@ final class UsersController extends Controller
 
     public function getBooks(HttpContext $context, string $userId)
     {
-        $userId = (int)$userId;
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
-
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
-            $paginatedList = $this->booksService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
+            $query = new BooksListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: BooksFilters::fromCreator($q, $userId),
+                userFilters: UserRelationFilters::fromInput($q, $currentUserId)
+            );
+
+            $paginatedList = $this->booksService->getList($query);
             return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -98,19 +112,25 @@ final class UsersController extends Controller
 
     public function getArticles(HttpContext $context, string $userId)
     {
-        $userId = (int)$userId;
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
             return Response::redirect('login');
 
-        $pageQ = PaginationQuery::fromInput($context->request->query);
-        $propsQ = PropertiesQuery::fromRaw("creator");
-        $searchQ = $context->query('q', '');
-        $filterState = $context->query('f', 'closed');
-
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
         $userContext = $this->usersService->loadContext($currentUserId);
         try{
-            $paginatedList = $this->articlesService->getList($pageQ, $searchQ, $propsQ, $currentUserId, creatorId: $userId);
+            $query = new ArticlesListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: ArticlesFilters::fromCreator($q, $userId),
+                userFilters: UserRelationFilters::fromInput($q, $currentUserId)
+            );
+
+            $paginatedList = $this->articlesService->getList($query);
             return $this->render('profile/profile-publications', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [

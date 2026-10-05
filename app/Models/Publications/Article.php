@@ -50,7 +50,7 @@ final readonly class ContentData
     }
 }
 
-final readonly class Article extends PublicationExtended
+readonly class Article extends PublicationExtended
 {
     public function __construct(
         int $id,
@@ -129,11 +129,21 @@ final readonly class Article extends PublicationExtended
             typeId: self::int($row, $prefix . 'type_id'),
             type: self::hasGroup($row, $t, 'id')
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
-            doi: self::str($row, $prefix . 'doi'),
+            doi: self::strN($row, $prefix . 'doi'),
             contentData: $contentData
         );
     }
 
-    public function isBookBased() { return $this->contentData->getType === ArticleContentType::Book; }
-    public function isContentBased() { return $this->contentData->getType === ArticleContentType::Content; }
+    public function isBookBased() { return $this->contentData->getType() === ArticleContentType::Book; }
+    public function isContentBased() { return $this->contentData->getType() === ArticleContentType::Content; }
+
+    public function toArray() : array
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'type' => $this->type,
+            'doi' => $this->doi,
+            'contentData' => $this->contentData
+        ];
+    }
 }

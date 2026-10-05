@@ -9,6 +9,9 @@ use App\Policies\Auth\AuthenticatedRequirement;
 use App\Policies\Verified\VerifiedHandler;
 use App\Policies\Verified\VerifiedRequirement;
 
+use App\Policies\Admin\AdminHandler;
+use App\Policies\Admin\AdminRequirement;
+
 use App\Policies\Owner\Profile\ProfileOwnerHandler;
 use App\Policies\Owner\Profile\ProfileOwnerRequirement;
 

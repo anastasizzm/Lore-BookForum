@@ -21,4 +21,13 @@ readonly class BasicModel extends Dto
             createdAt: self::dt($row, $prefix . 'created_at')
         );
     }
+
+    public function toArray() : array 
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'createdAt' => $this->createdAt
+        ];
+    }
 }

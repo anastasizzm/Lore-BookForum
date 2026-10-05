@@ -55,4 +55,16 @@ readonly class PublicationExtended extends Publication
             authorNotes: self::str($row, $prefix . 'author_notes'),
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'commentsCount' => $this->commentsCount,
+            'savedCount' => $this->savedCount,
+            'rating' => $this->rating,
+            'description' => $this->descriptions,
+            'authorNotes' => $this->authorNotes
+        ];
+    }
 }

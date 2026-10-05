@@ -29,7 +29,7 @@ final class BooksController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $query = BooksListQuery::fromInput($context->request->query, $userId);
-        $paginatedList = $this->booksService->getList($query);
+        $paginatedList = $this->booksService->getListWithContext($query);
         return $this->jsonList($paginatedList->getArray(), [
                 'page' => $paginatedList->getPage(),
                 'pageSize' => $paginatedList->getPageSize(),

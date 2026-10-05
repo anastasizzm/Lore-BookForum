@@ -46,4 +46,20 @@ final readonly class Post extends Dto
 
     public function getCreatorId() : int {return $this->creatorId;}
     public function getPublicationId() : int {return $this->publicationId;}
+
+    public function toArray() : array
+    {
+        return [
+            'id' => $this->id,
+            'content' => $this->content,
+            'isActive' => $this->isActive,
+            'likesCount' => $this->likesCount,
+            'commentsCount' => $this->commentsCount,
+            'creatorId' => $this->creatorId,
+            'publicationId' => $this->publicationId,
+            'createdAt' => $this->createdAt,
+            'creator' => $this->creator,
+            'publication' => $this->publication,
+        ];
+    }
 }

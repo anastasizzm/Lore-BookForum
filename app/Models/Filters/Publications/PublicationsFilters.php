@@ -23,4 +23,13 @@ readonly class PublicationsFilters
             search: QueryParser::optionalString($q, 'q'),
         );
     }
+
+    public static function fromCreator(array $q, int $creatorId) : self 
+    {
+        return new self(
+            creatorId: $creatorId,
+            genreId: QueryParser::optionalPositiveInt($q, 'genre'),
+            search: QueryParser::optionalString($q, 'q'),
+        );
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\PostsRepository;
+use App\Services\Enrichers\PostContextEnricher;
 
 use App\Forms\Publications\PostForm;
 
@@ -14,6 +15,7 @@ use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Posts\Post;
 use App\Models\Enums\PostsSortBy;
 use App\Models\PaginatedList;
+use App\Models\UserContext\WithContext;
 
 use Throwable;
 use App\Exceptions\ValidationException;
@@ -23,10 +25,30 @@ final class PostsService
 {
     public function __construct(
         private readonly PostsRepository $postsRepo,
+        private readonly PostContextEnricher $enricher,
         private readonly PostExceptionTranslator $translator
     ){}
 
     public function getList(PostsListQuery $query) : PaginatedList
+    {
+        $items = $this->getRawList($query);
+        return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function getListWithContext(PostsListQuery $query, int $currentUserId) : PaginatedList 
+    {
+        $items = $this->getRawList($query);
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
+        $enriched = $this->enricher->enrich(
+            $items,
+            $currentUserId
+        );
+
+        return PaginatedList::fromArray($enriched, $page, $pageSize);
+    }
+
+    private function getRawList(PostsListQuery $query) : array
     {
         $errors = [];
         $isValid = $query->properties->validateForType(Post::class, $errors);
@@ -39,7 +61,7 @@ final class PostsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->postsRepo->getList(
+        return $this->postsRepo->getList(
             new PostsCriteria(
                 $page,
                 $pageSize,
@@ -48,8 +70,6 @@ final class PostsService
             ),
             $query->properties->getProps()
         );
-
-        return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
     public function setLike(

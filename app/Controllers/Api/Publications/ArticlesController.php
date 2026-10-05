@@ -29,7 +29,7 @@ final class ArticlesController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $query = ArticlesListQuery::fromInput($context->request->query, $userId);
-        $paginatedList = $this->articlesService->getList($query);
+        $paginatedList = $this->articlesService->getListWithContext($query);
         return $this->jsonList($paginatedList->getArray(), [
                 'page' => $paginatedList->getPage(),
                 'pageSize' => $paginatedList->getPageSize(),
