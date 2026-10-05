@@ -15,7 +15,23 @@
  * не ловить "Object of class BasicModel could not be converted to string".
  */
 
-$book = $book ?? null;
+/**
+ * Контроллер отдаёт 'wrapper' => WithContext<Book, PublicationContext>
+ * (BooksController::retrieve): item — сама книга, context — данные текущего
+ * юзера (isSaved / isEditor / readingStatus). Старое имя 'book' поддерживаем.
+ */
+$wrapper   = $wrapper ?? null;
+$book      = $book ?? null;
+$readerCtx = null;
+
+if ($book === null && $wrapper !== null) {
+    if ($wrapper instanceof \App\Models\UserContext\WithContext) {
+        $book      = $wrapper->item;
+        $readerCtx = $wrapper->context;
+    } else {
+        $book = $wrapper;
+    }
+}
 if ($book === null) {
     return;
 }
@@ -37,8 +53,11 @@ $str = static function ($v): string {
 
 $publicationId = (int)    ($book->id ?? 0);
 $bookId        = (int)    ($book->id ?? 0);
-$isSaved       = (bool)   ($book->isSaved       ?? false);
-$readingStatus = (string) ($book->readingStatus ?? 'new');
+// isSaved / readingStatus живут в контексте юзера (PublicationContext), а не в модели
+$readingMap  = ['none' => 'new', 'reading' => 'in_progress', 'ended' => 'finished'];
+$statusRaw   = $readerCtx?->readingStatus?->value ?? $book->readingStatus ?? 'new';
+$isSaved       = (bool)   ($readerCtx?->isSaved ?? $book->isSaved ?? false);
+$readingStatus = (string) ($readingMap[$statusRaw] ?? $statusRaw);
 $savesCount    = (int)    ($book->savedCount    ?? 0);
 
 // rating_avg в БД хранится умноженным на 10 (46 -> 4.6)

@@ -15,7 +15,23 @@
  * к строке через хелпер $str.
  */
 
-$article = $article ?? null;
+/**
+ * Контроллер отдаёт 'wrapper' => WithContext<Article, PublicationContext>
+ * (ArticlesController::retrieve): item — сама статья, context — данные текущего
+ * юзера (isSaved / isEditor / ...). Старое имя 'article' поддерживаем.
+ */
+$wrapper   = $wrapper ?? null;
+$article   = $article ?? null;
+$readerCtx = null;
+
+if ($article === null && $wrapper !== null) {
+    if ($wrapper instanceof \App\Models\UserContext\WithContext) {
+        $article   = $wrapper->item;
+        $readerCtx = $wrapper->context;
+    } else {
+        $article = $wrapper;
+    }
+}
 if ($article === null) {
     return;
 }
@@ -38,7 +54,8 @@ $str = static function ($v): string {
 
 $publicationId = (int)  ($article->id ?? 0);
 $articleId     = (int)  ($article->id ?? 0);
-$isSaved       = (bool) ($article->isSaved    ?? false);
+// isSaved живёт в контексте юзера (PublicationContext), а не в модели
+$isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
 $savesCount    = (int)  ($article->savedCount ?? 0);
 
 // rating_avg в БД хранится умноженным на 10 (46 -> 4.6)
