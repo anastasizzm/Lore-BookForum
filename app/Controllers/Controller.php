@@ -42,12 +42,34 @@ abstract class Controller
 
     protected function jsonList(array $items, array $meta = [], int $statusCode = 200) : Response
     {
-        return Response::json(ResponseTemplates::list($items, $meta), $statusCode);
+        $list = array_map(
+                [self::class, 'serializeItem'],
+                is_array($items) ? $items : iterator_to_array($items),
+            );
+        return Response::json(ResponseTemplates::list($list, $meta), $statusCode);
     }
+
+    private static function serializeItem(mixed $item): mixed
+    {
+        if ($item instanceof WithContext) {
+            return $item->toArray();
+        }
+
+        if ($item instanceof JsonSerializable) {
+            return $item->jsonSerialize();
+        }
+
+        if (method_exists($item, 'toArray')) {
+            return $item->toArray();
+        }
+
+        return $item;
+    }   
 
     protected function jsonObject(object $obj, int $statusCode = 200) : Response
     {
-        return Response::json(ResponseTemplates::object($obj), $statusCode);
+        $item = self::serializeItem($obj);
+        return Response::json(ResponseTemplates::object($item), $statusCode);
     }
 
     protected function jsonCreatedId(mixed $id, int $statusCode = 201) : Response

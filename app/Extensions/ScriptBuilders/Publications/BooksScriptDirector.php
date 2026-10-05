@@ -46,7 +46,7 @@ final class BooksScriptDirector extends PublicationsScriptDirector
     public function addIsbnTempFilter(string $isbn) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("books.isbn ILIKE :isbn", [':isbn' => ScriptParam::asStr($isbn)]);
+        $this->tempBuilder->addWhere("books.isbn ILIKE :isbn", [':isbn' => ScriptParam::asStr($isbn . '%')]);
         return $this;
     }
 

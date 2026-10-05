@@ -23,7 +23,7 @@ use App\Constants;
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
 
-use App\Models\InnerMessage;
+use App\Models\Errors\InnerMessage;
 
 use App\Services\Users\UsersService;
 

@@ -8,7 +8,7 @@ use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
 use App\Models\BasicModel;
 
-final readonly class Book extends PublicationExtended
+readonly class Book extends PublicationExtended
 {
     public function __construct(
         int $id,
@@ -78,4 +78,16 @@ final readonly class Book extends PublicationExtended
     }
 
     public function getCategoryId() { return $this->categoryId; }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'category' => $this->category,
+            'publisher' => $this->publisher,
+            'pagesCount' => $this->pagesCount,
+            'isbn' => $this->isbn,
+            'contentId' => $this->contentId
+        ];
+    }
 }

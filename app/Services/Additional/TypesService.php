@@ -22,7 +22,7 @@ final class TypesService
 
         $sortEnum = $query->sort->hasData() 
             ? EnumExtensions::tryResolve(BasicModelSortBy::class, $query->sort->sortString()) 
-            : BasicModelSortBy::Newest;
+            : BasicModelSortBy::Alphabet;
 
         $items = $this->typesRepo->getList(
             $page, 

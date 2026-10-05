@@ -8,7 +8,6 @@ use App\Controllers\Controller;
 use App\Services\Users\UsersService;
 use App\Services\Publications\PostsService;
 
-
 use App\Http\HttpContext;
 use App\Http\Response;
 
@@ -43,7 +42,7 @@ final class FeedController extends Controller
                 properties: PropertiesQuery::fromRaw("creator+publication"),
                 filters: PostsFilters::fromInput($q),
             );
-            $paginatedList = $this->postsService->getList($query);
+            $paginatedList = $this->postsService->getListWithContext($query, $userId);
             return $this->render('feed/feed-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
