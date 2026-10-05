@@ -73,7 +73,7 @@ final class ArticlesService
             : new UserRelationCriteria(
                 $query->userFilters->viewerId,
                 $query->userFilters->status->hasData() 
-                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->status->status())
+                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->userFilters->status->status())
                     : ReadingStatus::None,
                 $query->userFilters->savedOnly,
             );

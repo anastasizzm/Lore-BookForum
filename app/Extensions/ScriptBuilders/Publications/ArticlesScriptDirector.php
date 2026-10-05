@@ -46,7 +46,7 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
     public function addDoiTempFilter(string $doi) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("articles.doi ILIKE :doi", [':doi' => ScriptParam::asStr($doi)]);
+        $this->tempBuilder->addWhere("articles.doi ILIKE :doi", [':doi' => ScriptParam::asStr($doi . '%')]);
         return $this;
     }
 
