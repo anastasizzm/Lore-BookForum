@@ -3,68 +3,99 @@
  * article-details — страница статьи (по аналогии с book/book-details.php).
  *
  * Ожидаемые переменные от контроллера:
- *   $article  — ['id','publicationId','cover','title','author','createdAt','genre',
- *                'doi' (string|null), 'type' ('content'|'book'),
- *                'bookTitle','pageStart','pageEnd',
- *                'annotation' (= publications.description), 'authorNote',
- *                'content' (текст статьи, для type='book' — null),
- *                'rating' (float 0-5), 'savesCount', 'isSaved']
+ *   $article — объект App\Models\Publications\Article
  *   $comments — массив постов (те же поля, что в feed-list.php)
  *
- * DEV: пока нет контроллера страницы, всё рендерится с заглушками;
- *      id можно передать в адресе — ?article=<id>&pub=<id>.
+ * Поля, которых может не быть в модели (annotation, authorNote, content, doi, bookTitle,
+ * pageStart, pageEnd, rating, savesCount, isSaved), читаются через ?? — чтобы страница
+ * не падала. Объекты (genre, creator, type) приводятся к строке через хелпер $str.
  */
-$article = $article ?? [
-    'id'            => 1,
-    'publicationId' => 1,
-    'cover'         => '/img/book-placeholder.svg',
-    'title'         => 'Notes on the Craft of Worldbuilding',
-    'author'        => 'Name Surname',
-    'createdAt'     => '10.09.2026',
-    'genre'         => 'Art',
-    'doi'           => '10.1234/lore.2026.0042',
-    'type'          => 'content',          // content | book
-    'bookTitle'     => '',
-    'pageStart'     => null,
-    'pageEnd'       => null,
-    'annotation'    => "Every world begins as a question: what do people here believe, and what do they refuse to discuss?\nThis essay breaks worldbuilding into three layers — geography, institutions and everyday habits — and shows how a detail from any layer makes the other two believable. Practical advice for authors, editors and game designers.",
-    'authorNote'    => 'A shorter version of this article was presented at the Lore conference in May.',
-    'content'       => "Start with the constraint, not with the map.\nA world becomes believable the moment its inhabitants can't have everything they want: a river that floods every spring, a law nobody dares to break, a spice that only grows on one island. Constraints create routine, routine creates culture.\n\nThe second step is inheritance. Ask what the previous generation handed down — a debt, a ruin, a recipe, a grudge — and you get history without writing a chronicle.\n\nThe last step is friction between layers. Geography should contradict institutions, institutions should contradict beliefs, and everyday habits should be the small compromises people invent to live with both.",
-    'rating'        => 4.6,
-    'savesCount'    => 121,
-    'isSaved'       => false,
-];
 
-$comments = $comments ?? [
-    [
-        'userInitials' => 'SN',
-        'userName'     => 'sername',
-        'userAvatar'   => null,
-        'date'         => '10.09.2026',
-        'text'         => 'The part about friction between layers finally made my outline click. Thanks!',
-        'likes'        => 0,
-        'comments'     => 0,
-    ],
-];
-
-/** id публикации — для формы комментария (POST /api/posts). */
-$publicationId = (int) ($article['publicationId'] ?? 0);
-if ($publicationId === 0) {
-    $publicationId = (int) ($_GET['pub'] ?? 0);
+$article = $article ?? null;
+if ($article === null) {
+    return;
 }
 
-/** id статьи (articles.id) — для кнопки Save (POST/DELETE /api/articles/{id}/save). */
-$articleId = (int) ($article['id'] ?? 0);
-if ($articleId === 0) {
-    $articleId = (int) ($_GET['article'] ?? 0);
-}
-$isSaved = (bool) ($article['isSaved'] ?? false);
+/* ---------- Универсальное приведение к строке ---------- */
+$str = static function ($v): string {
+    if ($v === null) return '';
+    if (is_string($v)) return $v;
+    if (is_scalar($v)) return (string) $v;
+    if ($v instanceof \BackedEnum) return (string) $v->value;
+    if (is_object($v)) {
+        if (method_exists($v, '__toString')) return (string) $v;
+        if (isset($v->title)) return (string) $v->title;
+        if (isset($v->name))  return (string) $v->name;
+    }
+    return '';
+};
 
-/** Тип статьи: content — собственный текст, book — отрывок из книги. */
-$isBookExcerpt = ($article['type'] ?? 'content') === 'book';
+/* ---------- Скалярные значения ---------- */
 
-$rating  = (float) ($article['rating'] ?? 0);
+$publicationId = (int)  ($article->id ?? 0);
+$articleId     = (int)  ($article->id ?? 0);
+$isSaved       = (bool) ($article->isSaved    ?? false);
+$rating        = (float)($article->rating     ?? 0);
+$savesCount    = (int)  ($article->savesCount ?? 0);
+
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
+
+/* ---------- Даты ---------- */
+
+$createdAt = '';
+if (($article->createdAt ?? null) instanceof \DateTimeInterface) {
+    $createdAt = $article->createdAt->format('d.m.Y');
+} elseif (is_string($article->createdAt ?? null)) {
+    $createdAt = $article->createdAt;
+}
+
+/* ---------- Автор ---------- */
+
+$authorName = '';
+if (($article->creator ?? null) !== null) {
+    $authorName = trim(($article->creator->name ?? '') . ' ' . ($article->creator->surname ?? ''));
+    if ($authorName === '') {
+        $authorName = (string) ($article->creator->username ?? '');
+    }
+}
+
+/* ---------- Жанр / DOI ---------- */
+
+$genreTitle = $str($article->genre ?? null);
+$doi        = $str($article->doi   ?? null);
+
+/* ---------- Тип статьи ---------- */
+// type может быть: BackedEnum, BasicModel (объект с ->title) или строкой
+$typeRaw = $article->type ?? 'content';
+if ($typeRaw instanceof \BackedEnum) {
+    $typeRaw = $typeRaw->value;
+}
+$type          = strtolower($str($typeRaw));
+$isBookExcerpt = $type === 'article';
+
+/* ---------- Аннотация / заметка / контент ---------- */
+
+$annotation = $str($article->annotation ?? null);
+$authorNote = $str($article->authorNote ?? null);
+$content    = $str($article->content    ?? null);
+
+/* ---------- Книга-источник (для type='book') ---------- */
+
+$bookTitle = $str($article->bookTitle ?? null);
+
+$pageStart = $article->pageStart ?? null;
+$pageEnd   = $article->pageEnd   ?? ($pageStart ?? null);
+
+/* ---------- Обложка ---------- */
+
+$coverUrl = '/img/book-placeholder.svg';
+if (!empty($article->iconId)) {
+    if ($article->iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $article->iconId;
+    } elseif (is_string($article->iconId)) {
+        $coverUrl = '/uploads/covers/' . $article->iconId;
+    }
+}
 ?>
 <?php $view->extends('main'); ?>
 
@@ -85,16 +116,15 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
   <div class="book-details">
     <div class="book-details__cover-col">
       <div class="book-details__cover">
-        <img src="<?= $view->e($article['cover']) ?>" alt="<?= $view->e($article['title']) ?>">
+        <img src="<?= $view->e($coverUrl) ?>" alt="<?= $view->e($article->title ?? '') ?>">
       </div>
 
-      <!-- Кнопки под обложкой (растянуты по ширине) -->
       <div class="book-actions">
-        <!-- Закладка: POST/DELETE /api/articles/{id}/save (обработчик в app.js) -->
         <button type="button"
                 class="btn-icon btn-icon--circle<?= $isSaved ? ' is-active' : '' ?>"
                 data-save-article
                 data-article-id="<?= $articleId ?>"
+                data-save-url="/api/articles/<?= $articleId ?>/save"
                 aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
                 aria-label="<?= $isSaved ? 'Remove from saved' : 'Save article' ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -102,12 +132,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           </svg>
         </button>
         <a class="btn btn--primary btn--pill"
-           href="<?= $isBookExcerpt && !empty($article['bookTitle']) ? '#' : '#annotation' ?>">
+           href="<?= $isBookExcerpt && $bookTitle !== '' ? '#' : '#annotation' ?>">
           <?= $isBookExcerpt ? 'Open book' : 'Read article' ?>
         </a>
       </div>
 
-      <!-- Блок рейтинга и сохранений -->
       <div class="book-rating">
         <div class="book-rating__group">
           <span class="book-rating__stars"
@@ -122,11 +151,10 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H10C10.5523 1 11 1.44772 11 2V14.5273C11 14.928 10.5574 15.1704 10.2039 14.9631L6 12.5L1.79612 14.9631C1.44265 15.1704 1 14.928 1 14.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
-          <span data-saves-count><?= (int) $article['savesCount'] ?></span>
+          <span data-saves-count><?= $savesCount ?></span>
         </span>
       </div>
 
-      <!-- Оценка пользователя -->
       <div class="rate" data-rate role="radiogroup" aria-label="Rate this article">
         <span class="rate__label">Click to Rate:</span>
         <div class="rate__stars">
@@ -138,7 +166,7 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                     aria-checked="false"
                     aria-label="<?= $i ?> out of 5">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12.5 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
+                <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
               </svg>
             </button>
           <?php endfor; ?>
@@ -146,24 +174,25 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
       </div>
     </div>
 
-    <!-- Инфо-карточка статьи -->
     <div class="card-base info-box">
-      <h2 class="info-box__title"><?= $view->e($article['title']) ?></h2>
-      <p class="info-box__meta"><?= $view->e($article['author']) ?></p>
-      <p class="info-box__meta">Creation date: <?= $view->e($article['createdAt']) ?></p>
-      <p class="info-box__meta">Genre: <?= $view->e($article['genre']) ?></p>
+      <h2 class="info-box__title"><?= $view->e($article->title ?? '') ?></h2>
+      <p class="info-box__meta"><?= $view->e($authorName) ?></p>
+      <p class="info-box__meta">Creation date: <?= $view->e($createdAt) ?></p>
+      <?php if ($genreTitle !== ''): ?>
+        <p class="info-box__meta">Genre: <?= $view->e($genreTitle) ?></p>
+      <?php endif; ?>
 
-      <?php if (!empty($article['doi'])): ?>
-        <p class="info-box__meta">DOI: <?= $view->e($article['doi']) ?></p>
+      <?php if ($doi !== ''): ?>
+        <p class="info-box__meta">DOI: <?= $view->e($doi) ?></p>
       <?php endif; ?>
 
       <?php if ($isBookExcerpt): ?>
         <p class="info-box__meta">Type: Article from the book</p>
-        <?php if (!empty($article['bookTitle'])): ?>
+        <?php if ($bookTitle !== ''): ?>
           <p class="info-box__meta">
-            Book: <?= $view->e($article['bookTitle']) ?>
-            <?php if (!empty($article['pageStart'])): ?>
-              (pp. <?= (int) $article['pageStart'] ?>–<?= (int) ($article['pageEnd'] ?? $article['pageStart']) ?>)
+            Book: <?= $view->e($bookTitle) ?>
+            <?php if (!empty($pageStart)): ?>
+              (pp. <?= (int) $pageStart ?>–<?= (int) $pageEnd ?>)
             <?php endif; ?>
           </p>
         <?php endif; ?>
@@ -183,12 +212,16 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
         ?>
 
         <div class="card-base book-tabs-panel__content" data-row="annotation">
-          <p class="info-box__body" id="annotation"><?= nl2br($view->e($article['annotation'])) ?></p>
+          <?php if ($annotation !== ''): ?>
+            <p class="info-box__body" id="annotation"><?= nl2br($view->e($annotation)) ?></p>
+          <?php else: ?>
+            <p class="info-box__body" id="annotation">Annotation is not available yet.</p>
+          <?php endif; ?>
 
-          <?php if (!empty($article['authorNote'])): ?>
+          <?php if ($authorNote !== ''): ?>
             <div class="book-tabs-panel__note">
               <strong>Author's Note:</strong><br>
-              <?= nl2br($view->e($article['authorNote'])) ?>
+              <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
         </div>
@@ -197,19 +230,19 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
           <?php if ($isBookExcerpt): ?>
             <p class="info-box__body">
               The full text is taken from the book
-              <strong><?= $view->e($article['bookTitle'] ?: 'Untitled') ?></strong><?php
-                if (!empty($article['pageStart'])):
-                  ?>, pages <?= (int) $article['pageStart'] ?>–<?= (int) ($article['pageEnd'] ?? $article['pageStart']) ?><?php
+              <strong><?= $view->e($bookTitle !== '' ? $bookTitle : 'Untitled') ?></strong><?php
+                if (!empty($pageStart)):
+                  ?>, pages <?= (int) $pageStart ?>–<?= (int) $pageEnd ?><?php
                 endif;
               ?>.
             </p>
             <!-- TODO: route for single book is not added yet -->
             <p><a class="link" href="#">Go to the book</a></p>
-          <?php elseif (empty($article['content'])): ?>
+          <?php elseif ($content === ''): ?>
             <p class="info-box__body">The article text is not available yet.</p>
           <?php else: ?>
             <div class="info-box__body article-content">
-              <?php foreach (preg_split('/\R{2,}/u', trim((string) $article['content']) ?: '') as $para): ?>
+              <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
                 <?php if (trim($para) === '') continue; ?>
                 <p><?= nl2br($view->e(trim($para))) ?></p>
               <?php endforeach; ?>
@@ -220,20 +253,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     </div>
   </div>
 
-  <!-- Блок комментариев -->
   <section class="comments-section">
     <h2 class="comments-section__title">
-      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments)) ?></span>
+      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments ?? [])) ?></span>
     </h2>
 
-    <!--
-      Форма написания комментария (стилизована как карточка).
-      Контракт: POST /api/posts, application/x-www-form-urlencoded
-        поля: content, publicationId, csrf-поле
-        успех: 201 {"createdId": N}
-        ошибка: не-201, JSON с errors / message
-      Отправку делает book.js (fetch).
-    -->
     <form class="comment-card" action="/api/posts" method="POST" data-comment-form novalidate>
       <?= $view->csrfField() ?>
       <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
@@ -257,8 +281,6 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
     <?php else: ?>
       <div class="stack">
         <?php foreach ($comments as $comment): ?>
-
-          <!-- Карточка комментария -->
           <div class="comment-card">
             <div class="comment-card__inner">
               <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
@@ -285,7 +307,6 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
                   </div>
                 </div>
 
-                <!-- Форма ответа -->
                 <form class="comment-reply-form" data-reply-form hidden>
                   <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
                   <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
@@ -299,13 +320,11 @@ $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
               </div>
             </div>
           </div>
-
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
   </section>
 
-  <!-- Шаблон нового ответа (клонируется из book.js) -->
   <template id="reply-template">
     <div class="comment-reply">
       <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
