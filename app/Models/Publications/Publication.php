@@ -45,4 +45,13 @@ readonly class Publication extends PublicationShort
 
     public function getCreatorId() { return $this->creatorId; }
     public function getGenreId() { return $this->genreId; }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'genre' => $this->genre,
+            'creator' => $this->creator
+        ];
+    }
 }

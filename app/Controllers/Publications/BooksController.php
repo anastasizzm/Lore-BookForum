@@ -51,7 +51,7 @@ final class BooksController extends Controller
                 userFilters: UserRelationFilters::fromAll($q, $userId)
             );
 
-            $paginatedList = $this->booksService->getList($query);
+            $paginatedList = $this->booksService->getListWithContext($query);
             return $this->render('library/library-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -90,7 +90,7 @@ final class BooksController extends Controller
                 userFilters: UserRelationFilters::fromSaved($q, $userId)
             );
 
-            $paginatedList = $this->booksService->getList($query);
+            $paginatedList = $this->booksService->getListWithContext($query);
             return $this->render('saved/saved-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -123,7 +123,7 @@ final class BooksController extends Controller
 
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $item = $this->booksService->retrieve($bookId, $propsQ);
+            $item = $this->booksService->retrieveWithContext($bookId, $propsQ, $userId);
             if ($item === null)
                 return $this->renderNotFound();
             

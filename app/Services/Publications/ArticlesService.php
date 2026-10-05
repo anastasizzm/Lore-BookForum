@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\ArticlesRepository;
+use App\Services\Enrichers\PublicationContextEnricher;
 
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
@@ -13,6 +14,7 @@ use App\Models\Queries\PropertiesQuery;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
+use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
@@ -30,19 +32,41 @@ final class ArticlesService
     public function __construct(
         private readonly ArticlesRepository $articlesRepo,
         private readonly ArticleExceptionTranslator $translator,
+        private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow
     ){}
 
     public function getList(ArticlesListQuery $query) : PaginatedList
+    {
+        $items = $this->getRawList($query);
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
+        return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function getListWithContext(ArticlesListQuery $query) : PaginatedList 
+    {
+        $items = $this->getRawList($query);
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
+        $enriched = $this->enricher->enrich(
+            $items,
+            $query->userFilters?->viewerId
+        );
+
+        return PaginatedList::fromArray($enriched, $page, $pageSize);
+    }
+
+    private function getRawList(ArticlesListQuery $query) : array
     {
         $errors = [];
         $isValid = $query->properties->validateForType(Publication::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
         $sortEnum = $query->sort->hasData()
-    ? (EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString())
-        ?? PublicationsSortBy::Newest)
-    : PublicationsSortBy::Newest;
+            ? (EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString())
+                ?? PublicationsSortBy::Newest)
+            : PublicationsSortBy::Newest;
         
         $userCriteria = $query->userFilters == NULL || $query->userFilters->isEmpty()
             ? NULL
@@ -53,14 +77,11 @@ final class ArticlesService
                     : ReadingStatus::None,
                 $query->userFilters->savedOnly,
             );
-
-        $page = $query->pagination->page();
-        $pageSize = $query->pagination->pageSize();
         
-        $items = $this->articlesRepo->getList(
+        return $this->articlesRepo->getList(
             new ArticlesCriteria(
-                $page,
-                $pageSize,
+                $query->pagination->page(),
+                $query->pagination->pageSize(),
                 $sortEnum,
                 $query->filters,
                 $userCriteria
@@ -78,6 +99,17 @@ final class ArticlesService
         if(!$isValid) throw new ValidationException($errors);
 
         return $this->articlesRepo->retrieve($articleId, $props->getProps());
+    }
+
+    public function retrieveWithContext(int $articleId, PropertiesQuery $props, int $currentUserId) : ?WithContext 
+    {
+        $item = $this->retrieve($articleId, $props);
+        if ($item === NULL) return NULL;
+
+        return $this->enricher->enrichOne(
+            $item,
+            $currentUserId
+        );
     }
 
     public function save(int $userId, int $articleId) : void

@@ -51,7 +51,7 @@ final class ArticlesController extends Controller
                 userFilters: UserRelationFilters::fromAll($q, $userId)
             );
 
-            $paginatedList = $this->articlesService->getList($query);
+            $paginatedList = $this->articlesService->getListWithContext($query);
             return $this->render('library/library-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -91,7 +91,7 @@ final class ArticlesController extends Controller
                 userFilters: UserRelationFilters::fromSaved($q, $userId)
             );
 
-            $paginatedList = $this->articlesService->getList($query);
+            $paginatedList = $this->articlesService->getListWithContext($query);
             return $this->render('saved/saved-list', [
                 'items' => $paginatedList->getArray(), 
                 'meta' => [
@@ -116,6 +116,7 @@ final class ArticlesController extends Controller
     public function retrieve(HttpContext $context, string $articleId)
     {
         $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
+        
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
@@ -124,7 +125,7 @@ final class ArticlesController extends Controller
 
         $userContext = $this->usersService->loadContext($userId);
         try{
-            $item = $this->articlesService->retrieve($articleId, $propsQ);
+            $item = $this->articlesService->retrieveWithContext($articleId, $propsQ, $userId);
             if ($item === null)
                 return $this->renderNotFound();
             

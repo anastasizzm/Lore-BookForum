@@ -31,4 +31,12 @@ readonly class PublicationShort extends BasicModel
             iconId: self::uuidN($row, $prefix . 'icon_id'),
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'iconId' => $this->iconId
+        ];
+    }
 }
