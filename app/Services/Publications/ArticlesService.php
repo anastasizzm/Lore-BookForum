@@ -40,8 +40,9 @@ final class ArticlesService
         if(!$isValid) throw new ValidationException($errors);
         
         $sortEnum = $query->sort->hasData()
-            ? EnumExtensions::tryResolve(PublicationsSortBy::class, $sort->sortString())
-            : PublicationsSortBy::Newest;
+    ? (EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString())
+        ?? PublicationsSortBy::Newest)
+    : PublicationsSortBy::Newest;
         
         $userCriteria = $query->userFilters == NULL || $query->userFilters->isEmpty()
             ? NULL

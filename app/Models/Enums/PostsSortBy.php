@@ -5,6 +5,6 @@ namespace App\Models\Enums;
 
 enum PostsSortBy : string
 {
-    case Popularity = 'populatiry';
+    case Popularity = 'popularity';
     case Newest = 'newest';
 }

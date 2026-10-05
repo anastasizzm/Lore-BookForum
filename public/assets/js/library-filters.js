@@ -11,12 +11,12 @@
     sort:   'sort',
     status: 'status',
     type:   'type',
-    props:  'props',
+    props:  'include',
   };
 
   // Значения совпадают с App\Models\Enums\*
   // (если бэк починит опечатки в enum — синхронизируй здесь)
-  const SORT_VALUES   = { newest: 'newest', popularity: 'populatiry', title: 'alpha' };
+  const SORT_VALUES   = { newest: 'newest', popularity: 'popularity', alpha: 'alpha' };
   const STATUS_VALUES = { reading: 'reading', finished: 'ended' };
 
   // Типы статей больше не маппятся — приходят из /api/additional/article-types
@@ -34,7 +34,7 @@
 
   // 'f' намеренно отсутствует: им управляет app.js
   const KEYS = ['genre', 'status', 'isbn', 'sort', 'kind', 'q'];
-  const DEFAULTS = { sort: 'popularity' }; // как на сервере по умолчанию
+  const DEFAULTS = { sort: 'newest' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
   let controller = null;
@@ -59,7 +59,7 @@
     const p = new URLSearchParams();
     const sortKey = state.sort ?? DEFAULTS.sort;
     p.set(PARAM.props, PROPS);
-    p.set(PARAM.sort, SORT_VALUES[sortKey] ?? sortKey);
+    p.set(PARAM.sort, sortKey);
     p.set(PARAM.page, String(page));
     if (state.q)      p.set(PARAM.q, state.q);
     if (state.genre)  p.set(PARAM.genre, state.genre);
@@ -167,6 +167,7 @@
 
   // ---------- loading ----------
   async function load({ append = false } = {}) {
+    console.log('load called, sort =', state.sort);
     controller?.abort();
     controller = new AbortController();
     if (!append) page = 1;
@@ -188,10 +189,16 @@
       if (append) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html;
 
-      shown = append ? shown + items.length : items.length;
+            shown = append ? shown + items.length : items.length;
       if (count) count.textContent = shown;
-      if (empty) empty.hidden = shown > 0;
+
+      if (empty) {
+        empty.hidden = shown > 0;
+        empty.style.display = shown > 0 ? 'none' : '';
+      }
       grid.hidden = shown === 0;
+      grid.style.display = shown === 0 ? 'none' : '';
+
       if (more) more.hidden = !meta.hasNext;
     } catch (e) {
       if (e.name !== 'AbortError') console.error('Library load failed', e);

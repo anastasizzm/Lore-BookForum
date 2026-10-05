@@ -306,11 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
           bubbles: true,
           detail: { id: id, saved: willSave }
         }));
-      } else {
+        } else {
         setState(btn, wasSaved, type);
         var msg = '';
         if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
         if (!msg && data && data.message) msg = data.message;
+        if (!msg && data && data.error && data.error.message) msg = data.error.message;
         if (!msg) {
           msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
               : res.status === 401 ? 'Please sign in again'

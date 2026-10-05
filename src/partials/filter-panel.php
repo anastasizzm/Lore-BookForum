@@ -45,11 +45,11 @@ $filter_open = $filter_open ?? false;
                  <?php endif; ?>>
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
-          <a class="filter-reset"
-             style="text-decoration:none"
-             href="<?= $view->e($control['href'] ?? '?') ?>">
-            &#10005; Reset
-          </a>
+        <button type="button"
+                class="filter-reset"
+                data-filter-reset>
+          &#10005; Reset
+        </button>
 
         <?php endif; ?>
 
