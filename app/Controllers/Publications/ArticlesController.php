@@ -130,7 +130,7 @@ final class ArticlesController extends Controller
                 return $this->renderNotFound();
             
             return $this->render('article/article-details', [
-                'article' => $item,
+                'wrapper' => $item,
                 'user' => $userContext
             ]);
         }
