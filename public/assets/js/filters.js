@@ -217,79 +217,120 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   }
 
   // ---------- ISBN ----------
+  //
+  // Формат приложения задан схемой БД и ошибкой бэкенда:
+  //   storage/db/schema.sql:  books.isbn ~ '^\d{3}-\d{1}-\d{3}-\d{5}-\d{1}$'
+  //   BookExceptionTranslator: "ISBN must match the format XXX-X-XXX-XXXXX-X"
+  // Поиск делает ILIKE isbn || '%', поэтому поле обязано собирать номер
+  // ровно в этом виде — иначе полный ISBN не находит ничего.
+  const ISBN_GROUPS = [3, 1, 3, 5, 1];                       // 978-0-306-40615-2
+  const ISBN_HINT = 'Format: 978-0-306-40615-2 (13 digits, 978/979)';
+  const DOI_HINT = 'Format: 10.5555/123456';
 
-  const is13 = (c) => /^97[89]/.test(c);
-
-  // Keeps digits; 'X' only as the 10th char of an ISBN-10
+  // Только цифры: колонка хранит \d и дефисы, ISBN-10 (и «X») не сохраняются
   function isbnClean(raw) {
     let out = '';
-    const src = String(raw).toUpperCase();
-    for (let i = 0; i < src.length; i++) {
+    const src = String(raw);
+    for (let i = 0; i < src.length && out.length < 13; i++) {
       const ch = src[i];
-      if (out.endsWith('X')) break;
       if (ch >= '0' && ch <= '9') out += ch;
-      else if (ch === 'X' && out.length === 9 && !is13(out)) out += ch;
     }
-    return out.slice(0, 13);
+    return out;
   }
 
-  function isbnGroups(c) {
-    if (is13(c)) return [3, 1, 2, 6, 1];          // 978-3-16-148410-0
-    if (c === '9' || c === '97') return [2];       // can still become 978/979
-    return [1, 3, 5, 1];                           // 0-306-40615-2
-  }
-
+  // Дефис встаёт, как только набрана следующая группа: 978-0-306-40615-2
   function isbnFormat(c) {
-    const groups = isbnGroups(c);
     const parts = [];
     let i = 0;
-    for (let g = 0; g < groups.length && i < c.length; g++) {
-      parts.push(c.slice(i, i + groups[g]));
-      i += groups[g];
+    for (let g = 0; g < ISBN_GROUPS.length && i < c.length; g++) {
+      parts.push(c.slice(i, i + ISBN_GROUPS[g]));
+      i += ISBN_GROUPS[g];
     }
     if (i < c.length) parts.push(c.slice(i));
     return parts.join('-');
   }
 
+  // В БД попадают только 978/979 — остальное не группируем, а показываем ошибку
+  function isbnShapeOk(c) {
+    return c.length <= 3 || /^97[89]/.test(c);
+  }
+
   function isbnChecksumOk(c) {
+    if (c.length !== 13) return true;                        // номер ещё набирается
     let sum = 0;
-    if (c.length === 13) {
-      for (let i = 0; i < 12; i++) sum += Number(c[i]) * (i % 2 ? 3 : 1);
-      return (10 - (sum % 10)) % 10 === Number(c[12]);
-    }
-    if (c.length === 10 && !is13(c)) {
-      for (let i = 0; i < 9; i++) sum += Number(c[i]) * (10 - i);
-      sum += c[9] === 'X' ? 10 : Number(c[9]);
-      return sum % 11 === 0;
-    }
-    return true; // partial value — nothing to check yet
+    for (let i = 0; i < 12; i++) sum += Number(c[i]) * (i % 2 ? 3 : 1);
+    return (10 - (sum % 10)) % 10 === Number(c[12]);
   }
 
   function isbnValidate(value) {
     const c = isbnClean(value);
     if (c === '') return { msg: '', blocking: false };
+    if (!isbnShapeOk(c)) {
+      return {
+        msg: 'ISBN must be 13 digits starting with 978 or 979 — ' + ISBN_HINT,
+        blocking: true,
+      };
+    }
+    if (c.length < 13) return { msg: '', blocking: false };
     if (!isbnChecksumOk(c)) {
-      return { msg: 'ISBN check digit does not match', blocking: STRICT_ISBN_CHECKSUM };
+      // STRICT_ISBN_CHECKSUM = false — предупреждение, поиск всё равно уйдёт
+      // (в сиде контрольные разряды случайные, искать по ним всё равно нужно)
+      return {
+        msg: 'ISBN check digit does not match (search still runs)',
+        blocking: STRICT_ISBN_CHECKSUM,
+      };
     }
     return { msg: '', blocking: false };
   }
 
   // ---------- DOI ----------
 
+  // Разбирает вставку из ссылки или цитаты:
+  // "https://doi.org/10.5555/1", "doi:10.5555/1", кавычки, пробелы, «.» в конце.
+  // Точку в конце убираем только у готового DOI — иначе «10.» при наборе
+  // превратится в «1» и точку придётся набирать заново.
+  function doiNormalize(raw) {
+    let v = String(raw).trim();
+    v = v.replace(/^["'«»“”‘’]+|["'«»“”‘’]+$/g, '');
+    v = v.replace(/^doi:\s*/i, '');
+    v = v.replace(/^(?:https?:\/\/)?(?:dx\.)?doi\.org\//i, '');
+    v = v.replace(/\s+/g, '');
+    if (v.indexOf('/') !== -1) v = v.replace(/[.,;]+$/, '');
+    return v;
+  }
+
   function doiFormat(raw) {
-    let v = String(raw).replace(/\s+/g, '');
-    if (/^10\d/.test(v)) v = '10.' + v.slice(2);                 // 101 -> 10.1
-    const m = /^10\.(\d{4,9})([^\d/].*)$/.exec(v);               // 10.1000x -> 10.1000/x
-    if (m) v = '10.' + m[1] + '/' + m[2];
+    let v = doiNormalize(raw);
+    if (/^10\d/.test(v)) v = '10.' + v.slice(2);             // 105555 -> 10.5555
     return v.slice(0, 200);
   }
 
+  // Схема БД: articles.doi ~ '^10\.\d+\/\d+$', ошибка бэкенда:
+  // "DOI must match the format 10.XXXX/YYYY" — префикс из цифр,
+  // цифровой суффикс. Поле — фильтр поиска, поэтому частичный ввод
+  // (10.5555, 10.5555/) тоже валиден: он находится как префикс.
   function doiValidate(value) {
     if (value === '') return { msg: '', blocking: false };
-    const ok = /^(1|10|10\.\d{0,9}|10\.\d{4,9}\/\S*)$/.test(value);
-    return ok
-      ? { msg: '', blocking: false }
-      : { msg: 'DOI must look like 10.1000/abc (4–9 digits after "10.")', blocking: true };
+
+    // Префикс набирается: 1 -> 10 -> 10. -> 10.5555
+    if (value === '1' || value === '10' || value === '10.') return { msg: '', blocking: false };
+    if (/^10\.\d{1,7}$/.test(value)) return { msg: '', blocking: false };
+
+    // Восемь и более цифр без «/» — суффикс забыли набрать
+    if (/^10\.\d{8,}$/.test(value)) {
+      return { msg: 'DOI is missing "/" after the prefix — ' + DOI_HINT, blocking: true };
+    }
+
+    // Суффикс набирается и готовое значение: 10.5555/123456
+    if (/^10\.\d+\/\d*$/.test(value)) return { msg: '', blocking: false };
+
+    if (/^10\.\d+\//.test(value)) {
+      return { msg: 'DOI suffix must be digits — ' + DOI_HINT, blocking: true };
+    }
+    if (/^10\./.test(value)) {
+      return { msg: 'DOI prefix must be digits after "10." — ' + DOI_HINT, blocking: true };
+    }
+    return { msg: 'DOI must start with "10." — ' + DOI_HINT, blocking: true };
   }
 
   // ---------- caret helpers ----------
@@ -311,10 +352,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const kind = inp.dataset.format;
     const isIsbn = kind === 'isbn';
     const validate = isIsbn ? isbnValidate : doiValidate;
+    const hint = isIsbn ? ISBN_HINT : DOI_HINT;
 
     function format(raw, caretPos) {
       if (isIsbn) {
-        const formatted = isbnFormat(isbnClean(raw));
+        const c = isbnClean(raw);
+        // Не 978/979 — расставлять дефисы некуда: оставляем как есть,
+        // ошибку покажет isbnValidate (иначе получается чужой формат)
+        const formatted = isbnShapeOk(c) ? isbnFormat(c) : c;
         const sig = caretPos == null ? null : isbnClean(raw.slice(0, caretPos)).length;
         return { formatted, caret: sig == null ? formatted.length : caretFromSig(formatted, sig) };
       }
@@ -328,9 +373,13 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     function showState() {
       const r = validate(inp.value);
-      inp.classList.toggle('is-invalid', !!r.msg);
-      inp.setAttribute('aria-invalid', r.msg ? 'true' : 'false');
-      inp.title = r.msg;
+      const hasMsg = !!r.msg;
+      // Красным — только то, что блокирует поиск; предупреждение
+      // (контрольный разряд) показываем янтарным, поиск продолжает работать
+      inp.classList.toggle('is-invalid', hasMsg && r.blocking);
+      inp.classList.toggle('is-warning', hasMsg && !r.blocking);
+      inp.setAttribute('aria-invalid', hasMsg && r.blocking ? 'true' : 'false');
+      inp.title = r.msg || hint;   // пока ошибки нет — подсказка с верным форматом
       return r;
     }
 

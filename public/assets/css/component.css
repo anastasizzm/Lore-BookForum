@@ -897,6 +897,20 @@ textarea.form-field__input {
   border-color: var(--color-primary);
 }
 
+/* ISBN/DOI: is-invalid — ошибка, которая блокирует поиск (красный),
+   is-warning — предупреждение, поиск продолжит работать (янтарный) */
+.filter-input.is-invalid {
+  border-color: var(--color-error);
+}
+
+.filter-input.is-invalid:focus-visible {
+  border-color: var(--color-error);
+}
+
+.filter-input.is-warning {
+  border-color: var(--color-warning);
+}
+
 .filter-reset {
   margin-left: auto;
   display: inline-flex;

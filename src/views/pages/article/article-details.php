@@ -4,14 +4,34 @@
  *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
- *   $comments — массив постов (те же поля, что в feed-list.php)
+ *   $comments — массив постов (те же поля, что в feed-list.php);
+ *               контроллер его НЕ передаёт — book.js подгружает комментарии
+ *               сам из GET /api/posts?publication={id}&include=creator (P0-5)
+ *   $user    — App\Models\Users\UserContext текущего пользователя
+ *              (имя/инициалы/аватар в форме комментария и в шаблоне ответа)
  *
- * Поля, которых может не быть в модели (annotation, authorNote, content, doi, bookTitle,
- * pageStart, pageEnd, rating, savesCount, isSaved), читаются через ?? — чтобы страница
- * не падала. Объекты (genre, creator, type) приводятся к строке через хелпер $str.
+ * Поля, которых может не быть в модели (rating, savesCount, isSaved), читаются
+ * через ?? — чтобы страница не падала. Объекты (genre, creator, book) приводятся
+ * к строке через хелпер $str.
  */
 
-$article = $article ?? null;
+/**
+ * Контроллер отдаёт 'wrapper' => WithContext<Article, PublicationContext>
+ * (ArticlesController::retrieve): item — сама статья, context — данные текущего
+ * юзера (isSaved / isEditor / ...). Старое имя 'article' поддерживаем.
+ */
+$wrapper   = $wrapper ?? null;
+$article   = $article ?? null;
+$readerCtx = null;
+
+if ($article === null && $wrapper !== null) {
+    if ($wrapper instanceof \App\Models\UserContext\WithContext) {
+        $article   = $wrapper->item;
+        $readerCtx = $wrapper->context;
+    } else {
+        $article = $wrapper;
+    }
+}
 if ($article === null) {
     return;
 }
@@ -34,9 +54,15 @@ $str = static function ($v): string {
 
 $publicationId = (int)  ($article->id ?? 0);
 $articleId     = (int)  ($article->id ?? 0);
-$isSaved       = (bool) ($article->isSaved    ?? false);
-$rating        = (float)($article->rating     ?? 0);
-$savesCount    = (int)  ($article->savesCount ?? 0);
+// isSaved живёт в контексте юзера (PublicationContext), а не в модели
+$isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
+$savesCount    = (int)  ($article->savedCount ?? 0);
+
+// rating_avg в БД хранится умноженным на 10 (46 -> 4.6)
+$rating = (float) ($article->rating ?? 0);
+if ($rating > 5) {
+    $rating /= 10;
+}
 
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
@@ -64,27 +90,58 @@ if (($article->creator ?? null) !== null) {
 $genreTitle = $str($article->genre ?? null);
 $doi        = $str($article->doi   ?? null);
 
-/* ---------- Тип статьи ---------- */
-// type может быть: BackedEnum, BasicModel (объект с ->title) или строкой
-$typeRaw = $article->type ?? 'content';
-if ($typeRaw instanceof \BackedEnum) {
-    $typeRaw = $typeRaw->value;
-}
-$type          = strtolower($str($typeRaw));
-$isBookExcerpt = $type === 'article';
+/* ---------- Тип статьи / книга-источник ---------- */
+/**
+ * Структурный тип лежит в contentData, а не в ->type (->type — это «жанр» статьи
+ * из таблицы types: Article / Review / …). Отрывок из книги = contentData
+ * содержит bookData — отсюда же берём id книги для ссылки «Open book» (P1-6).
+ */
+$contentData = $article->contentData ?? null;
+$bookData    = $contentData?->getBookData();
+$bookId      = (int) ($bookData?->bookId ?? 0);
+$isBookExcerpt = $bookData !== null;
 
 /* ---------- Аннотация / заметка / контент ---------- */
+// В модели поля называются description / authorNotes (не annotation / authorNote).
 
-$annotation = $str($article->annotation ?? null);
-$authorNote = $str($article->authorNote ?? null);
-$content    = $str($article->content    ?? null);
+$annotation = (string) ($article->description ?? '');
+$authorNote = (string) ($article->authorNotes ?? '');
+$content    = (string) ($contentData?->getContent() ?? '');
 
-/* ---------- Книга-источник (для type='book') ---------- */
+/* ---------- Книга-источник (для отрывка) ---------- */
 
-$bookTitle = $str($article->bookTitle ?? null);
+$bookTitle = $str($bookData?->book ?? null);
 
-$pageStart = $article->pageStart ?? null;
-$pageEnd   = $article->pageEnd   ?? ($pageStart ?? null);
+$pageStart = $bookData?->pageStart ?? null;
+$pageEnd   = $bookData?->pageEnd   ?? ($pageStart ?? null);
+
+/* ---------- Комментарии ---------- */
+/**
+ * Список комментариев контроллер не передаёт (P0-5): book.js подгружает их
+ * сам из GET /api/posts?publication={id}&include=creator.
+ */
+$comments      = $comments ?? [];
+$totalComments = (int) ($totalComments ?? ($article->commentsCount ?? count($comments)));
+
+/* ---------- Текущий пользователь (форма комментария + шаблон ответа) ---------- */
+
+$me         = $user ?? null;
+$meName     = trim(($me->name ?? '') . ' ' . ($me->surname ?? ''));
+if ($meName === '') {
+    $meName = (string) ($me->username ?? '');
+}
+if ($meName === '') {
+    $meName = 'sername'; // последний запасной вариант
+}
+$meParts    = preg_split('/\s+/u', $meName, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+$meInitials = mb_strtoupper(mb_substr($meParts[0] ?? 'm', 0, 1) . mb_substr($meParts[1] ?? '', 0, 1));
+if ($meInitials === '') {
+    $meInitials = 'ME';
+}
+$meAvatarRaw = (string) ($me->avatar ?? '');
+$meAvatar    = ($meAvatarRaw !== '' && $meAvatarRaw !== 'default')
+    ? '/uploads/avatars/' . $meAvatarRaw
+    : null;
 
 /* ---------- Обложка ---------- */
 
@@ -116,7 +173,9 @@ if (!empty($article->iconId)) {
   <div class="book-details">
     <div class="book-details__cover-col">
       <div class="book-details__cover">
-        <img src="<?= $view->e($coverUrl) ?>" alt="<?= $view->e($article->title ?? '') ?>">
+        <img src="<?= $view->e($coverUrl) ?>"
+             alt="<?= $view->e($article->title ?? '') ?>"
+             onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
       </div>
 
       <div class="book-actions">
@@ -131,8 +190,13 @@ if (!empty($article->iconId)) {
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
         </button>
-        <a class="btn btn--primary btn--pill"
-           href="<?= $isBookExcerpt && $bookTitle !== '' ? '#' : '#annotation' ?>">
+        <?php
+          // P1-6: «Open book» ведёт на страницу книги, а не на «#»
+          $bookHref = ($isBookExcerpt && $bookId > 0)
+              ? '/books/' . $bookId
+              : '#annotation';
+        ?>
+        <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
           <?= $isBookExcerpt ? 'Open book' : 'Read article' ?>
         </a>
       </div>
@@ -182,10 +246,6 @@ if (!empty($article->iconId)) {
         <p class="info-box__meta">Genre: <?= $view->e($genreTitle) ?></p>
       <?php endif; ?>
 
-      <?php if ($doi !== ''): ?>
-        <p class="info-box__meta">DOI: <?= $view->e($doi) ?></p>
-      <?php endif; ?>
-
       <?php if ($isBookExcerpt): ?>
         <p class="info-box__meta">Type: Article from the book</p>
         <?php if ($bookTitle !== ''): ?>
@@ -198,6 +258,11 @@ if (!empty($article->iconId)) {
         <?php endif; ?>
       <?php else: ?>
         <p class="info-box__meta">Type: Standalone article</p>
+      <?php endif; ?>
+
+      <?php /* P0-3: Type идёт выше DOI — как в макете */ ?>
+      <?php if ($doi !== ''): ?>
+        <p class="info-box__meta">DOI: <?= $view->e($doi) ?></p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
@@ -236,8 +301,8 @@ if (!empty($article->iconId)) {
                 endif;
               ?>.
             </p>
-            <!-- TODO: route for single book is not added yet -->
-            <p><a class="link" href="#">Go to the book</a></p>
+            <!-- P1-6: ссылка ведёт на страницу книги -->
+            <p><a class="link" href="<?= $view->e($bookId > 0 ? '/books/' . $bookId : '#') ?>">Go to the book</a></p>
           <?php elseif ($content === ''): ?>
             <p class="info-box__body">The article text is not available yet.</p>
           <?php else: ?>
@@ -253,21 +318,39 @@ if (!empty($article->iconId)) {
     </div>
   </div>
 
-  <section class="comments-section">
+  <!-- Блок комментариев -->
+  <section class="comments-section" data-comments data-publication-id="<?= (int) $publicationId ?>">
     <h2 class="comments-section__title">
-      Comments: <span data-comments-count><?= (int) ($totalComments ?? count($comments ?? [])) ?></span>
+      Comments: <span data-comments-count><?= (int) $totalComments ?></span>
     </h2>
 
+    <!--
+      Форма комментария (стилизована как карточка).
+      Контракт: POST /api/posts, application/x-www-form-urlencoded
+        поля: content, publicationId, csrf-поле
+        успех: любой 2xx без payload-а с ошибкой (201 {"createdId": N} — норма)
+        ошибка: JSON с errors / message
+      Отправку делает book.js (fetch): Enter в поле и кнопка-галочка ведут в одну
+      отправку, обработчики висят на document (переживают позднюю отрисовку DOM).
+    -->
     <form class="comment-card" action="/api/posts" method="POST" data-comment-form novalidate>
       <?= $view->csrfField() ?>
-      <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
+      <input type="hidden" name="publicationId" value="<?= (int) $publicationId ?>">
       <div class="comment-card__inner">
-        <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
+        <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'src' => $meAvatar]); ?>
         <div class="comment-card__content">
-          <div class="comment-card__author">sername</div>
-          <input class="comment-card__input" type="text" name="content"
-                 maxlength="2000" autocomplete="off"
-                 placeholder="Input comments...">
+          <div class="comment-card__author"><?= $view->e($meName) ?></div>
+          <div class="comment-card__row">
+            <input class="comment-card__input" type="text" name="content"
+                   maxlength="2000" autocomplete="off"
+                   placeholder="Input comments...">
+            <!-- Кнопка отправки (галочка): без неё Enter не выглядел «отправкой» (P0-2) -->
+            <button type="submit" class="comment-card__send" data-comment-send disabled aria-label="Send comment">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <p class="form-field__error" data-comment-error role="alert" hidden
              style="color: red; margin-top: 8px; font-size: 14px;"></p>
           <p data-comment-status role="status" hidden
@@ -276,60 +359,114 @@ if (!empty($article->iconId)) {
       </div>
     </form>
 
-    <?php if (empty($comments)): ?>
-      <p class="comments-section__empty">Be the first to comment.</p>
-    <?php else: ?>
-      <div class="stack">
-        <?php foreach ($comments as $comment): ?>
-          <div class="comment-card">
-            <div class="comment-card__inner">
-              <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
+    <p class="comments-section__empty" data-comments-empty<?= empty($comments) ? '' : ' hidden' ?>>
+      Be the first to comment.
+    </p>
 
-              <div class="comment-card__content">
-                <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
-                <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
+    <!-- Список комментариев: сервер его не передаёт, book.js наполняет из API (P0-5) -->
+    <div class="stack" data-comment-list>
+      <?php foreach ($comments as $comment): ?>
+        <?php
+          $cId    = (int) ($comment['id'] ?? 0);
+          $cLikes = (int) ($comment['likes'] ?? 0);
+        ?>
+        <div class="comment-card"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
+          <div class="comment-card__inner">
+            <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
 
-                <div class="comment-card__footer">
-                  <button type="button" class="btn-icon-small btn-like" data-comment-like aria-pressed="false" aria-label="Like">
-                    <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <div class="comment-card__content">
+              <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
+              <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
+
+              <div class="comment-card__footer">
+                <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) (P0-4) -->
+                <button type="button" class="btn-icon-small btn-like"
+                        data-like-btn
+                        data-like-id="<?= $cId ?>"
+                        aria-pressed="false" aria-label="Like">
+                  <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span data-like-count><?= $cLikes ?></span>
+                </button>
+
+                <div class="comment-card__meta">
+                  <span><?= $view->e($comment['date']) ?></span>
+                  <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
+                    <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                      <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span data-comment-like-count><?= (int) ($comment['likes'] ?? 0) ?></span>
                   </button>
-
-                  <div class="comment-card__meta">
-                    <span><?= $view->e($comment['date']) ?></span>
-                    <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
-                      <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                    </button>
-                  </div>
                 </div>
-
-                <form class="comment-reply-form" data-reply-form hidden>
-                  <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-                  <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
-                </form>
-
-                <div class="comment-replies" data-replies></div>
               </div>
+
+              <form class="comment-reply-form" data-reply-form hidden>
+                <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
+                <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </form>
+
+              <div class="comment-replies" data-replies></div>
             </div>
           </div>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
   </section>
+
+  <!-- Шаблон карточки комментария (клонируется book.js: ответ сервера + загрузка из БД) -->
+  <template id="comment-card-template">
+    <div class="comment-card">
+      <div class="comment-card__inner">
+        <div class="avatar avatar--sm"></div>
+        <div class="comment-card__content">
+          <div class="comment-card__author" data-c-author></div>
+          <div class="comment-card__text" data-c-text></div>
+
+          <div class="comment-card__footer">
+            <button type="button" class="btn-icon-small btn-like"
+                    data-like-btn
+                    data-like-id=""
+                    aria-pressed="false" aria-label="Like">
+              <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-like-count>0</span>
+            </button>
+
+            <div class="comment-card__meta">
+              <span data-c-date></span>
+              <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
+                <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <form class="comment-reply-form" data-reply-form hidden>
+            <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
+            <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </form>
+
+          <div class="comment-replies" data-replies></div>
+        </div>
+      </div>
+    </div>
+  </template>
 
   <template id="reply-template">
     <div class="comment-reply">
-      <?php $view->include('avatar', ['size' => 'sm', 'initials' => 'ME', 'src' => null]); ?>
+      <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'src' => $meAvatar]); ?>
       <div class="comment-reply__content">
-        <div class="comment-reply__author">sername</div>
+        <div class="comment-reply__author"><?= $view->e($meName) ?></div>
         <div class="comment-reply__text"></div>
       </div>
     </div>

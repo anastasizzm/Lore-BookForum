@@ -359,6 +359,58 @@
   color: var(--color-text-muted, #6F84A5);
 }
 
+/* Ряд «поле ввода + кнопка-галочка» (P0-2: раньше кнопки отправки не было) */
+.comment-card__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-card__row .comment-card__input {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-card__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #C5CFE0;                 /* серая, пока в поле нет текста */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease, background-color 0.2s ease;
+}
+
+.comment-card__send:not(:disabled) {
+  color: var(--color-primary, #1A3760);   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-card__send:not(:disabled):hover,
+.comment-card__send:not(:disabled):focus-visible {
+  transform: scale(1.1);
+  background: var(--color-overlay-hover, #e2e8f0);
+}
+
+.comment-card__send:focus-visible {
+  outline: 2px solid var(--color-primary, #1A3760);
+  outline-offset: 2px;
+}
+
+/* «Показать ещё» под списком комментариев */
+.comments-section__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
 /* Текст комментария */
 .comment-card__text {
   font-size: 14px;

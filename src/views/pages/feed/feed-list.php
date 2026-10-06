@@ -65,6 +65,18 @@ $view->include('page-header', [
   </div>
 <?php endif; ?>
 
+<?php
+/**
+ * PostsService::getListWithContext() отдаёт WithContext<Post, PostContext>
+ * (item + isLiked/isEditor). Циклу ниже нужен сам Post — разворачиваем.
+ * Preview-данные выше уже лежат в виде stdClass, они остаются как есть.
+ */
+$items = array_map(
+    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
+    $items ?? []
+);
+?>
+
 <?php if (empty($items)): ?>
 
   <div class="empty-state">

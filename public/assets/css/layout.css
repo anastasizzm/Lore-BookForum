@@ -321,7 +321,10 @@ body.is-sidebar-expanded .sidebar-overlay {
     transform: translateX(-100%);
     width: 260px;
     align-items: center;
-    padding: 32px 16px 24px 16px;
+    /* Верхний отступ с запасом: кнопка Profile не должна попадать
+       под фиксированный бургер (top:16, 42px высотой) — иначе по области
+       профиля клик «попадает через раз» (P1-5). */
+    padding: 76px 16px 24px 16px;
   }
 
   body.is-menu-open .sidebar {
@@ -393,7 +396,9 @@ body.is-sidebar-expanded .sidebar-overlay {
     position: fixed;
     top: 16px;
     left: 16px;
-    z-index: 30;
+    /* Выше overlay (35) и открытого sidebar (40), но ниже settings-menu (50):
+       кнопку всегда можно нажать, чтобы закрыть меню (app.js — toggle). */
+    z-index: 45;
     width: 42px;
     height: 42px;
     min-width: 42px;

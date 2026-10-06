@@ -1,11 +1,11 @@
 "use strict";
 
 /* ============================================
-   Book details page
+   Book details / Article details
    ============================================ */
 (function () {
-  // Закладка (Save book): обработчик [data-save-book] лежит в app.js
-  // (общий для страницы книги и карточек: POST/DELETE /api/books/{id}/save)
+  // Закладка (Save): обработчик [data-save-book] / [data-save-article] лежит в app.js
+  // (POST/DELETE /api/books|articles/{id}/save)
 
   // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');
@@ -76,43 +76,441 @@
     });
   }
 
-  // Комментарии: лайк и ответ (делегирование событий)
-  document.addEventListener('click', function (e) {
-    // Лайк комментария
-    var likeBtn = e.target.closest('[data-comment-like]');
-    if (likeBtn) {
-      var countEl = likeBtn.querySelector('[data-comment-like-count]');
-      var liked = likeBtn.classList.toggle('is-liked');
-      likeBtn.setAttribute('aria-pressed', String(liked));
-      if (countEl) {
-        countEl.textContent = Math.max(0, parseInt(countEl.textContent, 10) + (liked ? 1 : -1));
-      }
-      // TODO: отправить лайк на сервер (POST/DELETE /api/posts/{postId}/like)
+  /* ==========================================================
+     КОММЕНТАРИИ (P0-1 / P0-2 / P0-4 / P0-5)
+     - отправка: Enter в поле и кнопка-галочка ведут в одну отправку,
+       обработчики висят на document (работают даже если DOM
+       отрисовался позже, чем этот скрипт);
+     - успех: ЛЮБОЙ 2xx без payload-а с ошибкой (201 и 200 равнозначны);
+     - список: подгружается из БД через GET /api/posts?publication=…,
+       потому что контроллер страницы комментарии не отдаёт;
+     - лайки: отдаём общему обработчику card-feed.js
+       ([data-like-btn] -> POST/DELETE /api/posts/{id}/like).
+     ========================================================== */
+
+  var API_POSTS = '/api/posts';
+  var COMMENT_MAX = 2000;
+  var PAGE_SIZE = 20;
+
+  function one(sel, root) {
+    return (root || document).querySelector(sel);
+  }
+
+  function setMsg(el, text) {
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  /** Ошибка из payload-а ответа ('' — если ответ успешный). */
+  function payloadError(data) {
+    if (!data || typeof data !== 'object') return '';
+
+    if (data.errors && typeof data.errors === 'object') {
+      var flat = [];
+      Object.keys(data.errors).forEach(function (key) {
+        var v = data.errors[key];
+        if (Array.isArray(v)) flat = flat.concat(v.map(String));
+        else if (v != null) flat.push(String(v));
+      });
+      if (flat.length) return flat.join('\n');
+    }
+    if (typeof data.error === 'string' && data.error) return data.error;
+    if (data.error && data.error.message) return String(data.error.message);
+    if (data.message && (data.errors || data.error)) return String(data.message);
+
+    return '';
+  }
+
+  /**
+   * Человеческий текст ошибки для не-2xx / HTML-ответов.
+   * Бэкенд отдаёт страницу-заглушку с кодом в .login-message__status,
+   * но при этом HTTP-статус у неё может быть 200 — код достаём из разметки,
+   * чтобы вместо «Failed to send comment (HTTP 200)» показать причину.
+   */
+  function failureText(res, raw) {
+    var body = raw || '';
+    var code = /class="login-message__status"[^>]*>\s*(\d{3})\s*</.exec(body);
+    var text = /class="login-message__text"[^>]*>([\s\S]*?)<\/p>/.exec(body);
+
+    if (code) {
+      var msg = text ? text[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
+      return (msg || 'Request rejected') + ' (HTTP ' + code[1] + ')';
+    }
+    if (/^\s*</.test(body)) {
+      return 'Server returned an unexpected page (HTTP ' + res.status + '). The comment was not saved.';
+    }
+    if (res.status === 401) return 'Please sign in again';
+    if (res.status === 403) return 'Forbidden — check that your email is verified';
+    if (res.status === 419) return 'Session expired — reload the page and try again';
+    if (res.status === 500) return 'Server error — the comment was not saved';
+    return 'Failed to send the comment (HTTP ' + res.status + ')';
+  }
+
+  function formatDate(value) {
+    var d = value ? new Date(value) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+  }
+
+  function initialsOf(user) {
+    var n = String((user && user.name) || '').trim();
+    var s = String((user && user.surname) || '').trim();
+    var v = (n.charAt(0) + s.charAt(0)).toUpperCase();
+    if (!v) {
+      var u = String((user && user.username) || '').trim();
+      v = u.charAt(0).toUpperCase() || '?';
+    }
+    return v;
+  }
+
+  function avatarUrl(user) {
+    var raw = String((user && user.avatar) || '');
+    return (raw !== '' && raw !== 'default') ? '/uploads/avatars/' + raw : '';
+  }
+
+  /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
+  function fillAvatar(avatar, initials, src) {
+    if (!avatar) return;
+    avatar.replaceChildren();
+
+    var span = document.createElement('span');
+    span.textContent = initials || '?';
+
+    if (!src) {
+      avatar.appendChild(span);
       return;
     }
 
-    // Показать/скрыть форму ответа
-    var replyBtn = e.target.closest('[data-reply-toggle]');
-    if (replyBtn) {
-      var form = replyBtn.closest('.comment-card__content').querySelector('[data-reply-form]');
-      var open = form.hidden;
-      form.hidden = !open;
-      replyBtn.setAttribute('aria-expanded', String(open));
-      if (open) form.querySelector('input').focus();
+    var img = document.createElement('img');
+    img.alt = '';
+    img.src = src;
+    avatar.appendChild(img);
+    avatar.appendChild(span);
+    span.hidden = true;
+    img.onerror = function () {
+      img.hidden = true;
+      span.hidden = false;
+    };
+  }
+
+  /** Карточка комментария из <template id="comment-card-template">. */
+  function commentNode(data) {
+    var tpl = document.getElementById('comment-card-template');
+    if (!tpl) return null;
+
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
+
+    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
+    var author = one('[data-c-author]', node);
+    if (author) author.textContent = data.author || '';
+    var text = one('[data-c-text]', node);
+    if (text) text.textContent = data.text || '';      // textContent: без XSS
+    var date = one('[data-c-date]', node);
+    if (date) date.textContent = data.date || '';
+
+    var likeBtn = one('[data-like-btn]', node);
+    if (likeBtn) {
+      if (Number(data.id)) {
+        likeBtn.dataset.likeId = String(Number(data.id));  // общий like из card-feed.js
+        var cnt = one('[data-like-count]', likeBtn);
+        if (cnt) cnt.textContent = String(Number(data.likes) || 0);
+      } else {
+        likeBtn.remove(); // без id лайк некуда отправлять
+      }
+    }
+
+    // Состояние «мой лайк» (localStorage feed:liked-ids) — см. card-feed.js
+    if (typeof applyLikedState === 'function') applyLikedState(node);
+    return node;
+  }
+
+  function listEl() { return one('[data-comment-list]'); }
+  function emptyEl() { return one('[data-comments-empty]'); }
+  function countEl() { return one('[data-comments-count]'); }
+  function sectionEl() { return one('[data-comments]'); }
+
+  function bumpCount() {
+    var el = countEl();
+    if (el) el.textContent = String((parseInt(el.textContent, 10) || 0) + 1);
+  }
+
+  function appendComment(data, atTop) {
+    var list = listEl();
+    var node = commentNode(data);
+    if (!list || !node) return null;
+    if (atTop && list.firstElementChild) list.insertBefore(node, list.firstElementChild);
+    else list.appendChild(node);
+    var empty = emptyEl();
+    if (empty) empty.hidden = true;
+    return node;
+  }
+
+  /** GET /api/posts?publication={id}&include=creator — корневые комментарии из БД. */
+  async function loadComments(page, append) {
+    var section = sectionEl();
+    if (!section) return;
+
+    var pubId = Number(section.dataset.publicationId || 0);
+    if (!pubId) return;
+
+    var params = new URLSearchParams({
+      publication: String(pubId),
+      page: String(page || 1),
+      ps: String(PAGE_SIZE),
+      include: 'creator'
+    });
+
+    try {
+      var res = await fetch(API_POSTS + '?' + params.toString(), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
+
+      var data = null;
+      var raw = '';
+      try {
+        raw = await res.text();
+        data = raw ? JSON.parse(raw) : null;
+      } catch (_) { data = null; }
+
+      if (!res.ok || !data) {
+        console.warn('GET ' + API_POSTS, res.status, raw.slice(0, 200));
+        if (!append && listEl() && !listEl().children.length) {
+          setMsg(emptyEl(), 'Comments are unavailable right now. Please reload the page.');
+        }
+        return;
+      }
+
+      var items = Array.isArray(data.items) ? data.items
+                : (Array.isArray(data) ? data : []);
+
+      if (!append) {
+        var list = listEl();
+        if (list) list.replaceChildren();
+      }
+
+      items.forEach(function (item) {
+        appendComment({
+          id: item.id,
+          author: (item.creator && (item.creator.username || item.creator.name)) || '',
+          initials: initialsOf(item.creator),
+          avatar: avatarUrl(item.creator),
+          text: item.content || '',
+          date: formatDate(item.createdAt),
+          likes: item.likesCount || 0
+        }, false);
+      });
+
+      if (emptyEl()) {
+        var n = listEl() ? listEl().children.length : 0;
+        emptyEl().hidden = n > 0;
+      }
+
+      // «Показать ещё», если комментариев больше одной страницы
+      if (data.meta && data.meta.hasNext) renderMore(page || 1);
+    } catch (err) {
+      console.warn('GET ' + API_POSTS + ' failed', err);
+    }
+  }
+
+  function renderMore(loadedPage) {
+    var list = listEl();
+    if (!list || document.querySelector('[data-comments-more]')) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'comments-section__more';
+    wrap.dataset.commentsMore = '1';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn--secondary btn--pill';
+    btn.textContent = 'Show more comments';
+    btn.addEventListener('click', function () {
+      var next = loadedPage + 1;
+      wrap.remove();               // снимаем до загрузки, чтобы кнопка не дублировалась
+      loadComments(next, true);
+    });
+
+    wrap.appendChild(btn);
+    list.parentNode.insertBefore(wrap, list.nextSibling);
+  }
+
+  /** Отправка комментария: POST /api/posts (content, publicationId, _token). */
+  async function submitComment(form) {
+    if (!form || form.dataset.sending === '1') return;
+
+    var input = one('input[name="content"]', form);
+    var errEl = one('[data-comment-error]', form);
+    var statusEl = one('[data-comment-status]', form);
+    var sendBtn = one('[data-comment-send]', form);
+    if (!input) return;
+
+    setMsg(errEl, '');
+    setMsg(statusEl, '');
+
+    var text = (input.value || '').trim();
+    if (text === '') {
+      setMsg(errEl, 'Comment cannot be empty');
+      return;
+    }
+    if (text.length > COMMENT_MAX) {
+      setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
+      return;
+    }
+
+    var pubInput = one('input[name="publicationId"]', form);
+    if (!Number(pubInput && pubInput.value)) {
+      setMsg(errEl, 'Cannot send the comment: the publication id is missing on this page.');
+      return;
+    }
+
+    var body = new URLSearchParams(new FormData(form));
+    body.set('content', text);
+
+    form.dataset.sending = '1';
+    if (sendBtn) sendBtn.disabled = true;
+    input.readOnly = true;
+
+    try {
+      var res = await fetch(form.action || API_POSTS, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: body
+      });
+
+      var data = null;
+      var raw = '';
+      try {
+        raw = await res.text();
+        data = raw ? JSON.parse(raw) : null;
+      } catch (_) { data = null; }
+
+      console.log('POST ' + (form.action || API_POSTS), res.status, data || raw.slice(0, 200));
+
+      var serverError = payloadError(data);
+      // HTML-страница-заглушка = ответ бэкенда с ошибкой, хотя HTTP у неё
+      // может быть 200 (см. renderNotFound/renderForbid -> Response::html()
+      // без статуса). Такой ответ успехом не считаем.
+      var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
+
+      // Успех = любой 2xx без ошибки в payload-е. 201 и 200 равнозначны:
+      // раньше здесь проверялся строго 201, и штатный ответ в 200
+      // превращался в «Failed to send comment (HTTP 200)» (P0-1).
+      if (res.ok && !serverError && !htmlErrorPage) {
+        setMsg(statusEl, 'Comment sent');
+        input.value = '';
+
+        bumpCount();
+
+        var created = data ? (data.createdId != null ? data.createdId : data.id) : null;
+        var node = appendComment({
+          id: created,
+          author: (one('.comment-card__author', form) || {}).textContent || '',
+          initials: null,
+          avatar: '',
+          text: text,
+          date: new Date().toISOString(),
+          likes: 0
+        }, true);
+
+        // Своя аватарка/инициалы берутся из формы (там они уже отрендерены)
+        var formAvatar = one('.avatar', form);
+        if (node && formAvatar) {
+          var nodeAvatar = one('.avatar', node);
+          if (nodeAvatar) nodeAvatar.replaceWith(formAvatar.cloneNode(true));
+        }
+        var nodeAuthor = node && one('[data-c-author]', node);
+        if (nodeAuthor && !nodeAuthor.textContent) {
+          nodeAuthor.textContent = (one('.comment-card__author', form) || {}).textContent || '';
+        }
+
+        // Ответ не-JSON (страница-заглушка) — сверяемся с БД, что реально сохранилось
+        if (!data) window.setTimeout(function () { loadComments(1, false); }, 700);
+
+        if (typeof applyLikedState === 'function') applyLikedState(document);
+        return;
+      }
+
+      setMsg(errEl, serverError || failureText(res, raw));
+    } catch (err) {
+      console.warn('POST ' + API_POSTS + ' failed', err);
+      setMsg(errEl, 'Network error. Try again.');
+    } finally {
+      delete form.dataset.sending;
+      input.readOnly = false;
+      if (sendBtn) sendBtn.disabled = input.value.trim() === '';
+      if (document.activeElement === input || document.activeElement === document.body) {
+        input.focus();
+      }
+    }
+  }
+
+  // ---- Делегирование: отправка по Enter (P0-1) ----
+  // Кнопка отправки может быть disabled — Enter всё равно отправляет:
+  // иначе неявная отправка формы браузером не срабатывает.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== 'NumpadEnter') return;
+    var input = e.target.closest && e.target.closest('[data-comment-form] input[name="content"]');
+    if (!input) return;
+    e.preventDefault();
+    submitComment(input.closest('[data-comment-form]'));
+  });
+
+  // ---- Делегирование: отправка по кнопке/нативному submit (P0-2) ----
+  document.addEventListener('submit', function (e) {
+    var form = e.target.closest && e.target.closest('[data-comment-form]');
+    if (!form) return;
+    e.preventDefault();
+    submitComment(form);
+  });
+
+  // ---- Делегирование: активация галочки + сброс сообщений ----
+  document.addEventListener('input', function (e) {
+    var input = e.target.closest && e.target.closest('[data-comment-form] input[name="content"]');
+    if (!input) return;
+    var form = input.closest('[data-comment-form]');
+    var sendBtn = one('[data-comment-send]', form);
+    if (sendBtn) sendBtn.disabled = input.value.trim() === '';
+    setMsg(one('[data-comment-error]', form), '');
+    setMsg(one('[data-comment-status]', form), '');
+  });
+
+  /* ----------------------------------------------------------
+     Ответы на комментарии — локально (TODO: POST /api/posts/{id})
+     ---------------------------------------------------------- */
+
+  // Показать/скрыть форму ответа
+  document.addEventListener('click', function (e) {
+    var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
+    if (!replyBtn) return;
+    var content = replyBtn.closest('.comment-card__content');
+    if (!content) return;
+    var form = content.querySelector('[data-reply-form]');
+    if (!form) return;
+    var open = form.hidden;
+    form.hidden = !open;
+    replyBtn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      var first = form.querySelector('input');
+      if (first) first.focus();
     }
   });
 
   // Post активна, только когда есть текст
   document.addEventListener('input', function (e) {
-    var input = e.target.closest('.comment-reply-form__input');
+    var input = e.target.closest && e.target.closest('.comment-reply-form__input');
     if (!input) return;
-    input.closest('form').querySelector('.comment-reply-form__submit').disabled =
-      input.value.trim() === '';
+    var btn = input.closest('form') && input.closest('form').querySelector('.comment-reply-form__submit');
+    if (btn) btn.disabled = input.value.trim() === '';
   });
 
   // Отправка ответа (пока только локально)
   document.addEventListener('submit', function (e) {
-    var form = e.target.closest('[data-reply-form]');
+    var form = e.target.closest && e.target.closest('[data-reply-form]');
     if (!form) return;
     e.preventDefault();
 
@@ -136,94 +534,18 @@
     // TODO: отправить ответ на сервер (POST /api/posts/{postId})
   });
 
-  // ===== Отправка нового комментария: POST /api/posts =====
-  // Контракт: urlencoded (content, publicationId, csrf-поле)
-  //   успех: 201 {"createdId": N}
-  //   ошибка: не-201, JSON с errors / message
-  var commentForm = document.querySelector('[data-comment-form]');
-  if (commentForm) {
-    var cInput  = commentForm.querySelector('input[name="content"]');
-    var cError  = commentForm.querySelector('[data-comment-error]');
-    var cStatus = commentForm.querySelector('[data-comment-status]');
-    var COMMENT_MAX = 2000;
-    var sending = false;
+  /* ----------------------------------------------------------
+     Загрузка списка из БД при открытии страницы (P0-5)
+     ---------------------------------------------------------- */
+  function initComments() {
+    var section = sectionEl();
+    if (!section) return;
+    if (Number(section.dataset.publicationId || 0)) loadComments(1, false);
+  }
 
-    var setMsg = function (el, text) {
-      el.textContent = text;
-      el.hidden = text === '';
-    };
-
-    var resetMsgs = function () {
-      setMsg(cError, '');
-      setMsg(cStatus, '');
-      cInput.setAttribute('aria-invalid', 'false');
-    };
-
-    var fail = function (msg) {
-      setMsg(cError, msg);
-      cInput.setAttribute('aria-invalid', 'true');
-    };
-
-    cInput.addEventListener('input', resetMsgs);
-
-    commentForm.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      if (sending) return;
-      resetMsgs();
-
-      var text = cInput.value.trim();
-      if (text === '') return fail('Comment cannot be empty');
-      if (text.length > COMMENT_MAX) return fail('Max length is ' + COMMENT_MAX + ' characters');
-      if (!Number(commentForm.elements.publicationId.value)) return fail('publicationId is missing');
-
-      var body = new URLSearchParams(new FormData(commentForm));
-      body.set('content', text);
-
-      sending = true;
-      cInput.disabled = true;
-
-      try {
-        var res = await fetch(commentForm.action, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-          body: body
-        });
-
-        var data = null;
-        try { data = await res.json(); } catch (_) { /* не JSON */ }
-        console.log('POST', commentForm.action, res.status, data); // для отладки бэка
-
-        if (res.status === 201) {
-          setMsg(cStatus, 'Comment sent' + (data && data.createdId ? ' (id ' + data.createdId + ')' : ''));
-          cInput.value = '';
-
-          var counter = document.querySelector('[data-comments-count]');
-          if (counter) counter.textContent = (parseInt(counter.textContent, 10) || 0) + 1;
-
-          // Хук для будущей вставки карточки в список
-          commentForm.dispatchEvent(new CustomEvent('comment:created', {
-            bubbles: true,
-            detail: { id: data && data.createdId, content: text }
-          }));
-        } else {
-          var msg = '';
-          if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
-          if (!msg && data && data.message) msg = data.message;
-          if (!msg) {
-            msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
-                : res.status === 401 ? 'Please sign in again'
-                : 'Failed to send comment (HTTP ' + res.status + ')';
-          }
-          fail(msg);
-        }
-      } catch (err) {
-        fail('Network error. Try again.');
-      } finally {
-        sending = false;
-        cInput.disabled = false;
-        cInput.focus();
-      }
-    });
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initComments);
+  } else {
+    initComments();
   }
 })();

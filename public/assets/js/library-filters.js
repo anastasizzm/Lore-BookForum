@@ -8,6 +8,7 @@
     q:      'q',
     genre:  'genre',
     isbn:   'isbn',
+    doi:    'doi',
     sort:   'sort',
     status: 'status',
     type:   'type',
@@ -26,6 +27,8 @@
 
   const API         = root.dataset.api;
   const IS_ARTICLES = API.endsWith('/articles');
+  // P1-6: страница публикации, куда ведёт клик по карточке
+  const DETAIL_BASE = IS_ARTICLES ? '/articles' : '/books';
   const grid   = root.querySelector('[data-library-grid]');
   const empty  = root.querySelector('[data-library-empty]');
   const more   = root.querySelector('[data-library-more]');
@@ -33,7 +36,9 @@
   const search = document.querySelector('input[name="q"]');
 
   // 'f' намеренно отсутствует: им управляет app.js
-  const KEYS = ['genre', 'status', 'isbn', 'sort', 'kind', 'q'];
+  // 'doi' обязателен: без него значение из ?doi= не восстанавливается
+  // после перезагрузки, а поле стирается в syncUi()
+  const KEYS = ['genre', 'status', 'isbn', 'doi', 'sort', 'kind', 'q'];
   const DEFAULTS = { sort: 'newest' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
@@ -67,6 +72,8 @@
     if (IS_ARTICLES) {
       // Вариант B: без маппинга, значение из state.kind уходит как есть
       if (state.kind) p.set(PARAM.type, state.kind);
+      // Фильтр по DOI — бэкенд читает ?doi= (ArticlesFilters::fromInput)
+      if (state.doi) p.set(PARAM.doi, state.doi);
     } else if (state.isbn) {
       p.set(PARAM.isbn, state.isbn);
     }
@@ -140,6 +147,8 @@
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
       : '';
     const id = Number(b.id);
+    // P1-6: карточка ведёт на страницу книги/статьи (раньше href="#" — клик молчал)
+    const href = id > 0 ? `${DETAIL_BASE}/${id}` : '#';
 
     // На странице статей кнопка помечается как article — app.js по этому
     // атрибуту выбирает тип и событие (data-save-url дублирует эндпоинт).
@@ -149,7 +158,8 @@
     return `
 <article class="card-base card-book">
   <div class="card-book__cover">
-    <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy">
+    <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy"
+         onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
     <button type="button" class="btn-icon btn-icon--circle card-book__save${b.saved ? ' is-active' : ''}"
             ${saveAttr}="${id}"
             data-save-url="${esc(API + '/' + id + '/save')}"
@@ -160,7 +170,7 @@
       </svg>
     </button>
   </div>
-  <h3 class="card-book__title"><a class="card-book__link" href="#">${esc(b.title)}</a></h3>
+  <h3 class="card-book__title"><a class="card-book__link" href="${esc(href)}">${esc(b.title)}</a></h3>
   ${author}
 </article>`;
   }
@@ -230,7 +240,7 @@
     }
 
     if (e.target.closest('[data-filter-reset]')) {
-      ['genre', 'status', 'isbn', 'kind'].forEach(k => delete state[k]);
+      ['genre', 'status', 'isbn', 'doi', 'kind'].forEach(k => delete state[k]);
       syncUi(); pushUrl(); load();
       return;
     }
@@ -247,7 +257,12 @@
   };
 
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
-    inp.addEventListener('input', debounce(() => setFilter(inp.dataset.filterKey, inp.value.trim()), 350)));
+    inp.addEventListener('input', debounce(() => {
+      // filters.js помечает неверный ISBN/DOI классом is-invalid — бэкенд
+      // всё равно ничего не найдёт, поэтому не пишем его в URL и не дёргаем API
+      if (inp.classList.contains('is-invalid')) return;
+      setFilter(inp.dataset.filterKey, inp.value.trim());
+    }, 350)));
 
   search?.addEventListener('input', debounce(() => setFilter('q', search.value.trim()), 350));
 

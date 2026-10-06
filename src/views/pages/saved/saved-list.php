@@ -15,6 +15,16 @@
  */
 $items    = $items ?? [];
 $meta     = $meta  ?? [];
+
+/**
+ * Бэкенд отдаёт элементы обёрнутыми в WithContext<TItem, TContext> (item + контекст
+ * юзера: isSaved / isEditor / readingStatus). Вьюхе нужен сам объект публикации —
+ * разворачиваем, чтобы не ловить "undefined property" и "getCreatorId() on WithContext".
+ */
+$items = array_map(
+    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
+    $items
+);
 $page     = max(1, (int) ($meta['page'] ?? 1));
 $pageSize = (int) ($meta['pageSize'] ?? 0);
 $hasNext  = (bool) ($meta['hasNext'] ?? false);

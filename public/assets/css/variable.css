@@ -29,6 +29,9 @@
   /* Новый токен — нужен для состояний ошибки формы (login.css/component.css) */
   --color-error: #E5484D;
 
+  /* Предупреждение (не блокирует отправку) — фильтры ISBN/DOI */
+  --color-warning: #E9A23B;
+
   /* ШРИФТЫ И РАЗМЕРЫ */
   --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
 
