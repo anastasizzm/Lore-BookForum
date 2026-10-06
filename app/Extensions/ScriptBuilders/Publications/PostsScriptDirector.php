@@ -98,9 +98,11 @@ final class PostsScriptDirector extends ScriptDirector
             switch($prop)
             {
                 case 'creator':
-                    $this->tempBuilder->addJoin('INNER JOIN profiles ON profiles.user_id = users.id')
+                    // LEFT JOIN + COALESCE: a user without a profile row must not
+                    // hide the post (Dto::str() throws on NULL columns).
+                    $this->tempBuilder->addJoin('LEFT JOIN profiles ON profiles.user_id = users.id')
                         ->addSelect("users.id as u_id,\nusers.username as u_username")
-                        ->addSelect("profiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar");
+                        ->addSelect("COALESCE(profiles.name, users.username) as u_name,\nCOALESCE(profiles.surname, '') as u_surname,\nCOALESCE(profiles.avatar, 'default') as u_avatar");
                     break;
                 
                 case 'publication':

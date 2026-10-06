@@ -123,10 +123,14 @@ abstract class PublicationsScriptDirector extends ScriptDirector
             switch($prop)
             {
                 case 'creator':
+                    // profiles is LEFT-joined: not every user has one (e.g. the admin
+                    // created by init.sql), and dropping the row here made whole
+                    // publications disappear from lists/details.
+                    // COALESCE keeps Dto::str() happy - it throws on NULL columns.
                     $this->tempBuilder->addJoin('INNER JOIN users ON users.id = publications.creator_id')
-                        ->addJoin('INNER JOIN profiles ON profiles.user_id = users.id')
+                        ->addJoin('LEFT JOIN profiles ON profiles.user_id = users.id')
                         ->addSelect("users.id as u_id,\nusers.username as u_username")
-                        ->addSelect("profiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar");
+                        ->addSelect("COALESCE(profiles.name, users.username) as u_name,\nCOALESCE(profiles.surname, '') as u_surname,\nCOALESCE(profiles.avatar, 'default') as u_avatar");
                     break;
                 
                 case 'genre':

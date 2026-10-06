@@ -19,6 +19,18 @@ WHERE lower(u.username) = lower(:'admin_username')
   AND NOT EXISTS (SELECT 1 FROM users_rules r WHERE r.user_id = u.id);
 
 
+-- The admin must have a profile too: every list/details query joins profiles
+-- via INNER JOIN (PublicationsScriptDirector::addIncludesTemp('creator')),
+-- so without this row all admin-created publications are filtered out
+-- even though the rows exist in the DB. Normal users get their profile
+-- in AuthService::register().
+INSERT INTO profiles (user_id, name, surname, bio)
+SELECT u.id, 'Admin', 'Admin', ''
+FROM users u
+WHERE lower(u.username) = lower(:'admin_username')
+  AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id);
+
+
 INSERT INTO genres (title) VALUES
     -- Fiction / Narrative
     ('Fantasy'),
