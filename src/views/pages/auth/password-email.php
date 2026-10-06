@@ -22,13 +22,31 @@
     Enter the email you signed up with and we'll send you a link to set a new password.
   </p>
 
+  <?php
+    // ошибки, у которых на форме нет своего поля (всё новое, что может прийти с бэка)
+    $unboundErrors = [];
+    foreach (($errors ?? []) as $field => $list) {
+      if ($field === 'email') continue;
+      foreach ((array) $list as $err) $unboundErrors[] = $err;
+    }
+  ?>
+  <?php if (!empty($unboundErrors)): ?>
+    <div class="messages">
+      <?php foreach ($unboundErrors as $err): ?>
+        <div class="message message--error">
+          <div class="message__body"><?= $view->e($err) ?></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
   <!--
     Контракт с бэком:
-      POST /password/email, application/x-www-form-urlencoded
+      POST /auth/password-reset (url('password.email.submit')), application/x-www-form-urlencoded
         поля: email, csrf-поле
-      успех: редирект на /password/reset?sent=1 (страница с плашкой)
+      успех: страница message "The link to reset your password was sent to your email"
+             (в письме — ссылка /auth/password-reset/{token})
       ошибка: этот же шаблон с $errors['email'] / $innerMessages
-    Роут и обработчик добавит бэкенд.
   -->
   <form class="login-form" id="passwordEmailForm" action="<?= $view->url('password.email.submit') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>

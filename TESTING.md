@@ -18,7 +18,7 @@
 
 ---
 
-## 🔐 Auth — Login (`/login`)
+## 🔐 Auth — Login (`/auth/login`)
 
 ### Отображение
 - [ ] Страница открывается, форма по центру
@@ -34,8 +34,8 @@
 - [ ] Ошибки обновляются на лету при исправлении
 
 ### Отправка
-- [ ] Заполнить корректно → Submit → уходит POST на `/login`
-- [ ] В DevTools → Network видно `POST /login`
+- [ ] Заполнить корректно → Submit → уходит POST на `/auth/login`
+- [ ] В DevTools → Network видно `POST /auth/login`
 - [ ] В Request Headers есть `Cookie: csrf_token=...`
 
 ### Ошибка от бэка
@@ -48,7 +48,7 @@
 
 ---
 
-## 🔐 Auth — Register (`/register`)
+## 🔐 Auth — Register (`/auth/register`)
 
 ### Отображение
 - [ ] 6 полей: Email, Username, Name, Surname, Password, Confirm password
@@ -66,19 +66,62 @@
 - [ ] Пароли не совпадают → ошибка под Confirm
 
 ### Отправка
-- [ ] Корректные данные → POST `/register`
+- [ ] Корректные данные → POST `/auth/register`
 - [ ] Ошибки от бэка (email занят, username занят) → показываются под полями через `$errors`
 - [ ] Успех → редирект на `message` («проверьте почту»)
 
 ---
 
-## 📧 Message (`/message`)
+## 🔑 Auth — Forgot password (`/auth/password-reset`)
+
+### Отображение
+- [ ] Поле `Email`, кнопка `Send reset link`
+- [ ] `action` формы = `/auth/password-reset` (через `url('password.email.submit')`), метод POST
+- [ ] Есть CSRF-поле `_token`
+- [ ] Ссылка `Back to sign in` ведёт на `/auth/login`
+
+### Валидация (JS)
+- [ ] Пустой email или без `@` → ошибка `Invalid email`, навигации нет
+
+### Отправка
+- [ ] Network: `POST /auth/password-reset` с полями `email` + `_token`
+- [ ] Кривой формат → плашка `Invalid email format`
+- [ ] Неизвестный email → плашка `Account with this email not found`
+- [ ] Успех → страница message «The link to reset your password was sent to your email»
+- [ ] В письме ссылка `/auth/password-reset/{token}`
+- [ ] Без CSRF → 419
+
+---
+
+## 🔑 Auth — Set new password (`/auth/password-reset/{token}`)
+
+### Отображение
+- [ ] Страница открывается по ссылке из письма
+- [ ] Поля `password` / `password_confirm`, кнопка `Save new password`
+- [ ] В скрытом поле `token` — токен из пути ссылки
+- [ ] `action` формы = `/auth/password-reset/submit` (через `url('password.reset.submit')`)
+
+### Валидация (JS)
+- [ ] Пароль < 8 символов → ошибка под полем
+- [ ] Пароли разные → `Passwords are different` под Confirm
+- [ ] Ошибка сервера без поля (`$errors['token']` и др.) → красная плашка `.messages` сверху
+
+### Отправка
+- [ ] Network: `POST /auth/password-reset/submit` с `token`, `password`, `password_confirm`, `_token`
+- [ ] Ошибка валидации сервера → ререндер, **`token` в форме сохраняется**
+- [ ] Мусорный/просроченный token → страница message со статусом `410`
+- [ ] Успех → message «The new password was successfully set», вход новым паролем работает
+- [ ] Известный бэк-гэп: на странице message нет кнопки, если бэк не передал `$actionUrl` + `$actionTitle`
+
+---
+
+## 📧 Message (страница рендерится бэком, отдельного роута нет)
 
 - [ ] Страница открывается
 - [ ] Показан `$message`
 - [ ] Если есть `$statusCode` — показывается
 - [ ] Если есть `$actionUrl` + `$actionTitle` — кнопка работает
-- [ ] Ссылка ведёт туда, куда ожидается (`/login`, `/register`)
+- [ ] Ссылка ведёт туда, куда ожидается (`/auth/login`, `/auth/register`)
 
 ---
 
