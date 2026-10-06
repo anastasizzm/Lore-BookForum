@@ -163,4 +163,15 @@ final class UsersRepository extends Repository
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
     }
+
+    public function updatePassword(int $userId, string $passHash) : void 
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE users SET pass_hash = :passHash
+            WHERE user_id = :userId
+            RETURNING id'
+        );
+
+        $stmt->execute([':userId' => $userId, ':passHash' => $passHash]);
+    }
 }

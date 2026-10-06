@@ -11,17 +11,19 @@ use App\Http\UrlGenerator;
 use App\Services\Mail\Mailer;
 use App\Services\Configuration\UnitOfWork;
 
+use App\Cache\Auth\PassResetCache;
+
 use App\Repositories\Users\UsersRepository;
 
 use App\Models\Email;
 
 use App\Exceptions\GoneException;
 use App\Exceptions\NotFoundException;
-use App\Exceptions\UnauthorizedException;
+use App\Exceptions\ForbiddenException;
 
 use PDO;
 
-final class EmailVerificationService
+final class PasswordResetService
 {
     public function __construct(
         private readonly Jwt            $jwt,
@@ -29,42 +31,55 @@ final class EmailVerificationService
         private readonly Mailer         $mailer,
         private readonly UsersRepository $users,
         private readonly UnitOfWork     $uof,
+        private readonly PassResetCache $cache,
+        private readonly TokenResetTtlCache $tokenCache,
         private readonly Settings       $settings,
     ) {}
 
-    private const TOKEN_TYP = 'email_verify';
+    private const string TOKEN_TYP = 'pass_reset';
+    private const int TOKEN_TTL_SECONDS = 1800;
+    private const int TOKEN_RESET_TTL_SECONDS = 86400;
 
-    public function send(int $userId, string $email): void
+    public function startReset(int $userId, string $email) : void 
     {
         $token = $this->createToken($userId);
-
+        $this->cache->set($userId, sha256($token), self::TOKEN_TTL_SECONDS);
+        
         $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('verify.mail', ['token' => $token]);
+              . $this->url->url('password.reset', ['token' => $token]);
 
         $this->mailer->send(Email::to(
             $email,
-            'Lore email verification',
-            "<h2>Welcome to Lore!</h2><p>Please verify your email using this link: </p><a href=\"$link\">Click me</a>"
+            'Lore profile password reset',
+            "<h2>Password reset</h2><p>You received this message because you requested password reset.<br>
+            If you didnt request it, ignore the message.<br>
+            The link to reset your password: </p><a href=\"$link\">Reset</a>"
         ));
     }
 
-    /** @throws GoneException */
-    /** @throws NotFoundException */
-    /** @throws UnauthorizedException */
-    public function verify(int $userId, string $token): bool
+    public function verify(string $token) : int 
     {
         $claims = $this->decodeToken($token);
 
-        if ($claims === null) {
+        if ($claims === null)
             throw new GoneException('The link is invalid or has expired');
-        }
 
         $tokenUserId = (int)$claims['sub'];
-        if ($tokenUserId !== $userId)
-            throw new UnauthorizedException('You logged in with invalid user. Login with verifying user and try again');
+        $savedHash = $this->cache->get($tokenUserId);
+        if ($savedHash === NULL)
+            throw new GoneException('The request has expired');
 
-        return $this->uof->transactional(function (PDO $pdo) use ($userId): bool {
-            $ok = $this->users->markEmailVerified($userId);
+        $hash = hash('sha256', $rawToken);
+        if (!hash_equals($savedHash, $hash))
+            throw new ForbiddenException("Request token mismatch");
+
+        return $tokenUserId;
+    }
+
+    public function resetPassword(int $userId, string $newHash) : bool
+    {
+        $ok = $this->uof->transactional(function (PDO $pdo) use ($userId, $newHash): bool {
+            $ok = $this->users->updatePassword($userId, $newHash);
 
             if (!$ok) {
                 $exists = $this->users->exists($userId);
@@ -75,6 +90,11 @@ final class EmailVerificationService
 
             return $ok;
         });
+
+        if (!$ok) return false;
+
+        $this->tokenCache->set($userId, time(), self::TOKEN_RESET_TTL_SECONDS);
+        return true;
     }
 
     private function createToken(int $userId) : string
@@ -82,7 +102,7 @@ final class EmailVerificationService
         return $this->jwt->custom(
             $userId,
             self::TOKEN_TYP,
-            ttlSeconds: 3600
+            ttlSeconds: 1800
         );
     }
 

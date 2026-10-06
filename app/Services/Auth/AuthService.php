@@ -9,6 +9,7 @@ use App\Repositories\Users\UsersRepository;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\PasswordResetService;
 
 use App\Models\Email;
 
@@ -17,12 +18,15 @@ use App\Lib\CsrfManager;
 
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
+use App\Forms\Auth\PassResetMailForm;
+use App\Forms\Auth\PassResetForm;
 
 use App\Extensions\PdoExtensions;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\NotFoundException;
 use App\Exceptions\ForbiddenException;
 use App\Exceptions\MailException;
 use RuntimeException;
@@ -36,7 +40,8 @@ final class AuthService
         private readonly UsersRepository $usersRepo,
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
-        private readonly EmailVerificationService $verificationService
+        private readonly EmailVerificationService $mailVerificationService,
+        private readonly PasswordResetService $passResetService
     ){}
 
     /** @throws UnauthorizedException */
@@ -75,7 +80,7 @@ final class AuthService
                 return $userId;
             });
 
-            $this->verificationService->send($userId, $form->email);
+            $this->mailVerificationService->send($userId, $form->email);
             return $this->jwt->access($userId, ['verified' => '0']);
         }
         catch(\PDOException $e) {
@@ -85,10 +90,31 @@ final class AuthService
 
     public function mailVerify(int $userId, string $token) : string
     {
-        $isVerified = $this->verificationService->verify($userId, $token);
+        $isVerified = $this->mailVerificationService->verify($userId, $token);
         if (!$isVerified) throw new MailException('Mail verification failed');
 
         return $this->jwt->access($userId, ['verified' => '1']);
+    }
+
+    public function startPasswordReset(PassResetMailForm $form) : void
+    {
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
+
+        $credits = $this->usersRepo->findCreditsByLogin($form->email);
+        if ($credits === null)
+            throw new NotFoundException('Account with this email is not found');
+
+        $this->passResetService->startReset($credits->id, $form->email);
+    }
+
+    public function resetPassword(PassResetForm $form) : void 
+    {
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
+
+        $userId = $this->passResetService->verify($form->token);
+        $this->passResetService->resetPassword($userId, password_hash($form->password, PASSWORD_DEFAULT));
     }
 
     private const UNIQUE_CONSTRAINTS = [

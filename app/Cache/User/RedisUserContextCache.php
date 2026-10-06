@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Cache;
+namespace App\Cache\User;
 
 use App\Cache\UserContextCache;
 use App\Models\Users\UserContext;

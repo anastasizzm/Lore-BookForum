@@ -12,8 +12,14 @@ use App\Lib\Container;
 use App\Lib\Jwt;
 use App\Lib\Auth\PolicyRegistry;
 
-use App\Cache\UserContextCache;
-use App\Cache\RedisUserContextCache;
+use App\Cache\User\UserContextCache;
+use App\Cache\User\RedisUserContextCache;
+
+use App\Cache\Auth\PassResetCache;
+use App\Cache\Auth\RedisPassResetCache;
+
+use App\Cache\Auth\TokenResetTtlCache;
+use App\Cache\Auth\RedisTokenResetTtlCache;
 
 use App\Services\Auth\AuthService;
 use App\Services\Auth\AuthorizationService;
@@ -50,3 +56,5 @@ $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($setting
 
 //Model-based
 $container->singleton(UserContextCache::class, fn(Container $c) => new RedisUserContextCache($c->get(RedisClient::class)));
+$container->singleton(PassResetCache::class, fn(Container $c) => new RedisPassResetCache($c->get(RedisClient::class)));
+$container->singleton(TokenResetTtlCache::class, fn(Container $c) => new RedisTokenResetTtlCache($c->get(RedisClient::class)));
