@@ -12,6 +12,7 @@ use App\Services\Mail\Mailer;
 use App\Services\Configuration\UnitOfWork;
 
 use App\Cache\Auth\PassResetCache;
+use App\Cache\Auth\TokenResetTtlCache;
 
 use App\Repositories\Users\UsersRepository;
 
