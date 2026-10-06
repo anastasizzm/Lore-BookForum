@@ -7,10 +7,15 @@
 -- (admin_username, admin_email, admin_pass_hash); see migrate.sh.
 -- =====================================================================
 
-INSERT INTO users (username, email, pass_hash)
-VALUES (:'admin_username', :'admin_email', :'admin_pass_hash')
+INSERT INTO users (id, username, email, pass_hash)
+VALUES (1, :'admin_username', :'admin_email', :'admin_pass_hash')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO profiles (user_id, name, surname, avatar) 
+SELECT u.id, 'Admin', 'Adminovich', 'default'
+FROM users u
+WHERE lower(u.username) = lower(:'admin_username')
+  AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id);
 
 INSERT INTO users_rules (user_id, is_redactor, is_admin)
 SELECT u.id, TRUE, TRUE
