@@ -1,7 +1,7 @@
 <?php
 /** @var object $view  — объект представления с методом fullurl() */
 /** @var string $token — токен из письма */
-$resetUrl = $view->fullurl('password/reset/' . $token);
+$resetUrl = $view->fullurl('auth/password-reset/' . $token);
 $logoUrl = $view->fullurl('assets/img/logo.png');
 ?>
 <!DOCTYPE html>
