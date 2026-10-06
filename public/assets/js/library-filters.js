@@ -18,7 +18,8 @@
   // Значения совпадают с App\Models\Enums\*
   // (если бэк починит опечатки в enum — синхронизируй здесь)
   const SORT_VALUES   = { newest: 'newest', popularity: 'popularity', alpha: 'alpha' };
-  const STATUS_VALUES = { reading: 'reading', finished: 'ended' };
+  // ReadingStatus: none|reading|ended. 'finished' оставлен для старых ссылок.
+  const STATUS_VALUES = { reading: 'reading', finished: 'ended', ended: 'ended' };
 
   // Типы статей больше не маппятся — приходят из /api/additional/article-types
   // и уходят в ?type= как есть.
@@ -48,6 +49,9 @@
   // ---------- state <-> URL ----------
   const initial = new URLSearchParams(location.search);
   KEYS.forEach(k => { if (initial.get(k)) state[k] = initial.get(k); });
+  // Старые/человеческие ссылки ?status=finished -> каноничное 'ended' (enum),
+  // иначе tab[data-filter-value="ended"] не подсветится.
+  if (state.status === 'finished') state.status = 'ended';
 
   function pushUrl() {
     const p = new URLSearchParams();

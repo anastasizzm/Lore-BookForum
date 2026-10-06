@@ -68,11 +68,17 @@ $view->include('page-header', [
 <?php
 /**
  * PostsService::getListWithContext() отдаёт WithContext<Post, PostContext>
- * (item + isLiked/isEditor). Циклу ниже нужен сам Post — разворачиваем.
+ * (item + isLiked/isEditor). Контекст нужен карточке (data-liked), сам Post —
+ * циклу ниже, поэтому разбираем на пару [post, liked].
  * Preview-данные выше уже лежат в виде stdClass, они остаются как есть.
  */
 $items = array_map(
-    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
+    static function ($it) {
+        if ($it instanceof \App\Models\UserContext\WithContext) {
+            return ['post' => $it->item, 'liked' => (bool) ($it->context->isLiked ?? false)];
+        }
+        return ['post' => $it, 'liked' => false];
+    },
     $items ?? []
 );
 ?>
@@ -87,8 +93,9 @@ $items = array_map(
 
   <div class="feed-panel">
     <div class="stack">
-      <?php foreach ($items as $post): ?>
+      <?php foreach ($items as $entry): ?>
         <?php
+          $post = $entry['post'];
           $creator     = $post->creator;
           $publication = $post->publication;
 
@@ -139,6 +146,7 @@ $items = array_map(
               'text'          => $post->content,
               'likes'         => $post->likesCount ?? 0,
               'comments'      => $post->commentsCount ?? 0,
+              'liked'         => $entry['liked'],
               'date'          => $post->createdAt->format('d.m.Y'),
               'currentUserInitials' => $cuInitials,
               'currentUserName'     => $cu?->username ?? '',
@@ -173,7 +181,7 @@ $items = array_map(
       <div class="feed-comment__text" data-fc-text></div>
 
       <div class="feed-comment__actions">
-        <button type="button" class="action-btn action-like" data-like-btn data-like-id="" aria-pressed="false" aria-label="Like">
+        <button type="button" class="action-btn action-like" data-like-btn data-liked="0" aria-pressed="false" aria-label="Like">
           <svg width="16" height="14" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
