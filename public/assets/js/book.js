@@ -356,6 +356,9 @@
       // может быть 200 (см. renderNotFound/renderForbid -> Response::html()
       // без статуса). Такой ответ успехом не считаем.
       var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
+      // Любой HTML-ответ (в т.ч. PHP Fatal error с кодом 200) — это не успех:
+      // API при успехе отдаёт JSON ({"createdId": N}).
+      if (/^\s*</.test(raw)) htmlErrorPage = true;
 
       // Успех = любой 2xx без ошибки в payload-е. 201 и 200 равнозначны:
       // раньше здесь проверялся строго 201, и штатный ответ в 200
