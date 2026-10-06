@@ -82,7 +82,7 @@
 
 ---
 
-## ✅ Verify result (`/verify/{token}`)
+## ✅ Verify result (`/auth/verify/{token}`)
 
 ### Успех (success = true)
 - [ ] Страница открывается, зелёный цвет текста
@@ -91,9 +91,10 @@
 
 ### Ошибка (success = false)
 - [ ] Страница открывается, красный цвет
-- [ ] Кнопка `Resend verification`
-- [ ] Клик → fetch POST на API
-- [ ] При успехе fetch → редирект на `/message`
+- [ ] Кнопка `Resend verification` (форма, `action` = `$view->url('api.sendmail')`, без хардкода)
+- [ ] В форме есть скрытое поле `token` с токеном из адреса страницы
+- [ ] Клик → fetch POST (поля формы: `token` + `_token`) на URL из `action`
+- [ ] При успехе fetch → зелёная плашка `.message--success` на странице
 - [ ] При ошибке fetch → плашка `.message--error` появляется на странице
 
 ---
