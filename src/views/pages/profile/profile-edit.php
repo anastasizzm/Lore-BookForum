@@ -24,16 +24,8 @@ $val = function (string $key, string $default = '') use ($form, $userData) {
 
 $currentAvatar = $val('avatar', 'default');
 
-$avatarOptions = [
-    'default' => null,
-    'cat'     => '🐱',
-    'dog'     => '🐶',
-    'fox'     => '🦊',
-    'owl'     => '🦉',
-    'robot'   => '🤖',
-    'star'    => '⭐',
-    'book'    => '📚',
-];
+// Единый список пресетов (src/avatar-presets.php): 'default' => null = инициалы
+$avatarOptions = require __DIR__ . '/../../../avatar-presets.php';
 
 $initials = mb_strtoupper(
     mb_substr($userData->name    ?? '', 0, 1) .

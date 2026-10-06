@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="ru">
 <?php $view->include('head'); ?>
+
+<!-- Аватары: список пресетов (src/avatar-presets.php) отдаём в JS,
+     avatar.js должен подключаться ДО card-feed.js и book.js -->
+<script>
+window.AVATAR_PRESETS = <?= json_encode(
+    require __DIR__ . '/../avatar-presets.php',
+    JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+) ?>;
+</script>
+<script src="<?= $view->asset('js/avatar.js') ?>"></script>
+
 <script src="/assets/js/card-feed.js" defer></script>
 <body>
 

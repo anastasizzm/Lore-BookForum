@@ -317,7 +317,6 @@ document.addEventListener('submit', async (e) => {
 const FEED_COMMENTS = {
   url: '/api/posts',
   pageSize: 10,
-  avatarsDir: '/uploads/avatars/',
 };
 
 const feedCommentsState = new WeakMap(); // card -> {page, hasNext, loading, gen, started}
@@ -341,14 +340,6 @@ function fcState(card) {
   }
   return st;
 }
-
-function fcEsc(value) {
-  return String(value)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-const fcFirstChar = (s) => Array.from(s || '')[0] || '';
 
 // createdAt приходит либо строкой, либо объектом {date: "..."} (DateTimeImmutable)
 function fcFormatDate(value) {
@@ -383,26 +374,9 @@ function fcBuildItem(item, tpl) {
   const node = tpl.content.firstElementChild.cloneNode(true);
   const c = item.creator || {};
 
-  const initials = item.__initials
-    || ((fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
-        || fcFirstChar(c.username).toUpperCase());
-
-  const avatarRaw = c.avatar || '';
-  const src = avatarRaw && avatarRaw !== 'default' ? FEED_COMMENTS.avatarsDir + avatarRaw : null;
-
-  const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
-  const wrapImg = node.querySelector('[data-fc-avatar-img]');
-  if (wrapInitials && wrapImg) {
-    const used = src ? wrapImg : wrapInitials;
-    (src ? wrapInitials : wrapImg).remove();
-    used.hidden = false;
-    used.innerHTML = used.innerHTML
-      .split('__INITIALS__').join(fcEsc(initials))
-      .split('__SRC__').join(fcEsc(src ? encodeURI(src) : ''));
-    // Если картинка не отдастся — onerror в avatar.php покажет инициалы
-    const fallbackSpan = used.querySelector('.avatar span[hidden]');
-    if (fallbackSpan) fallbackSpan.textContent = initials;
-  }
+  // Аватар: эмодзи пресета или инициалы (см. avatar.js).
+  // item.__initials задан только для своего комментария.
+  Avatar.fill(node.querySelector('.avatar'), c, item.__initials);
 
   // textContent: без XSS
   node.querySelector('[data-fc-author]').textContent = c.username || '';
@@ -543,7 +517,7 @@ function fcOwnItem(id, text) {
     content: text,
     likesCount: 0,
     createdAt: new Date().toISOString(),
-    creator: { username: '', name: '', surname: '' },
+    creator: { username: '', name: '', surname: '', avatar: '' },
     __initials: '?',
   };
 }
@@ -555,6 +529,7 @@ function fcAppendOwn(card, id, text) {
 
   const item = fcOwnItem(id, text);
   item.creator.username = card.dataset.cuName || '';
+  item.creator.avatar = card.dataset.cuAvatar || '';
   item.__initials = card.dataset.cuInitials || '?';
 
   const node = fcBuildItem(item, tpl);

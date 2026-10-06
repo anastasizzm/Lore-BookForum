@@ -154,47 +154,6 @@
     return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
   }
 
-  function initialsOf(user) {
-    var n = String((user && user.name) || '').trim();
-    var s = String((user && user.surname) || '').trim();
-    var v = (n.charAt(0) + s.charAt(0)).toUpperCase();
-    if (!v) {
-      var u = String((user && user.username) || '').trim();
-      v = u.charAt(0).toUpperCase() || '?';
-    }
-    return v;
-  }
-
-  function avatarUrl(user) {
-    var raw = String((user && user.avatar) || '');
-    return (raw !== '' && raw !== 'default') ? '/uploads/avatars/' + raw : '';
-  }
-
-  /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
-  function fillAvatar(avatar, initials, src) {
-    if (!avatar) return;
-    avatar.replaceChildren();
-
-    var span = document.createElement('span');
-    span.textContent = initials || '?';
-
-    if (!src) {
-      avatar.appendChild(span);
-      return;
-    }
-
-    var img = document.createElement('img');
-    img.alt = '';
-    img.src = src;
-    avatar.appendChild(img);
-    avatar.appendChild(span);
-    span.hidden = true;
-    img.onerror = function () {
-      img.hidden = true;
-      span.hidden = false;
-    };
-  }
-
   /** Карточка комментария из <template id="comment-card-template">. */
   function commentNode(data) {
     var tpl = document.getElementById('comment-card-template');
@@ -203,7 +162,8 @@
     var node = tpl.content.firstElementChild.cloneNode(true);
     if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
 
-    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
+    // эмодзи пресета или инициалы (см. avatar.js)
+    Avatar.fill(one('.avatar', node), data.user, data.initials);
     var author = one('[data-c-author]', node);
     if (author) author.textContent = data.author || '';
     var text = one('[data-c-text]', node);
@@ -296,8 +256,8 @@
         appendComment({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
-          initials: initialsOf(item.creator),
-          avatar: avatarUrl(item.creator),
+          initials: null,
+          user: item.creator,
           text: item.content || '',
           date: formatDate(item.createdAt),
           likes: item.likesCount || 0
@@ -411,7 +371,7 @@
           id: created,
           author: (one('.comment-card__author', form) || {}).textContent || '',
           initials: null,
-          avatar: '',
+          user: null,
           text: text,
           date: new Date().toISOString(),
           likes: 0
