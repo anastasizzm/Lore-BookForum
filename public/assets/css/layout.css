@@ -312,6 +312,15 @@ body.is-sidebar-expanded .sidebar-overlay {
   flex-shrink: 0;
 }
 
+/* Аватар в сайдбаре: кружок и эмодзи крупнее */
+.nav-profile .avatar--xs {
+  width: 36px;
+  height: 36px;
+}
+.nav-profile .avatar--emoji.avatar--xs {
+  font-size: 24px;
+}
+
 /* ============================================
    RESPONSIVE (≤768px)
    ============================================ */

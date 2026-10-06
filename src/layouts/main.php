@@ -23,7 +23,9 @@ window.AVATAR_PRESETS = <?= json_encode(
     <span></span>
   </button>
 
-  <?php $view->include('sidebar'); ?>
+  <?php /* sidebar — отдельный partial: видит только globals, поэтому текущего
+          пользователя (для аватара) передаём явно */ ?>
+  <?php $view->include('sidebar', ['user' => $user ?? null]); ?>
 
   <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
   <?php $view->include('confirm-modal'); ?>
