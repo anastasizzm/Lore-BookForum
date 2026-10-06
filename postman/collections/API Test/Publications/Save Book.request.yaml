@@ -1,7 +1,8 @@
 $kind: http-request
 method: POST
-url: '{{base_url}}/api/books/{{bookId}}/save'
+url: "{{base_url}}/api/books/{{bookId}}/save"
+headers:
+  x-csrf-token: "{{csrf_token}}"
 order: 2000
 pathVariables:
-  - key: bookId
-    value: '1'
+  bookId: "1"

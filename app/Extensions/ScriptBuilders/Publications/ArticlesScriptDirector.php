@@ -24,7 +24,7 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($articleId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function addArticleSelectTemp() : self

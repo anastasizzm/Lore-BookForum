@@ -24,7 +24,7 @@ final class GenresScriptDirector extends ScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("id = :genreId", [':genreId' => ScriptParam::asInt($genreId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function startTempFilter() : self
