@@ -8,9 +8,10 @@ use App\Lib\Settings;
 
 use App\Http\UrlGenerator;
 
-use App\Cache\Auth\MailVerifyCache;
 use App\Services\Mail\Mailer;
-use App\Services\Configuration\UnitOfWork;
+
+use App\Cache\Auth\PassResetCache;
+use App\Cache\Auth\TokenResetTtlCache;
 
 use App\Repositories\Users\UsersRepository;
 
@@ -18,37 +19,40 @@ use App\Models\Email;
 
 use App\Exceptions\GoneException;
 use App\Exceptions\NotFoundException;
-use App\Exceptions\UnauthorizedException;
-use App\Exceptions\BadRequestException;
+use App\Exceptions\ForbiddenException;
 
 use PDO;
 
-final class EmailVerificationService
+final class PasswordResetService
 {
     public function __construct(
         private readonly Jwt            $jwt,
         private readonly UrlGenerator   $url,
         private readonly Mailer         $mailer,
         private readonly UsersRepository $users,
-        private readonly MailVerifyCache $cache,
+        private readonly PassResetCache $cache,
+        private readonly TokenResetTtlCache $tokenCache,
         private readonly Settings       $settings,
     ) {}
 
-    private const TOKEN_TYP = 'email_verify';
+    private const string TOKEN_TYP = 'pass_reset';
     private const int TOKEN_TTL_SECONDS = 1800;
+    private const int TOKEN_RESET_TTL_SECONDS = 86400;
 
-    public function send(int $userId, string $email): void
+    public function startReset(int $userId, string $email) : void 
     {
-        $token = $this->createToken($userId, $email);
+        $token = $this->createToken($userId);
         $this->cache->set($userId, hash('sha256', $token), self::TOKEN_TTL_SECONDS);
-
+        
         $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('verify.mail', ['token' => $token]);
+              . $this->url->url('password.reset', ['token' => $token]);
 
         $this->mailer->send(Email::to(
             $email,
-            'Lore email verification',
-            "<h2>Welcome to Lore!</h2><p>Please verify your email using this link: </p><a href=\"$link\">Click me</a>"
+            'Lore profile password reset',
+            "<h2>Password reset</h2><p>You received this message because you requested password reset.<br>
+            If you didnt request it, ignore the message.<br>
+            The link to reset your password: </p><a href=\"$link\">Reset</a>"
         ));
     }
 
@@ -56,7 +60,7 @@ final class EmailVerificationService
     {
         $claims = $this->decodeToken($token);
 
-        if ($claims === null || !$this->jwt->verify($claims))
+        if ($claims === null)
             throw new GoneException('The link is invalid or has expired');
 
         $tokenUserId = (int)$claims['sub'];
@@ -71,33 +75,23 @@ final class EmailVerificationService
         return $tokenUserId;
     }
 
-    public function reSend(string $oldToken) : void 
+    public function resetTokens(int $userId) : void
     {
-        $claims = $this->decodeToken($oldToken);
-        if ($claims === null)
-            throw new BadRequestException('The link is invalid');
-
-        $tokenUserId = (int)$claims['sub'];
-        $tokenEmail = $claims['email'];
-
-        $this->send($tokenUserId, $tokenEmail);
+        $this->tokenCache->set($userId, time(), self::TOKEN_RESET_TTL_SECONDS);
     }
 
-    private function createToken(int $userId, string $email) : string
+    private function createToken(int $userId) : string
     {
         return $this->jwt->custom(
             $userId,
             self::TOKEN_TYP,
-            [
-                'email' => $email
-            ],
-            3600
+            ttlSeconds: 1800
         );
     }
 
     private function decodeToken(string $token) : ?array 
     {
-        $claims = $this->jwt->decode($token);
+        $claims = $this->jwt->decodeVerify($token);
         return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
             ? $claims
             : null;

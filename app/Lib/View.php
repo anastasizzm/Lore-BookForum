@@ -149,6 +149,11 @@ final class View
         return $this->urlGenerator->url($name, $params);
     }
 
+    public function fullUrl(string $name, array $params = []) : string 
+    {
+        return $this->urlGenerator->fullUrl($name, $params);
+    }
+
     public function asset(string $path): string
     {
         $settings = self::$engineSettings

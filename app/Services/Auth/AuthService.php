@@ -9,6 +9,7 @@ use App\Repositories\Users\UsersRepository;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\PasswordResetService;
 
 use App\Models\Email;
 
@@ -17,14 +18,18 @@ use App\Lib\CsrfManager;
 
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
+use App\Forms\Auth\PassResetMailForm;
+use App\Forms\Auth\PassResetForm;
 
 use App\Extensions\PdoExtensions;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\NotFoundException;
 use App\Exceptions\ForbiddenException;
 use App\Exceptions\MailException;
+use App\Exceptions\Translators\UserExceptionTranslator;
 use RuntimeException;
 use Throwable;
 
@@ -36,7 +41,9 @@ final class AuthService
         private readonly UsersRepository $usersRepo,
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
-        private readonly EmailVerificationService $verificationService
+        private readonly UserExceptionTranslator $translator,
+        private readonly EmailVerificationService $mailVerificationService,
+        private readonly PasswordResetService $passResetService
     ){}
 
     /** @throws UnauthorizedException */
@@ -75,53 +82,55 @@ final class AuthService
                 return $userId;
             });
 
-            $this->verificationService->send($userId, $form->email);
+            $this->mailVerificationService->send($userId, $form->email);
             return $this->jwt->access($userId, ['verified' => '0']);
         }
         catch(\PDOException $e) {
-            throw $this->translatePdoException($e);
+            throw $this->translator->translate($e);
         }
     }
 
-    public function mailVerify(int $userId, string $token) : string
+    public function resendMailVerify(string $oldToken) : string 
     {
-        $isVerified = $this->verificationService->verify($userId, $token);
-        if (!$isVerified) throw new MailException('Mail verification failed');
+        
+    }
+
+    public function mailVerify(string $token) : string
+    {
+        $userId = $this->mailVerificationService->verify($token);
+        $this->uow->transactional(function (PDO $pdo) use ($userId): int 
+        {
+            $ok = $this->users->markEmailVerified($userId);
+            if (!$ok) {
+                $exists = $this->users->exists($userId);
+                if (!$exists) {
+                    throw new NotFoundException('User not found');
+                }   
+            }
+        });
 
         return $this->jwt->access($userId, ['verified' => '1']);
     }
 
-    private const UNIQUE_CONSTRAINTS = [
-        'uq_users_username_lower' => 'username',
-        'uq_users_email_lower'    => 'email',
-    ];
-
-    private const UNIQUE_MESSAGES = [
-        'username' => 'Such username already exists',
-        'email'    => 'The email already exists',
-    ];
-
-    /** @throws ValidationException */
-    private function translatePdoException(\PDOException $e): Throwable
+    public function startPasswordReset(PassResetMailForm $form) : void
     {
-        if ($e->getCode() !== '23505') {
-            return $e;
-        }
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
 
-        $constraint = PdoExtensions::extractConstraintName($e->getMessage());
+        $credits = $this->usersRepo->findCreditsByLogin($form->email);
+        if ($credits === null)
+            throw new ValidationException(['email' => ['Account with this email not found']]);
 
-        if ($constraint === null) {
-            return $e;
-        }
+        $this->passResetService->startReset($credits->id, $form->email);
+    }
 
-        $field = self::UNIQUE_CONSTRAINTS[$constraint] ?? null;
+    public function resetPassword(PassResetForm $form) : void 
+    {
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
 
-        if ($field === null) {
-            return $e;
-        }
-
-        return new ValidationException([
-            $field => [self::UNIQUE_MESSAGES[$field]],
-        ]);
+        $userId = $this->passResetService->verify($form->token);
+        $this->usersRepo->updatePassword($userId, password_hash($form->password, PASSWORD_DEFAULT));
+        $this->passResetService->resetTokens($userId);
     }
 }

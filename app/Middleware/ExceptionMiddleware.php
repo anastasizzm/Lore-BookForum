@@ -13,8 +13,9 @@ use App\Http\UrlGenerator;
 
 use App\ErrorCodes;
 
-use App\Models\Error;
+use App\Models\Errors\Error;
 
+use App\Exceptions\ValidationException;
 use App\Extensions\ResponseTemplates;
 
 final class ExceptionMiddleware implements Middleware

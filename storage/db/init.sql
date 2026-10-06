@@ -7,8 +7,8 @@
 -- (admin_username, admin_email, admin_pass_hash); see migrate.sh.
 -- =====================================================================
 
-INSERT INTO users (id, username, email, pass_hash)
-VALUES (1, :'admin_username', :'admin_email', :'admin_pass_hash')
+INSERT INTO users (username, email, pass_hash, is_verified)
+VALUES (:'admin_username', :'admin_email', :'admin_pass_hash', true)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO profiles (user_id, name, surname, avatar) 

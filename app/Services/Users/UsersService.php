@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Users;
 
-use App\Cache\UserContextCache;
+use App\Cache\User\UserContextCache;
 
 use App\Forms\Users\UserForm;
 

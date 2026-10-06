@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Extensions;
 
-use App\Models\Error;
+use App\Models\Errors\Error;
 
 final class ResponseTemplates
 {

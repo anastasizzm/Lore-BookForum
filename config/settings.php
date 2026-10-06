@@ -10,6 +10,7 @@ return [
     'middleware' => [
         App\Middleware\ExceptionMiddleware::class,
         App\Middleware\JwtMiddleware::class,
+        App\Middleware\TokenBlockerMiddleware::class,
         App\Middleware\CsrfMiddleware::class,
         App\Middleware\AuthorizationMiddleware::class,
         App\Middleware\ViewGlobalsMiddleware::class,

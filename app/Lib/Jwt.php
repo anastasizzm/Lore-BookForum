@@ -30,17 +30,9 @@ final class Jwt
         );
     }
 
-    public function emailVerification(int $userId, int $ttlSeconds = 86400): string
+    public function custom(int|string $userId, string $type, array $extra = [], int $ttlSeconds = 86400) : string
     {
-        $now = time();
-
-        return $this->encode([
-            'iss' => $this->settings->jwtIssuer,
-            'sub' => $userId,
-            'typ' => 'email_verify',
-            'iat' => $now,
-            'exp' => $now + $ttlSeconds,
-        ]);
+        return $this->encode($this->buildClaims($type, $userId, $extra, $ttlSeconds));
     }
 
     // ---------- convenience verifiers ----------
@@ -48,7 +40,7 @@ final class Jwt
     /** Returns claims if the token is a valid access token, null otherwise. */
     public function decodeAccess(string $token): ?array
     {
-        $claims = $this->decode($token);
+        $claims = $this->decodeVerify($token);
 
         return ($claims !== null && ($claims['typ'] ?? null) === self::TYP_ACCESS)
             ? $claims
@@ -58,18 +50,9 @@ final class Jwt
     /** Returns claims if the token is a valid refresh token, null otherwise. */
     public function decodeRefresh(string $token): ?array
     {
-        $claims = $this->decode($token);
+        $claims = $this->decodeVerify($token);
 
         return ($claims !== null && ($claims['typ'] ?? null) === self::TYP_REFRESH)
-            ? $claims
-            : null;
-    }
-
-    public function decodeEmailVerification(string $token): ?array
-    {
-        $claims = $this->decode($token);
-
-        return ($claims !== null && ($claims['typ'] ?? null) === 'email_verify')
             ? $claims
             : null;
     }
@@ -93,7 +76,7 @@ final class Jwt
         return "$header.$body.$sig";
     }
 
-    public function decode(string $token, int $leeway = 0): ?array
+    public function decode(string $token): ?array
     {
         $parts = explode('.', $token);
         if (count($parts) !== 3) {
@@ -128,22 +111,30 @@ final class Jwt
             return null;
         }
 
-        $now = time();
+        return $claims;
+    }
 
+    public function decodeVerify(string $token, int $leeway = 0) : ?array 
+    {
+        $claims = $this->decode($token);
+        if ($claims === null || !$this->verify($claims, $leeway)) return NULL;
+        return $claims;
+    }
+
+    public function verify(array $claims, int $leeway = 0) : bool
+    {
+        $now = time();
         if (isset($claims['exp']) && $claims['exp'] < ($now - $leeway)) {
-            return null;
+            return false;
         }
         if (isset($claims['nbf']) && $claims['nbf'] > ($now + $leeway)) {
-            return null;
+            return false;
         }
 
-        // Optional issuer check — skips if not configured.
         $issuer = $this->settings->jwtIssuer ?? null;
         if ($issuer !== null && ($claims['iss'] ?? null) !== $issuer) {
-            return null;
+            return false;
         }
-
-        return $claims;
     }
 
     // ---------- internals ----------

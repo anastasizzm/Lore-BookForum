@@ -12,8 +12,17 @@ use App\Lib\Container;
 use App\Lib\Jwt;
 use App\Lib\Auth\PolicyRegistry;
 
-use App\Cache\UserContextCache;
-use App\Cache\RedisUserContextCache;
+use App\Cache\User\UserContextCache;
+use App\Cache\User\RedisUserContextCache;
+
+use App\Cache\Auth\PassResetCache;
+use App\Cache\Auth\RedisPassResetCache;
+
+use App\Cache\Auth\TokenResetTtlCache;
+use App\Cache\Auth\RedisTokenResetTtlCache;
+
+use App\Cache\Auth\MailVerifyCache;
+use App\Cache\Auth\RedisMailVerifyCache;
 
 use App\Services\Auth\AuthService;
 use App\Services\Auth\AuthorizationService;
@@ -40,7 +49,7 @@ $container->instance(Jwt::class, new Jwt($settings));
 $container->instance(Database::class, new Database($settings));
 $container->instance(RedisClient::class, new RedisClient($settings));
 $container->instance(RouteRegistry::class, new RouteRegistry());
-$container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class)));
+$container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class), $settings));
 
 //Services
 $container->instance(CookieService::class, new CookieService(secureByDefault: false));
@@ -50,3 +59,6 @@ $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($setting
 
 //Model-based
 $container->singleton(UserContextCache::class, fn(Container $c) => new RedisUserContextCache($c->get(RedisClient::class)));
+$container->singleton(PassResetCache::class, fn(Container $c) => new RedisPassResetCache($c->get(RedisClient::class)));
+$container->singleton(TokenResetTtlCache::class, fn(Container $c) => new RedisTokenResetTtlCache($c->get(RedisClient::class)));
+$container->singleton(MailVerifyCache::class, fn(Container $c) => new RedisMailVerifyCache($c->get(RedisClient::class)));

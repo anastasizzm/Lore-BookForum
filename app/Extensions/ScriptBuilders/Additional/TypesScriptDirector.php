@@ -24,7 +24,7 @@ final class TypesScriptDirector extends ScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("id = :typeId", [':typeId' => ScriptParam::asInt($typeId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function startTempFilter() : self

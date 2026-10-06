@@ -11,7 +11,7 @@ use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use PHPMailer\PHPMailer\PHPMailer;
 
 use App\Services\Mail\Mailer;
-
+use App\ErrorCodes;
 use App\Exceptions\MailException;
 use Throwable;
 
@@ -51,8 +51,7 @@ final class SmtpMailer implements Mailer
         } catch (PHPMailerException $e) {
             throw new MailException(
                 'Failed to send email: ' . $e->getMessage(),
-                0,
-                $e,
+                ErrorCodes::UNHANDLED_EX
             );
         } finally {
             $mailer->smtpClose();
@@ -74,7 +73,7 @@ final class SmtpMailer implements Mailer
             'tls'  => PHPMailer::ENCRYPTION_STARTTLS,
             'ssl'  => PHPMailer::ENCRYPTION_SMTPS,
             ''     => '',
-            default => throw new MailException("Unknown encryption: {$s->mailEncryption}"),
+            default => throw new MailException("Unknown encryption: {$s->mailEncryption}", ErrorCodes::INVALID_ENCTYPTION),
         };
         $m->CharSet = 'UTF-8';
 

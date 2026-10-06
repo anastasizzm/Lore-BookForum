@@ -16,7 +16,7 @@ use App\ErrorCodes;
 
 use App\Extensions\ResponseTemplates;
 
-use App\Models\Error;
+use App\Models\Errors\Error;
 
 use App\Services\Configuration\CookieService;
 
