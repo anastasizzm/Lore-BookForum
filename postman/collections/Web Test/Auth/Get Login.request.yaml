@@ -1,4 +1,4 @@
 $kind: http-request
 method: GET
-url: '{{base_url}}/login'
+url: "{{base_url}}/auth/login"
 order: 1000

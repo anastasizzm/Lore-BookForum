@@ -30,17 +30,9 @@ final class Jwt
         );
     }
 
-    public function emailVerification(int $userId, int $ttlSeconds = 86400): string
+    public function custom(int|string $userId, string $type, array $extra = [], int $ttlSeconds = 86400) : string
     {
-        $now = time();
-
-        return $this->encode([
-            'iss' => $this->settings->jwtIssuer,
-            'sub' => $userId,
-            'typ' => 'email_verify',
-            'iat' => $now,
-            'exp' => $now + $ttlSeconds,
-        ]);
+        return $this->encode($this->buildClaims($type, $userId, $extra, $ttlSeconds));
     }
 
     // ---------- convenience verifiers ----------
@@ -65,13 +57,9 @@ final class Jwt
             : null;
     }
 
-    public function decodeEmailVerification(string $token): ?array
+    public function decodeCustom(string $token) : ?array
     {
-        $claims = $this->decode($token);
-
-        return ($claims !== null && ($claims['typ'] ?? null) === 'email_verify')
-            ? $claims
-            : null;
+        return $this->decode($token);
     }
 
     // ---------- core ----------

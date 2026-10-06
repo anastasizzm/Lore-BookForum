@@ -3,8 +3,7 @@ declare(strict_types=1);
 
 namespace App\Extensions\Parsers;
 
-use App\Http\HttpException;
-
+use App\Exceptions\NotFoundException;
 use App\ErrorCodes;
 
 final class RouteParamParser extends BaseInputParser

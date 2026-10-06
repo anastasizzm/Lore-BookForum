@@ -30,7 +30,7 @@
       ошибка: этот же шаблон с $errors['email'] / $innerMessages
     Роут и обработчик добавит бэкенд.
   -->
-  <form class="login-form" id="passwordEmailForm" action="/password/email" method="POST" novalidate>
+  <form class="login-form" id="passwordEmailForm" action="<?= $view->url('password.email.submit') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">

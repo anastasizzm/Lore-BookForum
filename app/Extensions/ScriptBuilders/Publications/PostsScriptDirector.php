@@ -24,7 +24,7 @@ final class PostsScriptDirector extends ScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("id = :commentId", [':commentId' => ScriptParam::asInt($commentId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function startTempFilter() : self

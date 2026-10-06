@@ -28,6 +28,7 @@ final class JwtMiddleware implements Middleware
         $claims = $this->jwt->decodeAccess($token);
 
         if ($claims !== null){
+            $ctx->request->setAttribute(Constants::TOKEN_IAT, (int)$claims['iat']);
             $ctx->request->setAttribute(Constants::USER_ID_ATTR, (int)$claims['sub']);
             $ctx->request->setAttribute(Constants::VERIFIED_ATTR, $claims['verified'] === '1');
         } 

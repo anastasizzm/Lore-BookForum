@@ -41,6 +41,10 @@ class ScriptBuilder
         $this->whereClauses = [];
         $this->havingClauses = [];
         $this->params = [];
+
+        $this->groupBy = '';
+        $this->orderBy = '';
+        $this->limit = '';
     }
 
     public static function withEmpty() : self

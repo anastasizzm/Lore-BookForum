@@ -24,7 +24,7 @@ final class CategoriesScriptDirector extends ScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("id = :categoryId", [':categoryId' => ScriptParam::asInt($categoryId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function startTempFilter() : self
