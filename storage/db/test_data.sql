@@ -58,6 +58,7 @@ DO $seed$
 DECLARE
     v_admin       bigint;
     v_genre_ids   int[];
+    v_types_ids   int[];
     v_cat_ids     int[];
     v_adjectives  text[] := ARRAY['Silent','Crimson','Forgotten','Hollow','Golden','Distant',
                                   'Broken','Hidden','Endless','Winter','Iron','Pale'];
@@ -95,10 +96,11 @@ BEGIN
     END IF;
 
     SELECT array_agg(id) INTO v_genre_ids FROM genres;
+    SELECT array_agg(id) INTO v_types_ids FROM types;
     SELECT array_agg(id) INTO v_cat_ids   FROM categories;
 
-    IF v_genre_ids IS NULL OR v_cat_ids IS NULL THEN
-        RAISE EXCEPTION 'No genres/categories found. Run init.sql first.';
+    IF v_genre_ids IS NULL OR v_cat_ids IS NULL OR v_types_ids IS NULL THEN
+        RAISE EXCEPTION 'No genres/categories/types found. Run init.sql first.';
     END IF;
 
     -- ---------------- 3 books ----------------
@@ -157,8 +159,9 @@ BEGIN
 
         IF i % 2 = 1 THEN
             -- standalone article with its own text
-            INSERT INTO articles (publication_id, doi, type, content)
-            VALUES (v_pub_id, v_doi, 'content',
+            INSERT INTO articles (publication_id, doi, type_id, content)
+            VALUES (v_pub_id, v_doi, 
+                    pg_temp.pick(v_types_ids),
                     pg_temp.lorem(pg_temp.rand(4, 6)) || E'\n\n' ||
                     pg_temp.lorem(pg_temp.rand(4, 6)) || E'\n\n' ||
                     pg_temp.lorem(pg_temp.rand(3, 5)));
@@ -168,8 +171,8 @@ BEGIN
             v_start := pg_temp.rand(1, v_book_pages[v_idx] - 20);
             v_end   := LEAST(v_book_pages[v_idx], v_start + pg_temp.rand(5, 40));
 
-            INSERT INTO articles (publication_id, doi, type, book_id, page_start, page_end)
-            VALUES (v_pub_id, v_doi, 'book', v_book_ids[v_idx], v_start, v_end);
+            INSERT INTO articles (publication_id, doi, type_id, book_id, page_start, page_end)
+            VALUES (v_pub_id, v_doi, pg_temp.pick(v_types_ids), v_book_ids[v_idx], v_start, v_end);
         END IF;
     END LOOP;
 
