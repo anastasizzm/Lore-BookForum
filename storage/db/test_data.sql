@@ -157,8 +157,8 @@ BEGIN
 
         IF i % 2 = 1 THEN
             -- standalone article with its own text
-            INSERT INTO articles (publication_id, doi, type, content)
-            VALUES (v_pub_id, v_doi, 'content',
+            INSERT INTO articles (publication_id, doi, type_id, content)
+            VALUES (v_pub_id, v_doi, 1,
                     pg_temp.lorem(pg_temp.rand(4, 6)) || E'\n\n' ||
                     pg_temp.lorem(pg_temp.rand(4, 6)) || E'\n\n' ||
                     pg_temp.lorem(pg_temp.rand(3, 5)));
@@ -168,8 +168,8 @@ BEGIN
             v_start := pg_temp.rand(1, v_book_pages[v_idx] - 20);
             v_end   := LEAST(v_book_pages[v_idx], v_start + pg_temp.rand(5, 40));
 
-            INSERT INTO articles (publication_id, doi, type, book_id, page_start, page_end)
-            VALUES (v_pub_id, v_doi, 'book', v_book_ids[v_idx], v_start, v_end);
+            INSERT INTO articles (publication_id, doi, type_id, book_id, page_start, page_end)
+            VALUES (v_pub_id, v_doi, 1, v_book_ids[v_idx], v_start, v_end);
         END IF;
     END LOOP;
 
