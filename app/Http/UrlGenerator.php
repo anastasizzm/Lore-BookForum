@@ -9,4 +9,9 @@ interface UrlGenerator
      * @param array<string, scalar> $params
      */
     public function url(string $name, array $params = []): string;
+
+    /**
+     * @param array<string, scalar> $params
+     */
+    public function fullUrl(string $name, array $params = []) : string;
 }
