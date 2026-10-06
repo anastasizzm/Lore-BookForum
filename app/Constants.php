@@ -11,6 +11,7 @@ final class Constants
     public const CSRF_HEADER = 'x-csrf-token';
     public const CSRF_FIELD = '_token';
     
+    public const TOKEN_IAT = 'token_iat';
     public const USER_ID_ATTR = 'user_id';
     public const VERIFIED_ATTR = 'is_verified';
     public const CSRF_ATTR = 'csrf';

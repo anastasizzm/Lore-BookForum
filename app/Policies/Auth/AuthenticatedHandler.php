@@ -24,6 +24,6 @@ final class AuthenticatedHandler implements AuthorizationHandler
         $userId = $ctx->attribute(Constants::USER_ID_ATTR);
         
         if (isset($userId)) return Decision::allow();
-        else return Decision::forbidden(ErrorCodes::FORBIDDEN, $requirement->describe());
+        else return Decision::unauthorized(ErrorCodes::FORBIDDEN, $requirement->describe());
     }
 }

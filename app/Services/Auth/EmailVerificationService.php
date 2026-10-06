@@ -32,9 +32,11 @@ final class EmailVerificationService
         private readonly Settings       $settings,
     ) {}
 
+    private const TOKEN_TYP = 'email_verify';
+
     public function send(int $userId, string $email): void
     {
-        $token = $this->jwt->emailVerification($userId);
+        $token = $this->createToken($userId);
 
         $link = rtrim($this->settings->appUrl, '/')
               . $this->url->url('verify.mail', ['token' => $token]);
@@ -51,7 +53,7 @@ final class EmailVerificationService
     /** @throws UnauthorizedException */
     public function verify(int $userId, string $token): bool
     {
-        $claims = $this->jwt->decodeEmailVerification($token);
+        $claims = $this->decodeToken($token);
 
         if ($claims === null) {
             throw new GoneException('The link is invalid or has expired');
@@ -73,5 +75,22 @@ final class EmailVerificationService
 
             return $ok;
         });
+    }
+
+    private function createToken(int $userId) : string
+    {
+        return $this->jwt->custom(
+            $userId,
+            self::TOKEN_TYP,
+            ttlSeconds: 3600
+        );
+    }
+
+    private function decodeToken(string $token) : ?array 
+    {
+        $claims = $this->jwt->decodeCustom($token);
+        return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
+            ? $claims
+            : null;
     }
 }

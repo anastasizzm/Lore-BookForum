@@ -22,6 +22,8 @@ use App\Constants;
 
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
+use App\Forms\Auth\PassResetMailForm;
+use App\Forms\Auth\PassResetForm;
 
 use App\Models\Errors\InnerMessage;
 
@@ -95,6 +97,48 @@ final class AuthController extends Controller
         }
         catch(HttpException | MailException $e){
             return $this->render('auth/verify-result', ['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function getPasswordMail(HttpContext $ctx) : Response 
+    {
+        return $this->render('auth/password-email');
+    }
+
+    public function passwordMail(HttpContext $context) : Response 
+    {
+        $formData = $context->request->body();
+
+        try{
+            $this->service->startPasswordReset(PassResetMailForm::fromInput($formData));
+            return $this->render('message', ['message' => 'The link to reset your password was sent to your email']);
+        }
+        catch(ValidationException $e)
+        {
+            return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors()]);
+        }
+    }
+
+    public function getPasswordReset(HttpContext $context, string $token) : Response 
+    {
+        return $this->render('auth/password-reset', ['token' => $token]);
+    }
+
+    public function passwordReset(HttpContext $context) : Response 
+    {
+        $formData = $context->request->body();
+
+        try{
+            $this->service->resetPassword(PassResetForm::fromInput($formData));
+            return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $this->url->url('login'), 'Login']);
+        }
+        catch(ValidationException $e)
+        {
+            return $this->render('auth/password-reset', ['form' => $formData, 'errors' => $e->errors()]);
+        }
+        catch(HttpException $e)
+        {
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
         }
     }
 }

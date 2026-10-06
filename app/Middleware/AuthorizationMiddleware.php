@@ -15,7 +15,7 @@ use App\Http\UrlGenerator;
 
 use App\Extensions\ResponseTemplates;
 
-use App\Models\Error;
+use App\Models\Errors\Error;
 
 final class AuthorizationMiddleware implements Middleware
 {

@@ -24,7 +24,7 @@ final class BooksScriptDirector extends PublicationsScriptDirector
         $this->builder
             ->addSelect("1")
             ->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($bookId)]);
-        return $this->builder->build();
+        return $this->build();
     }
 
     public function addBookSelectTemp() : self
