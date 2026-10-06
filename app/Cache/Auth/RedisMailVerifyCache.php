@@ -5,9 +5,9 @@ namespace App\Cache\Auth;
 
 use App\Lib\Data\RedisClient;
 
-final class RedisPassResetCache implements PassResetCache
+final class RedisMailVerifyCache implements MailVerifyCache
 {
-    private const string PREFIX = 'pwd_reset:';
+    private const string PREFIX = 'mail_verify:';
 
     public function __construct(private readonly RedisClient $redis) {}
 

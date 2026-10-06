@@ -31,7 +31,7 @@
       <button type="button"
               class="btn btn--primary"
               data-verify-retry
-              data-resend-url="/api/verify/resend"
+              data-resend-url="<?php $view->url('api.sendmail')?>"
               data-message-url="#">
         Resend verification
       </button>

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Lib\Settings;
+
 final class RouteUrlGenerator implements UrlGenerator
 {
     public function __construct(

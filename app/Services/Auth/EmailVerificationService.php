@@ -8,6 +8,7 @@ use App\Lib\Settings;
 
 use App\Http\UrlGenerator;
 
+use App\Cache\Auth\MailVerifyCache;
 use App\Services\Mail\Mailer;
 use App\Services\Configuration\UnitOfWork;
 
@@ -18,6 +19,7 @@ use App\Models\Email;
 use App\Exceptions\GoneException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\BadRequestException;
 
 use PDO;
 
@@ -28,15 +30,17 @@ final class EmailVerificationService
         private readonly UrlGenerator   $url,
         private readonly Mailer         $mailer,
         private readonly UsersRepository $users,
-        private readonly UnitOfWork     $uof,
+        private readonly MailVerifyCache $cache,
         private readonly Settings       $settings,
     ) {}
 
     private const TOKEN_TYP = 'email_verify';
+    private const int TOKEN_TTL_SECONDS = 1800;
 
     public function send(int $userId, string $email): void
     {
-        $token = $this->createToken($userId);
+        $token = $this->createToken($userId, $email);
+        $this->cache->set($userId, hash('sha256', $token), self::TOKEN_TTL_SECONDS);
 
         $link = rtrim($this->settings->appUrl, '/')
               . $this->url->url('verify.mail', ['token' => $token]);
@@ -48,47 +52,52 @@ final class EmailVerificationService
         ));
     }
 
-    /** @throws GoneException */
-    /** @throws NotFoundException */
-    /** @throws UnauthorizedException */
-    public function verify(int $userId, string $token): bool
+    public function verify(string $token) : int 
     {
         $claims = $this->decodeToken($token);
 
-        if ($claims === null) {
+        if ($claims === null || !$this->jwt->verify($claims))
             throw new GoneException('The link is invalid or has expired');
-        }
 
         $tokenUserId = (int)$claims['sub'];
-        if ($tokenUserId !== $userId)
-            throw new UnauthorizedException('You logged in with invalid user. Login with verifying user and try again');
+        $savedHash = $this->cache->get($tokenUserId);
+        if ($savedHash === NULL)
+            throw new GoneException('The request has expired');
 
-        return $this->uof->transactional(function (PDO $pdo) use ($userId): bool {
-            $ok = $this->users->markEmailVerified($userId);
+        $hash = hash('sha256', $token);
+        if (!hash_equals($savedHash, $hash))
+            throw new ForbiddenException("Request token mismatch");
 
-            if (!$ok) {
-                $exists = $this->users->exists($userId);
-                if (!$exists) {
-                    throw new NotFoundException('User not found');
-                }   
-            }
-
-            return $ok;
-        });
+        return $tokenUserId;
     }
 
-    private function createToken(int $userId) : string
+    public function reSend(string $oldToken) : void 
+    {
+        $claims = $this->decodeToken($oldToken);
+        if ($claims === null)
+            throw new BadRequestException('The link is invalid');
+
+        $tokenUserId = (int)$claims['sub'];
+        $tokenEmail = $claims['email'];
+
+        $this->send($tokenUserId, $tokenEmail);
+    }
+
+    private function createToken(int $userId, string $email) : string
     {
         return $this->jwt->custom(
             $userId,
             self::TOKEN_TYP,
-            ttlSeconds: 3600
+            [
+                'email' => $email
+            ],
+            3600
         );
     }
 
     private function decodeToken(string $token) : ?array 
     {
-        $claims = $this->jwt->decodeCustom($token);
+        $claims = $this->jwt->decode($token);
         return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
             ? $claims
             : null;

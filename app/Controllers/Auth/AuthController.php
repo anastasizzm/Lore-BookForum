@@ -82,20 +82,18 @@ final class AuthController extends Controller
         return $this->cookies->clear($this->cookies->clear($response, Constants::CSRF_COOKIE, false), Constants::TOKEN_COOKIE);
     }
 
-    public function mailVerify(HttpContext $ctx, string $token) : Response {
-        $userId = $ctx->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId)) return Response::redirect($this->url->url('login'));
-
+    public function mailVerify(HttpContext $ctx, string $token) : Response 
+    {
         $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR) ?? false;
         if($isVerified) return Response::redirect($this->url->url('home'));
 
         try{
-            $token = $this->service->mailVerify($userId, $token);
+            $token = $this->service->mailVerify($token);
             $response = Response::redirect($this->url->url('home'));
             
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
-        catch(HttpException | MailException $e){
+        catch(HttpException $e){
             return $this->render('auth/verify-result', ['success' => false, 'message' => $e->getMessage()]);
         }
     }

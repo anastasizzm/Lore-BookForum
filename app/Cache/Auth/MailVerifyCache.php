@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Cache\Auth;
 
-interface PassResetCache
+interface MailVerifyCache
 {
     public function get(int $userId): ?string;
 

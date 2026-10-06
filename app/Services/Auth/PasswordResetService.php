@@ -75,9 +75,8 @@ final class PasswordResetService
         return $tokenUserId;
     }
 
-    public function resetPassword(int $userId, string $newHash) : void
+    public function resetTokens(int $userId) : void
     {
-        $this->users->updatePassword($userId, $newHash);
         $this->tokenCache->set($userId, time(), self::TOKEN_RESET_TTL_SECONDS);
     }
 
@@ -92,7 +91,7 @@ final class PasswordResetService
 
     private function decodeToken(string $token) : ?array 
     {
-        $claims = $this->jwt->decodeCustom($token);
+        $claims = $this->jwt->decodeVerify($token);
         return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
             ? $claims
             : null;

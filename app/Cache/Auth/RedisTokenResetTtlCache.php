@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Cache\Auth;
 
-use App\Cache\UserContextCache;
-use App\Models\Users\UserContext;
 use App\Lib\Data\RedisClient;
 
 final class RedisTokenResetTtlCache implements TokenResetTtlCache
