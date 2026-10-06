@@ -105,7 +105,7 @@ final class AuthController extends Controller
         return $this->render('auth/password-email');
     }
 
-    public function passwordMailSend(HttpContext $context) : Response 
+    public function passwordMail(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
 
@@ -116,10 +116,6 @@ final class AuthController extends Controller
         catch(ValidationException $e)
         {
             return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors()]);
-        }
-        catch(HttpException $e)
-        {
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
         }
     }
 

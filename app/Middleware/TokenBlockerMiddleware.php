@@ -17,6 +17,8 @@ use App\Http\Router;
 use App\Lib\Jwt;
 use App\Lib\View;
 
+use App\Services\Configuration\CookieService;
+
 use App\Constants;
 use App\ErrorCodes;
 
@@ -24,6 +26,7 @@ final class TokenBlockerMiddleware implements Middleware
 {
     public function __construct(
         private readonly TokenResetTtlCache $cache,
+        private readonly CookieService $cookies,
         private readonly UrlGenerator $url
     ){}
 
@@ -34,13 +37,14 @@ final class TokenBlockerMiddleware implements Middleware
         if (empty($userId) || empty($tokenIat))
             return $next($ctx);
 
-        $ttl = $cache->get($userId);
-        if ($ttl === NULL || (int)$ttl > $tokenIat)
+        $ttl = $this->cache->get($userId);
+        if ($ttl === NULL || (int)$ttl < $tokenIat)
             return $next($ctx);
 
-        if ($ctx->isApi())
-            return Response::json(ResponseTemplates::error(new Error(ErrorCodes::UNAUTHORIZED, "Authenticate first")), 401);
-        else
-            return Response::redirect('login');
+        $response = $ctx->isApi()
+            ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::UNAUTHORIZED, "Authenticate first")), 401)
+            : Response::redirect($this->url->url('login'));
+
+        return $this->cookies->clear($response, Constants::TOKEN_COOKIE);
     }
 }

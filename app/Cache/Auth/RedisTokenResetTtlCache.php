@@ -7,7 +7,7 @@ use App\Cache\UserContextCache;
 use App\Models\Users\UserContext;
 use App\Lib\Data\RedisClient;
 
-final class RedisTokenResetTtlCache implements PassResetCache
+final class RedisTokenResetTtlCache implements TokenResetTtlCache
 {
     private const string PREFIX = 'token_reset:';
 
@@ -23,7 +23,7 @@ final class RedisTokenResetTtlCache implements PassResetCache
 
     public function set(int $userId, int $timeStamp, int $ttl = 300): void
     {
-        $this->redis->setex(self::PREFIX . $userId, $ttl, $timeStamp);
+        $this->redis->setex(self::PREFIX . $userId, $ttl, (string)$timeStamp);
     }
 
     public function forget(int $userId): void

@@ -168,7 +168,7 @@ final class UsersRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'UPDATE users SET pass_hash = :passHash
-            WHERE user_id = :userId
+            WHERE id = :userId
             RETURNING id'
         );
 

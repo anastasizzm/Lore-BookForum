@@ -33,7 +33,7 @@
     поэтому кладём его в hidden-поле.
     Роут и обработчик добавит бэкенд.
   -->
-  <form class="login-form" id="passwordResetForm" action="/password/reset" method="POST" novalidate>
+  <form class="login-form" id="passwordResetForm" action="<?= $view->url('password.reset.submit') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <input type="hidden" name="token" value="<?= $view->e($token ?? ($_GET['token'] ?? '')) ?>">

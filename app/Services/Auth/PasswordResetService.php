@@ -9,7 +9,6 @@ use App\Lib\Settings;
 use App\Http\UrlGenerator;
 
 use App\Services\Mail\Mailer;
-use App\Services\Configuration\UnitOfWork;
 
 use App\Cache\Auth\PassResetCache;
 use App\Cache\Auth\TokenResetTtlCache;
@@ -31,7 +30,6 @@ final class PasswordResetService
         private readonly UrlGenerator   $url,
         private readonly Mailer         $mailer,
         private readonly UsersRepository $users,
-        private readonly UnitOfWork     $uof,
         private readonly PassResetCache $cache,
         private readonly TokenResetTtlCache $tokenCache,
         private readonly Settings       $settings,
@@ -44,7 +42,7 @@ final class PasswordResetService
     public function startReset(int $userId, string $email) : void 
     {
         $token = $this->createToken($userId);
-        $this->cache->set($userId, sha256($token), self::TOKEN_TTL_SECONDS);
+        $this->cache->set($userId, hash('sha256', $token), self::TOKEN_TTL_SECONDS);
         
         $link = rtrim($this->settings->appUrl, '/')
               . $this->url->url('password.reset', ['token' => $token]);
@@ -70,32 +68,17 @@ final class PasswordResetService
         if ($savedHash === NULL)
             throw new GoneException('The request has expired');
 
-        $hash = hash('sha256', $rawToken);
+        $hash = hash('sha256', $token);
         if (!hash_equals($savedHash, $hash))
             throw new ForbiddenException("Request token mismatch");
 
         return $tokenUserId;
     }
 
-    public function resetPassword(int $userId, string $newHash) : bool
+    public function resetPassword(int $userId, string $newHash) : void
     {
-        $ok = $this->uof->transactional(function (PDO $pdo) use ($userId, $newHash): bool {
-            $ok = $this->users->updatePassword($userId, $newHash);
-
-            if (!$ok) {
-                $exists = $this->users->exists($userId);
-                if (!$exists) {
-                    throw new NotFoundException('User not found');
-                }   
-            }
-
-            return $ok;
-        });
-
-        if (!$ok) return false;
-
+        $this->users->updatePassword($userId, $newHash);
         $this->tokenCache->set($userId, time(), self::TOKEN_RESET_TTL_SECONDS);
-        return true;
     }
 
     private function createToken(int $userId) : string

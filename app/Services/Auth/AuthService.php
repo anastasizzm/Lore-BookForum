@@ -103,7 +103,7 @@ final class AuthService
 
         $credits = $this->usersRepo->findCreditsByLogin($form->email);
         if ($credits === null)
-            throw new NotFoundException('Account with this email is not found');
+            throw new ValidationException(['email' => ['Account with this email not found']]);
 
         $this->passResetService->startReset($credits->id, $form->email);
     }
