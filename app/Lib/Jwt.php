@@ -135,6 +135,8 @@ final class Jwt
         if ($issuer !== null && ($claims['iss'] ?? null) !== $issuer) {
             return false;
         }
+
+        return true;
     }
 
     // ---------- internals ----------
