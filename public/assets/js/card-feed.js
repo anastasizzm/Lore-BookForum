@@ -7,6 +7,14 @@
    ============================================ */
 
 /* ---------- CSRF ---------- */
+// Ники -> профили (users.js грузится раньше card-feed.js); фолбэк — без ссылок.
+const fcUsers = window.LoreUsers || {
+  remember: () => 0,
+  renderAuthor: (el, label) => { if (el) el.textContent = label || ''; },
+  renderText: (el, text) => { if (el) el.textContent = text || ''; },
+  withMention: (text) => String(text == null ? '' : text).trim(),
+};
+
 function csrfToken() {
   const el = document.querySelector('[data-feed-comment-form] [name="_token"]')
           || document.querySelector('[data-csrf] [name="_token"]')
@@ -121,7 +129,16 @@ document.addEventListener('click', (e) => {
     replyBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       const input = form.querySelector('.comment-form__input');
-      if (input) input.focus();
+      if (input) {
+        // Ответ начинается с @ника автора комментария (если поле пустое)
+        const target = (node && node.dataset.authorUsername) || '';
+        if (target && input.value.trim() === '') {
+          input.value = '@' + target + ' ';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        input.focus();
+        try { input.selectionStart = input.selectionEnd = input.value.length; } catch (_) {}
+      }
     }
   }
 });
@@ -240,9 +257,14 @@ document.addEventListener('submit', async (e) => {
   setFeedMsg(errEl, '');
   setFeedMsg(statusEl, '');
 
-  const text = input.value.trim();
+  let text = input.value.trim();
   if (text === '') return;
   if (!commentId) return setFeedMsg(errEl, 'commentId is missing');
+
+  // Ответ отправляется с @ником автора комментария в начале текста
+  text = fcUsers.withMention(text, node ? node.dataset.authorUsername : '');
+  input.value = text;
+
   if (form.dataset.lastSent === text) return setFeedMsg(errEl, 'You have already sent this comment.');
 
   // publicationId берём из основной формы карточки — у комментариев он общий с постом
@@ -301,7 +323,6 @@ document.addEventListener('submit', async (e) => {
 const FEED_COMMENTS = {
   url: '/api/posts',
   pageSize: 10,
-  avatarsDir: '/uploads/avatars/',
 };
 
 const feedCommentsState = new WeakMap(); // card -> {page, hasNext, loading, gen, started}
@@ -371,27 +392,34 @@ function fcBuildItem(item, tpl) {
     || ((fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
         || fcFirstChar(c.username).toUpperCase());
 
+  // Аватар: пресет из настроек (эмодзи) / настоящая картинка / инициалы
   const avatarRaw = c.avatar || '';
-  const src = avatarRaw && avatarRaw !== 'default' ? FEED_COMMENTS.avatarsDir + avatarRaw : null;
+  const av = (window.LoreAvatar && LoreAvatar.parse(avatarRaw)) || { type: 'none' };
 
   const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
   const wrapImg = node.querySelector('[data-fc-avatar-img]');
+  const wrapEmoji = node.querySelector('[data-fc-avatar-emoji]');
   if (wrapInitials && wrapImg) {
-    const used = src ? wrapImg : wrapInitials;
-    (src ? wrapInitials : wrapImg).remove();
+    let used = wrapInitials;
+    if (av.type === 'image') used = wrapImg;
+    else if (av.type === 'emoji' && wrapEmoji) used = wrapEmoji;
+
+    [wrapInitials, wrapImg, wrapEmoji].forEach((w) => { if (w && w !== used) w.remove(); });
     used.hidden = false;
     used.innerHTML = used.innerHTML
       .split('__INITIALS__').join(fcEsc(initials))
-      .split('__SRC__').join(fcEsc(src ? encodeURI(src) : ''));
+      .split('__EMOJI__').join(av.type === 'emoji' ? av.emoji : '')
+      .split('__SRC__').join(fcEsc(av.type === 'image' ? encodeURI(av.src) : ''));
     // Если картинка не отдастся — onerror в avatar.php покажет инициалы
     const fallbackSpan = used.querySelector('.avatar span[hidden]');
     if (fallbackSpan) fallbackSpan.textContent = initials;
   }
 
-  // textContent: без XSS
-  node.querySelector('[data-fc-author]').textContent = c.username || '';
+  // textContent/fillAvatar: без XSS; ник автора и @упоминания — ссылки на профиль
+  fcUsers.renderAuthor(node.querySelector('[data-fc-author]'), c.username || '', c.id, c.username);
+  if (c.username) node.dataset.authorUsername = c.username;
+  fcUsers.renderText(node.querySelector('[data-fc-text]'), item.content || '');
   node.querySelector('[data-fc-date]').textContent = fcFormatDate(item.createdAt);
-  node.querySelector('[data-fc-text]').textContent = item.content || '';
 
   if (item.id != null) {
     node.dataset.commentId = item.id;
@@ -540,6 +568,7 @@ function fcAppendOwn(card, id, text) {
 
   const item = fcOwnItem(id, text);
   item.creator.username = card.dataset.cuName || '';
+  item.creator.id = Number(card.dataset.cuId || 0);
   item.__initials = card.dataset.cuInitials || '?';
 
   const node = fcBuildItem(item, tpl);

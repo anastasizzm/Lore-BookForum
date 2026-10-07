@@ -146,6 +146,11 @@
       ? ([c.name, c.surname].filter(Boolean).join(' ').trim() || c.username || '')
       : '';
     const authorId = Number(c?.id ?? 0);
+    // «логин -> id» для @упоминаний в комментариях (users.js): карточки
+    // библиотеки/подборок — один из немногих мест, где пара уже есть.
+    if (authorId > 0 && c && c.username && window.LoreUsers) {
+      window.LoreUsers.remember(authorId, c.username);
+    }
     const author = authorName
       ? `<p class="card-book__author"><a class="card-book__author-link"
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
@@ -159,21 +164,27 @@
     const saveAttr = IS_ARTICLES ? 'data-save-article data-article-id' : 'data-save-book data-book-id';
     const saveKind = IS_ARTICLES ? 'article' : 'book';
 
+    // API отдаёт состояние закладки в контексте юзера как isSaved
+    // (WithContext<Publication, PublicationContext>), поле saved оставлено
+    // как запасной вариант для старых ответов — иначе в библиотеке
+    // сохранённая книга выглядела несохранённой.
+    const isSaved = !!(b.isSaved ?? b.saved);
+
     return `
 <article class="card-base card-book">
   <div class="card-book__cover">
     <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy"
          onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-    <button type="button" class="btn-icon btn-icon--circle card-book__save${b.saved ? ' is-active' : ''}"
-            ${saveAttr}="${id}"
-            data-save-url="${esc(API + '/' + id + '/save')}"
-            aria-pressed="${b.saved ? 'true' : 'false'}"
-            aria-label="${b.saved ? 'Remove from saved' : 'Save ' + saveKind}">
-      <svg width="14" height="18" viewBox="0 0 14 18" fill="none" aria-hidden="true">
-        <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
-      </svg>
-    </button>
   </div>
+  <button type="button" class="btn-icon btn-icon--circle card-book__save${isSaved ? ' is-active' : ''}"
+          ${saveAttr}="${id}"
+          data-save-url="${esc(API + '/' + id + '/save')}"
+          aria-pressed="${isSaved ? 'true' : 'false'}"
+          aria-label="${isSaved ? 'Remove from saved' : 'Save ' + saveKind}">
+    <svg width="14" height="18" viewBox="0 0 14 18" fill="none" aria-hidden="true">
+      <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+  </button>
   <h3 class="card-book__title"><a class="card-book__link" href="${esc(href)}">${esc(b.title)}</a></h3>
   ${author}
 </article>`;

@@ -162,18 +162,9 @@ $view->include('library-filters', [
         </div>
       </div>
 
-      <?php
-      // Табы фильтра Saved: ?status= (reading|ended) — одновременно и подсветка
-      // таба, и параметр для бэкенда; 'f' остаётся за панелью фильтров (app.js)
-      $view->include('tabs', [
-          'variant' => 'filled',
-          'items'   => [
-              ['label' => 'All',      'href' => $link(['q' => $q, 'status' => null]),      'active' => $f === 'all'],
-              ['label' => 'To read',  'href' => $link(['q' => $q, 'status' => 'reading']), 'active' => $f === 'to-read'],
-              ['label' => 'Finished', 'href' => $link(['q' => $q, 'status' => 'ended']),   'active' => $f === 'finished'],
-          ],
-      ]);
-      ?>
+      <!-- Дублирующийся фильтр «All / To read / Finished» убран:
+           статус читается только в открывающемся меню фильтров
+           (library-filters: табы внутри панели ?status=reading|ended). -->
 
       <?php
       // Сортировка. На Saved нет library-filters.js, поэтому пункты — обычные

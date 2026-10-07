@@ -299,6 +299,7 @@ $meAvatar    = ($meAvatarRaw !== '' && $meAvatarRaw !== 'default')
        вставленный комментарий/ответ должен совпадать с тем, что покажет перезагрузка. -->
   <section class="comments-section" data-comments
            data-publication-id="<?= (int) $publicationId ?>"
+           data-me-id="<?= (int) ($me->id ?? 0) ?>"
            data-me-name="<?= $view->e($meName) ?>"
            data-me-username="<?= $view->e((string) ($me->username ?? '')) ?>"
            data-me-initials="<?= $view->e($meInitials) ?>"

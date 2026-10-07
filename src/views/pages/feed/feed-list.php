@@ -150,6 +150,7 @@ $items = array_map(
               'date'          => $post->createdAt->format('d.m.Y'),
               'currentUserInitials' => $cuInitials,
               'currentUserName'     => $cu?->username ?? '',
+              'currentUserId'       => (int) ($cu?->id ?? 0),
           ]);
         ?>
       <?php endforeach; ?>
@@ -166,11 +167,13 @@ $items = array_map(
 <?php endif; ?>
 
 <!-- Шаблон комментария под постом (клонируется из card-feed.js).
-     __INITIALS__ и __SRC__ — плейсхолдеры: JS оставляет один из двух вариантов аватара -->
+     __INITIALS__/__EMOJI__/__SRC__ — плейсхолдеры: JS оставляет один из
+     трёх вариантов аватара (пресет-эмодзи / картинка / инициалы) -->
 <template id="feed-comment-template">
   <div class="feed-comment">
     <div class="feed-comment__avatar">
       <div data-fc-avatar-initials hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => null]); ?></div>
+      <div data-fc-avatar-emoji hidden><div class="avatar avatar--sm"><span class="avatar__emoji" aria-hidden="true">__EMOJI__</span></div></div>
       <div data-fc-avatar-img hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => '__SRC__']); ?></div>
     </div>
     <div class="feed-comment__body">
@@ -201,3 +204,9 @@ $items = array_map(
 </template>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <!-- Поиск в ленте по названию книги (не по автору): filters.js
+       делегирует сюда сабмит поля ?q= — см. feed-search.js -->
+  <script src="<?= $view->asset('js/feed-search.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

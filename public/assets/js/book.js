@@ -92,6 +92,15 @@
   var COMMENT_MAX = 2000;
   var PAGE_SIZE = 20;
 
+  // Ники -> профили (users.js). Фолбэк — если файл не догрузился,
+  // текст всё равно отрисуется, просто без ссылок.
+  var Users = window.LoreUsers || {
+    remember: function () { return 0; },
+    renderAuthor: function (el, label) { if (el) el.textContent = label || ''; },
+    renderText: function (el, text) { if (el) el.textContent = text || ''; },
+    withMention: function (text) { return String(text == null ? '' : text).trim(); }
+  };
+
   function one(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -168,27 +177,38 @@
     return v;
   }
 
-  function avatarUrl(user) {
-    var raw = String((user && user.avatar) || '');
-    return (raw !== '' && raw !== 'default') ? '/uploads/avatars/' + raw : '';
+  /** Значение users.avatar как есть: '' | 'default' | пресет | файл. */
+  function avatarOf(user) {
+    return String((user && user.avatar) || '');
   }
 
   /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
-  function fillAvatar(avatar, initials, src) {
+  function fillAvatar(avatar, initials, raw) {
     if (!avatar) return;
     avatar.replaceChildren();
 
     var span = document.createElement('span');
     span.textContent = initials || '?';
 
-    if (!src) {
+    // Аватар-пресет (настройки профиля) — эмодзи, а не битая картинка
+    var parsed = (window.LoreAvatar && LoreAvatar.parse(raw)) || { type: 'none' };
+    if (parsed.type === 'emoji') {
+      var em = document.createElement('span');
+      em.className = 'avatar__emoji';
+      em.setAttribute('aria-hidden', 'true');
+      em.textContent = parsed.emoji;
+      avatar.appendChild(em);
+      return;
+    }
+
+    if (parsed.type !== 'image') {
       avatar.appendChild(span);
       return;
     }
 
     var img = document.createElement('img');
     img.alt = '';
-    img.src = src;
+    img.src = parsed.src;
     avatar.appendChild(img);
     avatar.appendChild(span);
     span.hidden = true;
@@ -208,9 +228,12 @@
 
     fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     var author = one('[data-c-author]', node);
-    if (author) author.textContent = data.author || '';
+    if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    // для ответа: кому пишем (@ник) — лежит на карточке
+    if (data.authorUsername) node.dataset.authorUsername = data.authorUsername;
+    if (data.authorId) node.dataset.authorId = String(Number(data.authorId));
     var text = one('[data-c-text]', node);
-    if (text) text.textContent = data.text || '';      // textContent: без XSS
+    Users.renderText(text, data.text || '');            // текст + @упоминания ссылками
     var date = one('[data-c-date]', node);
     if (date) date.textContent = data.date || '';
 
@@ -303,8 +326,10 @@
         var node = appendComment({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
+          authorId: item.creator && item.creator.id,
+          authorUsername: (item.creator && item.creator.username) || '',
           initials: initialsOf(item.creator),
-          avatar: avatarUrl(item.creator),
+          avatar: avatarOf(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt),
           likes: item.likesCount || 0,
@@ -419,9 +444,12 @@
         bumpCount();
 
         var created = data ? (data.createdId != null ? data.createdId : data.id) : null;
+        var me = meInfo();
         var node = appendComment({
           id: created,
-          author: meInfo().author,
+          author: me.author,
+          authorId: me.id,
+          authorUsername: me.author,
           initials: null,
           avatar: '',
           text: text,
@@ -509,6 +537,7 @@
   function meInfo() {
     var section = sectionEl() || document;
     return {
+      id: Number(section.dataset.meId || 0),
       // author — как API вернёт creator.username, иначе после F5 имя «мигает»
       // между «Имя Фамилия» (data-me-name) и логином
       author:   section.dataset.meUsername || section.dataset.meName || '',
@@ -517,16 +546,15 @@
     };
   }
 
-  /** Строка ответа из <template id="reply-template"> (textContent/fillAvatar — без XSS). */
+  /** Строка ответа из <template id="reply-template"> (без innerHTML — без XSS). */
   function replyNode(data) {
     var tpl = document.getElementById('reply-template');
     if (!tpl) return null;
 
     var node = tpl.content.firstElementChild.cloneNode(true);
     var author = one('.comment-reply__author', node);
-    if (author) author.textContent = data.author || '';
-    var text = one('.comment-reply__text', node);
-    if (text) text.textContent = data.text || '';
+    Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    Users.renderText(one('.comment-reply__text', node), data.text || '');
     fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     return node;
   }
@@ -570,8 +598,10 @@
       items.slice().reverse().forEach(function (item) {
         appendReply(card, {
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
+          authorId: item.creator && item.creator.id,
+          authorUsername: (item.creator && item.creator.username) || '',
           initials: initialsOf(item.creator),
-          avatar: avatarUrl(item.creator),
+          avatar: avatarOf(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt)
         });
@@ -581,7 +611,7 @@
     }
   }
 
-  // Показать/скрыть форму ответа
+  // Показать/скрыть форму ответа; при открытии подставляем @ник автора
   document.addEventListener('click', function (e) {
     var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
     if (!replyBtn) return;
@@ -594,7 +624,19 @@
     replyBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       var first = form.querySelector('input');
-      if (first) first.focus();
+      if (first) {
+        // Ответ начинается с @ника автора комментария (если поле пустое)
+        var card = replyBtn.closest('[data-comment-id]');
+        var target = (card && card.dataset.authorUsername) || '';
+        if (target && first.value.trim() === '') {
+          first.value = '@' + target + ' ';
+          first.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        first.focus();
+        try {
+          first.selectionStart = first.selectionEnd = first.value.length;
+        } catch (_) { /* type=text в старых браузерах */ }
+      }
     }
   });
 
@@ -627,6 +669,11 @@
     var commentId = Number(card.dataset.commentId || 0);
     if (!commentId) return setMsg(errEl, 'Cannot send the reply: the comment id is missing.');
     if (text === '') return;
+
+    // Ответ отправляется с @ником автора комментария в начале текста
+    text = Users.withMention(text, card.dataset.authorUsername || '');
+    if (input) input.value = text;
+
     if (text.length > COMMENT_MAX) return setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
 
     var section = sectionEl();
@@ -665,6 +712,8 @@
         var me = meInfo();
         appendReply(card, {
           author: me.author,
+          authorId: me.id,
+          authorUsername: me.author,
           initials: me.initials,
           avatar: me.avatar,
           text: text
@@ -705,3 +754,5 @@
     initComments();
   }
 })();
+
+/* marker-test-12345 */

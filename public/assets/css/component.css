@@ -198,6 +198,12 @@ textarea.form-field__input {
   object-fit: cover;
 }
 
+/* Аватар-пресет из настроек профиля (cat/dog/…) — эмодзи вместо <img> */
+.avatar__emoji {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
 /* ============================================
    TAGS
    ============================================ */
@@ -1212,10 +1218,9 @@ textarea.form-field__input {
    CARD — Book: кнопка «Сохранить» (закладка)
    POST/DELETE /api/books/{id}/save — обработчик в app.js
    ============================================ */
-.card-book__cover {
-  position: relative;
-}
-
+/* Кнопка лежит прямо в карточке (не в .card-book__cover) и позиционируется
+   от неё: .card-book имеет position:relative и белое поле (padding 24px),
+   поэтому закладка видна в правом верхнем углу САМОЙ карточки. */
 .card-book__save {
   position: absolute;
   top: var(--space-2);
@@ -1360,4 +1365,35 @@ textarea.form-field__input {
 /* Аватар: если картинка не загрузилась, наследуем инициалы */
 .avatar [hidden] {
   display: none;
+}
+
+/* ============================================
+   Комментарии: ник автора и @упоминания ведут на профиль (/users/{id}).
+   Разметку делает users.js (без innerHTML — только textNode/ссылки).
+   ============================================ */
+.user-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.user-link:hover,
+.user-link:focus-visible {
+  text-decoration: underline;
+}
+
+.user-mention {
+  color: var(--main-text-color);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+a.user-mention:hover,
+a.user-mention:focus-visible {
+  text-decoration: underline;
+}
+
+/* Ссылка-заглушка: ответа API ещё не было, href появится после resolve */
+.user-mention:not([href]) {
+  color: inherit;
+  cursor: text;
 }
