@@ -27,14 +27,31 @@
       <a class="btn btn--primary" href="<?= $view->url('login') ?>">
         Sign in
       </a>
-    <?php else: ?>
-      <button type="button"
-              class="btn btn--primary"
-              data-verify-retry
-              data-resend-url="<?php $view->url('api.sendmail')?>"
-              data-message-url="#">
-        Resend verification
-      </button>
+    <?php else:
+      /*
+        Resend verification.
+        Токен подтверждения приходит в адресе страницы (/auth/verify/{token}) —
+        контроллер его во view не передаёт, поэтому достаём его из URL и кладём
+        в скрытое поле формы `token`: бэк (POST /api/mail) читает именно его.
+        Адрес для resend берём из роутера ($view->url), без хардкода.
+      */
+      $path  = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+      $match = [];
+      $verifyToken = preg_match('#^/auth/verify/([^/]+)#', $path, $match) === 1
+        ? rawurldecode($match[1])
+        : '';
+    ?>
+      <form class="login-message__form"
+            data-verify-resend
+            method="post"
+            action="<?= $view->e($view->url('api.sendmail')) ?>">
+        <?= $view->csrfField() ?>
+        <input type="hidden" name="token" value="<?= $view->e($verifyToken) ?>">
+
+        <button type="submit" class="btn btn--primary" data-verify-retry>
+          Resend verification
+        </button>
+      </form>
     <?php endif; ?>
 
     <!-- Сюда JS будет вставлять плашку при ошибке -->

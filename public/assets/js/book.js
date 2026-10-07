@@ -148,10 +148,13 @@
   }
 
   function formatDate(value) {
-    var d = value ? new Date(value) : null;
-    if (!d || isNaN(d.getTime())) return '';
-    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
-    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+    // API отдаёт DateTimeImmutable как {date, timezone_type, timezone}
+    var raw = (value && typeof value === 'object' && !(value instanceof Date))
+      ? value.date
+      : value;
+    if (raw instanceof Date) raw = raw.toISOString();
+    var m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
+    return m ? m[3] + '.' + m[2] + '.' + m[1] : '';
   }
 
   function initialsOf(user) {
@@ -222,8 +225,8 @@
       }
     }
 
-    // Состояние «мой лайк» (localStorage feed:liked-ids) — см. card-feed.js
-    if (typeof applyLikedState === 'function') applyLikedState(node);
+    // Состояние «мой лайк» — признак isLiked из контекста юзера в ответе API
+    if (likeBtn && typeof setLikedUI === 'function') setLikedUI(likeBtn, !!data.liked);
     return node;
   }
 
@@ -292,17 +295,26 @@
         if (list) list.replaceChildren();
       }
 
+      // Комментарии с ответами подтягиваем сразу: ответы живут отдельно
+      // (GET /api/posts?parent={id}), иначе после F5 они пропадут.
+      var withReplies = [];
+
       items.forEach(function (item) {
-        appendComment({
+        var node = appendComment({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
           initials: initialsOf(item.creator),
           avatar: avatarUrl(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt),
-          likes: item.likesCount || 0
+          likes: item.likesCount || 0,
+          liked: !!item.isLiked
         }, false);
+
+        if (node && Number(item.commentsCount) > 0) withReplies.push(node);
       });
+
+      withReplies.forEach(function (node) { loadReplies(node); });
 
       if (emptyEl()) {
         var n = listEl() ? listEl().children.length : 0;
@@ -409,12 +421,13 @@
         var created = data ? (data.createdId != null ? data.createdId : data.id) : null;
         var node = appendComment({
           id: created,
-          author: (one('.comment-card__author', form) || {}).textContent || '',
+          author: meInfo().author,
           initials: null,
           avatar: '',
           text: text,
           date: new Date().toISOString(),
-          likes: 0
+          likes: 0,
+          liked: false
         }, true);
 
         // Своя аватарка/инициалы берутся из формы (там они уже отрендерены)
@@ -480,8 +493,93 @@
   });
 
   /* ----------------------------------------------------------
-     Ответы на комментарии — локально (TODO: POST /api/posts/{id})
+     Ответы на комментарии:
+       отправка — POST /api/posts/{commentId} (content, publicationId, _token);
+       загрузка — GET  /api/posts?parent={commentId}&include=creator.
      ---------------------------------------------------------- */
+
+  var REPLY_PAGE_SIZE = 50;
+
+  function csrfTokenValue() {
+    var el = one('[data-comment-form] input[name="_token"]') || one('input[name="_token"]');
+    return el ? el.value : '';
+  }
+
+  /** Текущий юзер — из атрибутов секции комментариев (book-details.php). */
+  function meInfo() {
+    var section = sectionEl() || document;
+    return {
+      // author — как API вернёт creator.username, иначе после F5 имя «мигает»
+      // между «Имя Фамилия» (data-me-name) и логином
+      author:   section.dataset.meUsername || section.dataset.meName || '',
+      initials: section.dataset.meInitials || '?',
+      avatar:   section.dataset.meAvatar || ''
+    };
+  }
+
+  /** Строка ответа из <template id="reply-template"> (textContent/fillAvatar — без XSS). */
+  function replyNode(data) {
+    var tpl = document.getElementById('reply-template');
+    if (!tpl) return null;
+
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    var author = one('.comment-reply__author', node);
+    if (author) author.textContent = data.author || '';
+    var text = one('.comment-reply__text', node);
+    if (text) text.textContent = data.text || '';
+    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
+    return node;
+  }
+
+  function appendReply(card, data) {
+    var list = one('[data-replies]', card);
+    var node = replyNode(data);
+    if (!list || !node) return null;
+    list.appendChild(node);
+    return node;
+  }
+
+  /** GET /api/posts?parent={commentId}&include=creator — ответы из БД. */
+  async function loadReplies(card) {
+    var commentId = Number((card && card.dataset.commentId) || 0);
+    if (!commentId) return;
+
+    var params = new URLSearchParams({
+      parent: String(commentId),
+      page: '1',
+      ps: String(REPLY_PAGE_SIZE),
+      include: 'creator'
+    });
+
+    try {
+      var res = await fetch(API_POSTS + '?' + params.toString(), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
+
+      var data = null;
+      try { data = await res.json(); } catch (_) { data = null; }
+      if (!res.ok || !data) return;
+
+      var items = Array.isArray(data.items) ? data.items : [];
+      var list = one('[data-replies]', card);
+      if (!list) return;
+
+      list.replaceChildren();
+      // API отдаёт created_at DESC — ответы читаются сверху вниз, разворачиваем
+      items.slice().reverse().forEach(function (item) {
+        appendReply(card, {
+          author: (item.creator && (item.creator.username || item.creator.name)) || '',
+          initials: initialsOf(item.creator),
+          avatar: avatarUrl(item.creator),
+          text: item.content || '',
+          date: formatDate(item.createdAt)
+        });
+      });
+    } catch (err) {
+      console.warn('GET ' + API_POSTS + '?parent= failed', err);
+    }
+  }
 
   // Показать/скрыть форму ответа
   document.addEventListener('click', function (e) {
@@ -504,34 +602,92 @@
   document.addEventListener('input', function (e) {
     var input = e.target.closest && e.target.closest('.comment-reply-form__input');
     if (!input) return;
-    var btn = input.closest('form') && input.closest('form').querySelector('.comment-reply-form__submit');
+    var form = input.closest('form');
+    var btn = form && form.querySelector('.comment-reply-form__submit');
     if (btn) btn.disabled = input.value.trim() === '';
+    setMsg(form ? one('[data-reply-error]', form) : null, '');
   });
 
-  // Отправка ответа (пока только локально)
-  document.addEventListener('submit', function (e) {
+  // Отправка ответа: POST /api/posts/{commentId}
+  document.addEventListener('submit', async function (e) {
     var form = e.target.closest && e.target.closest('[data-reply-form]');
     if (!form) return;
     e.preventDefault();
+    if (form.dataset.sending === '1') return;
 
-    var input = form.querySelector('input');
-    var text = input.value.trim();
+    var input = one('input', form);
+    var sendBtn = one('.comment-reply-form__submit', form);
+    var errEl = one('[data-reply-error]', form);
+    var card = form.closest('[data-comment-id]');
+    var text = input ? (input.value || '').trim() : '';
+
+    setMsg(errEl, '');
+
+    if (!card) return;
+    var commentId = Number(card.dataset.commentId || 0);
+    if (!commentId) return setMsg(errEl, 'Cannot send the reply: the comment id is missing.');
     if (text === '') return;
+    if (text.length > COMMENT_MAX) return setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
 
-    var template = document.getElementById('reply-template');
-    if (!template) return;
+    var section = sectionEl();
+    var pubId = Number((section && section.dataset.publicationId) || 0);
+    if (!pubId) return setMsg(errEl, 'Cannot send the reply: the publication id is missing on this page.');
 
-    var reply = template.content.firstElementChild.cloneNode(true);
-    reply.querySelector('.comment-reply__text').textContent = text; // textContent: без XSS
+    var body = new URLSearchParams();
+    body.set('content', text);
+    body.set('publicationId', String(pubId));
+    var token = csrfTokenValue();
+    if (token) body.set('_token', token);
 
-    var content = form.closest('.comment-card__content');
-    content.querySelector('[data-replies]').appendChild(reply);
+    form.dataset.sending = '1';
+    input.readOnly = true;
+    if (sendBtn) sendBtn.disabled = true;
 
-    input.value = '';
-    form.querySelector('.comment-reply-form__submit').disabled = true;
-    form.hidden = true;
-    content.querySelector('[data-reply-toggle]').setAttribute('aria-expanded', 'false');
-    // TODO: отправить ответ на сервер (POST /api/posts/{postId})
+    try {
+      var res = await fetch(API_POSTS + '/' + commentId, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: body
+      });
+
+      var data = null;
+      var raw = '';
+      try {
+        raw = await res.text();
+        data = raw ? JSON.parse(raw) : null;
+      } catch (_) { data = null; }
+
+      var serverError = payloadError(data);
+      var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
+
+      if (res.ok && !serverError && !htmlErrorPage) {
+        var me = meInfo();
+        appendReply(card, {
+          author: me.author,
+          initials: me.initials,
+          avatar: me.avatar,
+          text: text
+        });
+
+        bumpCount(); // счётчик публикации включает ответы (считает триггер в БД)
+
+        input.value = '';
+        form.hidden = true;
+        var toggle = one('[data-reply-toggle]', card);
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        return;
+      }
+
+      setMsg(errEl, serverError || failureText(res, raw));
+    } catch (err) {
+      console.warn('POST ' + API_POSTS + '/' + commentId + ' failed', err);
+      setMsg(errEl, 'Network error. Try again.');
+    } finally {
+      delete form.dataset.sending;
+      input.readOnly = false;
+      if (sendBtn) sendBtn.disabled = input.value.trim() === '';
+    }
   });
 
   /* ----------------------------------------------------------

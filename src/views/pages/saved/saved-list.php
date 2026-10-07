@@ -11,7 +11,7 @@
  * Данные от BooksController::savedList / ArticlesController::savedList:
  *   $items — массив Publication (id, title, iconId, creator, getCreatorId()...)
  *   $meta  — ['page', 'pageSize', 'hasNext', 'type']
- * Необязательно: $searchQuery, $currentFilter (иначе берутся из ?q= и ?rf=)
+ * Необязательно: $searchQuery, $currentSort, $sortOptions (иначе берутся из ?q= и ?sort=)
  */
 $items    = $items ?? [];
 $meta     = $meta  ?? [];
@@ -33,10 +33,30 @@ $q = $searchQuery ?? ($_GET['q'] ?? '');
 $q = is_string($q) ? trim($q) : '';
 
 // ВАЖНО: 'f' занят под состояние панели фильтров (open/closed) в app.js.
-// Для табов Saved используем отдельный параметр 'rf'.
-// all -> все сохранённые, to-read -> в процессе чтения, finished -> дочитанные
-$f = $currentFilter ?? ($_GET['rf'] ?? 'all');
-if (!in_array($f, ['all', 'to-read', 'finished'], true)) $f = 'all';
+// Табы Saved фильтруются параметром 'status' — ровно тем, что читает бэкенд
+// (App\Models\Enums\ReadingStatus: none | reading | ended):
+//   status=reading -> 'To read', status=ended -> 'Finished', иначе -> 'All'.
+// Старый ?rf=to-read|finished здесь намеренно не читается: его бэкенд игнорирует,
+// из-за чего подсвеченный таб расходился с реально отрисованным списком.
+$statusParam = strtolower((string) ($_GET['status'] ?? ''));
+if (!in_array($statusParam, ['reading', 'ended'], true)) $statusParam = null;
+
+$f = match ($statusParam) {
+    'reading' => 'to-read',
+    'ended'   => 'finished',
+    default   => 'all',
+};
+
+// Сортировка — тот же ключ 'sort' и те же значения, что в library-list.
+// Пустой sort у бэкенда = Newest (PublicationsSortBy::Newest).
+$sortOptions = $sortOptions ?? [
+    'newest'     => 'Newest',
+    'popularity' => 'Popularity',
+    'alpha'      => 'A to Z',
+];
+$sort = $currentSort ?? ($_GET['sort'] ?? '');
+if (!is_string($sort) || !isset($sortOptions[$sort])) $sort = 'newest';
+$sortLabel = $sortOptions[$sort];
 
 // TODO: уточнить у бэка, как отдаются обложки по icon_id (files.id)
 $coversBase = '/uploads/covers/';
@@ -60,14 +80,16 @@ foreach ($items as $p) {
     ];
 }
 
-// Ссылки сохраняют поиск и фильтр
+// Ссылки сохраняют поиск, фильтр и сортировку
 $baseUrl = $view->url('books.saved');
-$link = static function (array $params) use ($baseUrl): string {
+$link = static function (array $params) use ($baseUrl, $sort, $statusParam): string {
+    // текущие ?sort= и ?status= не должны теряться; явное значение в $params главнее
+    $params += ['sort' => $sort === 'newest' ? null : $sort, 'status' => $statusParam];
+
     $params = array_filter($params, static fn($v) => $v !== null && $v !== '');
     $qs = http_build_query($params);
     return $baseUrl . ($qs !== '' ? '?' . $qs : '');
 };
-$filterParam = $f === 'all' ? null : $f;
 
 // Сколько книг показано (нижняя граница, если есть следующая страница)
 $shown = ($page - 1) * $pageSize + count($cards);
@@ -141,14 +163,33 @@ $view->include('library-filters', [
       </div>
 
       <?php
-      // Табы фильтра Saved: 'rf' — отдельный параметр, не конфликтует с f=open/closed
+      // Табы фильтра Saved: ?status= (reading|ended) — одновременно и подсветка
+      // таба, и параметр для бэкенда; 'f' остаётся за панелью фильтров (app.js)
       $view->include('tabs', [
           'variant' => 'filled',
           'items'   => [
-              ['label' => 'All',      'href' => $link(['q' => $q]),                      'active' => $f === 'all'],
-              ['label' => 'To read',  'href' => $link(['q' => $q, 'rf' => 'to-read']),   'active' => $f === 'to-read'],
-              ['label' => 'Finished', 'href' => $link(['q' => $q, 'rf' => 'finished']),  'active' => $f === 'finished'],
+              ['label' => 'All',      'href' => $link(['q' => $q, 'status' => null]),      'active' => $f === 'all'],
+              ['label' => 'To read',  'href' => $link(['q' => $q, 'status' => 'reading']), 'active' => $f === 'to-read'],
+              ['label' => 'Finished', 'href' => $link(['q' => $q, 'status' => 'ended']),   'active' => $f === 'finished'],
           ],
+      ]);
+      ?>
+
+      <?php
+      // Сортировка. На Saved нет library-filters.js, поэтому пункты — обычные
+      // ссылки; $link сам дописывает текущие q / status / sort.
+      $sortDropdown = [];
+      foreach ($sortOptions as $key => $text) {
+          $sortDropdown[] = [
+              'label' => $text,
+              'href'  => $link(['q' => $q, 'sort' => $key]),
+              'value' => $key,
+          ];
+      }
+      $view->include('dropdown', [
+          'label'   => 'Sort: ' . $sortLabel,
+          'key'     => 'sort',
+          'options' => $sortDropdown,
       ]);
       ?>
     </header>
@@ -157,7 +198,7 @@ $view->include('library-filters', [
       <p class="empty-state__text">
         <?= $q !== '' ? 'Nothing found for your search.' : 'No books here yet.' ?>
         <?php if ($page > 1): ?>
-          <a href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam])) ?>" class="link">Back to the first page</a>
+          <a href="<?= $view->e($link(['q' => $q])) ?>" class="link">Back to the first page</a>
         <?php endif; ?>
       </p>
     <?php else: ?>
@@ -175,18 +216,18 @@ $view->include('library-filters', [
     <!-- Показывается из saved.js, когда на странице сняли закладки со всех книг -->
     <p class="empty-state__text" data-saved-empty hidden>
       No saved books left on this page.
-      <a href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam])) ?>" class="link">Reload</a>
+      <a href="<?= $view->e($link(['q' => $q])) ?>" class="link">Reload</a>
     </p>
 
     <?php if ($page > 1 || $hasNext): ?>
       <nav class="books-panel__pager" aria-label="Pagination">
         <?php if ($page > 1): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
+             href="<?= $view->e($link(['q' => $q, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
         <?php endif; ?>
         <?php if ($hasNext): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'rf' => $filterParam, 'page' => $page + 1])) ?>">Next</a>
+             href="<?= $view->e($link(['q' => $q, 'page' => $page + 1])) ?>">Next</a>
         <?php endif; ?>
       </nav>
     <?php endif; ?>

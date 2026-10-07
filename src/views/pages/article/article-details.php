@@ -318,8 +318,17 @@ if (!empty($article->iconId)) {
     </div>
   </div>
 
-  <!-- Блок комментариев -->
-  <section class="comments-section" data-comments data-publication-id="<?= (int) $publicationId ?>">
+  <!-- Блок комментариев.
+       data-me-* нужен book.js: автора своего комментария/ответа он берёт из
+       data-me-username (= creator.username в API), иначе после F5 имя «мигает».
+       На статьях этих атрибутов раньше не было — оптимистичный ответ рисовался
+       с пустым автором. -->
+  <section class="comments-section" data-comments
+           data-publication-id="<?= (int) $publicationId ?>"
+           data-me-name="<?= $view->e($meName) ?>"
+           data-me-username="<?= $view->e((string) ($me->username ?? '')) ?>"
+           data-me-initials="<?= $view->e($meInitials) ?>"
+           data-me-avatar="<?= $view->e($meAvatar ?? '') ?>">
     <h2 class="comments-section__title">
       Comments: <span data-comments-count><?= (int) $totalComments ?></span>
     </h2>

@@ -1,7 +1,7 @@
 # Testing Checklist — Lore BookForum
 
-Чек-лист для проверки фронтенда. Проходить после того, как бэк починит
-`View::$urlResolver` и поднимет все роуты.
+Чек-лист для проверки фронтенда. Роуты (`config/routes.php`, `config/endpoints.php`)
+подняты — каждый пункт проверяем по актуальному пути из него.
 
 **Как пользоваться:** отмечай `[x]` то, что работает. Если что-то сломано —
 записывай баг с описанием и приоритетом (P0 — блокер, P1 — важно, P2 — потом).
@@ -18,7 +18,7 @@
 
 ---
 
-## 🔐 Auth — Login (`/login`)
+## 🔐 Auth — Login (`/auth/login`)
 
 ### Отображение
 - [ ] Страница открывается, форма по центру
@@ -34,8 +34,8 @@
 - [ ] Ошибки обновляются на лету при исправлении
 
 ### Отправка
-- [ ] Заполнить корректно → Submit → уходит POST на `/login`
-- [ ] В DevTools → Network видно `POST /login`
+- [ ] Заполнить корректно → Submit → уходит POST на `/auth/login`
+- [ ] В DevTools → Network видно `POST /auth/login`
 - [ ] В Request Headers есть `Cookie: csrf_token=...`
 
 ### Ошибка от бэка
@@ -48,7 +48,7 @@
 
 ---
 
-## 🔐 Auth — Register (`/register`)
+## 🔐 Auth — Register (`/auth/register`)
 
 ### Отображение
 - [ ] 6 полей: Email, Username, Name, Surname, Password, Confirm password
@@ -66,23 +66,66 @@
 - [ ] Пароли не совпадают → ошибка под Confirm
 
 ### Отправка
-- [ ] Корректные данные → POST `/register`
+- [ ] Корректные данные → POST `/auth/register`
 - [ ] Ошибки от бэка (email занят, username занят) → показываются под полями через `$errors`
 - [ ] Успех → редирект на `message` («проверьте почту»)
 
 ---
 
-## 📧 Message (`/message`)
+## 🔑 Auth — Forgot password (`/auth/password-reset`)
+
+### Отображение
+- [ ] Поле `Email`, кнопка `Send reset link`
+- [ ] `action` формы = `/auth/password-reset` (через `url('password.email.submit')`), метод POST
+- [ ] Есть CSRF-поле `_token`
+- [ ] Ссылка `Back to sign in` ведёт на `/auth/login`
+
+### Валидация (JS)
+- [ ] Пустой email или без `@` → ошибка `Invalid email`, навигации нет
+
+### Отправка
+- [ ] Network: `POST /auth/password-reset` с полями `email` + `_token`
+- [ ] Кривой формат → плашка `Invalid email format`
+- [ ] Неизвестный email → плашка `Account with this email not found`
+- [ ] Успех → страница message «The link to reset your password was sent to your email»
+- [ ] В письме ссылка `/auth/password-reset/{token}`
+- [ ] Без CSRF → 419
+
+---
+
+## 🔑 Auth — Set new password (`/auth/password-reset/{token}`)
+
+### Отображение
+- [ ] Страница открывается по ссылке из письма
+- [ ] Поля `password` / `password_confirm`, кнопка `Save new password`
+- [ ] В скрытом поле `token` — токен из пути ссылки
+- [ ] `action` формы = `/auth/password-reset/submit` (через `url('password.reset.submit')`)
+
+### Валидация (JS)
+- [ ] Пароль < 8 символов → ошибка под полем
+- [ ] Пароли разные → `Passwords are different` под Confirm
+- [ ] Ошибка сервера без поля (`$errors['token']` и др.) → красная плашка `.messages` сверху
+
+### Отправка
+- [ ] Network: `POST /auth/password-reset/submit` с `token`, `password`, `password_confirm`, `_token`
+- [ ] Ошибка валидации сервера → ререндер, **`token` в форме сохраняется**
+- [ ] Мусорный/просроченный token → страница message со статусом `410`
+- [ ] Успех → message «The new password was successfully set», вход новым паролем работает
+- [ ] Известный бэк-гэп: на странице message нет кнопки, если бэк не передал `$actionUrl` + `$actionTitle`
+
+---
+
+## 📧 Message (страница рендерится бэком, отдельного роута нет)
 
 - [ ] Страница открывается
 - [ ] Показан `$message`
 - [ ] Если есть `$statusCode` — показывается
 - [ ] Если есть `$actionUrl` + `$actionTitle` — кнопка работает
-- [ ] Ссылка ведёт туда, куда ожидается (`/login`, `/register`)
+- [ ] Ссылка ведёт туда, куда ожидается (`/auth/login`, `/auth/register`)
 
 ---
 
-## ✅ Verify result (`/verify/{token}`)
+## ✅ Verify result (`/auth/verify/{token}`)
 
 ### Успех (success = true)
 - [ ] Страница открывается, зелёный цвет текста
@@ -91,9 +134,10 @@
 
 ### Ошибка (success = false)
 - [ ] Страница открывается, красный цвет
-- [ ] Кнопка `Resend verification`
-- [ ] Клик → fetch POST на API
-- [ ] При успехе fetch → редирект на `/message`
+- [ ] Кнопка `Resend verification` (форма, `action` = `$view->url('api.sendmail')`, без хардкода)
+- [ ] В форме есть скрытое поле `token` с токеном из адреса страницы
+- [ ] Клик → fetch POST (поля формы: `token` + `_token`) на URL из `action`
+- [ ] При успехе fetch → зелёная плашка `.message--success` на странице
 - [ ] При ошибке fetch → плашка `.message--error` появляется на странице
 
 ---

@@ -28,19 +28,11 @@ function setFeedMsg(el, text) {
 }
 
 /* ---------- Лайки ---------- */
-const FEED_LIKED_KEY = 'feed:liked-ids';
-
-function likedIds() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(FEED_LIKED_KEY) || '[]'));
-  } catch (_) {
-    return new Set();
-  }
-}
-
-function saveLikedIds(set) {
-  try { localStorage.setItem(FEED_LIKED_KEY, JSON.stringify(Array.from(set))); } catch (_) {}
-}
+// Состояние «мой лайк» приходит с сервера:
+//   * в разметке — data-liked из PostContext.isLiked (feed-list.php / card-feed.php);
+//   * в ответе GET /api/posts — поле isLiked (book.js, card-feed.js).
+// Локальный storage больше не используется: он расходится с БД после F5
+// и на другом устройстве.
 
 function likeIdOf(btn) {
   if (btn.dataset.likeId) return Number(btn.dataset.likeId);
@@ -51,15 +43,14 @@ function likeIdOf(btn) {
 function setLikedUI(btn, liked) {
   btn.classList.toggle('is-liked', liked);
   btn.setAttribute('aria-pressed', String(liked));
+  btn.dataset.liked = liked ? '1' : '0';
 }
 
-// Сердечко должно оставаться залитым после перезагрузки.
-// API пока не отдаёт признак «мой лайк», поэтому состояние храним локально.
+// Рисуем по data-liked (серверный признак). Кнопки без data-liked не трогаем.
 function applyLikedState(root) {
-  const ids = likedIds();
   (root || document).querySelectorAll('[data-like-btn]').forEach((btn) => {
-    const id = likeIdOf(btn);
-    if (id && ids.has(id)) setLikedUI(btn, true);
+    if (btn.dataset.liked === undefined) return;
+    setLikedUI(btn, btn.dataset.liked === '1');
   });
 }
 
@@ -96,18 +87,11 @@ document.addEventListener('click', (e) => {
     setLikedUI(likeBtn, liked);
     if (countEl) countEl.textContent = Math.max(0, prev + (liked ? 1 : -1));
 
-    const ids = likedIds();
-    if (liked) ids.add(id); else ids.delete(id);
-    saveLikedIds(ids);
-
     sendLike(id, liked).then((ok) => {
       if (ok) return;
       // Откат: сервер не принял — возвращаем исходное состояние
       setLikedUI(likeBtn, !liked);
       if (countEl) countEl.textContent = String(prev);
-      const fresh = likedIds();
-      if (liked) fresh.delete(id); else fresh.add(id);
-      saveLikedIds(fresh);
     });
     return;
   }
@@ -416,10 +400,11 @@ function fcBuildItem(item, tpl) {
       likeBtn.dataset.likeId = String(item.id);
       const cnt = likeBtn.querySelector('[data-like-count]');
       if (cnt) cnt.textContent = String(item.likesCount || 0);
+      // Признак «мой лайк» — из контекста юзера в ответе API
+      setLikedUI(likeBtn, !!item.isLiked);
     }
   }
 
-  applyLikedState(node);
   return node;
 }
 
