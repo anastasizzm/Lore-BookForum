@@ -98,11 +98,11 @@ final class AuthService
     public function mailVerify(string $token) : string
     {
         $userId = $this->mailVerificationService->verify($token);
-        $this->uow->transactional(function (PDO $pdo) use ($userId): int 
+        $this->uow->transactional(function (PDO $pdo) use ($userId): void 
         {
-            $ok = $this->users->markEmailVerified($userId);
+            $ok = $this->usersRepo->markEmailVerified($userId);
             if (!$ok) {
-                $exists = $this->users->exists($userId);
+                $exists = $this->usersRepo->exists($userId);
                 if (!$exists) {
                     throw new NotFoundException('User not found');
                 }   
