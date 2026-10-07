@@ -24,16 +24,9 @@ $val = function (string $key, string $default = '') use ($form, $userData) {
 
 $currentAvatar = $val('avatar', 'default');
 
-$avatarOptions = [
-    'default' => null,
-    'cat'     => '🐱',
-    'dog'     => '🐶',
-    'fox'     => '🦊',
-    'owl'     => '🦉',
-    'robot'   => '🤖',
-    'star'    => '⭐',
-    'book'    => '📚',
-];
+// Карта пресетов — один источник правды для пикера, avatar.php и sidebar.php
+$avatarOptions = ['default' => null]
+    + require __DIR__ . '/../../../partials/avatar-presets.php';
 
 $initials = mb_strtoupper(
     mb_substr($userData->name    ?? '', 0, 1) .

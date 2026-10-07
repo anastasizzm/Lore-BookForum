@@ -198,6 +198,12 @@ textarea.form-field__input {
   object-fit: cover;
 }
 
+/* Аватар-пресет из настроек профиля (cat/dog/…) — эмодзи вместо <img> */
+.avatar__emoji {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
 /* ============================================
    TAGS
    ============================================ */
@@ -1212,10 +1218,9 @@ textarea.form-field__input {
    CARD — Book: кнопка «Сохранить» (закладка)
    POST/DELETE /api/books/{id}/save — обработчик в app.js
    ============================================ */
-.card-book__cover {
-  position: relative;
-}
-
+/* Кнопка лежит прямо в карточке (не в .card-book__cover) и позиционируется
+   от неё: .card-book имеет position:relative и белое поле (padding 24px),
+   поэтому закладка видна в правом верхнем углу САМОЙ карточки. */
 .card-book__save {
   position: absolute;
   top: var(--space-2);

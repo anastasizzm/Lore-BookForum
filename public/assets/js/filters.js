@@ -433,7 +433,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // ---------- search box (?q=) ----------
 
   function setupSearch(inp) {
-    function go() { navigateWith({ q: inp.value.trim() }); }
+    function go() {
+      // Лента: поиск идёт по названию книги на клиенте — см. feed-search.js
+      if (window.LoreFeedSearch) {
+        window.LoreFeedSearch.go(inp.value.trim());
+        return;
+      }
+      navigateWith({ q: inp.value.trim() });
+    }
 
     inp.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;

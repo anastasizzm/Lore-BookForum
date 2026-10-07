@@ -323,7 +323,6 @@ document.addEventListener('submit', async (e) => {
 const FEED_COMMENTS = {
   url: '/api/posts',
   pageSize: 10,
-  avatarsDir: '/uploads/avatars/',
 };
 
 const feedCommentsState = new WeakMap(); // card -> {page, hasNext, loading, gen, started}
@@ -393,18 +392,24 @@ function fcBuildItem(item, tpl) {
     || ((fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
         || fcFirstChar(c.username).toUpperCase());
 
+  // Аватар: пресет из настроек (эмодзи) / настоящая картинка / инициалы
   const avatarRaw = c.avatar || '';
-  const src = avatarRaw && avatarRaw !== 'default' ? FEED_COMMENTS.avatarsDir + avatarRaw : null;
+  const av = (window.LoreAvatar && LoreAvatar.parse(avatarRaw)) || { type: 'none' };
 
   const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
   const wrapImg = node.querySelector('[data-fc-avatar-img]');
+  const wrapEmoji = node.querySelector('[data-fc-avatar-emoji]');
   if (wrapInitials && wrapImg) {
-    const used = src ? wrapImg : wrapInitials;
-    (src ? wrapInitials : wrapImg).remove();
+    let used = wrapInitials;
+    if (av.type === 'image') used = wrapImg;
+    else if (av.type === 'emoji' && wrapEmoji) used = wrapEmoji;
+
+    [wrapInitials, wrapImg, wrapEmoji].forEach((w) => { if (w && w !== used) w.remove(); });
     used.hidden = false;
     used.innerHTML = used.innerHTML
       .split('__INITIALS__').join(fcEsc(initials))
-      .split('__SRC__').join(fcEsc(src ? encodeURI(src) : ''));
+      .split('__EMOJI__').join(av.type === 'emoji' ? av.emoji : '')
+      .split('__SRC__').join(fcEsc(av.type === 'image' ? encodeURI(av.src) : ''));
     // Если картинка не отдастся — onerror в avatar.php покажет инициалы
     const fallbackSpan = used.querySelector('.avatar span[hidden]');
     if (fallbackSpan) fallbackSpan.textContent = initials;

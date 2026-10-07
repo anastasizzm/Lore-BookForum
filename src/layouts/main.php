@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <?php $view->include('head'); ?>
+<!-- Аватар-пресеты (эмодзи из настроек) для JS-рендера комментариев -->
+<script src="<?= $view->asset('js/avatar.js') ?>"></script>
 <script src="/assets/js/card-feed.js" defer></script>
 <!-- Профили: ник автора и @упоминания -> /users/{id} (используют book.js и card-feed.js) -->
 <script src="<?= $view->asset('js/users.js') ?>"></script>
@@ -14,7 +16,9 @@
     <span></span>
   </button>
 
-  <?php $view->include('sidebar'); ?>
+  <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
+  <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
+  <?php $view->include('sidebar', ['me' => $user ?? null]); ?>
 
   <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
   <?php $view->include('confirm-modal'); ?>

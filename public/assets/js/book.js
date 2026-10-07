@@ -177,27 +177,38 @@
     return v;
   }
 
-  function avatarUrl(user) {
-    var raw = String((user && user.avatar) || '');
-    return (raw !== '' && raw !== 'default') ? '/uploads/avatars/' + raw : '';
+  /** Значение users.avatar как есть: '' | 'default' | пресет | файл. */
+  function avatarOf(user) {
+    return String((user && user.avatar) || '');
   }
 
   /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
-  function fillAvatar(avatar, initials, src) {
+  function fillAvatar(avatar, initials, raw) {
     if (!avatar) return;
     avatar.replaceChildren();
 
     var span = document.createElement('span');
     span.textContent = initials || '?';
 
-    if (!src) {
+    // Аватар-пресет (настройки профиля) — эмодзи, а не битая картинка
+    var parsed = (window.LoreAvatar && LoreAvatar.parse(raw)) || { type: 'none' };
+    if (parsed.type === 'emoji') {
+      var em = document.createElement('span');
+      em.className = 'avatar__emoji';
+      em.setAttribute('aria-hidden', 'true');
+      em.textContent = parsed.emoji;
+      avatar.appendChild(em);
+      return;
+    }
+
+    if (parsed.type !== 'image') {
       avatar.appendChild(span);
       return;
     }
 
     var img = document.createElement('img');
     img.alt = '';
-    img.src = src;
+    img.src = parsed.src;
     avatar.appendChild(img);
     avatar.appendChild(span);
     span.hidden = true;
@@ -318,7 +329,7 @@
           authorId: item.creator && item.creator.id,
           authorUsername: (item.creator && item.creator.username) || '',
           initials: initialsOf(item.creator),
-          avatar: avatarUrl(item.creator),
+          avatar: avatarOf(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt),
           likes: item.likesCount || 0,
@@ -590,7 +601,7 @@
           authorId: item.creator && item.creator.id,
           authorUsername: (item.creator && item.creator.username) || '',
           initials: initialsOf(item.creator),
-          avatar: avatarUrl(item.creator),
+          avatar: avatarOf(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt)
         });
