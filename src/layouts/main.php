@@ -2,6 +2,8 @@
 <html lang="ru">
 <?php $view->include('head'); ?>
 <script src="/assets/js/card-feed.js" defer></script>
+<!-- Профили: ник автора и @упоминания -> /users/{id} (используют book.js и card-feed.js) -->
+<script src="<?= $view->asset('js/users.js') ?>"></script>
 <body>
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>

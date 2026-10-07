@@ -1361,3 +1361,34 @@ textarea.form-field__input {
 .avatar [hidden] {
   display: none;
 }
+
+/* ============================================
+   Комментарии: ник автора и @упоминания ведут на профиль (/users/{id}).
+   Разметку делает users.js (без innerHTML — только textNode/ссылки).
+   ============================================ */
+.user-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.user-link:hover,
+.user-link:focus-visible {
+  text-decoration: underline;
+}
+
+.user-mention {
+  color: var(--main-text-color);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+a.user-mention:hover,
+a.user-mention:focus-visible {
+  text-decoration: underline;
+}
+
+/* Ссылка-заглушка: ответа API ещё не было, href появится после resolve */
+.user-mention:not([href]) {
+  color: inherit;
+  cursor: text;
+}

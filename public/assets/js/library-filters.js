@@ -146,6 +146,11 @@
       ? ([c.name, c.surname].filter(Boolean).join(' ').trim() || c.username || '')
       : '';
     const authorId = Number(c?.id ?? 0);
+    // «логин -> id» для @упоминаний в комментариях (users.js): карточки
+    // библиотеки/подборок — один из немногих мест, где пара уже есть.
+    if (authorId > 0 && c && c.username && window.LoreUsers) {
+      window.LoreUsers.remember(authorId, c.username);
+    }
     const author = authorName
       ? `<p class="card-book__author"><a class="card-book__author-link"
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`

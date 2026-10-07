@@ -150,6 +150,7 @@ $items = array_map(
               'date'          => $post->createdAt->format('d.m.Y'),
               'currentUserInitials' => $cuInitials,
               'currentUserName'     => $cu?->username ?? '',
+              'currentUserId'       => (int) ($cu?->id ?? 0),
           ]);
         ?>
       <?php endforeach; ?>

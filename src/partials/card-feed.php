@@ -37,6 +37,7 @@ $date          = $date         ?? '';
 // Кто сейчас авторизован — нужно card-feed.js для вставки своего комментария
 $currentUserInitials = $currentUserInitials ?? '';
 $currentUserName     = $currentUserName     ?? '';
+$currentUserId       = (int) ($currentUserId ?? 0);
 
 // «Мой лайк» приходит из PostContext (isLiked) — API /api/posts отдаёт его
 // вместе с каждым постом. Раньше состояние хранилось в localStorage и расходилось с БД.
@@ -44,7 +45,8 @@ $liked = (bool) ($liked ?? false);
 ?>
 <article class="card-base card-feed" data-post-id="<?= $postId ?>"
          data-cu-initials="<?= $view->e($currentUserInitials) ?>"
-         data-cu-name="<?= $view->e($currentUserName) ?>">
+         data-cu-name="<?= $view->e($currentUserName) ?>"
+         data-cu-id="<?= $currentUserId ?>">
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
