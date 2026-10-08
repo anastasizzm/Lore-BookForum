@@ -99,6 +99,13 @@ body.is-sidebar-expanded {
 
 /* Выбранный в настройках аватар вместо иконки-фигурки (см. sidebar.php) */
 .nav-icon__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--avatar-bg, transparent);
   font-size: 22px;
   line-height: 1;
 }

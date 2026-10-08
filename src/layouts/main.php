@@ -43,6 +43,7 @@
     </div>
   </main>
 
+  <script src="/assets/js/csrf.js"></script>
   <script src="<?= $view->asset('js/modal.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>
