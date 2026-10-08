@@ -218,6 +218,21 @@
     };
   }
 
+  /**
+   * Метка автора комментария/ответа: «@username» (как в Instagram).
+   * Если логина нет в API — оставляем имя как есть, без @.
+   */
+  function authorLabel(username, fallback) {
+    var v = String(username || '').trim();
+    return v ? '@' + v : String(fallback || '');
+  }
+
+  /** Подпись кнопки раскрытия ответов: «View N more reply(ies)». */
+  function repliesLabel(n) {
+    n = Number(n) || 0;
+    return 'View ' + n + ' more ' + (n === 1 ? 'reply' : 'replies');
+  }
+
   /** Карточка комментария из <template id="comment-card-template">. */
   function commentNode(data) {
     var tpl = document.getElementById('comment-card-template');
@@ -226,10 +241,13 @@
     var node = tpl.content.firstElementChild.cloneNode(true);
     if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
 
-    // эмодзи пресета или инициалы (см. avatar.js)
-    Avatar.fill(one('.avatar', node), data.user, data.initials);
+    // эмодзи пресета или инициалы (см. avatar.js): раньше здесь стоял
+    // Avatar.fill(...) — такого глобала не существует (avatar.js отдаёт
+    // window.LoreAvatar), commentNode падал с ReferenceError и список
+    // корневых комментариев оставался пустым
+    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     var author = one('[data-c-author]', node);
-    if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    if (author) Users.renderAuthor(author, authorLabel(data.authorUsername, data.author), data.authorId, data.authorUsername);
     // для ответа: кому пишем (@ник) — лежит на карточке
     if (data.authorUsername) node.dataset.authorUsername = data.authorUsername;
     if (data.authorId) node.dataset.authorId = String(Number(data.authorId));
@@ -247,6 +265,16 @@
       } else {
         likeBtn.remove(); // без id лайк некуда отправлять
       }
+    }
+
+    // Кнопка «View N more replies»: показываем сразу, если у комментария есть
+    // ответы (данные уже есть, сами ответы догрузит loadReplies). Без ответов
+    // кнопка остаётся скрытой.
+    var moreBtn = one('[data-replies-toggle]', node);
+    var repliesCount = Number(data.replies) || 0;
+    if (moreBtn) {
+      moreBtn.hidden = repliesCount <= 0;
+      if (repliesCount > 0) moreBtn.textContent = repliesLabel(repliesCount);
     }
 
     // Состояние «мой лайк» — признак isLiked из контекста юзера в ответе API
@@ -314,17 +342,15 @@
       var items = Array.isArray(data.items) ? data.items
                 : (Array.isArray(data) ? data : []);
 
-      if (!append) {
-        var list = listEl();
-        if (list) list.replaceChildren();
-      }
-
       // Комментарии с ответами подтягиваем сразу: ответы живут отдельно
       // (GET /api/posts?parent={id}), иначе после F5 они пропадут.
       var withReplies = [];
+      var fragment = document.createDocumentFragment();
 
-      items.forEach(function (item) {
-        var node = appendComment({
+      // API отдаёт корневые комментарии created_at DESC, а читаться они должны
+      // в хронологии (старые сверху, новые снизу) — разворачиваем страницу.
+      items.slice().reverse().forEach(function (item) {
+        var node = commentNode({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
           authorId: item.creator && item.creator.id,
@@ -334,18 +360,31 @@
           text: item.content || '',
           date: formatDate(item.createdAt),
           likes: item.likesCount || 0,
-          liked: !!item.isLiked
-        }, false);
+          liked: !!item.isLiked,
+          replies: Number(item.commentsCount) || 0
+        });
 
-        if (node && Number(item.commentsCount) > 0) withReplies.push(node);
+        if (!node) return;
+        fragment.appendChild(node);
+        if (Number(item.commentsCount) > 0) withReplies.push(node);
       });
 
-      withReplies.forEach(function (node) { loadReplies(node); });
+      var list = listEl();
+      if (list) {
+        // Первая страница заменяет список целиком (в т.ч. SSR-заглушку), а
+        // следующая — более старая — встаёт выше уже показанной, чтобы порядок
+        // оставался хронологическим
+        if (append) list.prepend(fragment);
+        else {
+          list.replaceChildren();
+          list.appendChild(fragment);
+        }
 
-      if (emptyEl()) {
-        var n = listEl() ? listEl().children.length : 0;
-        emptyEl().hidden = n > 0;
+        var empty = emptyEl();
+        if (empty) empty.hidden = list.children.length > 0;
       }
+
+      withReplies.forEach(function (node) { loadReplies(node); });
 
       // «Показать ещё», если комментариев больше одной страницы
       if (data.meta && data.meta.hasNext) renderMore(page || 1);
@@ -373,7 +412,9 @@
     });
 
     wrap.appendChild(btn);
-    list.parentNode.insertBefore(wrap, list.nextSibling);
+    // Кнопка стоит ПЕРЕД списком: нажатие подгружает более старые комментарии,
+    // которые встают как раз под ней (хронология: старые сверху)
+    list.parentNode.insertBefore(wrap, list);
   }
 
   /** Отправка комментария: POST /api/posts (content, publicationId, _token). */
@@ -457,10 +498,13 @@
           initials: null,
           user: null,
           text: text,
-          date: new Date().toISOString(),
+          date: formatDate(new Date().toISOString()),   // dd.mm.yyyy, как у остальных
           likes: 0,
-          liked: false
-        }, true);
+          liked: false,
+          replies: 0
+        }, false);   // новый комментарий — в конец списка (хронология: старые сверху)
+
+        if (node && node.scrollIntoView) node.scrollIntoView({ block: 'nearest' });
 
         // Своя аватарка/инициалы берутся из формы (там они уже отрендерены)
         var formAvatar = one('.avatar', form);
@@ -557,10 +601,34 @@
 
     var node = tpl.content.firstElementChild.cloneNode(true);
     var author = one('.comment-reply__author', node);
-    Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    Users.renderAuthor(author, authorLabel(data.authorUsername, data.author), data.authorId, data.authorUsername);
     Users.renderText(one('.comment-reply__text', node), data.text || '');
     fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     return node;
+  }
+
+  /** Показывает кнопку «View N more replies» (или прячет, если ответов нет). */
+  function setRepliesToggle(card, n) {
+    var btn = one('[data-replies-toggle]', card);
+    if (!btn) return;
+    btn.hidden = !(Number(n) > 0);
+    if (Number(n) > 0) btn.textContent = repliesLabel(n);
+  }
+
+  /** Синхронизирует кнопку раскрытия с реально загруженными ответами. */
+  function syncRepliesToggle(card) {
+    var list = one('[data-replies]', card);
+    var n = list ? list.children.length : 0;
+    if (card && card.dataset) card.dataset.repliesCount = String(n);
+    setRepliesToggle(card, n);
+  }
+
+  /** Раскрытые ответы: список виден, кнопка раскрытия больше не нужна. */
+  function revealReplies(card) {
+    var list = one('[data-replies]', card);
+    if (list) list.hidden = false;
+    var btn = one('[data-replies-toggle]', card);
+    if (btn) btn.hidden = true;
   }
 
   function appendReply(card, data) {
@@ -591,7 +659,10 @@
 
       var data = null;
       try { data = await res.json(); } catch (_) { data = null; }
-      if (!res.ok || !data) return;
+      if (!res.ok || !data) {
+        syncRepliesToggle(card);   // ответов нет — не показываем пустую кнопку
+        return;
+      }
 
       var items = Array.isArray(data.items) ? data.items : [];
       var list = one('[data-replies]', card);
@@ -610,10 +681,25 @@
           date: formatDate(item.createdAt)
         });
       });
+
+      // Кнопка «View N more replies» — по фактически загруженному числу ответов.
+      // Список остаётся скрытым: раскроет его только нажатие по кнопке.
+      syncRepliesToggle(card);
     } catch (err) {
       console.warn('GET ' + API_POSTS + '?parent= failed', err);
+      // Ответы не пришли — кнопку раскрытия прячем, чтобы не показывать пустоту
+      syncRepliesToggle(card);
     }
   }
+
+  // Раскрытие ответов: «View N more replies» → показать скрытый список
+  document.addEventListener('click', function (e) {
+    var moreBtn = e.target.closest && e.target.closest('[data-replies-toggle]');
+    if (!moreBtn) return;
+    var card = moreBtn.closest('[data-comment-id]');
+    if (!card) return;
+    revealReplies(card);
+  });
 
   // Показать/скрыть форму ответа; при открытии подставляем @ник автора
   document.addEventListener('click', function (e) {
@@ -724,6 +810,14 @@
         });
 
         bumpCount(); // счётчик публикации включает ответы (считает триггер в БД)
+
+        // Свой ответ должен быть виден сразу — раскрываем ответы целиком и
+        // убираем кнопку «View N more replies» (она больше не нужна)
+        revealReplies(card);
+        if (card.dataset) {
+          var repliesList = one('[data-replies]', card);
+          card.dataset.repliesCount = String(repliesList ? repliesList.children.length : 0);
+        }
 
         input.value = '';
         form.hidden = true;

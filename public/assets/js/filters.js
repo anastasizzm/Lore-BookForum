@@ -348,11 +348,48 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- ISBN / DOI inputs ----------
 
+  // Как быстро применять ввод, если страница фильтрует обычным переходом
+  // (Saved, публикации профиля): перезагружаем не на каждую клавишу.
+  const FILTER_NAV_DELAY = 500;
+
   function setupFormattedInput(inp) {
     const kind = inp.dataset.format;
     const isIsbn = kind === 'isbn';
     const validate = isIsbn ? isbnValidate : doiValidate;
     const hint = isIsbn ? ISBN_HINT : DOI_HINT;
+    let navTimer = 0;
+
+    /**
+     * Применяет фильтр поля, пока пользователь печатает.
+     *
+     * Страница библиотеки перехватывает cancelable-событие `filter:input`
+     * (library-filters.js) и фильтрует через API без перезагрузки. Если
+     * обработчика нет — значение уходит в URL: иначе ввод в ISBN/DOI ни к
+     * чему не приводит (Saved, публикации профиля).
+     */
+    function applyFilter() {
+      const key = inp.dataset.filterKey || inp.name;
+      if (!key) return;
+
+      window.clearTimeout(navTimer);
+
+      const ev = new CustomEvent('filter:input', {
+        bubbles: true,
+        cancelable: true,
+        detail: { key: key, value: inp.value.trim() },
+      });
+      if (!inp.dispatchEvent(ev)) return;      // страница с API-фильтром
+
+      // Неверный формат не отправляем (на библиотеке так же делает
+      // library-filters.js: is-invalid не попадает ни в URL, ни в API)
+      if (inp.classList.contains('is-invalid')) return;
+
+      navTimer = window.setTimeout(function () {
+        const changes = {};
+        changes[key] = inp.value.trim();
+        navigateWith(changes);
+      }, FILTER_NAV_DELAY);
+    }
 
     function format(raw, caretPos) {
       if (isIsbn) {
@@ -393,6 +430,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         try { inp.setSelectionRange(res.caret, res.caret); } catch (_) {}
       }
       showState();
+      applyFilter();
     }
 
     inp.addEventListener('input', onInput);
@@ -412,6 +450,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
       if (e.key !== 'Enter') return;
       e.preventDefault();
+      window.clearTimeout(navTimer);   // переход по Enter вместо отложенного
 
       const r = showState();
       if (r.msg && r.blocking) {
@@ -464,6 +503,29 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- init ----------
 
+  /**
+   * Возвращает фокус в поле ISBN/DOI, из которого ушли по URL.
+   * Фильтр применяется прямо во время ввода (см. applyFilter), поэтому
+   * без этого после перехода печатать дальше приходилось бы, кликая по
+   * полю заново. Фокусируем только открытую панель — иначе страница
+   * прыгала бы к скрытому полю.
+   */
+  function restoreFilterFocus() {
+    const panel = document.querySelector('[data-filter-panel]');
+    if (!panel || panel.hidden) return;
+
+    const params = new URLSearchParams(window.location.search);
+    ['isbn', 'doi'].forEach(function (key) {
+      if (!params.get(key)) return;
+      const inp = panel.querySelector(
+        'input.filter-input[data-format][name="' + key + '"]'
+      );
+      if (!inp || !inp.value) return;
+      inp.focus();
+      try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (_) {}
+    });
+  }
+
   function init() {
     document.querySelectorAll('input[name="q"]').forEach(setupSearch);
 
@@ -479,6 +541,8 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         if (row && row.hidden) return;
         populateDynamic(dd);
       });
+
+    restoreFilterFocus();
   }
 
   if (document.readyState === 'loading') {

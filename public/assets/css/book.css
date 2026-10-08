@@ -404,11 +404,12 @@
   outline-offset: 2px;
 }
 
-/* «Показать ещё» под списком комментариев */
+/* «Показать ещё» — НАД списком комментариев: она подгружает более старые
+   комментарии, которые встают под ней (хронология: старые сверху) */
 .comments-section__more {
   display: flex;
   justify-content: center;
-  margin-top: 8px;
+  margin: 0 0 12px;
 }
 
 /* Текст комментария */
@@ -450,6 +451,69 @@
 
 .btn-icon-small:hover {
   color: var(--color-primary, #1A3760);
+}
+
+/* Верхняя строка карточки комментария: текст слева, лайк справа
+   (Instagram-подобная раскладка — лайк прижат к правому краю) */
+.comment-card__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.comment-card__head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-card__like {
+  flex: 0 0 auto;
+  margin: 0;                    /* гасим общий margin:-4px у .btn-icon-small */
+}
+
+/* Кнопка «Reply» под текстом комментария */
+.comment-card__reply {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #6F84A5);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.comment-card__reply:hover,
+.comment-card__reply:focus-visible {
+  color: var(--color-primary, #1A3760);
+}
+
+/* Ещё ниже: «View N more replies» — показывает скрытые ответы.
+   Кнопка живёт только у комментариев, у которых ответы есть (book.js). */
+.comment-card__more {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #6F84A5);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.comment-card__more:hover,
+.comment-card__more:focus-visible {
+  color: var(--color-primary, #1A3760);
+}
+
+.comment-card__more[hidden] {
+  display: none;
 }
 
 /* ---------------- like + reply ---------------- */
@@ -530,6 +594,12 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Ответы скрыты, пока пользователь не нажал «View N more replies»
+   (без этого правила display:flex перебивал бы атрибут hidden) */
+.comment-replies[hidden] {
+  display: none;
 }
 
 .comment-replies:not(:empty) {
