@@ -36,12 +36,13 @@ return function(Router $router)
     $router->post('/auth/register', [App\Controllers\Auth\AuthController::class, 'register'], 'register.submit', AuthPolicy::Public);
 
     $router->post('/auth/logout', [App\Controllers\Auth\AuthController::class, 'logout'], 'logout', AuthPolicy::Auth);
-    $router->get('/auth/verify/{token}', [App\Controllers\Auth\AuthController::class, 'mailVerify'], 'verify.mail', AuthPolicy::Public);
+    
+    $router->get('/auth/verify/{token}', [App\Controllers\Auth\AccountController::class, 'verifyMail'], 'verify.mail', AuthPolicy::Public);
 
-    $router->get('/auth/password-reset', [App\Controllers\Auth\AuthController::class, 'getPasswordMail'], 'password.email', AuthPolicy::Public);
-    $router->post('/auth/password-reset', [App\Controllers\Auth\AuthController::class, 'passwordMail'], 'password.email.submit', AuthPolicy::Public);
-    $router->get('/auth/password-reset/{token}', [App\Controllers\Auth\AuthController::class, 'getPasswordReset'], 'password.reset', AuthPolicy::Public);
-    $router->post('/auth/password-reset/submit', [App\Controllers\Auth\AuthController::class, 'passwordReset'], 'password.reset.submit', AuthPolicy::Public);
+    $router->get('/auth/password-reset', [App\Controllers\Auth\AccountController::class, 'getPasswordMail'], 'password.email', AuthPolicy::Public);
+    $router->post('/auth/password-reset', [App\Controllers\Auth\AccountController::class, 'passwordMail'], 'password.email.submit', AuthPolicy::Public);
+    $router->get('/auth/password-reset/{token}', [App\Controllers\Auth\AccountController::class, 'getPasswordReset'], 'password.reset', AuthPolicy::Public);
+    $router->post('/auth/password-reset/submit', [App\Controllers\Auth\AccountController::class, 'passwordReset'], 'password.reset.submit', AuthPolicy::Public);
 
     // Feed
     $router->get('/', [App\Controllers\Feed\FeedController::class, 'list'], 'home', AuthPolicy::Auth);

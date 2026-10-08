@@ -12,6 +12,7 @@ use App\Controllers\Controller;
 
 use App\Services\Auth\AuthService;
 use App\Services\Configuration\CookieService;
+use App\Services\Auth\EmailVerificationService;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
@@ -27,12 +28,12 @@ use App\Forms\Auth\PassResetForm;
 
 use App\Models\Errors\InnerMessage;
 
-use App\Services\Users\UsersService;
 
 final class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthService $service,
+        private readonly EmailVerificationService $mailVerify,
         private readonly CookieService $cookies,
         private readonly UrlGenerator $url
     ){}
@@ -80,63 +81,5 @@ final class AuthController extends Controller
     public function logout(HttpContext $c) : Response{
         $response = Response::redirect($this->url->url('login'));
         return $this->cookies->clear($this->cookies->clear($response, Constants::CSRF_COOKIE, false), Constants::TOKEN_COOKIE);
-    }
-
-    public function mailVerify(HttpContext $ctx, string $token) : Response 
-    {
-        $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR) ?? false;
-        if($isVerified) return Response::redirect($this->url->url('home'));
-
-        try{
-            $token = $this->service->mailVerify($token);
-            $response = Response::redirect($this->url->url('home'));
-            
-            return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
-        }
-        catch(HttpException $e){
-            return $this->render('auth/verify-result', ['success' => false, 'message' => $e->getMessage()]);
-        }
-    }
-
-    public function getPasswordMail(HttpContext $ctx) : Response 
-    {
-        return $this->render('auth/password-email');
-    }
-
-    public function passwordMail(HttpContext $context) : Response 
-    {
-        $formData = $context->request->body();
-
-        try{
-            $this->service->startPasswordReset(PassResetMailForm::fromInput($formData));
-            return $this->render('message', ['message' => 'The link to reset your password was sent to your email']);
-        }
-        catch(ValidationException $e)
-        {
-            return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors()]);
-        }
-    }
-
-    public function getPasswordReset(HttpContext $context, string $token) : Response 
-    {
-        return $this->render('auth/password-reset', ['token' => $token]);
-    }
-
-    public function passwordReset(HttpContext $context) : Response 
-    {
-        $formData = $context->request->body();
-
-        try{
-            $this->service->resetPassword(PassResetForm::fromInput($formData));
-            return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $this->url->url('login'), 'Login']);
-        }
-        catch(ValidationException $e)
-        {
-            return $this->render('auth/password-reset', ['form' => $formData, 'errors' => $e->errors()]);
-        }
-        catch(HttpException $e)
-        {
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
-        }
     }
 }

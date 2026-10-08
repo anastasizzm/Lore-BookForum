@@ -172,6 +172,15 @@ final class View
         return $url;
     }
 
+    public function fullAsset(string $path): string
+    {
+        $asset = $this->asset($path);
+        if (filter_var($asset, FILTER_VALIDATE_URL)) return $asset;
+
+        $host = trim($this->settings->appUrl, '/');
+        return $host . '/' . ltrim($asset, '/');
+    }
+
     // ---------- internals ----------
 
     private function renderPage(string $page, array $data): string

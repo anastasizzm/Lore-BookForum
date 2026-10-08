@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
-use App\Cache\Auth\TokenResetTtlCache;
-
 use App\Extensions\ResponseTemplates;
 use App\Models\Errors\Error;
 
@@ -18,6 +16,7 @@ use App\Lib\Jwt;
 use App\Lib\View;
 
 use App\Services\Configuration\CookieService;
+use App\Services\Auth\TokenResetService;
 
 use App\Constants;
 use App\ErrorCodes;
@@ -25,7 +24,7 @@ use App\ErrorCodes;
 final class TokenBlockerMiddleware implements Middleware
 {
     public function __construct(
-        private readonly TokenResetTtlCache $cache,
+        private readonly TokenResetService $service,
         private readonly CookieService $cookies,
         private readonly UrlGenerator $url
     ){}
@@ -37,8 +36,7 @@ final class TokenBlockerMiddleware implements Middleware
         if (empty($userId) || empty($tokenIat))
             return $next($ctx);
 
-        $ttl = $this->cache->get($userId);
-        if ($ttl === NULL || (int)$ttl < $tokenIat)
+        if ($this->service->isValid($userId, $tokenIat))
             return $next($ctx);
 
         $response = $ctx->isApi()
