@@ -27,6 +27,7 @@ use App\Extensions\Parsers\RouteParamParser;
 
 use App\Forms\Auth\AccountCreditsForm;
 use App\Forms\Auth\MailOnlyForm;
+use App\Forms\Auth\PassResetForm;
 
 use App\Models\Errors\InnerMessage;
 
@@ -78,14 +79,21 @@ final class AccountController extends Controller
 
     public function getPasswordReset(HttpContext $context, string $token) : Response 
     {
-        return $this->render('auth/password-reset', ['token' => $token]);
+        try{
+            $this->passResetService->consumeToken($token);
+            return $this->render('auth/password-reset', ['token' => $token]);
+        }
+        catch(HttpException $e)
+        {
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
+        }
     }
 
     public function passwordReset(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
         try{
-            $this->service->completeReset(PassResetForm::fromInput($formData));
+            $this->passResetService->completeReset(PassResetForm::fromInput($formData));
             return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $this->url->url('login'), 'Login']);
         }
         catch(ValidationException $e)

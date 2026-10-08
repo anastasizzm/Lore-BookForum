@@ -46,13 +46,13 @@ final class PasswordResetService
         $errors = [];
         if (!$form->validate($errors)) throw new ValidationException($errors);
 
-        $userId = $this->getCredits($form->email);
+        $userId = $this->getId($form->email);
         
         $token = $this->issueResetToken($userId);
         $this->cache->set($userId, $this->fingerprint($token), self::RESET_TOKEN_TTL);
         
         $this->mailer->send(Email::to(
-            $email,
+            $form->email,
             'Lore profile password reset',
             View::render('email/reset-password', [
                 'resetUrl' => $this->url->fullUrl('password.reset', ['token' => $token])
@@ -66,12 +66,12 @@ final class PasswordResetService
         if (!$form->validate($errors)) throw new ValidationException($errors);
 
         $userId = $this->consumeToken($form->token);
-        $this->users->changePassword($userId, password_hash($form->password, PASSWORD_DEFAULT));
-
+        $this->cache->forget($userId);
+        $this->usersRepo->changePassword($userId, password_hash($form->password, PASSWORD_DEFAULT));
         $this->tokenResetService->resetFromUser($userId);
     }
 
-    private function getCredits(string $email) : AccountCredits 
+    private function getId(string $email) : int 
     {
         $id = $this->usersRepo->identifyByLogin($email);
         if ($id === null)
@@ -80,7 +80,7 @@ final class PasswordResetService
         return $id;
     }
 
-    private function consumeToken(string $rawToken): int
+    public function consumeToken(string $rawToken): int
     {
         $claims = $this->decodeVerifiedToken($rawToken);
         $userId = $this->extractUserId($claims);
@@ -94,7 +94,6 @@ final class PasswordResetService
             throw new ForbiddenException('Invalid token');
         }
 
-        $this->cache->forget($userId);
         return $userId;
     }
 
@@ -102,7 +101,7 @@ final class PasswordResetService
     {
         $claims = $this->jwt->decode($rawToken);
 
-        if ($claims === null || ($claims['typ'] ?? null) !== self::VERIFY_TOKEN_TYP
+        if ($claims === null || ($claims['typ'] ?? null) !== self::RESET_TOKEN_TYP
         ) {
             throw new ForbiddenException('Token is invalid');
         }
@@ -130,7 +129,7 @@ final class PasswordResetService
         return (int) $userId;
     }
 
-    private function issueResetToken(int $userId, string $email): string
+    private function issueResetToken(int $userId): string
     {
         return $this->jwt->custom(
             $userId,
