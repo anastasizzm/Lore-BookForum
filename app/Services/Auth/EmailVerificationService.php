@@ -101,7 +101,7 @@ final class EmailVerificationService
         }
 
         // One-shot: the link dies the moment it is redeemed.
-        $this->cache->delete($userId);
+        $this->cache->forget($userId);
 
         return $userId;
     }
@@ -159,7 +159,7 @@ final class EmailVerificationService
 
     private function issueSessionToken(int $userId): string
     {
-        return $this->jwt->access($userid, ['verified' => '1']);
+        return $this->jwt->access($userId, ['verified' => '1']);
     }
 
     private function fingerprint(string $token): string

@@ -43,14 +43,14 @@ final class AccountController extends Controller
 
     public function verifyMail(HttpContext $context, string $token)
     {
-        $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR) ?? false;
+        $isVerified = $context->attribute(Constants::VERIFIED_ATTR) ?? false;
         if($isVerified) return Response::redirect($this->url->url('home'));
 
         try{
-            $token = $this->mailVerify->completeVerification($token);
+            $sessionToken = $this->mailVerify->completeVerification($token);
             $response = Response::redirect($this->url->url('home'));
             
-            return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
+            return $this->cookies->set($response, Constants::TOKEN_COOKIE, $sessionToken);
         }
         catch(HttpException $e){
             if ($e->getStatus() === 302) return Response::redirect($this->url->url('home'));

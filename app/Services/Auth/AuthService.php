@@ -88,6 +88,6 @@ final class AuthService
 
     private function generateToken(int $userId, bool $isVerified) : string 
     {
-        return $this->jwt->access($userid, ['verified' => $isVerified ? '1' : '0']);
+        return $this->jwt->access($userId, ['verified' => $isVerified ? '1' : '0']);
     }
 }

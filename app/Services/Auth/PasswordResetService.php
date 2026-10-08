@@ -94,7 +94,7 @@ final class PasswordResetService
             throw new ForbiddenException('Invalid token');
         }
 
-        $this->cache->delete($userId);
+        $this->cache->forget($userId);
         return $userId;
     }
 

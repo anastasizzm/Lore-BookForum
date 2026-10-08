@@ -22,7 +22,7 @@ class HttpException extends RuntimeException implements ToErrorConvertible
         return $this->status;
     }
 
-    public function getCode() : string 
+    public function getErrorCode() : string 
     {
         return $this->errorCode;
     }
