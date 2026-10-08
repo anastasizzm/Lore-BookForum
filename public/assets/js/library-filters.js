@@ -136,7 +136,8 @@
     const uuid = b.iconId && typeof b.iconId === 'object'
       ? (b.iconId.uuid ?? b.iconId.value ?? '')
       : (b.iconId || '');
-    return uuid ? '/uploads/' + uuid : '/img/book-placeholder.svg';
+    // Нет обложки -> '' (cardHtml нарисует CSS-заглушку .cover--empty)
+    return uuid ? '/uploads/' + uuid : '';
   }
 
   function cardHtml(b) {
@@ -172,10 +173,9 @@
 
     return `
 <article class="card-base card-book">
-  <div class="card-book__cover">
-    <img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy"
-         onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-  </div>
+  <div class="card-book__cover${cover ? '' : ' cover--empty'}">${cover
+    ? `<img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy">`
+    : ''}</div>
   <button type="button" class="btn-icon btn-icon--circle card-book__save${isSaved ? ' is-active' : ''}"
           ${saveAttr}="${id}"
           data-save-url="${esc(API + '/' + id + '/save')}"

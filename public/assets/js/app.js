@@ -221,15 +221,18 @@ document.addEventListener('DOMContentLoaded', () => {
 (function () {
   var busy = new WeakSet();
 
-  function csrfInput() {
-    return document.querySelector(
-      '[data-csrf] input[type="hidden"], ' +
-      'input[type="hidden"][name*="csrf" i], ' +
-      'input[type="hidden"][name*="token" i]'
-    );
+  // cookie csrf_token — источник правды; запасной вариант — скрытое поле _token.
+  // Раньше брался ЛЮБОЙ hidden-input с «token» в имени (мог попасться чужой).
+  function csrfValue() {
+    var fromCookie = window.LoreCsrf ? window.LoreCsrf.token() : '';
+    if (fromCookie) return fromCookie;
+    var el = document.querySelector('input[type="hidden"][name="_token"]');
+    return el ? el.value : '';
   }
 
   function toast(text) {
+    // Единые плашки (messages.js); ниже — запасной вариант, если скрипт не загрузился
+    if (window.Messages) { window.Messages.show(text, { type: 'error' }); return; }
     var el = document.createElement('div');
     el.setAttribute('role', 'alert');
     el.textContent = text;
@@ -276,10 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
     var body = new URLSearchParams();
-    var token = csrfInput();
+    var token = csrfValue();
     if (token) {
-      headers['X-CSRF-Token'] = token.value;
-      body.set(token.name, token.value);
+      headers['X-CSRF-Token'] = token;
+      body.set('_token', token);
     }
 
     // data-save-url задаётся снаружи (library-filters.js), иначе эндпоинт
@@ -295,10 +298,13 @@ document.addEventListener('DOMContentLoaded', () => {
         body: body
       });
 
+      var raw = '';
       var data = null;
-      try { data = await res.json(); } catch (_) {}
+      try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
+      var htmlBody = /^\s*</.test(raw);
 
-      if (res.ok) {
+      if (res.ok && !htmlBody) {
         bumpSavesCount(willSave ? 1 : -1);
         btn.dispatchEvent(new CustomEvent('save:changed', {
           bubbles: true,
@@ -309,18 +315,12 @@ document.addEventListener('DOMContentLoaded', () => {
           bubbles: true,
           detail: { id: id, saved: willSave }
         }));
-        } else {
+      } else {
         setState(btn, wasSaved, type);
-        var msg = '';
-        if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
-        if (!msg && data && data.message) msg = data.message;
-        if (!msg && data && data.error && data.error.message) msg = data.error.message;
-        if (!msg) {
-          msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
-              : res.status === 401 ? 'Please sign in again'
-              : 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
-        }
-        toast(msg);
+        var fallbackMsg = 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
+        toast(window.Messages
+          ? window.Messages.describe(res.status, data, raw, fallbackMsg)
+          : fallbackMsg);
       }
     } catch (err) {
       setState(btn, wasSaved, type);
@@ -329,5 +329,38 @@ document.addEventListener('DOMContentLoaded', () => {
       busy.delete(btn);
       btn.disabled = false;
     }
+  });
+})();
+
+/* ===== Обложка не загрузилась (404 / нет файла) -> CSS-заглушка .cover--empty =====
+   Событие error не всплывает, поэтому слушаем в capture-фазе: так покрываются и
+   карточки, которые library-filters.js дорисовывает уже после загрузки страницы. */
+(function () {
+  var BOX = '.card-book__cover, .book-details__cover, .profile-publications__cover';
+
+  function mark(img) {
+    // Миниатюра в шапке карточки ленты — сам <img>: заменяем его на <span>-заглушку
+    if (img.classList.contains('card-feed__book-thumb')) {
+      var stub = document.createElement('span');
+      stub.className = img.className + ' cover--empty';
+      stub.setAttribute('aria-hidden', 'true');
+      img.replaceWith(stub);
+      return;
+    }
+    var box = img.closest ? img.closest(BOX) : null;
+    if (box) box.classList.add('cover--empty');
+  }
+
+  document.addEventListener('error', function (e) {
+    if (e.target && e.target.tagName === 'IMG') mark(e.target);
+  }, true);
+
+  // картинки, которые успели упасть до загрузки скрипта
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll(
+      '.card-book__cover img, .book-details__cover img, .profile-publications__cover img, img.card-feed__book-thumb'
+    ).forEach(function (img) {
+      if (img.complete && img.naturalWidth === 0) mark(img);
+    });
   });
 })();

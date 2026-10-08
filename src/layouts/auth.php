@@ -21,6 +21,8 @@
     <?= $view->block('content') ?>
   </main>
 
+  <script src="/assets/js/messages.js"></script>
+  <script src="/assets/js/csrf.js"></script>
   <?= $view->block('scripts') ?>
 </body>
 </html>

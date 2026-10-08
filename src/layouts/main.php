@@ -3,6 +3,8 @@
 <?php $view->include('head'); ?>
 <!-- Аватар-пресеты (эмодзи из настроек) для JS-рендера комментариев -->
 <script src="<?= $view->asset('js/avatar.js') ?>"></script>
+<!-- Плашки и разбор ошибок API (Messages.show / Messages.readError) -->
+<script src="<?= $view->asset('js/messages.js') ?>"></script>
 <script src="/assets/js/card-feed.js" defer></script>
 <!-- Профили: ник автора и @упоминания -> /users/{id} (используют book.js и card-feed.js) -->
 <script src="<?= $view->asset('js/users.js') ?>"></script>
@@ -16,7 +18,6 @@
     <span></span>
   </button>
 
-  <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
   <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
   <?php $view->include('sidebar', ['me' => $user ?? null]); ?>
 
@@ -43,6 +44,7 @@
     </div>
   </main>
 
+  <script src="/assets/js/csrf.js"></script>
   <script src="<?= $view->asset('js/modal.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>

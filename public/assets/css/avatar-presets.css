@@ -1,0 +1,23 @@
+/* Добавить в тот css, где лежит .avatar (и в profile.css для пикера) */
+
+.avatar--preset {
+  background: var(--avatar-bg);
+}
+
+/* Пикер в profile-edit: фон пресета на «визуале» */
+.avatar-picker__option[data-avatar] .avatar-picker__visual--preset {
+  background: var(--avatar-bg);
+}
+
+/* Иконка профиля в сайдбаре */
+.nav-icon__avatar--preset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--avatar-bg);
+  font-size: 16px;
+  line-height: 1;
+}

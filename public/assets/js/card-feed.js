@@ -16,6 +16,9 @@ const fcUsers = window.LoreUsers || {
 };
 
 function csrfToken() {
+  // cookie — источник правды (её сравнивает бэк); поле формы — запасной вариант
+  const fromCookie = window.LoreCsrf ? window.LoreCsrf.token() : '';
+  if (fromCookie) return fromCookie;
   const el = document.querySelector('[data-feed-comment-form] [name="_token"]')
           || document.querySelector('[data-csrf] [name="_token"]')
           || document.querySelector('[name="_token"]');
@@ -33,6 +36,12 @@ function setFeedMsg(el, text) {
   if (!el) return;
   el.textContent = text;
   el.hidden = text === '';
+}
+
+// Плашка с ошибкой (общий механизм — messages.js)
+function notify(text) {
+  if (window.Messages) window.Messages.show(text, { type: 'error' });
+  else console.warn(text);
 }
 
 /* ---------- Лайки ---------- */
@@ -62,6 +71,7 @@ function applyLikedState(root) {
   });
 }
 
+// Возвращает '' при успехе, иначе текст ошибки (его покажет плашка).
 async function sendLike(id, liked) {
   try {
     const body = new URLSearchParams();
@@ -74,9 +84,20 @@ async function sendLike(id, liked) {
       headers: csrfHeaders(),
       body,
     });
-    return res.ok || res.status === 201 || res.status === 204;
+
+    if (res.status === 204) return '';
+    if (!res.ok) {
+      return window.Messages
+        ? await window.Messages.readError(res, 'Could not update the like.')
+        : `Could not update the like (HTTP ${res.status}).`;
+    }
+
+    // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
+    const raw = await res.text();
+    if (/^\s*</.test(raw)) return 'Server error. The like was not saved.';
+    return '';
   } catch (_) {
-    return false;
+    return 'Network error. Try again.';
   }
 }
 
@@ -95,8 +116,9 @@ document.addEventListener('click', (e) => {
     setLikedUI(likeBtn, liked);
     if (countEl) countEl.textContent = Math.max(0, prev + (liked ? 1 : -1));
 
-    sendLike(id, liked).then((ok) => {
-      if (ok) return;
+    sendLike(id, liked).then((err) => {
+      if (!err) return;
+      notify(err);
       // Откат: сервер не принял — возвращаем исходное состояние
       setLikedUI(likeBtn, !liked);
       if (countEl) countEl.textContent = String(prev);
@@ -194,6 +216,8 @@ document.addEventListener('submit', async (e) => {
 
   const body = new URLSearchParams(new FormData(form));
   body.set('content', text);
+  const csrfValue = csrfToken();
+  if (csrfValue) body.set('_token', csrfValue);
 
   form.dataset.sending = '1';
   input.disabled = true;
@@ -405,6 +429,8 @@ function fcBuildItem(item, tpl) {
     // Если картинка не отдастся — onerror в avatar.php покажет инициалы
     const fallbackSpan = used.querySelector('.avatar span[hidden]');
     if (fallbackSpan) fallbackSpan.textContent = initials;
+    // Фон пресета на самом .avatar (внутри шаблона)
+    if (window.LoreAvatar) LoreAvatar.paint(used.querySelector('.avatar'), av);
   }
 
   // textContent/fillAvatar: без XSS; ник автора и @упоминания — ссылки на профиль
