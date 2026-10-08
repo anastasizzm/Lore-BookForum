@@ -353,7 +353,7 @@ $meAvatar = (string) ($me->avatar ?? '');
           $cLikes = (int) ($comment['likes'] ?? 0);
           $cLiked = (bool) ($comment['liked'] ?? false);
         ?>
-        <div class="comment-card"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
+        <div class="comment-card" data-page="1"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
             <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'avatar' => $comment['userAvatar'] ?? '']); ?>
 
@@ -361,7 +361,8 @@ $meAvatar = (string) ($me->avatar ?? '');
               <!-- Текст слева, лайк справа (Instagram-подобная раскладка) -->
               <div class="comment-card__main">
                 <div class="comment-card__head">
-                  <div class="comment-card__author">@<?= $view->e($comment['userName']) ?></div>
+                  <!-- Ник автора — без @: собачка только в упоминаниях внутри текста -->
+                  <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
                   <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
                 </div>
 
@@ -470,8 +471,21 @@ $meAvatar = (string) ($me->avatar ?? '');
     <div class="comment-reply">
       <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
       <div class="comment-reply__content">
-        <div class="comment-reply__author"></div>
-        <div class="comment-reply__text"></div>
+        <div class="comment-reply__body">
+          <div class="comment-reply__author"></div>
+          <div class="comment-reply__text"></div>
+        </div>
+        <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
+        <button type="button" class="btn-icon-small btn-like comment-reply__like"
+                data-like-btn
+                data-like-id=""
+                data-liked="0"
+                aria-pressed="false" aria-label="Like">
+          <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span data-like-count>0</span>
+        </button>
       </div>
     </div>
   </template>
@@ -479,5 +493,8 @@ $meAvatar = (string) ($me->avatar ?? '');
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
+       Show more/less); book.js подключается после неё -->
+  <script src="/assets/js/comments.js"></script>
   <script src="/assets/js/book.js"></script>
 <?php $view->endBlock('scripts'); ?>
