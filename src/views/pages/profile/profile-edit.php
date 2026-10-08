@@ -53,7 +53,7 @@ if ($initials === '') {
     <h2 class="profile-edit__section-title">Avatar</h2>
 
     <div class="avatar-picker" role="radiogroup" aria-label="Choose an avatar">
-      <?php foreach ($avatarOptions as $id => $emoji): ?>
+      <?php foreach ($avatarOptions as $id => $preset): ?>
         <label class="avatar-picker__option" data-avatar="<?= $view->e($id) ?>">
           <input type="radio"
                  name="avatar"
@@ -61,10 +61,10 @@ if ($initials === '') {
                  <?= $currentAvatar === $id ? 'checked' : '' ?>
                  class="avatar-picker__radio">
           <span class="avatar-picker__visual">
-            <?php if ($emoji === null): ?>
+            <?php if ($preset === null): ?>
               <span class="avatar-picker__initials"><?= $view->e($initials) ?></span>
             <?php else: ?>
-              <span class="avatar-picker__emoji"><?= $emoji ?></span>
+              <span class="avatar-picker__emoji"><?= $view->e($preset['icon']) ?></span>
             <?php endif; ?>
           </span>
         </label>

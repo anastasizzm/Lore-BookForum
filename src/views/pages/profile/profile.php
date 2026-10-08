@@ -38,7 +38,7 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
         <?php $view->include('avatar', [
             'size'     => 'lg',
             'initials' => $initials,
-            'avatar'   => $avatarKey,
+            'icon'   => $avatarKey,
         ]); ?>
       </div>
 
