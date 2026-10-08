@@ -16,6 +16,9 @@ const fcUsers = window.LoreUsers || {
 };
 
 function csrfToken() {
+  // cookie — источник правды (её сравнивает бэк); поле формы — запасной вариант
+  const fromCookie = window.LoreCsrf ? window.LoreCsrf.token() : '';
+  if (fromCookie) return fromCookie;
   const el = document.querySelector('[data-feed-comment-form] [name="_token"]')
           || document.querySelector('[data-csrf] [name="_token"]')
           || document.querySelector('[name="_token"]');
@@ -194,6 +197,8 @@ document.addEventListener('submit', async (e) => {
 
   const body = new URLSearchParams(new FormData(form));
   body.set('content', text);
+  const csrfValue = csrfToken();
+  if (csrfValue) body.set('_token', csrfValue);
 
   form.dataset.sending = '1';
   input.disabled = true;
@@ -405,6 +410,8 @@ function fcBuildItem(item, tpl) {
     // Если картинка не отдастся — onerror в avatar.php покажет инициалы
     const fallbackSpan = used.querySelector('.avatar span[hidden]');
     if (fallbackSpan) fallbackSpan.textContent = initials;
+    // Фон пресета на самом .avatar (внутри шаблона)
+    if (window.LoreAvatar) LoreAvatar.paint(used.querySelector('.avatar'), av);
   }
 
   // textContent/fillAvatar: без XSS; ник автора и @упоминания — ссылки на профиль

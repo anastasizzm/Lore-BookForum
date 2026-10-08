@@ -186,6 +186,7 @@
   function fillAvatar(avatar, initials, raw) {
     if (!avatar) return;
     avatar.replaceChildren();
+    if (window.LoreAvatar) LoreAvatar.paint(avatar, null);
 
     var span = document.createElement('span');
     span.textContent = initials || '?';
@@ -198,6 +199,7 @@
       em.setAttribute('aria-hidden', 'true');
       em.textContent = parsed.emoji;
       avatar.appendChild(em);
+      if (window.LoreAvatar) LoreAvatar.paint(avatar, parsed);
       return;
     }
 
@@ -227,7 +229,7 @@
     if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
 
     // эмодзи пресета или инициалы (см. avatar.js)
-    Avatar.fill(one('.avatar', node), data.user, data.initials);
+    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     var author = one('[data-c-author]', node);
     if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
     // для ответа: кому пишем (@ник) — лежит на карточке
@@ -407,6 +409,8 @@
 
     var body = new URLSearchParams(new FormData(form));
     body.set('content', text);
+    var csrfValue = csrfTokenValue();
+    if (csrfValue) body.set('_token', csrfValue);
 
     form.dataset.sending = '1';
     if (sendBtn) sendBtn.disabled = true;
@@ -533,6 +537,9 @@
   var REPLY_PAGE_SIZE = 50;
 
   function csrfTokenValue() {
+    // cookie — источник правды (её сравнивает бэк); поле формы — запасной вариант
+    var fromCookie = window.LoreCsrf ? LoreCsrf.token() : '';
+    if (fromCookie) return fromCookie;
     var el = one('[data-comment-form] input[name="_token"]') || one('input[name="_token"]');
     return el ? el.value : '';
   }
