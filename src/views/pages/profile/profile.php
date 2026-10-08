@@ -14,12 +14,10 @@ if ($initials === '') {
     $initials = mb_strtoupper(mb_substr($userData->username ?? '', 0, 1));
 }
 
-$avatarRaw = $userData->avatar ?? '';
-$avatarSrc = ($avatarRaw !== '' && $avatarRaw !== 'default')
-    ? '/uploads/avatars/' . $avatarRaw
-    : null;
+// Ключ аватара из БД ('cat', 'fox', 'default'...). Как его показать — решает partial avatar.php.
+$avatarKey = (string) ($userData->avatar ?? '');
 
-$isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
+$isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
 ?>
 
 <?php $view->startBlock('title'); ?><?= $view->e($displayName) ?> - Profile<?php $view->endBlock('title'); ?>
@@ -40,7 +38,7 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
         <?php $view->include('avatar', [
             'size'     => 'lg',
             'initials' => $initials,
-            'src'      => $avatarSrc,
+            'avatar'   => $avatarKey,
         ]); ?>
       </div>
 
@@ -88,7 +86,7 @@ $isOwner = ($user->id ?? 0) === ($userData->id ?? 0);
            data-publications
            data-publications-user-id="<?= (int)$userData->id ?>"
            data-publications-limit="5"
-           data-publications-more-url="/users/<?= (int)$userData->id ?>/books">
+           data-publications-more-url="<?= $view->e($view->url('users.profile.books', ['userId' => (int) $userData->id])) ?>">
         <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
           Loading...
         </p>

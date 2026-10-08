@@ -226,7 +226,8 @@
     var node = tpl.content.firstElementChild.cloneNode(true);
     if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
 
-    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
+    // эмодзи пресета или инициалы (см. avatar.js)
+    Avatar.fill(one('.avatar', node), data.user, data.initials);
     var author = one('[data-c-author]', node);
     if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
     // для ответа: кому пишем (@ник) — лежит на карточке
@@ -433,6 +434,9 @@
       // может быть 200 (см. renderNotFound/renderForbid -> Response::html()
       // без статуса). Такой ответ успехом не считаем.
       var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
+      // Любой HTML-ответ (в т.ч. PHP Fatal error с кодом 200) — это не успех:
+      // API при успехе отдаёт JSON ({"createdId": N}).
+      if (/^\s*</.test(raw)) htmlErrorPage = true;
 
       // Успех = любой 2xx без ошибки в payload-е. 201 и 200 равнозначны:
       // раньше здесь проверялся строго 201, и штатный ответ в 200
@@ -451,7 +455,7 @@
           authorId: me.id,
           authorUsername: me.author,
           initials: null,
-          avatar: '',
+          user: null,
           text: text,
           date: new Date().toISOString(),
           likes: 0,

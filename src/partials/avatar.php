@@ -17,6 +17,7 @@
  * Если картинка не загрузилась (404/битый URL) — onerror прячет <img>
  * и показывает инициалы, вместо сломанного изображения.
  */
+$presets  = require __DIR__ . '/../avatar-presets.php';
 $size     = $size     ?? 'md';
 $initials = $initials ?? '';
 $src      = $src      ?? null;

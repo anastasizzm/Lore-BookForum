@@ -138,10 +138,8 @@ $meInitials = mb_strtoupper(mb_substr($meParts[0] ?? 'm', 0, 1) . mb_substr($meP
 if ($meInitials === '') {
     $meInitials = 'ME';
 }
-$meAvatarRaw = (string) ($me->avatar ?? '');
-$meAvatar    = ($meAvatarRaw !== '' && $meAvatarRaw !== 'default')
-    ? '/uploads/avatars/' . $meAvatarRaw
-    : null;
+// Ключ аватара ('cat', 'fox', 'default'...). Как его показать — решает partial avatar.php.
+$meAvatar = (string) ($me->avatar ?? '');
 
 /* ---------- Обложка ---------- */
 
@@ -347,7 +345,7 @@ if (!empty($article->iconId)) {
       <?= $view->csrfField() ?>
       <input type="hidden" name="publicationId" value="<?= (int) $publicationId ?>">
       <div class="comment-card__inner">
-        <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'src' => $meAvatar]); ?>
+        <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
         <div class="comment-card__content">
           <div class="comment-card__author"><?= $view->e($meName) ?></div>
           <div class="comment-card__row">
@@ -382,7 +380,7 @@ if (!empty($article->iconId)) {
         ?>
         <div class="comment-card"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
-            <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'src' => $comment['userAvatar'] ?? null]); ?>
+            <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'avatar' => $comment['userAvatar'] ?? '']); ?>
 
             <div class="comment-card__content">
               <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
@@ -474,7 +472,7 @@ if (!empty($article->iconId)) {
 
   <template id="reply-template">
     <div class="comment-reply">
-      <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'src' => $meAvatar]); ?>
+      <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
       <div class="comment-reply__content">
         <div class="comment-reply__author"><?= $view->e($meName) ?></div>
         <div class="comment-reply__text"></div>

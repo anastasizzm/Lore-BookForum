@@ -10,7 +10,8 @@
  *   $bookCover     — обложка книги
  *   $bookTitle     — название книги
  *   $userInitials  — инициалы
- *   $userAvatar    — URL аватара (опционально)
+ *   $userAvatar    — ключ аватара из БД: 'cat', 'fox', ... или 'default'
+ *                    (как его показать — решает partial avatar.php)
  *   $userName      — имя пользователя
  *   $text          — текст поста/коммента
  *   $likes         — число лайков
@@ -18,6 +19,7 @@
  *   $date          — дата строкой
  *   $currentUserInitials — инициалы текущего пользователя (для своих комментариев)
  *   $currentUserName     — логин текущего пользователя
+ *   $currentUserAvatar   — ключ аватара текущего пользователя
  */
 
 // Безопасные значения по умолчанию
@@ -27,7 +29,7 @@ $withBook      = $withBook     ?? false;
 $bookCover     = $bookCover    ?? '';
 $bookTitle     = $bookTitle    ?? '';
 $userInitials  = $userInitials ?? '';
-$userAvatar    = $userAvatar   ?? null;
+$userAvatar    = $userAvatar   ?? '';
 $userName      = $userName     ?? '';
 $text          = $text         ?? '';
 $likes         = $likes        ?? 0;
@@ -62,7 +64,7 @@ $liked = (bool) ($liked ?? false);
       <?php $view->include('avatar', [
           'size'     => 'md',
           'initials' => $userInitials,
-          'src'      => $userAvatar,
+          'avatar'   => $userAvatar,
       ]); ?>
       <div class="card-feed__user">
         <div class="card-feed__name"><?= $view->e($userName) ?></div>

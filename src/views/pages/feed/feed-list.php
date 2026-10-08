@@ -14,7 +14,7 @@ if (isset($_GET['preview'])) {
             'id' => 1,
             'creator' => (object) [
                 'name' => 'Иван', 'surname' => 'Иванов',
-                'username' => 'ivan', 'avatar' => null,
+                'username' => 'ivan', 'avatar' => 'cat',
             ],
             'publication' => (object) [
                 'cover' => '', 'title' => 'Тестовая книга', 'author' => 'Автор Авторов',
@@ -26,7 +26,7 @@ if (isset($_GET['preview'])) {
             'id' => 2,
             'creator' => (object) [
                 'name' => 'Анна', 'surname' => 'Петрова',
-                'username' => 'anna', 'avatar' => null,
+                'username' => 'anna', 'avatar' => 'default',
             ],
             'publication' => null, // пост без книги
             'content'   => 'Комментарий без книги. Длинный текст для проверки переноса строк: lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.',
@@ -104,14 +104,9 @@ $items = array_map(
               mb_substr($creator?->name    ?? '', 0, 1) .
               mb_substr($creator?->surname ?? '', 0, 1)
           );
-
-          // Аватар: 'default' в БД означает «нет аватара» → передаём null,
-          // чтобы avatar.php отрендерил инициалы вместо битой картинки.
-          // Если у тебя аватары лежат в другой папке — поменяй '/uploads/avatars/'.
-          $avatarRaw = $creator?->avatar ?? '';
-          $avatarSrc = ($avatarRaw !== '' && $avatarRaw !== 'default')
-              ? '/uploads/avatars/' . $avatarRaw
-              : null;
+          if ($initials === '') {
+              $initials = mb_strtoupper(mb_substr($creator?->username ?? '', 0, 1));
+          }
 
           // id публикации: у модели Post он приватный (геттер), у DEV-заглушки его нет
           $publicationId = method_exists($post, 'getPublicationId')
@@ -142,7 +137,9 @@ $items = array_map(
               'bookTitle'     => $publication?->title  ?? '',
               'userInitials'  => $initials,
               'userName'      => $creator?->username   ?? '',
-              'userAvatar'    => $avatarSrc,
+              // Сырой ключ аватара из БД ('cat', 'fox', 'default'...).
+              // Как его показать (эмодзи или инициалы) решает partial avatar.php.
+              'userAvatar'    => $creator?->avatar     ?? '',
               'text'          => $post->content,
               'likes'         => $post->likesCount ?? 0,
               'comments'      => $post->commentsCount ?? 0,

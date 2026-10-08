@@ -347,14 +347,6 @@ function fcState(card) {
   return st;
 }
 
-function fcEsc(value) {
-  return String(value)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-const fcFirstChar = (s) => Array.from(s || '')[0] || '';
-
 // createdAt приходит либо строкой, либо объектом {date: "..."} (DateTimeImmutable)
 function fcFormatDate(value) {
   const raw = value && typeof value === 'object' ? value.date : value;
@@ -556,7 +548,7 @@ function fcOwnItem(id, text) {
     content: text,
     likesCount: 0,
     createdAt: new Date().toISOString(),
-    creator: { username: '', name: '', surname: '' },
+    creator: { username: '', name: '', surname: '', avatar: '' },
     __initials: '?',
   };
 }
