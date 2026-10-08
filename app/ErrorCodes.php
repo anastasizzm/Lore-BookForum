@@ -26,4 +26,6 @@ final class ErrorCodes
     
     public const UNHANDLED_EX = 'unhandled';
     public const ALREADY_DONE = 'already_done';
+
+    public const ACCEPTED = 'accepted';
 }

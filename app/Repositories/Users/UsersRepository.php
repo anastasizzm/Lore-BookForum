@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories\Users;
 
 use App\Models\Auth\AuthCredits;
+use App\Models\Auth\AccountCredits;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 
@@ -18,7 +19,7 @@ final class UsersRepository extends Repository
         parent::__construct($db);
     }
 
-    public function findCreditsByLogin(string $login): ?AuthCredits
+    public function getAuthCredits(string $login) : ?AuthCredits
     {
         $stmt = $this->pdo()->prepare(
             'SELECT id, pass_hash, is_blocked, is_verified, username
@@ -30,6 +31,17 @@ final class UsersRepository extends Repository
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : AuthCredits::fromRow($row);
+    }
+
+    public function getAccountCredits(string $userId) : ?AccountCredits 
+    {
+        $stmt = $this->pdo()->prepare(
+            'SELECT id, email, username FROM users WHERE id = :userId LIMIT 1'
+        );
+        $stmt->execute([':userId' => $userId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : AccountCredits::fromRow($row);
     }
 
     public function exists(int $id) : bool
@@ -81,6 +93,16 @@ final class UsersRepository extends Repository
         $stmt->execute();
     }
 
+    public function checkVerified(int $id) : bool 
+    {
+        $stmt = $this->pdo()->prepare(
+            'SELECT id FROM users WHERE is_verified = true AND id = :userId'
+        );
+        $stmt->execute([':userId' => $id]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function markEmailVerified(int $id): bool
     {
         $stmt = $this->pdo()->prepare(
@@ -98,10 +120,17 @@ final class UsersRepository extends Repository
     public function loadContext(int $userId) : ?UserContext
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT u.id, u.username, p.name, p.surname, p.avatar, ur.is_admin, ur.is_redactor
+            'SELECT 
+                u.id, 
+                u.username, 
+                p.name, 
+                p.surname, 
+                p.avatar, 
+                ur.is_admin IS NOT NULL AND ur.is_admin as is_admin, 
+                ur.is_redactor IS NOT NULL AND ur.is_redactor as is_redactor
             FROM (SELECT u0.id, u0.username FROM users u0 WHERE u0.id = :userId) u
             INNER JOIN profiles p ON p.user_id = u.id
-            INNER JOIN users_rules ur ON ur.user_id = u.id'
+            LEFT JOIN users_rules ur ON ur.user_id = u.id'
         );
         $stmt->execute([':userId' => $userId]);
 
@@ -134,11 +163,7 @@ final class UsersRepository extends Repository
         return $row === false ? null : UserData::fromRow($row);
     }
 
-    public function edit(
-        int $userId,
-        string $email,
-        string $username,
-    ) : void
+    public function changeCredits(int $userId, string $email, string $username) : void 
     {
         $stmt = $this->pdo()->prepare(
             'UPDATE users SET email = :email, username = :username
@@ -146,6 +171,17 @@ final class UsersRepository extends Repository
         );
 
         $stmt->execute([':userId' => $userId, ':email' => $email, ':username' => $username]);
+    }
+
+    public function changePassword(int $userId, string $passHash) : void 
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE users SET pass_hash = :passHash
+            WHERE id = :userId
+            RETURNING id'
+        );
+
+        $stmt->execute([':userId' => $userId, ':passHash' => $passHash]);
     }
 
     public function editProfile(
@@ -164,14 +200,5 @@ final class UsersRepository extends Repository
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
     }
 
-    public function updatePassword(int $userId, string $passHash) : void 
-    {
-        $stmt = $this->pdo()->prepare(
-            'UPDATE users SET pass_hash = :passHash
-            WHERE id = :userId
-            RETURNING id'
-        );
-
-        $stmt->execute([':userId' => $userId, ':passHash' => $passHash]);
-    }
+    
 }

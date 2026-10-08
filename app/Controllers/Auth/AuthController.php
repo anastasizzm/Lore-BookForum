@@ -12,6 +12,7 @@ use App\Controllers\Controller;
 
 use App\Services\Auth\AuthService;
 use App\Services\Configuration\CookieService;
+use App\Services\Auth\EmailVerificationService;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\OperationFailedException;
@@ -27,12 +28,12 @@ use App\Forms\Auth\PassResetForm;
 
 use App\Models\Errors\InnerMessage;
 
-use App\Services\Users\UsersService;
 
 final class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthService $service,
+        private readonly EmailVerificationService $mailVerify,
         private readonly CookieService $cookies,
         private readonly UrlGenerator $url
     ){}
@@ -82,22 +83,9 @@ final class AuthController extends Controller
         return $this->cookies->clear($this->cookies->clear($response, Constants::CSRF_COOKIE, false), Constants::TOKEN_COOKIE);
     }
 
-    public function mailVerify(HttpContext $ctx, string $token) : Response 
-    {
-        $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR) ?? false;
-        if($isVerified) return Response::redirect($this->url->url('home'));
 
-        try{
-            $token = $this->service->mailVerify($token);
-            $response = Response::redirect($this->url->url('home'));
-            
-            return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
-        }
-        catch(HttpException $e){
-            return $this->render('auth/verify-result', ['success' => false, 'message' => $e->getMessage()]);
-        }
-    }
 
+    
     public function getPasswordMail(HttpContext $ctx) : Response 
     {
         return $this->render('auth/password-email');

@@ -12,6 +12,7 @@ use App\Services\Configuration\UnitOfWork;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 use App\Repositories\Users\UsersRepository;
+use App\Exceptions\Translators\UserExceptionTranslator;
 use Throwable;
 use PDO;
 
@@ -21,6 +22,7 @@ final class UsersService
         private readonly UserContextCache $cache,
         private readonly UnitOfWork $uow,
         private readonly UsersRepository  $usersRepo,
+        private readonly UserExceptionTranslator $translator
     ){}
 
     public function loadContext(int $userId): ?UserContext
@@ -66,48 +68,17 @@ final class UsersService
         return $this->usersRepo->retrieve($userId);
     }
 
-    public function edit(int $userId, UserForm $form)
+    public function editProfile(int $userId, UserForm $form)
     {
         $errors = [];
         $isValid = $form->validate($errors);
         if (!$isValid) throw new ValidationException($errors);
 
         try{
-            $this->uow->transactional(function (PDO $pdo) use ($userId, $form) : void {
-                $this->usersRepo->edit($userId, $form->email, $form->username);
-                $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);
-            });
+            $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);
         }
         catch(\PDOException $e){
-            throw $this->translatePdoException($e);
+            throw $this->translator->translate($e);
         }
-    }
-
-    private const CHECK_CONSTRAINTS = [
-        'users_username_check' => 'username'
-    ];
-
-    private const CHECK_MESSAGES = [
-        'username' => 'Invalid format'
-    ];
-
-    private function translatePdoException(\PDOException $e): Throwable
-    {
-        $constraint = PdoExtensions::extractConstraintName($e->getMessage());
-        if ($constraint === null) {
-            return $e;
-        }
-
-        if ($e->getCode() == '23514'){
-            $field = self::CHECK_CONSTRAINTS[$constraint] ?? null;
-            if ($field === null)
-                return $e;
-
-            return new ValidationException([
-                $field => [self::CHECK_MESSAGES[$field]],
-            ]);
-        }
-
-        return $e;
     }
 }

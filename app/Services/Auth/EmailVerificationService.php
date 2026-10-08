@@ -3,13 +3,17 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
+use App\ErrorCodes;
+
 use App\Lib\Jwt;
-use App\Lib\Settings;
+use App\Lib\View;
 
 use App\Http\UrlGenerator;
+use App\Http\HttpException;
 
 use App\Cache\Auth\MailVerifyCache;
 use App\Services\Mail\Mailer;
+use App\Services\Auth\TokenResetService;
 use App\Services\Configuration\UnitOfWork;
 
 use App\Repositories\Users\UsersRepository;
@@ -17,89 +21,149 @@ use App\Repositories\Users\UsersRepository;
 use App\Models\Email;
 
 use App\Exceptions\GoneException;
+use App\Exceptions\ForbiddenException;
 use App\Exceptions\NotFoundException;
-use App\Exceptions\UnauthorizedException;
 use App\Exceptions\BadRequestException;
 
 use PDO;
 
 final class EmailVerificationService
 {
+    private const VERIFY_TOKEN_TYP = 'email_verify';
+    private const VERIFY_TOKEN_TTL = 3600;
+
     public function __construct(
-        private readonly Jwt            $jwt,
-        private readonly UrlGenerator   $url,
-        private readonly Mailer         $mailer,
+        private readonly Jwt             $jwt,
+        private readonly UrlGenerator    $url,
+        private readonly Mailer          $mailer,
         private readonly UsersRepository $users,
         private readonly MailVerifyCache $cache,
-        private readonly Settings       $settings,
+        private readonly TokenResetService $tokenResetService,
+        private readonly UnitOfWork      $uow,
     ) {}
 
-    private const TOKEN_TYP = 'email_verify';
-    private const int TOKEN_TTL_SECONDS = 1800;
-
-    public function send(int $userId, string $email): void
+    public function startVerification(int $userId, string $email): void
     {
-        $token = $this->createToken($userId, $email);
-        $this->cache->set($userId, hash('sha256', $token), self::TOKEN_TTL_SECONDS);
-
-        $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('verify.mail', ['token' => $token]);
+        $token = $this->issueVerifyToken($userId, $email);
+        $this->cache->set($userId, $this->fingerprint($token), self::VERIFY_TOKEN_TTL);
 
         $this->mailer->send(Email::to(
             $email,
             'Lore email verification',
-            "<h2>Welcome to Lore!</h2><p>Please verify your email using this link: </p><a href=\"$link\">Click me</a>"
+            View::render('email/verify-email', [
+                'verifyUrl' => $this->url->fullUrl('verify.mail', ['token' => $token]),
+            ]),
         ));
     }
 
-    public function verify(string $token) : int 
-    {
-        $claims = $this->decodeToken($token);
-
-        if ($claims === null || !$this->jwt->verify($claims))
-            throw new GoneException('The link is invalid or has expired');
-
-        $tokenUserId = (int)$claims['sub'];
-        $savedHash = $this->cache->get($tokenUserId);
-        if ($savedHash === NULL)
-            throw new GoneException('The request has expired');
-
-        $hash = hash('sha256', $token);
-        if (!hash_equals($savedHash, $hash))
-            throw new ForbiddenException("Request token mismatch");
-
-        return $tokenUserId;
-    }
-
-    public function reSend(string $oldToken) : void 
+    public function restartVerification(string $oldToken) : void 
     {
         $claims = $this->decodeToken($oldToken);
-        if ($claims === null)
-            throw new BadRequestException('The link is invalid');
+        $userId = $this->extractUserId($claims);
+        $mail = $this->extractEmail($claims);
 
-        $tokenUserId = (int)$claims['sub'];
-        $tokenEmail = $claims['email'];
-
-        $this->send($tokenUserId, $tokenEmail);
+        $this->startVerification($userId, $mail);
     }
 
-    private function createToken(int $userId, string $email) : string
+    public function completeVerification(string $rawToken): string
+    {
+        $userId = $this->consumeToken($rawToken);
+        if ($this->checkVerificationExists($userId))
+            throw new HttpException("Already verified", 302, ErrorCodes::ALREADY_DONE);
+
+        $ok = $this->uow->transactional(function (PDO $pdo) use ($userId): bool {
+            return $this->users->markEmailVerified($userId);
+        });
+
+        if (!$ok) throw new NotFoundException('The user not found');
+        
+        $this->tokenResetService->resetFromUser($userId);
+        return $this->issueSessionToken($userId);
+    }
+
+    private function checkVerificationExists(int $userId) : bool 
+    {
+        return $this->users->checkVerified($userId);
+    }
+
+    private function consumeToken(string $rawToken): int
+    {
+        $claims = $this->decodeVerifiedToken($rawToken);
+        $userId = $this->extractUserId($claims);
+
+        $cachedHash = $this->cache->get($userId);
+        if ($cachedHash === null) {
+            throw new GoneException('The link has expired');
+        }
+
+        if (!hash_equals($cachedHash, $this->fingerprint($rawToken))) {
+            throw new ForbiddenException('Invalid token');
+        }
+
+        // One-shot: the link dies the moment it is redeemed.
+        $this->cache->delete($userId);
+
+        return $userId;
+    }
+
+    private function decodeToken(string $rawToken) : array 
+    {
+        $claims = $this->jwt->decode($rawToken);
+
+        if ($claims === null || ($claims['typ'] ?? null) !== self::VERIFY_TOKEN_TYP
+        ) {
+            throw new ForbiddenException('Token is invalid');
+        }
+
+        return $claims;
+    }
+
+    private function decodeVerifiedToken(string $rawToken): array
+    {
+        $claims = $this->decodeToken($rawToken);
+
+        if (!$this->jwt->verify($claims))
+            throw new ForbiddenException('Token is invalid');
+
+        return $claims;
+    }
+
+    private function extractEmail(array $claims) : string 
+    {
+        $email = $claims['email'] ?? null;
+        if (empty($email))
+            throw new BadRequestException('No email data provided');
+
+        return $email;
+    }
+
+    private function extractUserId(array $claims): int
+    {
+        $userId = $claims['sub'] ?? null;
+        if (empty($userId)) {
+            throw new BadRequestException('No user data provided');
+        }
+
+        return (int) $userId;
+    }
+
+    private function issueVerifyToken(int $userId, string $email): string
     {
         return $this->jwt->custom(
             $userId,
-            self::TOKEN_TYP,
-            [
-                'email' => $email
-            ],
-            3600
+            self::VERIFY_TOKEN_TYP,
+            ['email' => $email],
+            self::VERIFY_TOKEN_TTL,
         );
     }
 
-    private function decodeToken(string $token) : ?array 
+    private function issueSessionToken(int $userId): string
     {
-        $claims = $this->jwt->decode($token);
-        return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
-            ? $claims
-            : null;
+        return $this->jwt->access($userid, ['verified' => '1']);
+    }
+
+    private function fingerprint(string $token): string
+    {
+        return hash('sha256', $token);
     }
 }

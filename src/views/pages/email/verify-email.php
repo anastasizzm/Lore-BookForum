@@ -1,8 +1,8 @@
 <?php
 /** @var object $view  — объект представления с методом fullurl() */
 /** @var string $token — токен из письма */
-$verifyUrl = $view->fullurl('auth/verify/' . $token);
-$logoUrl = $view->fullurl('assets/img/logo.png');
+$verifyUrl = $view->fullUrl('auth/verify/' . $token);
+$logoUrl = $view->fullUrl('assets/img/logo.png');
 ?>
 <!DOCTYPE html>
 <html lang="ru">
