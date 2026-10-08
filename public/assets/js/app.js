@@ -231,6 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function toast(text) {
+    // Единые плашки (messages.js); ниже — запасной вариант, если скрипт не загрузился
+    if (window.Messages) { window.Messages.show(text, { type: 'error' }); return; }
     var el = document.createElement('div');
     el.setAttribute('role', 'alert');
     el.textContent = text;
@@ -296,10 +298,13 @@ document.addEventListener('DOMContentLoaded', () => {
         body: body
       });
 
+      var raw = '';
       var data = null;
-      try { data = await res.json(); } catch (_) {}
+      try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
+      var htmlBody = /^\s*</.test(raw);
 
-      if (res.ok) {
+      if (res.ok && !htmlBody) {
         bumpSavesCount(willSave ? 1 : -1);
         btn.dispatchEvent(new CustomEvent('save:changed', {
           bubbles: true,
@@ -312,17 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
       } else {
         setState(btn, wasSaved, type);
-        var msg = '';
-        if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
-        if (!msg && data && data.message) msg = data.message;
-        if (!msg && data && data.error && data.error.message) msg = data.error.message;
-        if (!msg) {
-          msg = res.status === 419 ? 'Session expired. Please reload the page and try again.'
-              : res.status === 403 ? 'Forbidden (verify your email first)'
-              : res.status === 401 ? 'Please sign in again'
-              : 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
-        }
-        toast(msg);
+        var fallbackMsg = 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
+        toast(window.Messages
+          ? window.Messages.describe(res.status, data, raw, fallbackMsg)
+          : fallbackMsg);
       }
     } catch (err) {
       setState(btn, wasSaved, type);

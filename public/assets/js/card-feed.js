@@ -38,6 +38,12 @@ function setFeedMsg(el, text) {
   el.hidden = text === '';
 }
 
+// Плашка с ошибкой (общий механизм — messages.js)
+function notify(text) {
+  if (window.Messages) window.Messages.show(text, { type: 'error' });
+  else console.warn(text);
+}
+
 /* ---------- Лайки ---------- */
 // Состояние «мой лайк» приходит с сервера:
 //   * в разметке — data-liked из PostContext.isLiked (feed-list.php / card-feed.php);
@@ -65,6 +71,7 @@ function applyLikedState(root) {
   });
 }
 
+// Возвращает '' при успехе, иначе текст ошибки (его покажет плашка).
 async function sendLike(id, liked) {
   try {
     const body = new URLSearchParams();
@@ -77,9 +84,20 @@ async function sendLike(id, liked) {
       headers: csrfHeaders(),
       body,
     });
-    return res.ok || res.status === 201 || res.status === 204;
+
+    if (res.status === 204) return '';
+    if (!res.ok) {
+      return window.Messages
+        ? await window.Messages.readError(res, 'Could not update the like.')
+        : `Could not update the like (HTTP ${res.status}).`;
+    }
+
+    // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
+    const raw = await res.text();
+    if (/^\s*</.test(raw)) return 'Server error. The like was not saved.';
+    return '';
   } catch (_) {
-    return false;
+    return 'Network error. Try again.';
   }
 }
 
@@ -98,8 +116,9 @@ document.addEventListener('click', (e) => {
     setLikedUI(likeBtn, liked);
     if (countEl) countEl.textContent = Math.max(0, prev + (liked ? 1 : -1));
 
-    sendLike(id, liked).then((ok) => {
-      if (ok) return;
+    sendLike(id, liked).then((err) => {
+      if (!err) return;
+      notify(err);
       // Откат: сервер не принял — возвращаем исходное состояние
       setLikedUI(likeBtn, !liked);
       if (countEl) countEl.textContent = String(prev);
