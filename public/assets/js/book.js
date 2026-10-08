@@ -92,6 +92,15 @@
   var COMMENT_MAX = 2000;
   var PAGE_SIZE = 20;
 
+  // Ники -> профили (users.js). Фолбэк — если файл не догрузился,
+  // текст всё равно отрисуется, просто без ссылок.
+  var Users = window.LoreUsers || {
+    remember: function () { return 0; },
+    renderAuthor: function (el, label) { if (el) el.textContent = label || ''; },
+    renderText: function (el, text) { if (el) el.textContent = text || ''; },
+    withMention: function (text) { return String(text == null ? '' : text).trim(); }
+  };
+
   function one(sel, root) {
     return (root || document).querySelector(sel);
   }
@@ -148,10 +157,65 @@
   }
 
   function formatDate(value) {
-    var d = value ? new Date(value) : null;
-    if (!d || isNaN(d.getTime())) return '';
-    var pad = function (n) { return n < 10 ? '0' + n : String(n); };
-    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+    // API отдаёт DateTimeImmutable как {date, timezone_type, timezone}
+    var raw = (value && typeof value === 'object' && !(value instanceof Date))
+      ? value.date
+      : value;
+    if (raw instanceof Date) raw = raw.toISOString();
+    var m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
+    return m ? m[3] + '.' + m[2] + '.' + m[1] : '';
+  }
+
+  function initialsOf(user) {
+    var n = String((user && user.name) || '').trim();
+    var s = String((user && user.surname) || '').trim();
+    var v = (n.charAt(0) + s.charAt(0)).toUpperCase();
+    if (!v) {
+      var u = String((user && user.username) || '').trim();
+      v = u.charAt(0).toUpperCase() || '?';
+    }
+    return v;
+  }
+
+  /** Значение users.avatar как есть: '' | 'default' | пресет | файл. */
+  function avatarOf(user) {
+    return String((user && user.avatar) || '');
+  }
+
+  /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
+  function fillAvatar(avatar, initials, raw) {
+    if (!avatar) return;
+    avatar.replaceChildren();
+
+    var span = document.createElement('span');
+    span.textContent = initials || '?';
+
+    // Аватар-пресет (настройки профиля) — эмодзи, а не битая картинка
+    var parsed = (window.LoreAvatar && LoreAvatar.parse(raw)) || { type: 'none' };
+    if (parsed.type === 'emoji') {
+      var em = document.createElement('span');
+      em.className = 'avatar__emoji';
+      em.setAttribute('aria-hidden', 'true');
+      em.textContent = parsed.emoji;
+      avatar.appendChild(em);
+      return;
+    }
+
+    if (parsed.type !== 'image') {
+      avatar.appendChild(span);
+      return;
+    }
+
+    var img = document.createElement('img');
+    img.alt = '';
+    img.src = parsed.src;
+    avatar.appendChild(img);
+    avatar.appendChild(span);
+    span.hidden = true;
+    img.onerror = function () {
+      img.hidden = true;
+      span.hidden = false;
+    };
   }
 
   /** Карточка комментария из <template id="comment-card-template">. */
@@ -165,9 +229,12 @@
     // эмодзи пресета или инициалы (см. avatar.js)
     Avatar.fill(one('.avatar', node), data.user, data.initials);
     var author = one('[data-c-author]', node);
-    if (author) author.textContent = data.author || '';
+    if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    // для ответа: кому пишем (@ник) — лежит на карточке
+    if (data.authorUsername) node.dataset.authorUsername = data.authorUsername;
+    if (data.authorId) node.dataset.authorId = String(Number(data.authorId));
     var text = one('[data-c-text]', node);
-    if (text) text.textContent = data.text || '';      // textContent: без XSS
+    Users.renderText(text, data.text || '');            // текст + @упоминания ссылками
     var date = one('[data-c-date]', node);
     if (date) date.textContent = data.date || '';
 
@@ -182,8 +249,8 @@
       }
     }
 
-    // Состояние «мой лайк» (localStorage feed:liked-ids) — см. card-feed.js
-    if (typeof applyLikedState === 'function') applyLikedState(node);
+    // Состояние «мой лайк» — признак isLiked из контекста юзера в ответе API
+    if (likeBtn && typeof setLikedUI === 'function') setLikedUI(likeBtn, !!data.liked);
     return node;
   }
 
@@ -252,17 +319,28 @@
         if (list) list.replaceChildren();
       }
 
+      // Комментарии с ответами подтягиваем сразу: ответы живут отдельно
+      // (GET /api/posts?parent={id}), иначе после F5 они пропадут.
+      var withReplies = [];
+
       items.forEach(function (item) {
-        appendComment({
+        var node = appendComment({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
-          initials: null,
-          user: item.creator,
+          authorId: item.creator && item.creator.id,
+          authorUsername: (item.creator && item.creator.username) || '',
+          initials: initialsOf(item.creator),
+          avatar: avatarOf(item.creator),
           text: item.content || '',
           date: formatDate(item.createdAt),
-          likes: item.likesCount || 0
+          likes: item.likesCount || 0,
+          liked: !!item.isLiked
         }, false);
+
+        if (node && Number(item.commentsCount) > 0) withReplies.push(node);
       });
+
+      withReplies.forEach(function (node) { loadReplies(node); });
 
       if (emptyEl()) {
         var n = listEl() ? listEl().children.length : 0;
@@ -370,14 +448,18 @@
         bumpCount();
 
         var created = data ? (data.createdId != null ? data.createdId : data.id) : null;
+        var me = meInfo();
         var node = appendComment({
           id: created,
-          author: (one('.comment-card__author', form) || {}).textContent || '',
+          author: me.author,
+          authorId: me.id,
+          authorUsername: me.author,
           initials: null,
           user: null,
           text: text,
           date: new Date().toISOString(),
-          likes: 0
+          likes: 0,
+          liked: false
         }, true);
 
         // Своя аватарка/инициалы берутся из формы (там они уже отрендерены)
@@ -443,10 +525,97 @@
   });
 
   /* ----------------------------------------------------------
-     Ответы на комментарии — локально (TODO: POST /api/posts/{id})
+     Ответы на комментарии:
+       отправка — POST /api/posts/{commentId} (content, publicationId, _token);
+       загрузка — GET  /api/posts?parent={commentId}&include=creator.
      ---------------------------------------------------------- */
 
-  // Показать/скрыть форму ответа
+  var REPLY_PAGE_SIZE = 50;
+
+  function csrfTokenValue() {
+    var el = one('[data-comment-form] input[name="_token"]') || one('input[name="_token"]');
+    return el ? el.value : '';
+  }
+
+  /** Текущий юзер — из атрибутов секции комментариев (book-details.php). */
+  function meInfo() {
+    var section = sectionEl() || document;
+    return {
+      id: Number(section.dataset.meId || 0),
+      // author — как API вернёт creator.username, иначе после F5 имя «мигает»
+      // между «Имя Фамилия» (data-me-name) и логином
+      author:   section.dataset.meUsername || section.dataset.meName || '',
+      initials: section.dataset.meInitials || '?',
+      avatar:   section.dataset.meAvatar || ''
+    };
+  }
+
+  /** Строка ответа из <template id="reply-template"> (без innerHTML — без XSS). */
+  function replyNode(data) {
+    var tpl = document.getElementById('reply-template');
+    if (!tpl) return null;
+
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    var author = one('.comment-reply__author', node);
+    Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
+    Users.renderText(one('.comment-reply__text', node), data.text || '');
+    fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
+    return node;
+  }
+
+  function appendReply(card, data) {
+    var list = one('[data-replies]', card);
+    var node = replyNode(data);
+    if (!list || !node) return null;
+    list.appendChild(node);
+    return node;
+  }
+
+  /** GET /api/posts?parent={commentId}&include=creator — ответы из БД. */
+  async function loadReplies(card) {
+    var commentId = Number((card && card.dataset.commentId) || 0);
+    if (!commentId) return;
+
+    var params = new URLSearchParams({
+      parent: String(commentId),
+      page: '1',
+      ps: String(REPLY_PAGE_SIZE),
+      include: 'creator'
+    });
+
+    try {
+      var res = await fetch(API_POSTS + '?' + params.toString(), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
+
+      var data = null;
+      try { data = await res.json(); } catch (_) { data = null; }
+      if (!res.ok || !data) return;
+
+      var items = Array.isArray(data.items) ? data.items : [];
+      var list = one('[data-replies]', card);
+      if (!list) return;
+
+      list.replaceChildren();
+      // API отдаёт created_at DESC — ответы читаются сверху вниз, разворачиваем
+      items.slice().reverse().forEach(function (item) {
+        appendReply(card, {
+          author: (item.creator && (item.creator.username || item.creator.name)) || '',
+          authorId: item.creator && item.creator.id,
+          authorUsername: (item.creator && item.creator.username) || '',
+          initials: initialsOf(item.creator),
+          avatar: avatarOf(item.creator),
+          text: item.content || '',
+          date: formatDate(item.createdAt)
+        });
+      });
+    } catch (err) {
+      console.warn('GET ' + API_POSTS + '?parent= failed', err);
+    }
+  }
+
+  // Показать/скрыть форму ответа; при открытии подставляем @ник автора
   document.addEventListener('click', function (e) {
     var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
     if (!replyBtn) return;
@@ -459,7 +628,19 @@
     replyBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       var first = form.querySelector('input');
-      if (first) first.focus();
+      if (first) {
+        // Ответ начинается с @ника автора комментария (если поле пустое)
+        var card = replyBtn.closest('[data-comment-id]');
+        var target = (card && card.dataset.authorUsername) || '';
+        if (target && first.value.trim() === '') {
+          first.value = '@' + target + ' ';
+          first.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        first.focus();
+        try {
+          first.selectionStart = first.selectionEnd = first.value.length;
+        } catch (_) { /* type=text в старых браузерах */ }
+      }
     }
   });
 
@@ -467,34 +648,99 @@
   document.addEventListener('input', function (e) {
     var input = e.target.closest && e.target.closest('.comment-reply-form__input');
     if (!input) return;
-    var btn = input.closest('form') && input.closest('form').querySelector('.comment-reply-form__submit');
+    var form = input.closest('form');
+    var btn = form && form.querySelector('.comment-reply-form__submit');
     if (btn) btn.disabled = input.value.trim() === '';
+    setMsg(form ? one('[data-reply-error]', form) : null, '');
   });
 
-  // Отправка ответа (пока только локально)
-  document.addEventListener('submit', function (e) {
+  // Отправка ответа: POST /api/posts/{commentId}
+  document.addEventListener('submit', async function (e) {
     var form = e.target.closest && e.target.closest('[data-reply-form]');
     if (!form) return;
     e.preventDefault();
+    if (form.dataset.sending === '1') return;
 
-    var input = form.querySelector('input');
-    var text = input.value.trim();
+    var input = one('input', form);
+    var sendBtn = one('.comment-reply-form__submit', form);
+    var errEl = one('[data-reply-error]', form);
+    var card = form.closest('[data-comment-id]');
+    var text = input ? (input.value || '').trim() : '';
+
+    setMsg(errEl, '');
+
+    if (!card) return;
+    var commentId = Number(card.dataset.commentId || 0);
+    if (!commentId) return setMsg(errEl, 'Cannot send the reply: the comment id is missing.');
     if (text === '') return;
 
-    var template = document.getElementById('reply-template');
-    if (!template) return;
+    // Ответ отправляется с @ником автора комментария в начале текста
+    text = Users.withMention(text, card.dataset.authorUsername || '');
+    if (input) input.value = text;
 
-    var reply = template.content.firstElementChild.cloneNode(true);
-    reply.querySelector('.comment-reply__text').textContent = text; // textContent: без XSS
+    if (text.length > COMMENT_MAX) return setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
 
-    var content = form.closest('.comment-card__content');
-    content.querySelector('[data-replies]').appendChild(reply);
+    var section = sectionEl();
+    var pubId = Number((section && section.dataset.publicationId) || 0);
+    if (!pubId) return setMsg(errEl, 'Cannot send the reply: the publication id is missing on this page.');
 
-    input.value = '';
-    form.querySelector('.comment-reply-form__submit').disabled = true;
-    form.hidden = true;
-    content.querySelector('[data-reply-toggle]').setAttribute('aria-expanded', 'false');
-    // TODO: отправить ответ на сервер (POST /api/posts/{postId})
+    var body = new URLSearchParams();
+    body.set('content', text);
+    body.set('publicationId', String(pubId));
+    var token = csrfTokenValue();
+    if (token) body.set('_token', token);
+
+    form.dataset.sending = '1';
+    input.readOnly = true;
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+      var res = await fetch(API_POSTS + '/' + commentId, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: body
+      });
+
+      var data = null;
+      var raw = '';
+      try {
+        raw = await res.text();
+        data = raw ? JSON.parse(raw) : null;
+      } catch (_) { data = null; }
+
+      var serverError = payloadError(data);
+      var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
+
+      if (res.ok && !serverError && !htmlErrorPage) {
+        var me = meInfo();
+        appendReply(card, {
+          author: me.author,
+          authorId: me.id,
+          authorUsername: me.author,
+          initials: me.initials,
+          avatar: me.avatar,
+          text: text
+        });
+
+        bumpCount(); // счётчик публикации включает ответы (считает триггер в БД)
+
+        input.value = '';
+        form.hidden = true;
+        var toggle = one('[data-reply-toggle]', card);
+        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        return;
+      }
+
+      setMsg(errEl, serverError || failureText(res, raw));
+    } catch (err) {
+      console.warn('POST ' + API_POSTS + '/' + commentId + ' failed', err);
+      setMsg(errEl, 'Network error. Try again.');
+    } finally {
+      delete form.dataset.sending;
+      input.readOnly = false;
+      if (sendBtn) sendBtn.disabled = input.value.trim() === '';
+    }
   });
 
   /* ----------------------------------------------------------
@@ -512,3 +758,5 @@
     initComments();
   }
 })();
+
+/* marker-test-12345 */

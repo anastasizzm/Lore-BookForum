@@ -292,8 +292,16 @@ $meAvatar = (string) ($me->avatar ?? '');
     </div>
   </div>
 
-  <!-- Блок комментариев -->
-  <section class="comments-section" data-comments data-publication-id="<?= (int) $publicationId ?>">
+  <!-- Блок комментариев.
+       data-me-username = логин, как его отдаёт API (creator.username): оптимистично
+       вставленный комментарий/ответ должен совпадать с тем, что покажет перезагрузка. -->
+  <section class="comments-section" data-comments
+           data-publication-id="<?= (int) $publicationId ?>"
+           data-me-id="<?= (int) ($me->id ?? 0) ?>"
+           data-me-name="<?= $view->e($meName) ?>"
+           data-me-username="<?= $view->e((string) ($me->username ?? '')) ?>"
+           data-me-initials="<?= $view->e($meInitials) ?>"
+           data-me-avatar="<?= $view->e($meAvatar ?? '') ?>">
     <h2 class="comments-section__title">
       Comments: <span data-comments-count><?= (int) $totalComments ?></span>
     </h2>
@@ -343,6 +351,7 @@ $meAvatar = (string) ($me->avatar ?? '');
         <?php
           $cId    = (int) ($comment['id'] ?? 0);
           $cLikes = (int) ($comment['likes'] ?? 0);
+          $cLiked = (bool) ($comment['liked'] ?? false);
         ?>
         <div class="comment-card"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
@@ -354,10 +363,11 @@ $meAvatar = (string) ($me->avatar ?? '');
 
               <div class="comment-card__footer">
                 <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) (P0-4) -->
-                <button type="button" class="btn-icon-small btn-like"
+                <button type="button" class="btn-icon-small btn-like<?= $cLiked ? ' is-liked' : '' ?>"
                         data-like-btn
                         data-like-id="<?= $cId ?>"
-                        aria-pressed="false" aria-label="Like">
+                        data-liked="<?= $cLiked ? '1' : '0' ?>"
+                        aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="Like">
                   <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -381,6 +391,8 @@ $meAvatar = (string) ($me->avatar ?? '');
                     <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </button>
+                <p class="form-field__error" data-reply-error role="alert" hidden
+                   style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
               </form>
 
               <div class="comment-replies" data-replies></div>
@@ -404,6 +416,7 @@ $meAvatar = (string) ($me->avatar ?? '');
             <button type="button" class="btn-icon-small btn-like"
                     data-like-btn
                     data-like-id=""
+                    data-liked="0"
                     aria-pressed="false" aria-label="Like">
               <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -428,6 +441,8 @@ $meAvatar = (string) ($me->avatar ?? '');
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
+            <p class="form-field__error" data-reply-error role="alert" hidden
+               style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
           </form>
 
           <div class="comment-replies" data-replies></div>

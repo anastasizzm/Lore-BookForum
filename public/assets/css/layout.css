@@ -97,6 +97,12 @@ body.is-sidebar-expanded {
   background-color: transparent;
 }
 
+/* Выбранный в настройках аватар вместо иконки-фигурки (см. sidebar.php) */
+.nav-icon__avatar {
+  font-size: 22px;
+  line-height: 1;
+}
+
 .sidebar-bottom {
   position: relative;
   margin-top: auto;

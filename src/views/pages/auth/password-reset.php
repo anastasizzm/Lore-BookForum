@@ -22,21 +22,39 @@
     Create a new password for your account. It must be at least 8 characters long.
   </p>
 
+  <?php
+    // ошибки, у которых на форме нет своего поля (token и всё новое с бэка)
+    $unboundErrors = [];
+    foreach (($errors ?? []) as $field => $list) {
+      if (in_array($field, ['password', 'password_confirm'], true)) continue;
+      foreach ((array) $list as $err) $unboundErrors[] = $err;
+    }
+  ?>
+  <?php if (!empty($unboundErrors)): ?>
+    <div class="messages">
+      <?php foreach ($unboundErrors as $err): ?>
+        <div class="message message--error">
+          <div class="message__body"><?= $view->e($err) ?></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
   <!--
     Контракт с бэком:
-      POST /password/reset, application/x-www-form-urlencoded
+      POST /auth/password-reset/submit (url('password.reset.submit')), application/x-www-form-urlencoded
         поля: token, password, password_confirm, csrf-поле
-      успех: редирект на /login с плашкой "Password updated"
+      успех: страница message "The new password was successfully set"
       ошибки: этот же шаблон с $errors[...] / $innerMessages;
-              невалидный/просроченный token -> редирект на /password/email
-    token приходит из ссылки в письме (/password/reset?token=...),
-    поэтому кладём его в hidden-поле.
-    Роут и обработчик добавит бэкенд.
+              невалидный/просроченный token -> страница message со статусом
+    token приходит в пути ссылки из письма (/auth/password-reset/{token}) и
+    передаётся во view контроллером; при ререндере с ошибкой его нет — тогда
+    берём из отправленной формы ($form['token']), иначе поле опустеет.
   -->
   <form class="login-form" id="passwordResetForm" action="<?= $view->url('password.reset.submit') ?>" method="POST" novalidate>
     <?= $view->csrfField() ?>
 
-    <input type="hidden" name="token" value="<?= $view->e($token ?? ($_GET['token'] ?? '')) ?>">
+    <input type="hidden" name="token" value="<?= $view->e($token ?? ($form['token'] ?? '')) ?>">
 
     <div class="form-field">
       <label class="visually-hidden" for="resetPassword">New password</label>

@@ -7,6 +7,14 @@
    ============================================ */
 
 /* ---------- CSRF ---------- */
+// Ники -> профили (users.js грузится раньше card-feed.js); фолбэк — без ссылок.
+const fcUsers = window.LoreUsers || {
+  remember: () => 0,
+  renderAuthor: (el, label) => { if (el) el.textContent = label || ''; },
+  renderText: (el, text) => { if (el) el.textContent = text || ''; },
+  withMention: (text) => String(text == null ? '' : text).trim(),
+};
+
 function csrfToken() {
   const el = document.querySelector('[data-feed-comment-form] [name="_token"]')
           || document.querySelector('[data-csrf] [name="_token"]')
@@ -28,19 +36,11 @@ function setFeedMsg(el, text) {
 }
 
 /* ---------- Лайки ---------- */
-const FEED_LIKED_KEY = 'feed:liked-ids';
-
-function likedIds() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(FEED_LIKED_KEY) || '[]'));
-  } catch (_) {
-    return new Set();
-  }
-}
-
-function saveLikedIds(set) {
-  try { localStorage.setItem(FEED_LIKED_KEY, JSON.stringify(Array.from(set))); } catch (_) {}
-}
+// Состояние «мой лайк» приходит с сервера:
+//   * в разметке — data-liked из PostContext.isLiked (feed-list.php / card-feed.php);
+//   * в ответе GET /api/posts — поле isLiked (book.js, card-feed.js).
+// Локальный storage больше не используется: он расходится с БД после F5
+// и на другом устройстве.
 
 function likeIdOf(btn) {
   if (btn.dataset.likeId) return Number(btn.dataset.likeId);
@@ -51,15 +51,14 @@ function likeIdOf(btn) {
 function setLikedUI(btn, liked) {
   btn.classList.toggle('is-liked', liked);
   btn.setAttribute('aria-pressed', String(liked));
+  btn.dataset.liked = liked ? '1' : '0';
 }
 
-// Сердечко должно оставаться залитым после перезагрузки.
-// API пока не отдаёт признак «мой лайк», поэтому состояние храним локально.
+// Рисуем по data-liked (серверный признак). Кнопки без data-liked не трогаем.
 function applyLikedState(root) {
-  const ids = likedIds();
   (root || document).querySelectorAll('[data-like-btn]').forEach((btn) => {
-    const id = likeIdOf(btn);
-    if (id && ids.has(id)) setLikedUI(btn, true);
+    if (btn.dataset.liked === undefined) return;
+    setLikedUI(btn, btn.dataset.liked === '1');
   });
 }
 
@@ -96,18 +95,11 @@ document.addEventListener('click', (e) => {
     setLikedUI(likeBtn, liked);
     if (countEl) countEl.textContent = Math.max(0, prev + (liked ? 1 : -1));
 
-    const ids = likedIds();
-    if (liked) ids.add(id); else ids.delete(id);
-    saveLikedIds(ids);
-
     sendLike(id, liked).then((ok) => {
       if (ok) return;
       // Откат: сервер не принял — возвращаем исходное состояние
       setLikedUI(likeBtn, !liked);
       if (countEl) countEl.textContent = String(prev);
-      const fresh = likedIds();
-      if (liked) fresh.delete(id); else fresh.add(id);
-      saveLikedIds(fresh);
     });
     return;
   }
@@ -137,7 +129,16 @@ document.addEventListener('click', (e) => {
     replyBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       const input = form.querySelector('.comment-form__input');
-      if (input) input.focus();
+      if (input) {
+        // Ответ начинается с @ника автора комментария (если поле пустое)
+        const target = (node && node.dataset.authorUsername) || '';
+        if (target && input.value.trim() === '') {
+          input.value = '@' + target + ' ';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        input.focus();
+        try { input.selectionStart = input.selectionEnd = input.value.length; } catch (_) {}
+      }
     }
   }
 });
@@ -256,9 +257,14 @@ document.addEventListener('submit', async (e) => {
   setFeedMsg(errEl, '');
   setFeedMsg(statusEl, '');
 
-  const text = input.value.trim();
+  let text = input.value.trim();
   if (text === '') return;
   if (!commentId) return setFeedMsg(errEl, 'commentId is missing');
+
+  // Ответ отправляется с @ником автора комментария в начале текста
+  text = fcUsers.withMention(text, node ? node.dataset.authorUsername : '');
+  input.value = text;
+
   if (form.dataset.lastSent === text) return setFeedMsg(errEl, 'You have already sent this comment.');
 
   // publicationId берём из основной формы карточки — у комментариев он общий с постом
@@ -374,14 +380,38 @@ function fcBuildItem(item, tpl) {
   const node = tpl.content.firstElementChild.cloneNode(true);
   const c = item.creator || {};
 
-  // Аватар: эмодзи пресета или инициалы (см. avatar.js).
-  // item.__initials задан только для своего комментария.
-  Avatar.fill(node.querySelector('.avatar'), c, item.__initials);
+  const initials = item.__initials
+    || ((fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
+        || fcFirstChar(c.username).toUpperCase());
 
-  // textContent: без XSS
-  node.querySelector('[data-fc-author]').textContent = c.username || '';
+  // Аватар: пресет из настроек (эмодзи) / настоящая картинка / инициалы
+  const avatarRaw = c.avatar || '';
+  const av = (window.LoreAvatar && LoreAvatar.parse(avatarRaw)) || { type: 'none' };
+
+  const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
+  const wrapImg = node.querySelector('[data-fc-avatar-img]');
+  const wrapEmoji = node.querySelector('[data-fc-avatar-emoji]');
+  if (wrapInitials && wrapImg) {
+    let used = wrapInitials;
+    if (av.type === 'image') used = wrapImg;
+    else if (av.type === 'emoji' && wrapEmoji) used = wrapEmoji;
+
+    [wrapInitials, wrapImg, wrapEmoji].forEach((w) => { if (w && w !== used) w.remove(); });
+    used.hidden = false;
+    used.innerHTML = used.innerHTML
+      .split('__INITIALS__').join(fcEsc(initials))
+      .split('__EMOJI__').join(av.type === 'emoji' ? av.emoji : '')
+      .split('__SRC__').join(fcEsc(av.type === 'image' ? encodeURI(av.src) : ''));
+    // Если картинка не отдастся — onerror в avatar.php покажет инициалы
+    const fallbackSpan = used.querySelector('.avatar span[hidden]');
+    if (fallbackSpan) fallbackSpan.textContent = initials;
+  }
+
+  // textContent/fillAvatar: без XSS; ник автора и @упоминания — ссылки на профиль
+  fcUsers.renderAuthor(node.querySelector('[data-fc-author]'), c.username || '', c.id, c.username);
+  if (c.username) node.dataset.authorUsername = c.username;
+  fcUsers.renderText(node.querySelector('[data-fc-text]'), item.content || '');
   node.querySelector('[data-fc-date]').textContent = fcFormatDate(item.createdAt);
-  node.querySelector('[data-fc-text]').textContent = item.content || '';
 
   if (item.id != null) {
     node.dataset.commentId = item.id;
@@ -390,10 +420,11 @@ function fcBuildItem(item, tpl) {
       likeBtn.dataset.likeId = String(item.id);
       const cnt = likeBtn.querySelector('[data-like-count]');
       if (cnt) cnt.textContent = String(item.likesCount || 0);
+      // Признак «мой лайк» — из контекста юзера в ответе API
+      setLikedUI(likeBtn, !!item.isLiked);
     }
   }
 
-  applyLikedState(node);
   return node;
 }
 
@@ -529,7 +560,7 @@ function fcAppendOwn(card, id, text) {
 
   const item = fcOwnItem(id, text);
   item.creator.username = card.dataset.cuName || '';
-  item.creator.avatar = card.dataset.cuAvatar || '';
+  item.creator.id = Number(card.dataset.cuId || 0);
   item.__initials = card.dataset.cuInitials || '?';
 
   const node = fcBuildItem(item, tpl);

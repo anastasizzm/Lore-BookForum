@@ -86,10 +86,13 @@ $filter_rows = [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
-                    // 'value' => 'finished' (UI), JS маппит в 'ended' (API) через STATUS_VALUES
-                    ['label' => 'All',      'href' => $link([], ['status']),           'key' => 'status', 'value' => 'all',      'active' => $status === ''],
-                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']),  'key' => 'status', 'value' => 'reading',  'active' => $status === 'reading'],
-                    ['label' => 'Finished', 'href' => $link(['status' => 'finished']), 'key' => 'status', 'value' => 'finished', 'active' => $status === 'finished'],
+                    // 'value' = значение enum App\Models\Enums\ReadingStatus (none|reading|ended).
+                    // Раньше здесь был 'finished' — такой ?status= падает в бэке с
+                    // TypeError (UserRelationCriteria получает null), поэтому и href,
+                    // и value обязаны быть 'ended'.
+                    ['label' => 'All',      'href' => $link([], ['status']),          'key' => 'status', 'value' => 'all',     'active' => $status === ''],
+                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']), 'key' => 'status', 'value' => 'reading', 'active' => $status === 'reading'],
+                    ['label' => 'Finished', 'href' => $link(['status' => 'ended']),   'key' => 'status', 'value' => 'ended',   'active' => $status === 'ended'],
                 ],
             ],
             [

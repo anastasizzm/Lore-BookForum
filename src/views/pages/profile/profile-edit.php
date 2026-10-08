@@ -24,8 +24,9 @@ $val = function (string $key, string $default = '') use ($form, $userData) {
 
 $currentAvatar = $val('avatar', 'default');
 
-// Единый список пресетов (src/avatar-presets.php): 'default' => null = инициалы
-$avatarOptions = require __DIR__ . '/../../../avatar-presets.php';
+// Карта пресетов — один источник правды для пикера, avatar.php и sidebar.php
+$avatarOptions = ['default' => null]
+    + require __DIR__ . '/../../../partials/avatar-presets.php';
 
 $initials = mb_strtoupper(
     mb_substr($userData->name    ?? '', 0, 1) .

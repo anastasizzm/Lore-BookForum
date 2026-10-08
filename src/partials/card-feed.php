@@ -39,12 +39,16 @@ $date          = $date         ?? '';
 // Кто сейчас авторизован — нужно card-feed.js для вставки своего комментария
 $currentUserInitials = $currentUserInitials ?? '';
 $currentUserName     = $currentUserName     ?? '';
-$currentUserAvatar   = $currentUserAvatar   ?? '';
+$currentUserId       = (int) ($currentUserId ?? 0);
+
+// «Мой лайк» приходит из PostContext (isLiked) — API /api/posts отдаёт его
+// вместе с каждым постом. Раньше состояние хранилось в localStorage и расходилось с БД.
+$liked = (bool) ($liked ?? false);
 ?>
 <article class="card-base card-feed" data-post-id="<?= $postId ?>"
          data-cu-initials="<?= $view->e($currentUserInitials) ?>"
          data-cu-name="<?= $view->e($currentUserName) ?>"
-         data-cu-avatar="<?= $view->e($currentUserAvatar) ?>">
+         data-cu-id="<?= $currentUserId ?>">
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
@@ -71,7 +75,9 @@ $currentUserAvatar   = $currentUserAvatar   ?? '';
 
     <footer class="card-feed__footer">
     <div class="card-feed__actions">
-        <button type="button" class="action-btn action-like" data-like-btn aria-pressed="false" aria-label="Like">
+        <button type="button" class="action-btn action-like<?= $liked ? ' is-liked' : '' ?>"
+                data-like-btn data-liked="<?= $liked ? '1' : '0' ?>"
+                aria-pressed="<?= $liked ? 'true' : 'false' ?>" aria-label="Like">
             <svg width="18" height="16" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>

@@ -1,18 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <?php $view->include('head'); ?>
-
-<!-- Аватары: список пресетов (src/avatar-presets.php) отдаём в JS,
-     avatar.js должен подключаться ДО card-feed.js и book.js -->
-<script>
-window.AVATAR_PRESETS = <?= json_encode(
-    require __DIR__ . '/../avatar-presets.php',
-    JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-) ?>;
-</script>
+<!-- Аватар-пресеты (эмодзи из настроек) для JS-рендера комментариев -->
 <script src="<?= $view->asset('js/avatar.js') ?>"></script>
-
 <script src="/assets/js/card-feed.js" defer></script>
+<!-- Профили: ник автора и @упоминания -> /users/{id} (используют book.js и card-feed.js) -->
+<script src="<?= $view->asset('js/users.js') ?>"></script>
 <body>
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>
@@ -23,9 +16,9 @@ window.AVATAR_PRESETS = <?= json_encode(
     <span></span>
   </button>
 
-  <?php /* sidebar — отдельный partial: видит только globals, поэтому текущего
-          пользователя (для аватара) передаём явно */ ?>
-  <?php $view->include('sidebar', ['user' => $user ?? null]); ?>
+  <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
+  <!-- $me — текущий пользователь: сайдбар рисует его аватар вместо иконки -->
+  <?php $view->include('sidebar', ['me' => $user ?? null]); ?>
 
   <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
   <?php $view->include('confirm-modal'); ?>
