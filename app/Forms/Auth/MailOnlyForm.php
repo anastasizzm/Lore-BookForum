@@ -5,7 +5,7 @@ namespace App\Forms\Auth;
 
 use App\Forms\Form;
 
-final readonly class PassResetMailForm implements Form
+final readonly class MailOnlyForm implements Form
 {
     public function __construct(
         public string $email,

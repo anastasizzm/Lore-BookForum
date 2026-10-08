@@ -1,8 +1,8 @@
 <?php
 /** @var object $view  — объект представления с методом fullurl() */
 /** @var string $token — токен из письма */
-$verifyUrl = $view->fullUrl('auth/verify/' . $token);
-$logoUrl = $view->fullUrl('assets/img/logo.png');
+$verifyUrl = $verifyUrl ?? '';
+$logoUrl = $view->asset('img/logo.png');
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -47,7 +47,7 @@ $logoUrl = $view->fullUrl('assets/img/logo.png');
           <!-- Кнопка -->
           <tr>
             <td align="center" style="padding:28px 32px;">
-              <a href="<?= htmlspecialchars($verifyUrl) ?>" target="_blank"
+              <a href="<?= $verifyUrl ?>" target="_blank"
                  style="display:inline-block;background-color:#5876A6;color:#FFFFFF;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">
                 Verify email
               </a>
@@ -59,7 +59,7 @@ $logoUrl = $view->fullUrl('assets/img/logo.png');
             <td style="padding:0 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#6F84A5;">
               Если кнопка не работает, скопируйте ссылку и вставьте её в адресную строку браузера:
               <br>
-              <a href="<?= htmlspecialchars($verifyUrl) ?>" target="_blank" style="color:#5876A6;word-break:break-all;"><?= htmlspecialchars($verifyUrl) ?></a>
+              <a href="<?= $verifyUrl ?>" target="_blank" style="color:#5876A6;word-break:break-all;"><?= $view->e($verifyUrl) ?></a>
             </td>
           </tr>
 

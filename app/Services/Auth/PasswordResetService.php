@@ -5,13 +5,16 @@ namespace App\Services\Auth;
 
 use App\Lib\Jwt;
 use App\Lib\Settings;
+use App\Lib\View;
 
 use App\Http\UrlGenerator;
 
 use App\Services\Mail\Mailer;
+use App\Services\Auth\TokenResetService;
 
+use App\Forms\Auth\MailOnlyForm;
+use App\Forms\Auth\PassResetForm;
 use App\Cache\Auth\PassResetCache;
-use App\Cache\Auth\TokenResetTtlCache;
 
 use App\Repositories\Users\UsersRepository;
 
@@ -25,75 +28,119 @@ use PDO;
 
 final class PasswordResetService
 {
+    private const RESET_TOKEN_TYP = 'pass_reset';
+    private const RESET_TOKEN_TTL = 1800;
+
     public function __construct(
         private readonly Jwt            $jwt,
         private readonly UrlGenerator   $url,
         private readonly Mailer         $mailer,
-        private readonly UsersRepository $users,
+        private readonly UsersRepository $usersRepo,
         private readonly PassResetCache $cache,
-        private readonly TokenResetTtlCache $tokenCache,
+        private readonly TokenResetService $tokenResetService,
         private readonly Settings       $settings,
     ) {}
 
-    private const string TOKEN_TYP = 'pass_reset';
-    private const int TOKEN_TTL_SECONDS = 1800;
-    private const int TOKEN_RESET_TTL_SECONDS = 86400;
-
-    public function startReset(int $userId, string $email) : void 
+    public function startReset(MailOnlyForm $form) : void 
     {
-        $token = $this->createToken($userId);
-        $this->cache->set($userId, hash('sha256', $token), self::TOKEN_TTL_SECONDS);
-        
-        $link = rtrim($this->settings->appUrl, '/')
-              . $this->url->url('password.reset', ['token' => $token]);
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
 
+        $userId = $this->getCredits($form->email);
+        
+        $token = $this->issueResetToken($userId);
+        $this->cache->set($userId, $this->fingerprint($token), self::RESET_TOKEN_TTL);
+        
         $this->mailer->send(Email::to(
             $email,
             'Lore profile password reset',
-            "<h2>Password reset</h2><p>You received this message because you requested password reset.<br>
-            If you didnt request it, ignore the message.<br>
-            The link to reset your password: </p><a href=\"$link\">Reset</a>"
+            View::render('email/reset-password', [
+                'resetUrl' => $this->url->fullUrl('password.reset', ['token' => $token])
+            ]),
         ));
     }
 
-    public function verify(string $token) : int 
+    public function completeReset(PassResetForm $form): void
     {
-        $claims = $this->decodeToken($token);
+        $errors = [];
+        if (!$form->validate($errors)) throw new ValidationException($errors);
 
-        if ($claims === null)
-            throw new GoneException('The link is invalid or has expired');
+        $userId = $this->consumeToken($form->token);
+        $this->users->changePassword($userId, password_hash($form->password, PASSWORD_DEFAULT));
 
-        $tokenUserId = (int)$claims['sub'];
-        $savedHash = $this->cache->get($tokenUserId);
-        if ($savedHash === NULL)
-            throw new GoneException('The request has expired');
-
-        $hash = hash('sha256', $token);
-        if (!hash_equals($savedHash, $hash))
-            throw new ForbiddenException("Request token mismatch");
-
-        return $tokenUserId;
+        $this->tokenResetService->resetFromUser($userId);
     }
 
-    public function resetTokens(int $userId) : void
+    private function getCredits(string $email) : AccountCredits 
     {
-        $this->tokenCache->set($userId, time(), self::TOKEN_RESET_TTL_SECONDS);
+        $id = $this->usersRepo->identifyByLogin($email);
+        if ($id === null)
+            throw new ValidationException(['email' => ['Account with this email not found']]);
+    
+        return $id;
     }
 
-    private function createToken(int $userId) : string
+    private function consumeToken(string $rawToken): int
+    {
+        $claims = $this->decodeVerifiedToken($rawToken);
+        $userId = $this->extractUserId($claims);
+
+        $cachedHash = $this->cache->get($userId);
+        if ($cachedHash === null) {
+            throw new GoneException('The link has expired');
+        }
+
+        if (!hash_equals($cachedHash, $this->fingerprint($rawToken))) {
+            throw new ForbiddenException('Invalid token');
+        }
+
+        $this->cache->delete($userId);
+        return $userId;
+    }
+
+    private function decodeToken(string $rawToken) : array 
+    {
+        $claims = $this->jwt->decode($rawToken);
+
+        if ($claims === null || ($claims['typ'] ?? null) !== self::VERIFY_TOKEN_TYP
+        ) {
+            throw new ForbiddenException('Token is invalid');
+        }
+
+        return $claims;
+    }
+
+    private function decodeVerifiedToken(string $rawToken): array
+    {
+        $claims = $this->decodeToken($rawToken);
+
+        if (!$this->jwt->verify($claims))
+            throw new ForbiddenException('Token is invalid');
+
+        return $claims;
+    }
+
+    private function extractUserId(array $claims): int
+    {
+        $userId = $claims['sub'] ?? null;
+        if (empty($userId)) {
+            throw new BadRequestException('No user data provided');
+        }
+
+        return (int) $userId;
+    }
+
+    private function issueResetToken(int $userId, string $email): string
     {
         return $this->jwt->custom(
             $userId,
-            self::TOKEN_TYP,
-            ttlSeconds: 1800
+            self::RESET_TOKEN_TYP,
+            ttlSeconds: self::RESET_TOKEN_TTL,
         );
     }
 
-    private function decodeToken(string $token) : ?array 
+    private function fingerprint(string $token): string
     {
-        $claims = $this->jwt->decodeVerify($token);
-        return ($claims !== null && ($claims['typ'] ?? null) === self::TOKEN_TYP)
-            ? $claims
-            : null;
+        return hash('sha256', $token);
     }
 }

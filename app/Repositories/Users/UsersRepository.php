@@ -44,6 +44,17 @@ final class UsersRepository extends Repository
         return $row === false ? null : AccountCredits::fromRow($row);
     }
 
+    public function identifyByLogin(string $login) : ?int 
+    {
+        $stmt = $this->pdo()->prepare(
+            'SELECT id FROM users WHERE email = :email OR username = :username LIMIT 1'
+        );
+        $stmt->execute([':email' => $login, ':username' => $login]);
+
+        $id = $stmt->fetchColumn();
+        return $id === false ? null : (int)$id;
+    }
+
     public function exists(int $id) : bool
     {
         $stmt = $this->pdo()->prepare('SELECT 1 FROM users WHERE id = :id LIMIT 1');
@@ -199,6 +210,4 @@ final class UsersRepository extends Repository
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
     }
-
-    
 }
