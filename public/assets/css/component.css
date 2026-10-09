@@ -1418,7 +1418,7 @@ textarea.form-field__input {
 
 /* Сердце — на уровне ника (макет), а не по центру строки */
 .card-feed .comment-card__main,
-.card-feed .comment-reply__content {
+.card-feed .comment-reply__row {
   align-items: flex-start;
 }
 
@@ -1684,18 +1684,94 @@ a.user-mention:focus-visible {
   color: var(--color-primary, #1A3760);
 }
 
-/* Верхняя строка карточки комментария: текст слева, лайк справа
-   (Instagram-подобная раскладка) — и сердечко отцентрировано
-   по комментарию, а не прижато к верху */
+/* Верхняя строка карточки комментария: текст слева, «три точки» справа
+   (на месте бывшего сердечка) — иконка прижата к первой строке текста */
 .comment-card__main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
 .comment-card__head {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* ---------- Меню «три точки» (только автор комментария/ответа) ---------- */
+
+/* Контейнер относительно — меню позиционируется НАД кнопкой */
+.comment-card__actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.comment-card__menu-btn {
+  flex: 0 0 auto;
+  margin: 0;                     /* гасим общий margin:-4px у .btn-icon-small */
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.comment-card__menu-btn[aria-expanded="true"] {
+  color: var(--color-primary, #1A3760);
+}
+
+/* Выпадашка с кнопкой Delete — раскрывается НАД иконкой */
+.comment-card__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  min-width: 148px;
+  padding: 6px;
+  background: var(--color-bg-elevated, #FFFFFF);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.comment-card__menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text, #1A3760);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.comment-card__menu-item:hover,
+.comment-card__menu-item:focus-visible {
+  background: var(--color-bg-subtle, #F3F6FB);
+}
+
+.comment-card__menu-item--danger {
+  color: var(--color-error, #EF4444);
+}
+
+.comment-card__menu-item--danger:hover,
+.comment-card__menu-item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error, #EF4444);
+}
+
+/* Заглушка удалённого комментария/ответа (после 204 от API) */
+.comment-card__text--deleted {
+  color: var(--color-text-muted, #6F84A5);
+  font-style: italic;
+}
+
+/* Дата написания — справа в футере, под «тремя точками»,
+   на одном уровне с лайком/кнопкой Reply */
+.comment-card__date {
+  font-size: 12px;
+  color: var(--color-text-muted, #6F84A5);
+  white-space: nowrap;
 }
 
 .comment-card__like {
@@ -1846,13 +1922,19 @@ a.user-mention:focus-visible {
   align-items: flex-start;
 }
 
-/* Строка ответа: текст слева, лайк справа — и сердечко отцентрировано
-   по ответу, как у корневого комментария */
+/* Строка ответа: текст слева, «три точки» справа (на месте бывшего
+   сердечка) — иконка на уровне первой строки текста */
 .comment-reply__content {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-reply__row {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -1866,9 +1948,8 @@ a.user-mention:focus-visible {
   margin: 0;                 /* гасим общий margin:-4px у .btn-icon-small */
 }
 
-/* Дата + Reply под текстом ответа (раскладку даёт .comment-card__meta) —
-   так же, как у основного комментария */
-.comment-reply__meta {
+/* Футер ответа: сердечко + Reply слева, дата справа — как у комментария */
+.comment-reply__footer {
   margin-top: 6px;
 }
 
