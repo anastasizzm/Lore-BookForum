@@ -197,6 +197,15 @@
     Users.renderText(one('.comment-reply__text', node), data.text || '');
     fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
 
+    // Дата, когда ответ был написан (как у основного комментария)
+    var date = one('[data-reply-date]', node);
+    if (date) date.textContent = data.date || '';
+
+    // Автор ответа — адресат его кнопки Reply: ответ на ответ всё равно
+    // уходит в тот же плоский список главного комментария (без вложенности)
+    if (data.authorUsername) node.dataset.authorUsername = data.authorUsername;
+    if (data.authorId) node.dataset.authorId = String(Number(data.authorId));
+
     // Лайк ответа — такой же, как у комментария, справа по центру
     var likeBtn = one('[data-like-btn]', node);
     if (likeBtn) {
@@ -528,7 +537,11 @@
     setRepliesExpanded(card, true);
   });
 
-  // Показать/скрыть форму ответа; при открытии подставляем @ник автора
+  // Показать/скрыть форму ответа; при открытии подставляем @ник адресата.
+  // Кнопка Reply есть и у главного комментария, и у каждого его ответа:
+  // адресат — автор того узла, по которому кликнули, но POST всегда идёт
+  // на главный комментарий — ответы не вкладываются, они идут одним
+  // плоским хронологическим списком.
   document.addEventListener('click', function (e) {
     var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
     if (!replyBtn) return;
@@ -538,15 +551,26 @@
     if (!form) return;
     var open = form.hidden;
     form.hidden = !open;
-    replyBtn.setAttribute('aria-expanded', String(open));
+
+    // У карточки одна форма — aria-expanded держим в sync у всех кнопок Reply
+    Array.prototype.forEach.call(content.querySelectorAll('[data-reply-toggle]'), function (b) {
+      b.setAttribute('aria-expanded', String(open));
+    });
+
     if (open) {
       var first = form.querySelector('input');
       if (first) {
-        // Ответ начинается с @ника автора комментария (если поле пустое) —
-        // это упоминание, поэтому со «@»
+        // Адресат: автор ответа — если кликнули Reply у ответа,
+        // иначе автор самого комментария
+        var replyEl = replyBtn.closest('.comment-reply');
         var card = replyBtn.closest('[data-comment-id]');
-        var target = (card && card.dataset.authorUsername) || '';
-        if (target && first.value.trim() === '') {
+        var target = (replyEl && replyEl.dataset.authorUsername)
+                  || (card && card.dataset.authorUsername) || '';
+        form.dataset.mentionTarget = target;   // его же подставит withMention
+
+        // Ответ начинается с @ника адресата: поле пустое, либо в нём остался
+        // «голый» @ник от прошлого адресата — заменяем на текущего
+        if (target && (!first.value.trim() || /^@\S+\s*$/.test(first.value))) {
           first.value = '@' + target + ' ';
           first.dispatchEvent(new Event('input', { bubbles: true }));
         }
@@ -588,8 +612,9 @@
     if (!commentId) return setMsg(errEl, 'Cannot send the reply: the comment id is missing.');
     if (text === '') return;
 
-    // Ответ отправляется с @ником автора комментария в начале текста
-    text = Users.withMention(text, card.dataset.authorUsername || '');
+    // Ответ отправляется с @ником адресата в начале текста: автора того узла,
+    // по чьей кнопке Reply открыли форму (главного комментария или его ответа)
+    text = Users.withMention(text, (form.dataset.mentionTarget || card.dataset.authorUsername) || '');
     if (input) input.value = text;
 
     if (text.length > COMMENT_MAX) return setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
@@ -646,8 +671,11 @@
 
         input.value = '';
         form.hidden = true;
-        var toggle = one('[data-reply-toggle]', card);
-        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        // Закрыли форму — все её кнопки Reply (у комментария и у ответов)
+        // снимаем с aria-expanded
+        Array.prototype.forEach.call(card.querySelectorAll('[data-reply-toggle]'), function (b) {
+          b.setAttribute('aria-expanded', 'false');
+        });
         return;
       }
 

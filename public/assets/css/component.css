@@ -1688,6 +1688,12 @@ a.user-mention:focus-visible {
   margin: 0;                 /* гасим общий margin:-4px у .btn-icon-small */
 }
 
+/* Дата + Reply под текстом ответа (раскладку даёт .comment-card__meta) —
+   так же, как у основного комментария */
+.comment-reply__meta {
+  margin-top: 6px;
+}
+
 .comment-reply__author {
   font-size: 14px;
   font-weight: 600;

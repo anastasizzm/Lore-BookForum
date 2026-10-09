@@ -474,6 +474,13 @@ $meAvatar = (string) ($me->avatar ?? '');
         <div class="comment-reply__body">
           <div class="comment-reply__author"></div>
           <div class="comment-reply__text"></div>
+          <!-- Под текстом: дата и Reply — как у основного комментария.
+               Ответ на ответ идёт в тот же плоский список (без вложенности) -->
+          <div class="comment-card__meta comment-reply__meta">
+            <span data-reply-date></span>
+            <button type="button" class="comment-card__reply" data-reply-toggle
+                    aria-expanded="false" aria-label="Reply">Reply</button>
+          </div>
         </div>
         <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
         <button type="button" class="btn-icon-small btn-like comment-reply__like"
