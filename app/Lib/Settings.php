@@ -17,6 +17,11 @@ final class Settings
     public readonly array  $middleware;
     public readonly string $appUrl;
 
+    // --- i18n ---
+    public readonly string $defaultLocale;
+    public readonly array  $availableLocales;
+    public readonly string $langPath;
+
     // --- database ---
     public readonly string $dbUrl;
 
@@ -55,6 +60,17 @@ final class Settings
         $this->debug      = $data['debug'] ?? false;
         $this->middleware = $data['middleware'] ?? [];
         $this->appUrl     = $data['appUrl'] ?? 'http://localhost:8080';
+
+        // i18n
+        $this->defaultLocale    = $data['i18n']['default']     ?? 'en';
+        $this->availableLocales = $data['i18n']['available']   ?? ['en'];
+        $this->langPath         = rtrim($data['i18n']['path'] ?? __DIR__ . '/../resources/lang', '/\\');
+
+        if (!in_array($this->defaultLocale, $this->availableLocales, true)) {
+            throw new \RuntimeException(
+                "Default locale '{$this->defaultLocale}' must be in available list"
+            );
+        }
 
         // database
         $this->dbUrl = $data['database_url'];

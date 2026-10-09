@@ -10,6 +10,7 @@ use App\Lib\Data\Database;
 use App\Lib\Data\RedisClient;
 use App\Lib\Container;
 use App\Lib\Jwt;
+use App\Lib\I18n\Translator;
 use App\Lib\Auth\PolicyRegistry;
 
 use App\Cache\User\UserContextCache;
@@ -50,6 +51,11 @@ $container->instance(Database::class, new Database($settings));
 $container->instance(RedisClient::class, new RedisClient($settings));
 $container->instance(RouteRegistry::class, new RouteRegistry());
 $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class), $settings));
+$container->instance(Translator::class, new Translator(
+    langPath: $settings->langPath,
+    fallback: $settings->defaultLocale,
+    available: $settings->availableLocales
+));
 
 //Services
 $container->instance(CookieService::class, new CookieService(secureByDefault: false));

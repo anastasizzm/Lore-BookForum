@@ -1,0 +1,8 @@
+{
+    "login": "Войти",
+    "logout": "Выйти",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "chapters_count": "Глав: :count",
+    "welcome_user": "Привет, :name!"
+}

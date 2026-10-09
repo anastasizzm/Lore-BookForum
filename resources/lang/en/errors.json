@@ -1,0 +1,28 @@
+{
+    "commont": {
+        "required": "The field is required",
+        "not_found": "Not found",
+        "not_exists": "Does not exists",
+        "already_exists": "Already exists",
+        "forbidden": "Forbidden",
+        "unauthorized": "Authorize first",
+        "internal": "Something went wrong :(",
+        "rate_limited": "Too many requests. Try again later",
+        "invalid_input": "Invalid input",
+        "min": "The value must be greater than :value",
+        "max": "The value must be less than :value"
+    },
+    "articles": {
+        "pub_exists": "An article for this publication already exists",
+        "doi_exists": "An article with this DOI already exists",
+        "doi_format": "DOI must match the format 10.XXXX/YYYY"
+    },
+    "books": {
+        "pub_exists": "A book for this publication already exists",
+        "isbn_exists": "A book with this ISBN already exists",
+        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
+    },
+    "users": {
+        "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores"
+    }
+}

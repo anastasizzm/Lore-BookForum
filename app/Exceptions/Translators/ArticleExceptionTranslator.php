@@ -5,51 +5,53 @@ namespace App\Exceptions\Translators;
 
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
+use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class ArticleExceptionTranslator
+final class ArticleExceptionTranslator extends Translator
 {
-    private const ENUM_TYPE = 'article_base';
-
     /** FK: constraint → [поле, сообщение] */
     private const FK = [
         // publications (вставляется перед articles)
-        'publications_genre_id_fkey'   => ['genre_id',   'The genre does not exist'],
-        'publications_icon_id_fkey'    => ['icon_id',    'The icon does not exist'],
-        'publications_creator_id_fkey' => ['creator_id', 'The creator does not exist'],
+        'publications_genre_id_fkey'   => ['genre_id',   'errors.common.required'],
+        'publications_icon_id_fkey'    => ['icon_id',    'errors.common.not_exists'],
+        'publications_creator_id_fkey' => ['creator_id', 'errors.common.not_exists'],
 
         // articles
-        'articles_publication_id_fkey' => ['publication_id', 'The publication does not exist'],
-        'articles_book_id_fkey'        => ['book_id',        'The book does not exist'],
+        'articles_publication_id_fkey' => ['publication_id', 'errors.common.not_exists'],
+        'articles_book_id_fkey'        => ['book_id',        'errors.common.not_exists'],
     ];
 
     /** UNIQUE: constraint → [поле, сообщение] */
     private const UNIQUE = [
-        'articles_publication_id_key' => ['publication_id', 'An article for this publication already exists'],
-        'articles_doi_key'            => ['doi',            'An article with this DOI already exists'],
+        'articles_publication_id_key' => ['publication_id', 'errors.articles.pub_exists'],
+        'articles_doi_key'            => ['doi',            'errors.articles.doi_exists'],
     ];
 
     /** CHECK: constraint → [поле, сообщение] */
     private const CHECK = [
-        'articles_doi_check'          => ['doi',        'DOI must match the format 10.XXXX/YYYY'],
-        'articles_page_start_check'   => ['page_start', 'Page start must be greater than 0'],
-        'articles_page_end_check'     => ['page_end',   'Page end must be greater than 0'],
-        'articles_type_consistency'   => ['type',       'Article fields do not match the selected type'],
+        'articles_doi_check'          => ['doi',        'errors.articles.doi_format'],
+        'articles_page_start_check'   => ['page_start', 'errors.common.min', [":value" => 0]],
+        'articles_page_end_check'     => ['page_end',   'errors.commin.min', [":value" => 0]],
     ];
 
     /** NOT NULL: колонка → [поле, сообщение] */
     private const NOT_NULL = [
         // publications
-        'title'        => ['title',        'Title is required'],
-        'description'  => ['description',  'Description is required'],
-        'genre_id'     => ['genre_id',     'Genre is required'],
-        'author_notes' => ['author_notes', 'Author notes are required'],
+        'title'        => ['title',        'errors.common.required'],
+        'description'  => ['description',  'errors.common.required'],
+        'genre_id'     => ['genre_id',     'errors.common.required'],
+        'type_id'     =>  ['type_id',     'errors.common.required'],
+        'author_notes' => ['author_notes', 'errors.common.required'],
 
         // articles
-        'publication_id' => ['publication_id', 'Publication is required'],
-        'type'           => ['type',           'Type is required'],
+        'publication_id' => ['publication_id', 'errors.common.required'],
     ];
+
+    public function __construct(
+        private readonly Translator $translator
+    ){}
 
     public function translate(PDOException $e): Throwable
     {
@@ -77,9 +79,7 @@ final class ArticleExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function unique(PDOException $e): Throwable
@@ -96,9 +96,7 @@ final class ArticleExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function check(PDOException $e): Throwable
@@ -115,9 +113,7 @@ final class ArticleExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function notNull(PDOException $e): Throwable
@@ -134,26 +130,6 @@ final class ArticleExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
-    }
-
-    private function invalidEnum(PDOException $e): Throwable
-    {
-        // invalid input value for enum article_base: "xyz"
-        if (!preg_match('/enum (\w+): "([^"]*)"/', $e->getMessage(), $m)) {
-            return $e;
-        }
-
-        [, $enumType, $value] = $m;
-
-        if ($enumType !== self::ENUM_TYPE) {
-            return $e;
-        }
-
-        return new ValidationException([
-            'type' => ["'{$value}' is not a valid article type"],
-        ]);
+        return $this->raiseException($entry);
     }
 }

@@ -5,16 +5,17 @@ namespace App\Exceptions\Translators;
 
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
+use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class UserExceptionTranslator
+final class UserExceptionTranslator extends Translator
 {
     /** FK: constraint → [поле, сообщение] */
     private const FK = [
-        'profiles_user_id_fkey'   => ['user_id', 'The user does not exist'],
-        'profiles_icon_id_fkey'   => ['icon_id', 'The icon file does not exist'],
-        'users_rules_user_id_fkey'=> ['user_id', 'The user does not exist'],
+        'profiles_user_id_fkey'   => ['user_id', 'errors.common.not_exists'],
+        'profiles_icon_id_fkey'   => ['icon_id', 'errors.common.not_exists'],
+        'users_rules_user_id_fkey'=> ['user_id', 'errors.common.not_exists'],
     ];
 
     /** UNIQUE: constraint → [поле, сообщение] */
@@ -31,25 +32,29 @@ final class UserExceptionTranslator
     private const CHECK = [
         'users_username_check' => [
             'username',
-            'Username must be 3–30 characters and contain only letters, digits, and underscores',
+            'errors.users.username_format',
         ],
     ];
 
     /** NOT NULL: колонка → [поле, сообщение] */
     private const NOT_NULL = [
         // users
-        'username'  => ['username',  'Username is required'],
-        'email'     => ['email',     'Email is required'],
-        'pass_hash' => ['pass_hash', 'Password is required'],
+        'username'  => ['username',  'errors.common.required'],
+        'email'     => ['email',     'errors.common.required'],
+        'pass_hash' => ['pass_hash', 'errors.common.required'],
 
         // profiles
-        'name'    => ['name',    'Name is required'],
-        'surname' => ['surname', 'Surname is required'],
-        'icon_id' => ['icon_id', 'Icon is required'],
+        'name'    => ['name',    'errors.common.required'],
+        'surname' => ['surname', 'errors.common.required'],
+        'icon_id' => ['icon_id', 'errors.common.required'],
 
         // users_rules
-        'user_id' => ['user_id', 'User is required'],
+        'user_id' => ['user_id', 'errors.common.required'],
     ];
+
+    public function __construct(
+        private readonly Translator $translator
+    ){}
 
     public function translate(PDOException $e): Throwable
     {
@@ -76,9 +81,7 @@ final class UserExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function unique(PDOException $e): Throwable
@@ -95,9 +98,7 @@ final class UserExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function check(PDOException $e): Throwable
@@ -114,9 +115,7 @@ final class UserExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function notNull(PDOException $e): Throwable
@@ -133,8 +132,6 @@ final class UserExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 }
