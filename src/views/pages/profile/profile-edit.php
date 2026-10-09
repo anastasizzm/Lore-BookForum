@@ -24,7 +24,6 @@ $val = function (string $key, string $default = '') use ($form, $userData) {
 
 $currentAvatar = $val('avatar', 'default');
 
-// Карта пресетов — один источник правды для пикера, avatar.php и sidebar.php
 $avatarOptions = ['default' => null]
     + require __DIR__ . '/../../../partials/avatar-presets.php';
 
@@ -39,135 +38,169 @@ if ($initials === '') {
 
 <?php $view->include('page-header', [
     'title'    => 'Edit profile',
-    'subtitle' => 'Update your personal information.',
+    'subtitle' => 'Update your personal information and account credentials.',
 ]); ?>
 
-<section class="profile-edit card-base">
+<div class="profile-edit-grid">
 
-  <form action="/users/<?= (int)$userData->id ?>/edit"
-        method="POST"
-        id="profileEditForm" novalidate>
-    <?= $view->csrfField() ?>
-    <input type="hidden" name="_method" value="PUT">
+  <!-- ============================================================
+       FORM 1: Profile (avatar, name, surname, bio)
+       ============================================================ -->
+  <section class="profile-edit card-base">
 
-    <h2 class="profile-edit__section-title">Avatar</h2>
+    <form action="/users/<?= (int)$userData->id ?>/profile/edit"
+          method="POST"
+          id="profileEditForm"
+          data-profile-form
+          data-endpoint="/api/users/<?= (int)$userData->id ?>/profile/edit"
+          novalidate>
+      <?= $view->csrfField() ?>
+      <input type="hidden" name="_method" value="PUT">
 
-    <div class="avatar-picker" role="radiogroup" aria-label="Choose an avatar">
-      <?php foreach ($avatarOptions as $id => $preset): ?>
-        <label class="avatar-picker__option" data-avatar="<?= $view->e($id) ?>">
-          <input type="radio"
-                 name="avatar"
-                 value="<?= $view->e($id) ?>"
-                 <?= $currentAvatar === $id ? 'checked' : '' ?>
-                 class="avatar-picker__radio">
-          <span class="avatar-picker__visual">
-            <?php if ($preset === null): ?>
-              <span class="avatar-picker__initials"><?= $view->e($initials) ?></span>
-            <?php else: ?>
-              <span class="avatar-picker__emoji"><?= $view->e($preset['icon']) ?></span>
+      <h2 class="profile-edit__section-title">Profile</h2>
+
+      <h3 class="profile-edit__section-subtitle">Avatar</h3>
+
+      <div class="avatar-picker" role="radiogroup" aria-label="Choose an avatar">
+        <?php foreach ($avatarOptions as $id => $preset): ?>
+          <label class="avatar-picker__option" data-avatar="<?= $view->e($id) ?>">
+            <input type="radio"
+                   name="avatar"
+                   value="<?= $view->e($id) ?>"
+                   <?= $currentAvatar === $id ? 'checked' : '' ?>
+                   class="avatar-picker__radio">
+            <span class="avatar-picker__visual">
+              <?php if ($preset === null): ?>
+                <span class="avatar-picker__initials"><?= $view->e($initials) ?></span>
+              <?php else: ?>
+                <span class="avatar-picker__emoji"><?= $view->e($preset['icon']) ?></span>
+              <?php endif; ?>
+            </span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <p class="form-field__error" data-error-for="avatar">
+        <?php if (!empty($errors['avatar'])): ?>
+          <span class="field-error-icon" title="<?= $view->e($errors['avatar'][0]) ?>">!</span>
+        <?php endif; ?>
+      </p>
+
+      <div class="form-row--two-cols">
+
+        <div class="form-field">
+          <label for="profileName">Name</label>
+          <input class="form-field__input"
+                 type="text"
+                 id="profileName"
+                 name="name"
+                 value="<?= $view->e($val('name')) ?>"
+                 autocomplete="given-name"
+                 maxlength="64"
+                 required>
+          <p class="form-field__error" data-error-for="name">
+            <?php if (!empty($errors['name'])): ?>
+              <span class="field-error-icon" title="<?= $view->e($errors['name'][0]) ?>">!</span>
             <?php endif; ?>
-          </span>
-        </label>
-      <?php endforeach; ?>
-    </div>
-    <p class="form-field__error" data-error-for="avatar">
-      <?php if (!empty($errors['avatar'])): ?>
-        <span class="field-error-icon" title="<?= $view->e($errors['avatar'][0]) ?>">!</span>
-      <?php endif; ?>
-    </p>
+          </p>
+        </div>
 
-    <h2 class="profile-edit__section-title">Profile information</h2>
+        <div class="form-field">
+          <label for="profileSurname">Surname</label>
+          <input class="form-field__input"
+                 type="text"
+                 id="profileSurname"
+                 name="surname"
+                 value="<?= $view->e($val('surname')) ?>"
+                 autocomplete="family-name"
+                 maxlength="64"
+                 required>
+          <p class="form-field__error" data-error-for="surname">
+            <?php if (!empty($errors['surname'])): ?>
+              <span class="field-error-icon" title="<?= $view->e($errors['surname'][0]) ?>">!</span>
+            <?php endif; ?>
+          </p>
+        </div>
 
-    <div class="form-row--two-cols">
+      </div>
 
       <div class="form-field">
-        <label for="profileName">Name</label>
+        <label for="profileBio">Biography</label>
+        <textarea class="form-field__input form-field__input--textarea"
+                  id="profileBio"
+                  name="bio"
+                  rows="6"
+                  maxlength="500"
+                  placeholder="Tell readers about yourself..."><?= $view->e($val('bio')) ?></textarea>
+        <p class="form-field__error" data-error-for="bio"></p>
+      </div>
+
+      <div class="profile-edit__actions">
+        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>">Cancel</a>
+        <button class="btn btn--primary" type="submit">Save changes</button>
+      </div>
+    </form>
+
+  </section>
+
+  <!-- ============================================================
+       FORM 2: Account credentials (username, email)
+       ============================================================ -->
+  <section class="profile-edit card-base">
+
+    <form action="/users/<?= (int)$userData->id ?>/credits/edit"
+          method="POST"
+          id="profileAccountForm"
+          data-profile-form
+          data-endpoint="/api/users/<?= (int)$userData->id ?>/credits/edit"
+          novalidate>
+      <?= $view->csrfField() ?>
+      <input type="hidden" name="_method" value="PUT">
+
+      <h2 class="profile-edit__section-title">Account credentials</h2>
+
+      <div class="form-field">
+        <label for="profileUsername">Username</label>
         <input class="form-field__input"
                type="text"
-               id="profileName"
-               name="name"
-               value="<?= $view->e($val('name')) ?>"
-               autocomplete="given-name"
-               maxlength="64"
+               id="profileUsername"
+               name="username"
+               value="<?= $view->e($val('username')) ?>"
+               autocomplete="username"
+               minlength="3"
+               maxlength="30"
                required>
-        <p class="form-field__error" data-error-for="name">
-          <?php if (!empty($errors['name'])): ?>
-            <span class="field-error-icon" title="<?= $view->e($errors['name'][0]) ?>">!</span>
+        <p class="form-field__error" data-error-for="username">
+          <?php if (!empty($errors['username'])): ?>
+            <span class="field-error-icon" title="<?= $view->e($errors['username'][0]) ?>">!</span>
           <?php endif; ?>
         </p>
       </div>
 
       <div class="form-field">
-        <label for="profileSurname">Surname</label>
+        <label for="profileEmail">Email</label>
         <input class="form-field__input"
-               type="text"
-               id="profileSurname"
-               name="surname"
-               value="<?= $view->e($val('surname')) ?>"
-               autocomplete="family-name"
-               maxlength="64"
+               type="email"
+               id="profileEmail"
+               name="email"
+               value="<?= $view->e($val('email')) ?>"
+               autocomplete="email"
+               maxlength="255"
                required>
-        <p class="form-field__error" data-error-for="surname">
-          <?php if (!empty($errors['surname'])): ?>
-            <span class="field-error-icon" title="<?= $view->e($errors['surname'][0]) ?>">!</span>
+        <p class="form-field__error" data-error-for="email">
+          <?php if (!empty($errors['email'])): ?>
+            <span class="field-error-icon" title="<?= $view->e($errors['email'][0]) ?>">!</span>
           <?php endif; ?>
         </p>
       </div>
 
-    </div>
+      <div class="profile-edit__actions">
+        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>">Cancel</a>
+        <button class="btn btn--primary" type="submit">Save changes</button>
+      </div>
+    </form>
 
-    <div class="form-field">
-      <label for="profileUsername">Username</label>
-      <input class="form-field__input"
-             type="text"
-             id="profileUsername"
-             name="username"
-             value="<?= $view->e($val('username')) ?>"
-             autocomplete="username"
-             minlength="3"
-             maxlength="30"
-             required>
-      <p class="form-field__error" data-error-for="username">
-        <?php if (!empty($errors['username'])): ?>
-          <span class="field-error-icon" title="<?= $view->e($errors['username'][0]) ?>">!</span>
-        <?php endif; ?>
-      </p>
-    </div>
+  </section>
 
-    <div class="form-field">
-      <label for="profileEmail">Email</label>
-      <input class="form-field__input"
-             type="email"
-             id="profileEmail"
-             name="email"
-             value="<?= $view->e($val('email')) ?>"
-             autocomplete="email"
-             maxlength="255"
-             required>
-      <p class="form-field__error" data-error-for="email">
-        <?php if (!empty($errors['email'])): ?>
-          <span class="field-error-icon" title="<?= $view->e($errors['email'][0]) ?>">!</span>
-        <?php endif; ?>
-      </p>
-    </div>
-
-    <div class="form-field">
-      <label for="profileBio">Biography</label>
-      <textarea class="form-field__input form-field__input--textarea"
-                id="profileBio"
-                name="bio"
-                rows="6"
-                maxlength="500"
-                placeholder="Tell readers about yourself..."><?= $view->e($val('bio')) ?></textarea>
-      <p class="form-field__error" data-error-for="bio"></p>
-    </div>
-
-    <div class="profile-edit__actions">
-      <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>">Cancel</a>
-      <button class="btn btn--primary" type="submit">Save changes</button>
-    </div>
-  </form>
-
-</section>
+</div>
 
 <?php $view->endBlock('content'); ?>

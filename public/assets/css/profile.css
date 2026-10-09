@@ -149,53 +149,6 @@
 }
 
 /* ============================================
-   PUBLICATIONS
-   ============================================ */
-.profile-publications {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.profile-publications__link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  transition: background 0.15s;
-}
-
-.profile-publications__link:hover {
-  background: var(--color-overlay);
-}
-
-.profile-publications__cover {
-  display: block;
-  width: 48px;
-  height: 64px;
-  flex-shrink: 0;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--color-bg-secondary);
-}
-
-.profile-publications__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.profile-publications__title {
-  font-size: var(--fs-small);
-  color: var(--color-text);
-  line-height: 1.3;
-}
-
-/* ============================================
    PAGINATION
    ============================================ */
 .pagination {
@@ -271,6 +224,13 @@
   margin: 0;
 }
 
+.profile-edit__section-subtitle {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+}
+
 /* Форма — ограничена по ширине, поля не растягиваются на весь экран */
 .profile-edit form {
   display: flex;
@@ -311,6 +271,28 @@
 }
 
 /* ============================================
+   PROFILE EDIT — две формы на одном экране
+   ============================================ */
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: start;   /* ← ключевое: элементы не растягиваются по высоте ряда */
+}
+
+@media (min-width: 1024px) {
+  .profile-edit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Каждая форма — по своей высоте, без растяжения под соседа */
+.profile-edit-grid > .profile-edit {
+  height: auto;
+  align-self: start;
+}
+
+/* ============================================
    PROFILE EDIT — MOBILE
    ============================================ */
 @media (max-width: 480px) {
@@ -347,12 +329,11 @@
 /* ============================================
    AVATAR PICKER
    ============================================ */
-
 .avatar-picker {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .avatar-picker__option {
@@ -469,7 +450,6 @@
 /* ============================================
    FORM FIELD ERRORS
    ============================================ */
-
 .form-field__input--invalid {
   border-color: #dc2626;
 }
@@ -477,31 +457,6 @@
 .form-field__input--invalid:focus-visible {
   outline-color: #dc2626;
 }
-
-.form-field__error {
-  min-height: 1.125rem;   /* фиксируем высоту, чтобы layout не прыгал */
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #dc2626;
-}
-
-/* ============================================
-   ПРЕДПОЧТЕНИЯ ДОСТУПНОСТИ
-   ============================================ */
-
-@media (prefers-reduced-motion: reduce) {
-  .avatar-picker__option,
-  .avatar-picker__visual,
-  .avatar-picker__emoji,
-  .avatar-picker__initials {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* ============================================
-   FORM FIELD ERRORS
-   ============================================ */
 
 .form-field__error {
   display: flex;
@@ -514,8 +469,9 @@
   line-height: 1.3;
 }
 
+/* Сохраняем высоту, но ничего не показываем, когда ошибок нет */
 .form-field__error:empty {
-  visibility: hidden;   /* сохраняем высоту, но ничего не показываем */
+  visibility: hidden;
 }
 
 .field-error-icon {
@@ -544,25 +500,33 @@
   100% { opacity: 1; transform: scale(1); }
 }
 
-.form-field__input--invalid {
-  border-color: #dc2626;
-}
-
-.form-field__input--invalid:focus-visible {
-  outline-color: #dc2626;
+/* ============================================
+   PREFERS REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .avatar-picker__option,
+  .avatar-picker__visual,
+  .avatar-picker__emoji,
+  .avatar-picker__initials {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ============================================
-   PROFILE PUBLICATIONS
+   PROFILE PUBLICATIONS — sidebar block
    ============================================ */
-
 .profile-publications {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.profile-publications__item {
+.profile-publications__item,
+.profile-publications__link {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -573,160 +537,8 @@
   transition: background .15s ease;
 }
 
-.profile-publications__item:hover {
-  background: var(--color-overlay, #f1f5f9);
-}
-
-.profile-publications__cover {
-  flex-shrink: 0;
-  width: 36px;
-  height: 50px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-publications__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.profile-publications__info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1;
-}
-
-.profile-publications__title {
-  font-weight: 500;
-  font-size: 14px;
-  color: #29466F;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-height: 1.3;
-}
-
-.profile-publications__meta {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.2;
-}
-
-/* ============================================
-   SEE ALL LINK (sidebar)
-   ============================================ */
-
-.profile-publications__more {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 4px 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: #29466F;
-  text-decoration: none;
-  transition: opacity .15s ease, transform .15s ease;
-}
-
-.profile-publications__more:hover {
-  opacity: 0.75;
-  transform: translateX(2px);
-}
-
-.profile-publications__more::after {
-  content: " \2192"; /* " ->" */
-  display: inline-block;
-  transition: transform .15s ease;
-}
-
-/* ============================================
-   PUBLICATIONS PAGE - grid
-   ============================================ */
-
-.grid-publications {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
-}
-
-.publication-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-decoration: none;
-  color: inherit;
-  transition: transform .15s ease;
-}
-
-.publication-card:hover {
-  transform: translateY(-2px);
-}
-
-.publication-card__cover {
-  display: block;
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #e2e8f0;
-}
-
-.publication-card__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.publication-card__title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #29466F;
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.publication-card__meta {
-  font-size: 12px;
-  color: #64748b;
-}
-
-/* ============================================
-   PROFILE PUBLICATIONS - sidebar block
-   ============================================ */
-
-.profile-publications {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.profile-publications__item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 6px 8px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: inherit;
-  transition: background .15s ease;
-}
-
-.profile-publications__item:hover {
+.profile-publications__item:hover,
+.profile-publications__link:hover {
   background: var(--color-overlay, #f1f5f9);
 }
 
@@ -799,9 +611,8 @@
 }
 
 /* ============================================
-   PUBLICATIONS PAGE - grid
+   PUBLICATIONS PAGE — grid
    ============================================ */
-
 .grid-publications {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
