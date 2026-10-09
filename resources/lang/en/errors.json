@@ -33,5 +33,14 @@
         "token_empty": "Token is not provided",
         "email_format": "Invalid email format",
         "mail_already_verified": "You have already verified the email"
+    },
+    "policies": {
+        "admin": "The user must be admin",
+        "auth": "The user must be authenticated",
+        "verify": "The user's email must be verified",
+        "owner": {
+            "post": "The user should be either post owner or admin",
+            "profile": "The user should be either profile owner or admin"
+        }
     }
 }
