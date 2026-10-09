@@ -82,7 +82,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- dynamic dropdowns ----------
 
-    const SOURCES = {
+  const SOURCES = {
     genres: {
       url:      '/api/additional/genres',
       param:    'genre',
@@ -227,6 +227,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   const ISBN_HINT = 'Format: 978-0-306-40615-2 (13 digits, 978/979)';
   const DOI_HINT = 'Format: 10.5555/123456';
 
+  // Сколько набрано цифр, когда группа ISBN только что завершилась:
+  // 978 | 9780 | 9780306 | 978030640615 — после них сразу ставим «-»
+  const ISBN_GROUP_ENDS = [3, 4, 7, 12];
+
   // Только цифры: колонка хранит \d и дефисы, ISBN-10 (и «X») не сохраняются
   function isbnClean(raw) {
     let out = '';
@@ -299,9 +303,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return v;
   }
 
-  function doiFormat(raw) {
+  // deleting=true — пользователь стирает символ: «10» не дополняем до «10.»,
+  // иначе точку нельзя было бы удалить.
+  function doiFormat(raw, deleting) {
     let v = doiNormalize(raw);
     if (/^10\d/.test(v)) v = '10.' + v.slice(2);             // 105555 -> 10.5555
+    else if (v === '10' && !deleting) v = '10.';             // 10 -> 10.
     return v.slice(0, 200);
   }
 
@@ -348,22 +355,77 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- ISBN / DOI inputs ----------
 
+  // Как быстро применять ввод, если страница фильтрует обычным переходом
+  // (Saved, публикации профиля): перезагружаем не на каждую клавишу.
+  const FILTER_NAV_DELAY = 500;
+
   function setupFormattedInput(inp) {
     const kind = inp.dataset.format;
     const isIsbn = kind === 'isbn';
     const validate = isIsbn ? isbnValidate : doiValidate;
     const hint = isIsbn ? ISBN_HINT : DOI_HINT;
+    let navTimer = 0;
 
-    function format(raw, caretPos) {
+    /**
+     * Применяет фильтр поля, пока пользователь печатает.
+     *
+     * Страница библиотеки перехватывает cancelable-событие `filter:input`
+     * (library-filters.js) и фильтрует через API без перезагрузки. Если
+     * обработчика нет — значение уходит в URL: иначе ввод в ISBN/DOI ни к
+     * чему не приводит (Saved, публикации профиля).
+     */
+    function applyFilter() {
+      const key = inp.dataset.filterKey || inp.name;
+      if (!key) return;
+
+      window.clearTimeout(navTimer);
+
+      const ev = new CustomEvent('filter:input', {
+        bubbles: true,
+        cancelable: true,
+        detail: { key: key, value: inp.value.trim() },
+      });
+      if (!inp.dispatchEvent(ev)) return;      // страница с API-фильтром
+
+      // Неверный формат не отправляем (на библиотеке так же делает
+      // library-filters.js: is-invalid не попадает ни в URL, ни в API)
+      if (inp.classList.contains('is-invalid')) return;
+
+      navTimer = window.setTimeout(function () {
+        const changes = {};
+        changes[key] = inp.value.trim();
+        navigateWith(changes);
+      }, FILTER_NAV_DELAY);
+    }
+
+    /**
+     * deleting=true — пользователь стирает символ: разделитель в конце
+     * автоматически не добавляем, иначе его нельзя было бы удалить.
+     */
+    function format(raw, caretPos, deleting) {
+      const atEnd = caretPos == null || caretPos >= raw.length;
+
       if (isIsbn) {
         const c = isbnClean(raw);
         // Не 978/979 — расставлять дефисы некуда: оставляем как есть,
         // ошибку покажет isbnValidate (иначе получается чужой формат)
-        const formatted = isbnShapeOk(c) ? isbnFormat(c) : c;
+        const shapeOk = isbnShapeOk(c);
+        let formatted = shapeOk ? isbnFormat(c) : c;
+
+        // Группа только что завершилась — сразу ставим дефис:
+        // 978 -> 978-, 9780 -> 978-0-
+        if (!deleting && atEnd && shapeOk && ISBN_GROUP_ENDS.indexOf(c.length) !== -1) {
+          formatted += '-';
+        }
+
         const sig = caretPos == null ? null : isbnClean(raw.slice(0, caretPos)).length;
-        return { formatted, caret: sig == null ? formatted.length : caretFromSig(formatted, sig) };
+        return {
+          formatted,
+          caret: atEnd || sig == null ? formatted.length : caretFromSig(formatted, sig),
+        };
       }
-      const formatted = doiFormat(raw);
+
+      const formatted = doiFormat(raw, deleting);
       let caret = formatted.length;
       if (caretPos != null && caretPos < raw.length) {
         caret = Math.max(0, Math.min(formatted.length, caretPos + formatted.length - raw.length));
@@ -383,16 +445,18 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       return r;
     }
 
-    function onInput() {
+    function onInput(e) {
       inp.setCustomValidity('');
       const raw = inp.value;
       const pos = inp.selectionStart;
-      const res = format(raw, pos);
+      const deleting = !!(e && e.inputType && e.inputType.indexOf('delete') === 0);
+      const res = format(raw, pos, deleting);
       if (res.formatted !== raw) {
         inp.value = res.formatted;
         try { inp.setSelectionRange(res.caret, res.caret); } catch (_) {}
       }
       showState();
+      applyFilter();
     }
 
     inp.addEventListener('input', onInput);
@@ -412,6 +476,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
       if (e.key !== 'Enter') return;
       e.preventDefault();
+      window.clearTimeout(navTimer);   // переход по Enter вместо отложенного
 
       const r = showState();
       if (r.msg && r.blocking) {
@@ -425,7 +490,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     });
 
     // Normalize value that came from the URL on page load
-    const initial = format(inp.value, null);
+    const initial = format(inp.value, null, true);
     inp.value = initial.formatted;
     showState();
   }
@@ -464,6 +529,29 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- init ----------
 
+  /**
+   * Возвращает фокус в поле ISBN/DOI, из которого ушли по URL.
+   * Фильтр применяется прямо во время ввода (см. applyFilter), поэтому
+   * без этого после перехода печатать дальше приходилось бы, кликая по
+   * полю заново. Фокусируем только открытую панель — иначе страница
+   * прыгала бы к скрытому полю.
+   */
+  function restoreFilterFocus() {
+    const panel = document.querySelector('[data-filter-panel]');
+    if (!panel || panel.hidden) return;
+
+    const params = new URLSearchParams(window.location.search);
+    ['isbn', 'doi'].forEach(function (key) {
+      if (!params.get(key)) return;
+      const inp = panel.querySelector(
+        'input.filter-input[data-format][name="' + key + '"]'
+      );
+      if (!inp || !inp.value) return;
+      inp.focus();
+      try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (_) {}
+    });
+  }
+
   function init() {
     document.querySelectorAll('input[name="q"]').forEach(setupSearch);
 
@@ -479,6 +567,8 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         if (row && row.hidden) return;
         populateDynamic(dd);
       });
+
+    restoreFilterFocus();
   }
 
   if (document.readyState === 'loading') {

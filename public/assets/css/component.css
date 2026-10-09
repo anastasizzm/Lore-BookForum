@@ -1448,47 +1448,10 @@ textarea.form-field__input {
   display: none;
 }
 
-.feed-comment {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.feed-comment__avatar {
-  flex-shrink: 0;
-}
-
-.feed-comment__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.feed-comment__head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.feed-comment__author {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--fs-small);
-  color: var(--color-text);
-}
-
-.feed-comment__date {
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
-}
-
-.feed-comment__text {
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
-  color: var(--interaction-text-color);
-  white-space: pre-line;      /* переносы строк из комментария */
-  overflow-wrap: anywhere;
+/* Комментарий в ленте — та же карточка, что на details (book-компонент
+   перенесён в component.css): внешние отступы задаёт контейнер */
+.feed-comments__list .comment-card {
+  margin-bottom: 0;
 }
 
 .feed-comments__status {
@@ -1501,46 +1464,11 @@ textarea.form-field__input {
   display: none;
 }
 
-.feed-comments__more {
+/* «Show less» — свернуть блок комментариев карточки целиком */
+.feed-comments__collapse {
   align-self: flex-start;
   padding: var(--space-2) var(--space-3);
   font-size: var(--fs-small);
-}
-
-.feed-comments__more[hidden] {
-  display: none;               /* .btn задаёт display, перебивая атрибут hidden */
-}
-
-/* Кнопки «лайк» и «ответить» под комментарием */
-.feed-comment__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: 2px;
-}
-
-.feed-comment__actions .action-btn {
-  font-size: var(--fs-small);
-  padding: 2px 0;
-}
-
-/* Форма ответа на конкретный комментарий */
-.comment-form--reply {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 2px;
-}
-
-.comment-form--reply[hidden] {
-  display: none;
-}
-
-.comment-form--reply .comment-form__input {
-  font-size: var(--fs-small);
-}
-
-.comment-form--reply p[hidden] {
-  display: none;
 }
 
 /* Аватар: если картинка не загрузилась, наследуем инициалы */
@@ -1578,3 +1506,386 @@ a.user-mention:focus-visible {
   color: inherit;
   cursor: text;
 }
+
+
+/* ============================================
+   КОММЕНТАРИИ — общие стили для book details, article details
+   и ленты (feed): карточка, ответы, кнопки «View N more replies» /
+   «Show less», пагинация «Show more/less comments».
+   Лежат здесь, потому что book.css подключается только на страницах
+   публикаций, а в ленте комментарии есть тоже.
+   ============================================ */
+
+/* ---------------- comments ---------------- */
+
+.comments-section {
+  margin-top: 32px;
+}
+
+.comments-section__title {
+  margin: 0 0 24px;
+  font-size: var(--fs-h2, 20px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary, #1A3760);
+}
+
+.comments-section__empty {
+  padding: 32px;
+  color: var(--color-text-muted, #6F84A5);
+  text-align: center;
+  font-size: var(--fs-body, 14px);
+}
+
+/* Единый стиль карточки для формы ввода и самого комментария */
+.comment-card {
+  display: block;
+  background: #ffffff;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.comment-card__inner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.comment-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-card__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #1A3760);
+  margin-bottom: 8px;
+}
+
+/* Поле ввода */
+.comment-card__input {
+  width: 100%;
+  background: var(--color-bg-subtle, #F3F6FB);
+  border: none;
+  border-radius: 9999px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-text, #1A3760);
+  outline: none;
+}
+
+.comment-card__input::placeholder {
+  color: var(--color-text-muted, #6F84A5);
+}
+
+/* Ряд «поле ввода + кнопка-галочка» (P0-2: раньше кнопки отправки не было) */
+.comment-card__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-card__row .comment-card__input {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-card__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #C5CFE0;                 /* серая, пока в поле нет текста */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease, background-color 0.2s ease;
+}
+
+.comment-card__send:not(:disabled) {
+  color: var(--color-primary, #1A3760);   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-card__send:not(:disabled):hover,
+.comment-card__send:not(:disabled):focus-visible {
+  transform: scale(1.1);
+  background: var(--color-overlay-hover, #e2e8f0);
+}
+
+.comment-card__send:focus-visible {
+  outline: 2px solid var(--color-primary, #1A3760);
+  outline-offset: 2px;
+}
+
+/* «Show more comments» / «Show less comments» — НАД списком: «more» подгружает
+   более старые (встают под ней — хронология: старые сверху), «less» убирает
+   уже подгруженные обратно */
+.comments-section__more {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.comments-section__more[hidden] {
+  display: none;             /* display:flex перебивал бы атрибут hidden */
+}
+
+/* Текст комментария */
+.comment-card__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, #1A3760);
+  margin-bottom: 16px;
+  word-wrap: break-word;
+}
+
+/* Подвал комментария (иконки, дата) */
+.comment-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.btn-icon-small {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, #6F84A5);
+  transition: color 0.2s ease;
+}
+
+.btn-icon-small:hover {
+  color: var(--color-primary, #1A3760);
+}
+
+/* Верхняя строка карточки комментария: текст слева, лайк справа
+   (Instagram-подобная раскладка) — и сердечко отцентрировано
+   по комментарию, а не прижато к верху */
+.comment-card__main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.comment-card__head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-card__like {
+  flex: 0 0 auto;
+  margin: 0;                    /* гасим общий margin:-4px у .btn-icon-small */
+}
+
+/* Кнопка «Reply» под текстом комментария */
+.comment-card__reply {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #6F84A5);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.comment-card__reply:hover,
+.comment-card__reply:focus-visible {
+  color: var(--color-primary, #1A3760);
+}
+
+/* Ещё ниже: «View N more replies» — показывает скрытые ответы.
+   Кнопка живёт только у комментариев, у которых ответы есть (book.js). */
+.comment-card__more {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #6F84A5);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.comment-card__more:hover,
+.comment-card__more:focus-visible {
+  color: var(--color-primary, #1A3760);
+}
+
+.comment-card__more[hidden] {
+  display: none;
+}
+
+/* ---------------- like + reply ---------------- */
+
+.btn-like {
+  gap: 6px;
+  font-size: var(--fs-small, 14px);
+}
+
+.btn-like svg {
+  flex-shrink: 0;
+  transition: fill 0.2s ease;
+}
+
+.btn-like.is-liked,
+.btn-like.is-liked:hover {
+  color: #EF4444;
+}
+
+.btn-like.is-liked svg {
+  fill: #EF4444;
+}
+
+.comment-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  background: var(--color-bg-subtle, #F3F6FB);
+}
+
+.comment-reply-form[hidden] {
+  display: none;
+}
+
+.comment-reply-form__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text, #1A3760);
+  padding: 8px 0;
+}
+
+.comment-reply-form__input::placeholder {
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.comment-reply-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #C5CFE0;                 /* серая, пока ничего не введено */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.comment-reply-form__submit:not(:disabled) {
+  color: var(--color-primary, #1A3760);   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-reply-form__submit:not(:disabled):hover,
+.comment-reply-form__submit:not(:disabled):focus-visible {
+  transform: scale(1.12);
+}
+
+.comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Ответы скрыты, пока пользователь не нажал «View N more replies»
+   (без этого правила display:flex перебивал бы атрибут hidden) */
+.comment-replies[hidden] {
+  display: none;
+}
+
+.comment-replies:not(:empty) {
+  margin-top: 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-border, #E2E8F0);
+}
+
+.comment-reply {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+/* Строка ответа: текст слева, лайк справа — и сердечко отцентрировано
+   по ответу, как у корневого комментария */
+.comment-reply__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.comment-reply__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-reply__like {
+  flex: 0 0 auto;
+  margin: 0;                 /* гасим общий margin:-4px у .btn-icon-small */
+}
+
+/* Дата + Reply под текстом ответа (раскладку даёт .comment-card__meta) —
+   так же, как у основного комментария */
+.comment-reply__meta {
+  margin-top: 6px;
+}
+
+.comment-reply__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, #1A3760);
+  margin-bottom: 4px;
+}
+
+.comment-reply__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, #1A3760);
+  overflow-wrap: anywhere;
+}
+
+.btn--pill {
+  border-radius: 9999px;
+  padding: 10px 24px;
+}
+

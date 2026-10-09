@@ -40,15 +40,20 @@ $date          = $date         ?? '';
 $currentUserInitials = $currentUserInitials ?? '';
 $currentUserName     = $currentUserName     ?? '';
 $currentUserId       = (int) ($currentUserId ?? 0);
+$currentUserAvatar   = $currentUserAvatar   ?? '';
 
 // «Мой лайк» приходит из PostContext (isLiked) — API /api/posts отдаёт его
 // вместе с каждым постом. Раньше состояние хранилось в localStorage и расходилось с БД.
 $liked = (bool) ($liked ?? false);
 ?>
+<!-- data-publication-id — publicationId для ответа (comments.js),
+     data-cu-* — текущий юзер для оптимистичной вставки своего комментария -->
 <article class="card-base card-feed" data-post-id="<?= $postId ?>"
+         data-publication-id="<?= $publicationId ?>"
          data-cu-initials="<?= $view->e($currentUserInitials) ?>"
          data-cu-name="<?= $view->e($currentUserName) ?>"
-         data-cu-id="<?= $currentUserId ?>">
+         data-cu-id="<?= $currentUserId ?>"
+         data-cu-avatar="<?= $view->e($currentUserAvatar) ?>">
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
@@ -118,12 +123,15 @@ $liked = (bool) ($liked ?? false);
 
 <!--
   Комментарии к посту: GET /api/posts?parent={postId}.
-  Подгружаются лениво при первом раскрытии (card-feed.js), дальше по кнопке Load more.
+  Подгружаются лениво при первом раскрытии (card-feed.js), порядок —
+  хронологический; кнопки «Show more/less comments» ставит comments.js,
+  кнопка «Show less» внизу сворачивает блок целиком.
 -->
 <div class="feed-comments" data-feed-comments hidden>
     <div class="feed-comments__list" data-fc-list></div>
     <p class="feed-comments__status" data-fc-status role="status" hidden></p>
-    <button type="button" class="btn btn--secondary feed-comments__more" data-fc-more hidden>Load more</button>
+    <button type="button" class="btn btn--secondary btn--pill feed-comments__collapse"
+            data-fc-collapse>Show less</button>
 </div>
   </div>
 </article>

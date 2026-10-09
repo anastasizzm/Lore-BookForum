@@ -271,6 +271,11 @@
     return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   };
 
+  // filters.js шлёт cancelable-событие filter:input, чтобы без обработчика
+  // применить фильтр переходом по URL (Saved, публикации профиля). Здесь
+  // фильтр идёт через API (см. ввод ниже) — страницу не перезагружаем.
+  document.addEventListener('filter:input', e => e.preventDefault());
+
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
     inp.addEventListener('input', debounce(() => {
       // filters.js помечает неверный ISBN/DOI классом is-invalid — бэкенд

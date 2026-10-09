@@ -345,7 +345,12 @@ if (!empty($article->iconId)) {
       <?= $view->csrfField() ?>
       <input type="hidden" name="publicationId" value="<?= (int) $publicationId ?>">
       <div class="comment-card__inner">
-        <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
+        <?php $view->include('avatar', [
+            'size'     => 'sm',
+            'initials' => $meInitials,
+            'icon'     => $meAvatar,
+            'src'      => is_string($meAvatar) && str_contains($meAvatar, '/') ? $meAvatar : null,
+        ]); ?>
         <div class="comment-card__content">
           <div class="comment-card__author"><?= $view->e($meName) ?></div>
           <div class="comment-card__row">
@@ -377,36 +382,53 @@ if (!empty($article->iconId)) {
         <?php
           $cId    = (int) ($comment['id'] ?? 0);
           $cLikes = (int) ($comment['likes'] ?? 0);
+          $cLiked = (bool) ($comment['liked'] ?? false);
         ?>
-        <div class="comment-card"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
+        <div class="comment-card" data-page="1"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
-            <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'avatar' => $comment['userAvatar'] ?? '']); ?>
+            <?php
+            $cAvatar = (string) ($comment['userAvatar'] ?? '');
+            $view->include('avatar', [
+                'size'     => 'sm',
+                'initials' => $comment['userInitials'] ?? 'SN',
+                'icon'     => $cAvatar,
+                'src'      => str_contains($cAvatar, '/') ? $cAvatar : null,
+            ]);
+            ?>
 
             <div class="comment-card__content">
-              <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
-              <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
+              <!-- Текст слева, лайк справа (Instagram-подобная раскладка) -->
+              <div class="comment-card__main">
+                <div class="comment-card__head">
+                  <!-- Ник автора — без @: собачка только в упоминаниях внутри текста -->
+                  <div class="comment-card__author"><?= $view->e($comment['userName']) ?></div>
+                  <div class="comment-card__text"><?= nl2br($view->e($comment['text'])) ?></div>
+                </div>
 
-              <div class="comment-card__footer">
                 <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) (P0-4) -->
-                <button type="button" class="btn-icon-small btn-like"
+                <button type="button" class="btn-icon-small btn-like comment-card__like<?= $cLiked ? ' is-liked' : '' ?>"
                         data-like-btn
                         data-like-id="<?= $cId ?>"
-                        aria-pressed="false" aria-label="Like">
+                        data-liked="<?= $cLiked ? '1' : '0' ?>"
+                        aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="Like">
                   <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   <span data-like-count><?= $cLikes ?></span>
                 </button>
+              </div>
 
+              <!-- Под текстом: дата и кнопка ответа -->
+              <div class="comment-card__footer">
                 <div class="comment-card__meta">
                   <span><?= $view->e($comment['date']) ?></span>
-                  <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
-                    <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </button>
+                  <button type="button" class="comment-card__reply" data-reply-toggle
+                          aria-expanded="false" aria-label="Reply">Reply</button>
                 </div>
               </div>
+
+              <!-- Ещё ниже: раскрытие ответов; book.js наполняет после загрузки -->
+              <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
               <form class="comment-reply-form" data-reply-form hidden>
                 <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
@@ -415,9 +437,12 @@ if (!empty($article->iconId)) {
                     <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </button>
+                <p class="form-field__error" data-reply-error role="alert" hidden
+                   style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
               </form>
 
-              <div class="comment-replies" data-replies></div>
+              <!-- Ответы скрыты до нажатия «View N more replies» -->
+              <div class="comment-replies" data-replies hidden></div>
             </div>
           </div>
         </div>
@@ -431,29 +456,36 @@ if (!empty($article->iconId)) {
       <div class="comment-card__inner">
         <div class="avatar avatar--sm"></div>
         <div class="comment-card__content">
-          <div class="comment-card__author" data-c-author></div>
-          <div class="comment-card__text" data-c-text></div>
+          <!-- Текст слева, лайк справа -->
+          <div class="comment-card__main">
+            <div class="comment-card__head">
+              <div class="comment-card__author" data-c-author></div>
+              <div class="comment-card__text" data-c-text></div>
+            </div>
 
-          <div class="comment-card__footer">
-            <button type="button" class="btn-icon-small btn-like"
+            <button type="button" class="btn-icon-small btn-like comment-card__like"
                     data-like-btn
                     data-like-id=""
+                    data-liked="0"
                     aria-pressed="false" aria-label="Like">
               <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span data-like-count>0</span>
             </button>
+          </div>
 
+          <!-- Под текстом: дата и кнопка ответа -->
+          <div class="comment-card__footer">
             <div class="comment-card__meta">
               <span data-c-date></span>
-              <button type="button" class="btn-icon-small" data-reply-toggle aria-expanded="false" aria-label="Reply">
-                <svg width="16" height="13" viewBox="0 0 16 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path d="M5.5 1L1 5.5M1 5.5L5.5 10M1 5.5H11.5C13.9853 5.5 16 7.51472 16 10V12.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+              <button type="button" class="comment-card__reply" data-reply-toggle
+                      aria-expanded="false" aria-label="Reply">Reply</button>
             </div>
           </div>
+
+          <!-- Ещё ниже: «View N more replies» (book.js показывает при ответах) -->
+          <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
           <form class="comment-reply-form" data-reply-form hidden>
             <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
@@ -462,9 +494,12 @@ if (!empty($article->iconId)) {
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
+            <p class="form-field__error" data-reply-error role="alert" hidden
+               style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
           </form>
 
-          <div class="comment-replies" data-replies></div>
+          <!-- Ответы: скрыты до нажатия «View N more replies» -->
+          <div class="comment-replies" data-replies hidden></div>
         </div>
       </div>
     </div>
@@ -472,10 +507,35 @@ if (!empty($article->iconId)) {
 
   <template id="reply-template">
     <div class="comment-reply">
-      <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
+      <?php $view->include('avatar', [
+          'size'     => 'sm',
+          'initials' => $meInitials,
+          'icon'     => $meAvatar,
+          'src'      => is_string($meAvatar) && str_contains($meAvatar, '/') ? $meAvatar : null,
+      ]); ?>
       <div class="comment-reply__content">
-        <div class="comment-reply__author"><?= $view->e($meName) ?></div>
-        <div class="comment-reply__text"></div>
+        <div class="comment-reply__body">
+          <div class="comment-reply__author"></div>
+          <div class="comment-reply__text"></div>
+          <!-- Под текстом: дата и Reply — как у основного комментария.
+               Ответ на ответ идёт в тот же плоский список (без вложенности) -->
+          <div class="comment-card__meta comment-reply__meta">
+            <span data-reply-date></span>
+            <button type="button" class="comment-card__reply" data-reply-toggle
+                    aria-expanded="false" aria-label="Reply">Reply</button>
+          </div>
+        </div>
+        <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
+        <button type="button" class="btn-icon-small btn-like comment-reply__like"
+                data-like-btn
+                data-like-id=""
+                data-liked="0"
+                aria-pressed="false" aria-label="Like">
+          <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span data-like-count>0</span>
+        </button>
       </div>
     </div>
   </template>
@@ -483,5 +543,8 @@ if (!empty($article->iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
+       Show more/less); book.js подключается после неё -->
+  <script src="/assets/js/comments.js"></script>
   <script src="/assets/js/book.js"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -148,6 +148,8 @@ $items = array_map(
               'currentUserInitials' => $cuInitials,
               'currentUserName'     => $cu?->username ?? '',
               'currentUserId'       => (int) ($cu?->id ?? 0),
+              // Сырой ключ аватара текущего юзера — для своих комментариев
+              'currentUserAvatar'   => $cu?->avatar ?? '',
           ]);
         ?>
       <?php endforeach; ?>
@@ -163,39 +165,90 @@ $items = array_map(
 
 <?php endif; ?>
 
-<!-- Шаблон комментария под постом (клонируется из card-feed.js).
-     __INITIALS__/__EMOJI__/__SRC__ — плейсхолдеры: JS оставляет один из
-     трёх вариантов аватара (пресет-эмодзи / картинка / инициалы) -->
-<template id="feed-comment-template">
-  <div class="feed-comment">
-    <div class="feed-comment__avatar">
-      <div data-fc-avatar-initials hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => null]); ?></div>
-      <div data-fc-avatar-emoji hidden><div class="avatar avatar--sm"><span class="avatar__emoji" aria-hidden="true">__EMOJI__</span></div></div>
-      <div data-fc-avatar-img hidden><?php $view->include('avatar', ['size' => 'sm', 'initials' => '__INITIALS__', 'src' => '__SRC__']); ?></div>
+<!-- Шаблоны комментария под постом — ТЕ ЖЕ, что на book/article details
+     (клонирует comments.js): ник автора без @, лайк справа по центру,
+     под текстом дата и Reply, ответы — за кнопкой «View N more replies». -->
+<template id="comment-card-template">
+  <div class="comment-card">
+    <div class="comment-card__inner">
+      <div class="avatar avatar--sm"></div>
+      <div class="comment-card__content">
+        <!-- Текст слева, лайк справа -->
+        <div class="comment-card__main">
+          <div class="comment-card__head">
+            <div class="comment-card__author" data-c-author></div>
+            <div class="comment-card__text" data-c-text></div>
+          </div>
+
+          <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) -->
+          <button type="button" class="btn-icon-small btn-like comment-card__like"
+                  data-like-btn
+                  data-like-id=""
+                  data-liked="0"
+                  aria-pressed="false" aria-label="Like">
+            <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-like-count>0</span>
+          </button>
+        </div>
+
+        <!-- Под текстом: дата и кнопка ответа -->
+        <div class="comment-card__footer">
+          <div class="comment-card__meta">
+            <span data-c-date></span>
+            <button type="button" class="comment-card__reply" data-reply-toggle
+                    aria-expanded="false" aria-label="Reply">Reply</button>
+          </div>
+        </div>
+
+        <!-- Ещё ниже: «View N more replies» / «Show less» (comments.js) -->
+        <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
+
+        <form class="comment-reply-form" data-reply-form hidden>
+          <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
+          <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <p class="form-field__error" data-reply-error role="alert" hidden
+             style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
+        </form>
+
+        <!-- Ответы: скрыты до нажатия «View N more replies» -->
+        <div class="comment-replies" data-replies hidden></div>
+      </div>
     </div>
-    <div class="feed-comment__body">
-      <div class="feed-comment__head">
-        <span class="feed-comment__author" data-fc-author></span>
-        <span class="feed-comment__date" data-fc-date></span>
-      </div>
-      <div class="feed-comment__text" data-fc-text></div>
+  </div>
+</template>
 
-      <div class="feed-comment__actions">
-        <button type="button" class="action-btn action-like" data-like-btn data-liked="0" aria-pressed="false" aria-label="Like">
-          <svg width="16" height="14" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span data-like-count>0</span>
-        </button>
-        <button type="button" class="action-btn action-comment" data-fc-reply aria-expanded="false">Reply</button>
+<template id="reply-template">
+  <div class="comment-reply">
+    <div class="avatar avatar--sm"></div>
+    <div class="comment-reply__content">
+      <div class="comment-reply__body">
+        <div class="comment-reply__author"></div>
+        <div class="comment-reply__text"></div>
+        <!-- Под текстом: дата и Reply — как у основного комментария.
+             Ответ на ответ идёт в тот же плоский список (без вложенности) -->
+        <div class="comment-card__meta comment-reply__meta">
+          <span data-reply-date></span>
+          <button type="button" class="comment-card__reply" data-reply-toggle
+                  aria-expanded="false" aria-label="Reply">Reply</button>
+        </div>
       </div>
-
-      <form class="comment-form comment-form--reply" data-fc-reply-form hidden novalidate>
-        <input type="text" class="comment-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-        <button type="submit" class="comment-form__submit" disabled>Reply</button>
-        <p data-comment-error role="alert" hidden></p>
-        <p data-comment-status role="status" hidden></p>
-      </form>
+      <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
+      <button type="button" class="btn-icon-small btn-like comment-reply__like"
+              data-like-btn
+              data-like-id=""
+              data-liked="0"
+              aria-pressed="false" aria-label="Like">
+        <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span data-like-count>0</span>
+      </button>
     </div>
   </div>
 </template>
@@ -203,6 +256,9 @@ $items = array_map(
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
+       Show more/less); card-feed.js (defer) выполнится после неё -->
+  <script src="<?= $view->asset('js/comments.js') ?>"></script>
   <!-- Поиск в ленте по названию книги (не по автору): filters.js
        делегирует сюда сабмит поля ?q= — см. feed-search.js -->
   <script src="<?= $view->asset('js/feed-search.js') ?>"></script>
