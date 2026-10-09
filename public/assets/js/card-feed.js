@@ -136,7 +136,7 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Показать/скрыть поле комментария
+  // Показать/скрыть встроенный ввод поста («Reply» в строке поста)
   const toggleBtn = e.target.closest('[data-comment-toggle]');
   if (toggleBtn) {
     const card = toggleBtn.closest('.card-feed');
@@ -146,7 +146,6 @@ document.addEventListener('click', (e) => {
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', String(open));
     if (open) form.querySelector('.comment-form__input').focus();
-    fcSetOpen(card, open);
     return;
   }
 });
@@ -417,11 +416,20 @@ async function fcLoad(card) {
   }
 }
 
-// Показать/скрыть список вместе с формой; первая загрузка — при первом открытии
+// Ссылка «Show more/Show less» под постом — зеркало состояния списка
+function fcSyncExpandBtn(card, open) {
+  const btn = card.querySelector('[data-fc-expand]');
+  if (!btn) return;
+  btn.textContent = open ? 'Show less' : 'Show more';
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+// Показать/скрыть список; первая загрузка — при первом раскрытии
 function fcSetOpen(card, open) {
   const parts = fcParts(card);
   if (!parts) return;
   parts.root.hidden = !open;
+  fcSyncExpandBtn(card, open);
   if (!open) return;
 
   const st = fcState(card);
@@ -461,6 +469,7 @@ function fcAppendOwn(card, id, text) {
 
   fcState(card).started = true;
   parts.root.hidden = false;
+  fcSyncExpandBtn(card, true);   // ссылка под постом: «Show less»
   if (parts.status && parts.status.textContent === 'No comments yet.') {
     setFeedMsg(parts.status, '');
   }
@@ -470,18 +479,17 @@ function fcAppendOwn(card, id, text) {
   if (fcState(card).loaded === 0) fcLoad(card);
 }
 
-// «Show less» — свернуть блок комментариев карточки (список + форма)
+// «Show more» / «Show less» — раскрыть/свернуть список комментариев под постом
+// (маленькая серая ссылка под строкой поста вместо пилюли внизу блока)
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-fc-collapse]');
+  const btn = e.target.closest('[data-fc-expand]');
   if (!btn) return;
   const card = btn.closest('.card-feed');
   if (!card) return;
+  const parts = fcParts(card);
+  if (!parts) return;
 
-  fcSetOpen(card, false);
-  const form = card.querySelector('[data-feed-comment-form]');
-  if (form) form.hidden = true;
-  const toggle = card.querySelector('[data-comment-toggle]');
-  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  fcSetOpen(card, parts.root.hidden);
 });
 
 // Свой комментарий отправлен — вставляем в конец списка этого поста

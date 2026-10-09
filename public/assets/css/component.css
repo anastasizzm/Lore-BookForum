@@ -417,62 +417,18 @@ textarea.form-field__input {
   margin-left: var(--space-3);
 }
 
-.card-feed__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.card-feed__name {
-  font-weight: var(--font-weight-bold);
-  font-size: var(--fs-small);
-  color: var(--color-text);
-}
-
-.card-feed__text {
-  font-size: var(--fs-body);
-  line-height: var(--lh-normal);
-  color: var(--interaction-text-color);
-  margin: 0;
-}
-
-.card-feed__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: var(--space-1);
-}
-
 .card-feed__tags {
   display: flex;
   gap: var(--space-3);
 }
 
-.card-feed__date {
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
-}
-
-.action-btn svg {
-  flex-shrink: 0;
-  transition: fill 0.2s ease;
-}
-
-/* Лайк поставлен */
-.action-btn.is-liked {
-  color: #EF4444;
-}
-.action-btn.is-liked svg {
-  fill: #EF4444;
-}
-
-/* Поле комментария */
+/* Поле комментария — вшито в строку поста, раскрывает Reply:
+   без разделителя сверху (макет) */
 .comment-form {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-2);
 }
 
 .comment-form[hidden] {
@@ -509,47 +465,6 @@ textarea.form-field__input {
 .comment-form__submit:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-/* 
-  Стили для кнопок лайков и комментов внутри карточки 
-*/
-.card-feed__actions {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted, #94A3B8);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 4px;
-  transition: color 0.2s ease;
-  outline: none;
-}
-
-.action-btn:hover {
-  color: var(--color-text, #1E293B);
-}
-
-.action-btn.action-like:hover {
-  color: #EF4444; 
-}
-.action-btn.action-like:hover svg {
-  fill: #EF4444; /* Закрашивает сердечко при наведении */
-}
-
-.action-btn.action-comment:hover {
-  color: var(--color-primary, #5876A6);
-}
-.action-btn.action-comment:hover svg {
-  fill: #E2E8F0;
 }
 
 /* Изменено: Убраны фон и рамки, чтобы карточки были самостоятельными элементами на сером фоне */
@@ -1432,6 +1347,8 @@ textarea.form-field__input {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* Блок вложен в колонку контента поста — отступ от ссылки «Show more» */
+  margin-top: var(--space-3);
 }
 
 .feed-comments[hidden] {
@@ -1455,13 +1372,17 @@ textarea.form-field__input {
 }
 
 /* ============================================
-   ЛЕНТА — комментарии под постом (макет):
-   * ОДНА сплошная вертикальная линия слева на весь список — её рисует
+   ЛЕНТА — пост как корневой комментарий + комментарии под ним (макет):
+   * строка поста собирается из тех же .comment-card__*, что и комментарий:
+     32px аватар, синий ник, тёмно-синий текст, серая дата + синий Reply,
+     сердце справа на уровне ника; ввод — вшитая в строку форма, Reply;
+   * ОДНА сплошная вертикальная линия слева на весь блок — её рисует
      border-left у .card-feed__body-section--with-book (он идёт от
      заголовка книги через весь пост и все комментарии), поэтому у
      самого комментария не должно быть своей рамки/фона/второй линии;
    * комментарий — строка внутри карточки поста, а не мини-карточка;
-   * ответы сдвинуты ВПРАВО от родительского комментария, но остаются
+   * список вложен в колонку контента поста — уходит вправо под ник поста,
+     как ответы; у каждого комментария ответы ещё правее (аватар+gap),
      на той же общей линии (без собственной линии слева).
    Правила ниже — только лента: book/article details не трогаем.
    ============================================ */
@@ -1492,11 +1413,64 @@ textarea.form-field__input {
   display: none;
 }
 
-/* «Show less» — свернуть блок комментариев карточки целиком */
-.feed-comments__collapse {
-  align-self: flex-start;
-  padding: var(--space-2) var(--space-3);
+/* Пост = корневой комментарий: строка поста живёт на тех же .comment-card__*,
+   что и комментарии ниже (без своих рамок/фонов — их задаёт контекст ленты) */
+
+/* Сердце — на уровне ника (макет), а не по центру строки */
+.card-feed .comment-card__main,
+.card-feed .comment-reply__content {
+  align-items: flex-start;
+}
+
+/* Оптическое выравнивание сердечка по строке ника (padding 4px у кнопки,
+   высота кнопки 23px против строки ника 21px — центры совпадают при -1px) */
+.card-feed .comment-card__like,
+.card-feed .comment-reply__like {
+  margin-top: -1px;
+}
+
+/* Reply — синий, как ник (базово серый) */
+.card-feed .comment-card__reply {
+  color: var(--color-primary);
+}
+.card-feed .comment-card__reply:hover,
+.card-feed .comment-card__reply:focus-visible {
+  color: var(--color-primary-hover);
+}
+
+/* Единый ритм строки: автор/текст/дата — как у ответов */
+.card-feed .comment-card__author {
+  margin-bottom: 4px;
+}
+.card-feed .comment-card__text {
+  margin-bottom: 0;
+}
+.card-feed .comment-card__footer {
+  margin-top: 6px;
+}
+
+/* Ответы под постом — меньше: 28px (32px остаётся у строки поста) */
+.card-feed .feed-comments .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;   /* инициалы и пресет-эмодзи (span = 1.5em) */
+}
+.card-feed .feed-comments .avatar--emoji.avatar--sm {
+  font-size: 16px;
+}
+
+/* Пагинация списка — не пилюля, а маленькая серая ссылка (макет) */
+.card-feed .comments-section__more .btn {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.card-feed .comments-section__more .btn:hover {
+  background: none;
+  color: var(--color-primary);
 }
 
 /* Аватар: если картинка не загрузилась, наследуем инициалы */
