@@ -109,7 +109,7 @@ $view->include('library-filters', [
 
   <?php else: ?>
 
-    <div class="grid-publications">
+    <div class="grid-books">
       <?php foreach ($items as $item): ?>
         <?php
           $year = $item->createdAt ? $item->createdAt->format('Y') : '';
@@ -117,16 +117,22 @@ $view->include('library-filters', [
           $url = $isArticles
             ? '/articles/' . (int)$item->id
             : '/books/' . (int)$item->id;
+
+          // Обложка: если у item есть coverUrl/cover — используем; иначе сразу cover--empty
+          $coverUrl = $item->coverUrl ?? ($item->cover ?? null);
+          $hasCover = !empty($coverUrl);
         ?>
-        <a class="publication-card" href="<?= $view->e($url) ?>">
-          <span class="publication-card__cover">
-            <img src="/img/book-placeholder.svg" alt="" loading="lazy">
-          </span>
-          <span class="publication-card__title"><?= $view->e($item->title) ?></span>
-          <span class="publication-card__meta">
-            <?= $isArticles ? 'Article' : 'Book' ?><?= $year ? ' - ' . $view->e($year) : '' ?>
-          </span>
-        </a>
+        <article class="card-base card-book">
+          <a class="card-book__link" href="<?= $view->e($url) ?>">
+            <div class="card-book__cover <?= $hasCover ? '' : 'cover--empty' ?>">
+              <?php if ($hasCover): ?>
+                <img src="<?= $view->e($coverUrl) ?>" alt="" loading="lazy">
+              <?php endif; ?>
+            </div>
+            <h3 class="card-book__title"><?= $view->e($item->title) ?></h3>
+          </a>
+          <p class="card-book__author"><?= $view->e($userName) ?></p>
+        </article>
       <?php endforeach; ?>
     </div>
 
