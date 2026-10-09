@@ -107,28 +107,26 @@
 
   function setMsg(el, text) {
     if (!el) return;
+
+    // Ошибки отправки и «Comment sent» — общими плашками (messages.js)
+    var isError  = el.hasAttribute('data-comment-error') || el.hasAttribute('data-reply-error');
+    var isStatus = el.hasAttribute('data-comment-status');
+    if ((isError || isStatus) && window.Messages) {
+      el.textContent = '';
+      el.hidden = true;
+      if (text) window.Messages.show(text, { type: isError ? 'error' : 'success' });
+      return;
+    }
+
     el.textContent = text || '';
     el.hidden = !text;
   }
 
   /** Ошибка из payload-а ответа ('' — если ответ успешный). */
   function payloadError(data) {
-    if (!data || typeof data !== 'object') return '';
-
-    if (data.errors && typeof data.errors === 'object') {
-      var flat = [];
-      Object.keys(data.errors).forEach(function (key) {
-        var v = data.errors[key];
-        if (Array.isArray(v)) flat = flat.concat(v.map(String));
-        else if (v != null) flat.push(String(v));
-      });
-      if (flat.length) return flat.join('\n');
-    }
-    if (typeof data.error === 'string' && data.error) return data.error;
-    if (data.error && data.error.message) return String(data.error.message);
-    if (data.message && (data.errors || data.error)) return String(data.message);
-
-    return '';
+    // Считаем ответом-ошибкой только тело с error / errors ({ error: { code, message, details } })
+    if (!data || typeof data !== 'object' || (!data.error && !data.errors)) return '';
+    return window.Messages ? window.Messages.fromPayload(data) : '';
   }
 
   /**
@@ -149,10 +147,6 @@
     if (/^\s*</.test(body)) {
       return 'Server returned an unexpected page (HTTP ' + res.status + '). The comment was not saved.';
     }
-    if (res.status === 401) return 'Please sign in again';
-    if (res.status === 403) return 'Forbidden — check that your email is verified';
-    if (res.status === 419) return 'Session expired — reload the page and try again';
-    if (res.status === 500) return 'Server error — the comment was not saved';
     return 'Failed to send the comment (HTTP ' + res.status + ')';
   }
 
