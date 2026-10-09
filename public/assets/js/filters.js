@@ -82,7 +82,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   // ---------- dynamic dropdowns ----------
 
-    const SOURCES = {
+  const SOURCES = {
     genres: {
       url:      '/api/additional/genres',
       param:    'genre',
@@ -227,6 +227,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   const ISBN_HINT = 'Format: 978-0-306-40615-2 (13 digits, 978/979)';
   const DOI_HINT = 'Format: 10.5555/123456';
 
+  // Сколько набрано цифр, когда группа ISBN только что завершилась:
+  // 978 | 9780 | 9780306 | 978030640615 — после них сразу ставим «-»
+  const ISBN_GROUP_ENDS = [3, 4, 7, 12];
+
   // Только цифры: колонка хранит \d и дефисы, ISBN-10 (и «X») не сохраняются
   function isbnClean(raw) {
     let out = '';
@@ -299,9 +303,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return v;
   }
 
-  function doiFormat(raw) {
+  // deleting=true — пользователь стирает символ: «10» не дополняем до «10.»,
+  // иначе точку нельзя было бы удалить.
+  function doiFormat(raw, deleting) {
     let v = doiNormalize(raw);
     if (/^10\d/.test(v)) v = '10.' + v.slice(2);             // 105555 -> 10.5555
+    else if (v === '10' && !deleting) v = '10.';             // 10 -> 10.
     return v.slice(0, 200);
   }
 
@@ -391,16 +398,34 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       }, FILTER_NAV_DELAY);
     }
 
-    function format(raw, caretPos) {
+    /**
+     * deleting=true — пользователь стирает символ: разделитель в конце
+     * автоматически не добавляем, иначе его нельзя было бы удалить.
+     */
+    function format(raw, caretPos, deleting) {
+      const atEnd = caretPos == null || caretPos >= raw.length;
+
       if (isIsbn) {
         const c = isbnClean(raw);
         // Не 978/979 — расставлять дефисы некуда: оставляем как есть,
         // ошибку покажет isbnValidate (иначе получается чужой формат)
-        const formatted = isbnShapeOk(c) ? isbnFormat(c) : c;
+        const shapeOk = isbnShapeOk(c);
+        let formatted = shapeOk ? isbnFormat(c) : c;
+
+        // Группа только что завершилась — сразу ставим дефис:
+        // 978 -> 978-, 9780 -> 978-0-
+        if (!deleting && atEnd && shapeOk && ISBN_GROUP_ENDS.indexOf(c.length) !== -1) {
+          formatted += '-';
+        }
+
         const sig = caretPos == null ? null : isbnClean(raw.slice(0, caretPos)).length;
-        return { formatted, caret: sig == null ? formatted.length : caretFromSig(formatted, sig) };
+        return {
+          formatted,
+          caret: atEnd || sig == null ? formatted.length : caretFromSig(formatted, sig),
+        };
       }
-      const formatted = doiFormat(raw);
+
+      const formatted = doiFormat(raw, deleting);
       let caret = formatted.length;
       if (caretPos != null && caretPos < raw.length) {
         caret = Math.max(0, Math.min(formatted.length, caretPos + formatted.length - raw.length));
@@ -420,11 +445,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       return r;
     }
 
-    function onInput() {
+    function onInput(e) {
       inp.setCustomValidity('');
       const raw = inp.value;
       const pos = inp.selectionStart;
-      const res = format(raw, pos);
+      const deleting = !!(e && e.inputType && e.inputType.indexOf('delete') === 0);
+      const res = format(raw, pos, deleting);
       if (res.formatted !== raw) {
         inp.value = res.formatted;
         try { inp.setSelectionRange(res.caret, res.caret); } catch (_) {}
@@ -464,7 +490,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     });
 
     // Normalize value that came from the URL on page load
-    const initial = format(inp.value, null);
+    const initial = format(inp.value, null, true);
     inp.value = initial.formatted;
     showState();
   }
