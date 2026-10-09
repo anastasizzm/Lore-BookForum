@@ -7,5 +7,5 @@ use App\Lib\Auth\AuthorizationRequirement;
 
 final class AuthenticatedRequirement implements AuthorizationRequirement
 {
-    public function describe() :string { return 'The user must be authenticated'; }
+    public function describe() :string { return 'errors.policies.auth'; }
 }

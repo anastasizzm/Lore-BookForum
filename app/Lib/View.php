@@ -6,12 +6,14 @@ namespace App\Lib;
 use RuntimeException;
 use Throwable;
 use App\Http\UrlGenerator;
+use App\Lib\I18n\Translator;
 use App\Constants;
 
 final class View
 {
     // ---- long-lived, engine-wide state ----
     private static ?Settings $engineSettings = null;
+    private static ?Translator $engineTranslator = null;
     private static ?UrlGenerator $engineUrlGenerator = null;
     /** @var array<string, mixed> */
     private static array $globals = [];
@@ -25,6 +27,7 @@ final class View
 
     private function __construct(
         private Settings $settings,
+        private Translator $translator,
         private UrlGenerator $urlGenerator
     ) {}
 
@@ -34,12 +37,16 @@ final class View
     {
         $settings = $container->get(Settings::class);
         $urlGenerator = $container->get(UrlGenerator::class);
+        $translator = $container->get(Translator::class);
 
         if (!isset($settings))
             throw new RuntimeException("Failed to take 'Settings' from container");
 
         if (!isset($urlGenerator))
             throw new RuntimeException("Failed to take 'UrlGenerator' from container");
+
+        if (!isset($translator))
+            throw new RuntimeException("Failed to take 'Translator' from container");
 
         foreach (
             [$settings->pagesPath, $settings->layoutsPath, $settings->partialsPath]
@@ -52,6 +59,7 @@ final class View
 
         self::$engineSettings = $settings;
         self::$engineUrlGenerator = $urlGenerator;
+        self::$engineTranslator = $translator;
     }
 
     public static function share(string $key, mixed $value): void
@@ -61,13 +69,16 @@ final class View
 
     public static function render(string $page, array $data = []): string
     {
-        if (self::$engineSettings === null || self::$engineUrlGenerator === null) {
+        if (self::$engineSettings === null 
+            || self::$engineUrlGenerator === null
+            || self::$engineTranslator === null
+        ) {
             throw new RuntimeException(
                 'View engine not configured. Call View::configure() first.'
             );
         }
 
-        return (new self(self::$engineSettings, self::$engineUrlGenerator))->renderPage($page, $data);
+        return (new self(self::$engineSettings, self::$engineTranslator, self::$engineUrlGenerator))->renderPage($page, $data);
     }
 
     /** For long-running servers (RoadRunner, Swoole, FrankenPHP). */
@@ -75,6 +86,7 @@ final class View
     {
         self::$engineSettings = null;
         self::$engineUrlGenerator = null;
+        self::$engineTranslator = null;
         self::$globals = [];
     }
 
@@ -130,6 +142,16 @@ final class View
             ENT_QUOTES | ENT_SUBSTITUTE,
             'UTF-8'
         );
+    }
+
+    public function t(string $key, array $params = []): string
+    {
+        return $this->translator->t($key, $params);
+    }
+
+    public function locale(): string
+    {
+        return $this->translator->locale();
     }
 
     public function csrfField(): string

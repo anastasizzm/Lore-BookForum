@@ -7,5 +7,5 @@ use App\Lib\Auth\AuthorizationRequirement;
 
 final class AdminRequirement implements AuthorizationRequirement
 {
-    public function describe() : string { return 'The user must be admin'; }
+    public function describe() : string { return 'errors.policies.admin'; }
 }

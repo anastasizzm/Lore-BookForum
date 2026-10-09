@@ -23,29 +23,4 @@ final readonly class ProfileForm implements Form
             bio: trim($input['bio'] ?? '')
         );
     }
-
-    public function validate(array &$errors) : bool
-    {
-        $ok = true;
-        
-        if (empty($this->avatar))
-        {
-            $errors['avatar'][] = "Avatar can't be empty";
-            $ok = false;
-        }
-
-        if (empty($this->name))
-        {
-            $errors['name'][] = "Name can't be empty";
-            $ok = false;
-        }
-
-        if (empty($this->surname))
-        {
-            $erorrs['surname'][] = "Surname can't be empty";
-            $ok = false;
-        }
-
-        return $ok;
-    } 
 }

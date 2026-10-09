@@ -7,5 +7,5 @@ use App\Lib\Auth\AuthorizationRequirement;
 
 final class VerifiedRequirement implements AuthorizationRequirement
 {
-    public function describe() : string { return 'The user\'s email must be verified'; }
+    public function describe() : string { return 'errors.policies.verify'; }
 }

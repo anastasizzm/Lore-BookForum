@@ -25,36 +25,4 @@ final readonly class RegisterForm implements Form
             password: (string) ($input['password'] ?? ''),
         );
     }
-
-    public function validate(array &$errors): bool
-    {
-        $ok = true;
-
-        if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $this->username)) {
-            $errors['username'][] = 'Invalid username format';
-            $ok = false;
-        }
-
-        if (!filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'][] = 'Invalid email format';
-            $ok = false;
-        }
-
-        if ($this->name === '') {
-            $errors['name'][] = 'Name is required';
-            $ok = false;
-        }
-
-        if ($this->surname === '') {
-            $errors['surname'][] = 'Surname is required';
-            $ok = false;
-        }
-
-        if (strlen($this->password) < 8) {
-            $errors['password'][] = 'Password must be at least 8 characters';
-            $ok = false;
-        }
-
-        return $ok;
-    }
 }
