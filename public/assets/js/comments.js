@@ -44,6 +44,18 @@
 
   function setMsg(el, text) {
     if (!el) return;
+
+    // Ошибки ответов — общими плашками (messages.js), а не красным текстом
+    // в форме — как в card-feed.js / book.js
+    var isError  = el.hasAttribute('data-comment-error') || el.hasAttribute('data-reply-error');
+    var isStatus = el.hasAttribute('data-comment-status');
+    if ((isError || isStatus) && window.Messages) {
+      el.textContent = '';
+      el.hidden = true;
+      if (text) window.Messages.show(text, { type: isError ? 'error' : 'success' });
+      return;
+    }
+
     el.textContent = text || '';
     el.hidden = !text;
   }
@@ -488,39 +500,45 @@
   /* ---------------- Ошибка отправки ответа (общая для всех страниц) ---------------- */
 
   /** '' — успех; иначе человекочитаемая причина. */
-  function replyError(data, res, raw) {
+  /** Ошибка из payload-а ответа ('' — если ответ успешный). */
+  function payloadError(data) {
+    // Считаем ответом-ошибкой только тело с error / errors ({ error: { code, message, details } })
+    if (!data || typeof data !== 'object' || (!data.error && !data.errors)) return '';
+    if (window.Messages) return window.Messages.fromPayload(data);
+
+    // messages.js не подключён — запасное извлечение текста
+    if (data.errors && typeof data.errors === 'object') {
+      var flat = [];
+      Object.keys(data.errors).forEach(function (key) {
+        var v = data.errors[key];
+        if (Array.isArray(v)) flat = flat.concat(v.map(String));
+        else if (v != null) flat.push(String(v));
+      });
+      if (flat.length) return flat.join('\n');
+    }
+    if (typeof data.error === 'string' && data.error) return data.error;
+    if (data.error && data.error.message) return String(data.error.message);
+    return '';
+  }
+
+  /**
+   * Человеческий текст ошибки для не-2xx / HTML-ответов. Бэкенд отдаёт
+   * страницу-заглушку с кодом в .login-message__status, но при этом HTTP
+   * у неё может быть 200 — код достаём из разметки, чтобы вместо
+   * «Failed to send the reply (HTTP 200)» показать причину.
+   */
+  function failureText(res, raw) {
     var body = raw || '';
+    var code = /class="login-message__status"[^>]*>\s*(\d{3})\s*</.exec(body);
+    var text = /class="login-message__text"[^>]*>([\s\S]*?)<\/p>/.exec(body);
 
+    if (code) {
+      var msg = text ? text[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
+      return (msg || 'Request rejected') + ' (HTTP ' + code[1] + ')';
+    }
     if (/^\s*</.test(body)) {
-      var code = /class="login-message__status"[^>]*>\s*(\d{3})\s*</.exec(body);
-      return code
-        ? 'Request rejected (HTTP ' + code[1] + ')'
-        : 'Server returned an unexpected page (HTTP ' + res.status + '). The reply was not saved.';
+      return 'Server returned an unexpected page (HTTP ' + res.status + '). The reply was not saved.';
     }
-
-    if (data && typeof data === 'object') {
-      if (data.errors && typeof data.errors === 'object') {
-        var flat = [];
-        Object.keys(data.errors).forEach(function (key) {
-          var v = data.errors[key];
-          if (Array.isArray(v)) flat = flat.concat(v.map(String));
-          else if (v != null) flat.push(String(v));
-        });
-        if (flat.length) return flat.join('\n');
-      }
-      if (data.error) {
-        return typeof data.error === 'string'
-          ? data.error
-          : (data.error.message ? String(data.error.message) : '');
-      }
-      if (data.message && !res.ok) return String(data.message);
-    }
-
-    if (res.ok) return '';
-    if (res.status === 401) return 'Please sign in again';
-    if (res.status === 403) return 'Forbidden — check that your email is verified';
-    if (res.status === 419) return 'Session expired — reload the page and try again';
-    if (res.status === 500) return 'Server error — the reply was not saved';
     return 'Failed to send the reply (HTTP ' + res.status + ')';
   }
 
@@ -695,8 +713,13 @@
         data = raw ? JSON.parse(raw) : null;
       } catch (_) { data = null; }
 
-      var err = replyError(data, res, raw);
-      if (!err) {
+      var serverError = payloadError(data);
+      // HTML-страница-заглушка = ответ бэкенда с ошибкой, хотя HTTP у неё
+      // может быть 200; любой HTML (в т.ч. PHP Fatal error) — не успех:
+      // API при успехе отдаёт JSON ({"createdId": N}). Как в book.js.
+      var htmlErrorPage = /class="login-message__(status|text)/.test(raw) || /^\s*</.test(raw);
+
+      if (res.ok && !serverError && !htmlErrorPage) {
         var me = meInfo(scope);
         appendReply(card, {
           id: data ? (data.createdId != null ? data.createdId : data.id) : null,
@@ -727,9 +750,9 @@
         return;
       }
 
-      setMsg(errEl, err);
+      setMsg(errEl, serverError || failureText(res, raw));
     } catch (err2) {
-      console.warn('POST ' + API_POSTS + '/' + commentId + ' failed', err2);
+      console.error('POST ' + API_POSTS + '/' + commentId + ' failed', err2);
       setMsg(errEl, 'Network error. Try again.');
     } finally {
       delete form.dataset.sending;

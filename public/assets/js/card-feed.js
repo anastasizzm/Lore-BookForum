@@ -31,6 +31,19 @@ function csrfHeaders() {
 
 function setFeedMsg(el, text) {
   if (!el) return;
+
+  // Ошибки отправки и «Comment sent» показываем общими плашками (messages.js),
+  // а не красным текстом в форме
+  const isError  = el.hasAttribute('data-comment-error') || el.hasAttribute('data-reply-error');
+  const isStatus = el.hasAttribute('data-comment-status');
+  if ((isError || isStatus) && window.Messages) {
+    el.textContent = '';
+    el.hidden = true;
+    if (text) window.Messages.show(text, { type: isError ? 'error' : 'success' });
+    return;
+  }
+
+  // состояние списка («Loading comments…», «No comments yet.») остаётся на месте
   el.textContent = text;
   el.hidden = text === '';
 }
@@ -151,15 +164,9 @@ document.addEventListener('input', (e) => {
 });
 
 function sendStatus(data, res, fallback) {
-  let msg = '';
-  if (data && data.errors) msg = Object.values(data.errors).flat().join('\n');
-  if (!msg && data && data.message) msg = data.message;
-  if (!msg) {
-    msg = res.status === 403 ? 'Forbidden (verify email / CSRF?)'
-        : res.status === 401 ? 'Please sign in again'
-        : fallback(res.status);
-  }
-  return msg;
+  // Текст ошибки берём из ответа API ({ error: { message, details } })
+  const msg = window.Messages ? window.Messages.fromPayload(data) : '';
+  return msg || fallback(res.status);
 }
 
 /* ---------- Отправка комментария к посту ---------- */
@@ -227,6 +234,7 @@ document.addEventListener('submit', async (e) => {
       setFeedMsg(errEl, sendStatus(data, res, (s) => `Failed to send comment (HTTP ${s})`));
     }
   } catch (err) {
+    console.error('[feed] comment request failed:', err);
     setFeedMsg(errEl, 'Network error. Try again.');
   } finally {
     form.dataset.sending = '0';
@@ -344,11 +352,13 @@ async function fcLoad(card) {
     fcComments.syncPager(parts.list, st, pagerOpts);
   };
 
+  let received = false; // true, когда ответ сервера получен: дальше ошибка уже не сетевая
   try {
     const res = await fetch(url, {
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     });
+    received = true;
 
     let data = null;
     try { data = await res.json(); } catch (_) { /* не JSON */ }
@@ -399,7 +409,11 @@ async function fcLoad(card) {
       setFeedMsg(parts.status, '');
     }
   } catch (err) {
-    fail('Network error. Try again.');
+    if (gen !== st.gen) return;
+    console.error('[feed] failed to load comments:', err);
+    fail(received ? 'Could not display the comments.' : 'Network error. Try again.');
+  } finally {
+    if (gen === st.gen) st.loading = false;
   }
 }
 
