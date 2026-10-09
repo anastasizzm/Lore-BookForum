@@ -1,23 +1,24 @@
 <?php
 /**
- * avatar-presets — единая карта пресетов аватара: id => эмодзи.
+ * avatar-presets — единая карта пресетов аватара: id => [icon, bg].
  *
- * Хранится в профиле (users.avatar): 'default' означает «показывать
- * инициалы», остальные ключи выбираются в profile-edit.php (avatar-picker).
- * Единственный источник правды — отсюда его читают и avatar.php (рендер),
- * и sidebar.php (иконка профиля), чтобы список не расходился.
+ * В БД (users.avatar) по-прежнему хранится только id ('cat', 'fox'...)
+ * или 'default' (= показывать инициалы), поэтому миграция не нужна.
+ * Отсюда читают avatar.php (рендер), profile-edit.php (пикер),
+ * sidebar.php (иконка профиля) и валидатор на бэке (array_keys).
  *
- * Подключается через require (а не $view->include): include() рендерит
- * partial в отдельной области видимости и не отдаёт переменные обратно.
+ * icon — эмодзи, bg — цвет фона (hex, подставляется в --avatar-bg).
  *
- * @return array<string, string> id пресета => эмодзи
+ * Подключается через require (не $view->include).
+ *
+ * @return array<string, array{icon: string, bg: string}>
  */
 return [
-    'cat'   => '🐱',
-    'dog'   => '🐶',
-    'fox'   => '🦊',
-    'owl'   => '🦉',
-    'robot' => '🤖',
-    'star'  => '⭐',
-    'book'  => '📚',
+    'cat'   => ['icon' => '🐱', 'bg' => '#FFE1C9'],
+    'dog'   => ['icon' => '🐶', 'bg' => '#F3DFC4'],
+    'fox'   => ['icon' => '🦊', 'bg' => '#FFD2B0'],
+    'owl'   => ['icon' => '🦉', 'bg' => '#E4D3C3'],
+    'robot' => ['icon' => '🤖', 'bg' => '#D7E2F1'],
+    'star'  => ['icon' => '⭐', 'bg' => '#FFF2B8'],
+    'book'  => ['icon' => '📚', 'bg' => '#DCD4F0'],
 ];

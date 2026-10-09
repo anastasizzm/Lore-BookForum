@@ -57,9 +57,12 @@ $liked = (bool) ($liked ?? false);
 
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
-      <img src="<?= $view->e($bookCover !== '' ? $bookCover : '/img/book-placeholder.svg') ?>"
-           alt="" class="card-feed__book-thumb"
-           onerror="if (!this.dataset.fallback) { this.dataset.fallback = '1'; this.src = '/img/book-placeholder.svg'; }">
+      <?php if ($bookCover !== ''): ?>
+        <?php /* не загрузится — app.js заменит <img> на CSS-заглушку */ ?>
+        <img src="<?= $view->e($bookCover) ?>" alt="" class="card-feed__book-thumb">
+      <?php else: ?>
+        <span class="card-feed__book-thumb cover--empty" aria-hidden="true"></span>
+      <?php endif; ?>
       <h3 class="card-feed__book-title"><?= $view->e($bookTitle) ?></h3>
     </div>
   <?php endif; ?>
@@ -69,7 +72,7 @@ $liked = (bool) ($liked ?? false);
       <?php $view->include('avatar', [
           'size'     => 'md',
           'initials' => $userInitials,
-          'avatar'   => $userAvatar,
+          'icon'     => $userAvatar,
       ]); ?>
       <div class="card-feed__user">
         <div class="card-feed__name"><?= $view->e($userName) ?></div>

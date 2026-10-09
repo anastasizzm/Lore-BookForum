@@ -319,7 +319,12 @@ $meAvatar = (string) ($me->avatar ?? '');
       <?= $view->csrfField() ?>
       <input type="hidden" name="publicationId" value="<?= (int) $publicationId ?>">
       <div class="comment-card__inner">
-        <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
+        <?php $view->include('avatar', [
+            'size'     => 'sm',
+            'initials' => $meInitials,
+            'icon'     => $meAvatar,
+            'src'      => is_string($meAvatar) && str_contains($meAvatar, '/') ? $meAvatar : null,
+        ]); ?>
         <div class="comment-card__content">
           <div class="comment-card__author"><?= $view->e($meName) ?></div>
           <div class="comment-card__row">
@@ -355,7 +360,15 @@ $meAvatar = (string) ($me->avatar ?? '');
         ?>
         <div class="comment-card" data-page="1"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
-            <?php $view->include('avatar', ['size' => 'sm', 'initials' => $comment['userInitials'] ?? 'SN', 'avatar' => $comment['userAvatar'] ?? '']); ?>
+            <?php
+            $cAvatar = (string) ($comment['userAvatar'] ?? '');
+            $view->include('avatar', [
+                'size'     => 'sm',
+                'initials' => $comment['userInitials'] ?? 'SN',
+                'icon'     => $cAvatar,
+                'src'      => str_contains($cAvatar, '/') ? $cAvatar : null,
+            ]);
+            ?>
 
             <div class="comment-card__content">
               <!-- Текст слева, лайк справа (Instagram-подобная раскладка) -->
@@ -469,7 +482,12 @@ $meAvatar = (string) ($me->avatar ?? '');
 
   <template id="reply-template">
     <div class="comment-reply">
-      <?php $view->include('avatar', ['size' => 'sm', 'initials' => $meInitials, 'avatar' => $meAvatar]); ?>
+      <?php $view->include('avatar', [
+          'size'     => 'sm',
+          'initials' => $meInitials,
+          'icon'     => $meAvatar,
+          'src'      => is_string($meAvatar) && str_contains($meAvatar, '/') ? $meAvatar : null,
+      ]); ?>
       <div class="comment-reply__content">
         <div class="comment-reply__body">
           <div class="comment-reply__author"></div>

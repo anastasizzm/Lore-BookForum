@@ -72,6 +72,12 @@ abstract class Controller
         return Response::json(ResponseTemplates::object($item), $statusCode);
     }
 
+    protected function jsonObjectFromArray(array $obj, int $statusCode = 200) : Response 
+    {
+        $item = self::serializeItem($obj);
+        return Response::json(ResponseTemplates::object($item), $statusCode);
+    }
+
     protected function jsonCreatedId(mixed $id, int $statusCode = 201) : Response
     {
         return Response::json(['createdId' => $id], $statusCode);

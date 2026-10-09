@@ -49,6 +49,12 @@
   }
 
   function csrfToken() {
+    // cookie — источник правды (см. Csrf.js, LoreCsrf.token);
+    // скрытое поле формы — запасной вариант
+    if (window.LoreCsrf && LoreCsrf.token) {
+      var fromCookie = LoreCsrf.token();
+      if (fromCookie) return fromCookie;
+    }
     var el = one('[data-comment-form] input[name="_token"]')
           || one('[data-feed-comment-form] [name="_token"]')
           || one('input[name="_token"]');
@@ -85,6 +91,7 @@
   function fillAvatar(avatar, initials, raw) {
     if (!avatar) return;
     avatar.replaceChildren();
+    if (window.LoreAvatar) LoreAvatar.paint(avatar, null);   // сброс фона пресета
 
     var span = document.createElement('span');
     span.textContent = initials || '?';
@@ -97,6 +104,7 @@
       em.setAttribute('aria-hidden', 'true');
       em.textContent = parsed.emoji;
       avatar.appendChild(em);
+      if (window.LoreAvatar) LoreAvatar.paint(avatar, parsed);   // фон пресета
       return;
     }
 

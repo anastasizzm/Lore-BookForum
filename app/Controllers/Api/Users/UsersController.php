@@ -20,12 +20,12 @@ final class UsersController extends Controller
         private readonly UsersService $usersService
     ){}
 
-    public function edit(HttpContext $context, string $userId)
+    public function editProfile(HttpContext $context, string $userId)
     {
         $userId = RouteParamParser::int(['userId' => $userId], 'userId');
 
         $formData = $context->request->body();
-        $this->usersService->edit($userId, UserForm::fromInput($formData));
+        $this->usersService->editProfile($userId, UserForm::fromInput($formData));
         return $this->jsonEmpty(201);
     }
 }

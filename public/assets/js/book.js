@@ -117,6 +117,10 @@
   }
 
   function csrfTokenValue() {
+    // cookie — источник правды (её сравнивает бэк, см. Csrf.js);
+    // скрытое поле формы — запасной вариант
+    var fromCookie = window.LoreCsrf ? LoreCsrf.token() : '';
+    if (fromCookie) return fromCookie;
     var el = one('[data-comment-form] input[name="_token"]') || one('input[name="_token"]');
     return el ? el.value : '';
   }
@@ -318,6 +322,8 @@
 
     var body = new URLSearchParams(new FormData(form));
     body.set('content', text);
+    var csrfValue = csrfTokenValue();
+    if (csrfValue) body.set('_token', csrfValue);
 
     form.dataset.sending = '1';
     if (sendBtn) sendBtn.disabled = true;

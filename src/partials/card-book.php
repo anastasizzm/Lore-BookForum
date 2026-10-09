@@ -18,8 +18,9 @@ $saveAttr  = $isArticle ? 'data-save-article' : 'data-save-book';
 $idAttr    = $isArticle ? 'data-article-id'   : 'data-book-id';
 $saveLabel = $saved ? 'Remove from saved' : 'Save ' . $saveType;
 
-// ИСПРАВЛЕНО: Правильный путь к заглушке (лежит в public/img/, а не в public/assets/img/)
-$coverSrc = $cover !== '' ? $cover : '/img/book-placeholder.svg';
+// Нет обложки -> <img> не выводим: сразу рисуем CSS-заглушку (.cover--empty).
+// Файла-картинки для заглушки нет, запрос за ним только давал 404 в консоли.
+$hasCover = $cover !== '';
 
 // P1-6: карточка ведёт на страницу публикации (раньше было href="#",
 // из-за чего клик по карточке ничего не делал)
@@ -31,11 +32,13 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
 ?>
 <article class="card-base card-book">
 
-  <div class="card-book__cover">
-    <img src="<?= $view->e($coverSrc) ?>"
-         alt="<?= $view->e($title) ?>"
-         loading="lazy"
-         onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
+  <div class="card-book__cover<?= $hasCover ? '' : ' cover--empty' ?>">
+    <?php if ($hasCover): ?>
+      <?php /* обложка есть, но не загрузилась — app.js сам включит .cover--empty */ ?>
+      <img src="<?= $view->e($cover) ?>"
+           alt="<?= $view->e($title) ?>"
+           loading="lazy">
+    <?php endif; ?>
   </div>
 
   <!-- Кнопка закладки — в правом верхнем углу самой карточки (белое поле),

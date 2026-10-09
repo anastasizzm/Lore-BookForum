@@ -262,6 +262,8 @@
 
     var formData = new FormData(form);
     formData.delete('_method');
+    var csrfValue = window.LoreCsrf ? LoreCsrf.token() : '';
+    if (csrfValue) formData.set('_token', csrfValue);
 
     // application/x-www-form-urlencoded
     var body = new URLSearchParams(formData).toString();

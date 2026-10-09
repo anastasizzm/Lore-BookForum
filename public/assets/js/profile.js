@@ -27,8 +27,6 @@
     return String(value).slice(0, 4);
   }
 
-  var PLACEHOLDER = '/img/book-placeholder.svg';
-
   async function fetchAll(userId) {
     var include = 'creator';
 
@@ -67,8 +65,8 @@
 
     return '' +
       '<a class="profile-publications__item" href="' + url + '">' +
-        '<span class="profile-publications__cover">' +
-          '<img src="' + PLACEHOLDER + '" alt="" loading="lazy">' +
+        '<span class="profile-publications__cover cover--empty" aria-hidden="true">' +
+          // обложки в API нет — рисуем CSS-заглушку (.cover--empty, component.css)
         '</span>' +
         '<span class="profile-publications__info">' +
           '<span class="profile-publications__title">' + escapeHtml(item.title) + '</span>' +

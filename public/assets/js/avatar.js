@@ -16,15 +16,15 @@
    ============================================ */
 window.LoreAvatar = (function () {
   var DIR = '/uploads/avatars/';
-  // Держать в sync с src/partials/avatar-presets.php
+  // Держать в sync с src/partials/avatar-presets.php (icon + bg)
   var PRESETS = {
-    cat: '🐱',
-    dog: '🐶',
-    fox: '🦊',
-    owl: '🦉',
-    robot: '🤖',
-    star: '⭐',
-    book: '📚',
+    cat:   { icon: '🐱', bg: '#FFE1C9' },
+    dog:   { icon: '🐶', bg: '#F3DFC4' },
+    fox:   { icon: '🦊', bg: '#FFD2B0' },
+    owl:   { icon: '🦉', bg: '#E4D3C3' },
+    robot: { icon: '🤖', bg: '#D7E2F1' },
+    star:  { icon: '⭐', bg: '#FFF2B8' },
+    book:  { icon: '📚', bg: '#DCD4F0' },
   };
 
   function parse(raw) {
@@ -38,7 +38,7 @@ window.LoreAvatar = (function () {
 
     // Пресет из настроек профиля
     if (Object.prototype.hasOwnProperty.call(PRESETS, v)) {
-      return { type: 'emoji', emoji: PRESETS[v] };
+      return { type: 'emoji', emoji: PRESETS[v].icon, bg: PRESETS[v].bg };
     }
 
     // Ни "/", ни "." — неизвестный ид пресета: не выдумываем битую картинку
@@ -51,5 +51,21 @@ window.LoreAvatar = (function () {
     };
   }
 
-  return { parse: parse, PRESETS: PRESETS };
+  /**
+   * Красит .avatar под результат parse(): для пресета ставит фон
+   * (через CSSOM, не inline-атрибутом — безопасно для CSP),
+   * для остальных случаев сбрасывает.
+   */
+  function paint(el, parsed) {
+    if (!el) return;
+    if (parsed && parsed.type === 'emoji' && parsed.bg) {
+      el.classList.add('avatar--preset');
+      el.style.setProperty('--avatar-bg', parsed.bg);
+    } else {
+      el.classList.remove('avatar--preset');
+      el.style.removeProperty('--avatar-bg');
+    }
+  }
+
+  return { parse: parse, paint: paint, PRESETS: PRESETS };
 })();
