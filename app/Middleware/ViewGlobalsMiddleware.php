@@ -20,10 +20,12 @@ final class ViewGlobalsMiddleware implements Middleware
         $csrf = $ctx->attribute(Constants::CSRF_ATTR);
         $userId = $ctx->attribute(Constants::USER_ID_ATTR);
         $isVerified = $ctx->attribute(Constants::VERIFIED_ATTR);
+        $lang = $ctx->attribute(Constants::LANG_ATTR);
 
         View::share('currentUserId', $userId ?? null);
         View::share(Constants::CSRF_ATTR, $csrf ?? '');
         View::share('is_verified', $isVerified ?? false);
+        View::share(Constants::LANG_ATTR, $lang ?? 'en');
 
         return $next($ctx);
     }

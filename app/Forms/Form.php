@@ -7,7 +7,4 @@ interface Form
 {
     /** @param array<string, mixed> $input*/
     public static function fromInput(array $form) : self;
-
-    /** @return bool */
-    public function validate(array &$errors) : bool;
 }

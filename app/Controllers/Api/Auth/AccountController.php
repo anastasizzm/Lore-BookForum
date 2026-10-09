@@ -7,6 +7,7 @@ use App\Http\HttpContext;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 use App\Http\HttpException;
+use App\Lib\I18n\Translator;
 
 use App\Controllers\Controller;
 
@@ -23,13 +24,14 @@ final class AccountController extends Controller
 {
     public function __construct(
         private readonly EmailVerificationService $emailService,
-        private readonly AccountService $accountService
+        private readonly AccountService $accountService,
+        private readonly Translator $translator
     ){}
 
     public function resendMailVerify(HttpContext $context)
     {
         $isVerified = $context->attribute(Constants::VERIFIED_ATTR) ?? false;
-        if ($isVerified) return $this->jsonError(new Error(ErrorCodes::ALREADY_DONE, "You have already verified your email"), 409);
+        if ($isVerified) return $this->jsonError(new Error(ErrorCodes::ALREADY_DONE, $this->translator->t("errors.account.mail_already_verified")), 409);
         
         $token = $context->input('token') ?? '';
         $this->emailService->restartVerification($token);

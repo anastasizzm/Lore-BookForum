@@ -15,9 +15,11 @@ use App\Models\Email;
 use App\Models\Auth\AuthCredits;
 
 use App\Lib\Jwt;
+use App\Lib\I18n\Translator;
 use App\Http\HttpException;
 
 use App\Forms\Auth\AccountCreditsForm;
+use App\Validators\Auth\AccountCreditsFormValidator;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -33,28 +35,30 @@ final class AccountService
         private readonly UsersRepository $usersRepo,
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
-        private readonly UserExceptionTranslator $translator,
-        private readonly EmailVerificationService $mailVerificationService
+        private readonly UserExceptionTranslator $exceptionTranslator,
+        private readonly EmailVerificationService $mailVerificationService,
+        private readonly Translator $translator,
+        private readonly AccountCreditsFormValidator $accountCreditsFormValidator
     ){}
 
     public function changeCredits(int $userId, AccountCreditsForm $form) : void
     {
-        $errors = [];
-        if (!$form->validate($errors)) throw new ValidationException($errors);
+        $errorBag = $this->accountCreditsFormValidator->validateOne($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
         
         $currentCredits = $this->usersRepo->getAccountCredits($userId);
-        if ($currentCredits === NULL) throw new NotFoundException('User not found');
+        if ($currentCredits === NULL) throw new NotFoundException($this->translator->t('errors.common.not_found'));
 
         try{
             $this->usersRepo->changeCredits($userId, $form->email, $form->username);
             if ($form->email !== $currentCredits->email)
             {
                 $this->mailVerificationService->startVerification($userId, $form->email);
-                throw new HttpException("Please verify new email", 202, ErrorCodes::ACCEPTED);
+                throw new HttpException($this->translator->t('errors.mail.verify_mail'), 202, ErrorCodes::ACCEPTED);
             }
         }
         catch(\PDOException $e){
-            throw $this->translator->translate($e);
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 }

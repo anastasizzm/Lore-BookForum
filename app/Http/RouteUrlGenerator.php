@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Lib\Settings;
+use App\Lib\I18n\Translator;
 
 final class RouteUrlGenerator implements UrlGenerator
 {
     public function __construct(
         private readonly RouteRegistry $registry,
-        private readonly Settings $settings
+        private readonly Settings $settings,
+        private readonly Translator $translator
     ) {}
 
     public function url(string $name, array $params = []): string
@@ -25,7 +27,7 @@ final class RouteUrlGenerator implements UrlGenerator
             );
         }
 
-        return '/' . ltrim($path, '/');
+        return '/' . ltrim($path, '/') . '?lang=' . $this->translator->locale();
     }
 
     public function fullUrl(string $name, array $params = []) : string

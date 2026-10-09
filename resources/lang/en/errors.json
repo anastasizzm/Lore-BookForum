@@ -1,0 +1,56 @@
+{
+    "commont": {
+        "required": "The field is required",
+        "not_found": "Not found",
+        "not_exists": "Does not exists",
+        "format": "Invalid format",
+        "csrf_fail": "CSRF token mismatch",
+        "already_exists": "Already exists",
+        "forbidden": "Forbidden",
+        "unauthorized": "Authorize first",
+        "internal": "Something went wrong :(",
+        "rate_limited": "Too many requests. Try again later",
+        "invalid_input": "Invalid input",
+        "min": "The value must be greater than :value",
+        "min_len": "The length must be greater than :value",
+        "max": "The value must be less than :value",
+        "max_len": "The length must be less than :value",
+        "between": "The value must be from :from to :to",
+        "between_len": "The value length must be from :from to :to"
+    },
+    "articles": {
+        "pub_exists": "An article for this publication already exists",
+        "doi_exists": "An article with this DOI already exists",
+        "doi_format": "DOI must match the format 10.XXXX/YYYY"
+    },
+    "books": {
+        "pub_exists": "A book for this publication already exists",
+        "isbn_exists": "A book with this ISBN already exists",
+        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
+    },
+    "account": {
+        "credits_invalid": "Invalid login or password",
+        "account_block": "Account is blocked",
+        "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores",
+        "token_empty": "Token is not provided",
+        "email_format": "Invalid email format",
+        "mail_already_verified": "You have already verified the email"
+    },
+    "policies": {
+        "admin": "The user must be admin",
+        "auth": "The user must be authenticated",
+        "verify": "The user's email must be verified",
+        "owner": {
+            "post": "The user should be either post owner or admin",
+            "profile": "The user should be either profile owner or admin"
+        }
+    },
+    "mail": {
+        "verify_mail": "Please verify your email",
+        "already_verified": "Already verified",
+        "link_expired": "The link has expired",
+        "invalid_token": "Invalid token",
+        "no_user_data": "No user data provided",
+        "no_email_data": "No email data provided"
+    }
+}

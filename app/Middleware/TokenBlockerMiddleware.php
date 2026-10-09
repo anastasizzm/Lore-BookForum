@@ -13,6 +13,7 @@ use App\Http\UrlGenerator;
 use App\Http\Router;
 
 use App\Lib\Jwt;
+use App\Lib\I18n\Translator;
 use App\Lib\View;
 
 use App\Services\Configuration\CookieService;
@@ -26,7 +27,8 @@ final class TokenBlockerMiddleware implements Middleware
     public function __construct(
         private readonly TokenResetService $service,
         private readonly CookieService $cookies,
-        private readonly UrlGenerator $url
+        private readonly UrlGenerator $url,
+        private readonly Translator $translator
     ){}
 
     public function handle(HttpContext $ctx, callable $next) : Response
@@ -40,7 +42,7 @@ final class TokenBlockerMiddleware implements Middleware
             return $next($ctx);
 
         $response = $ctx->isApi()
-            ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::UNAUTHORIZED, "Authenticate first")), 401)
+            ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::UNAUTHORIZED, $this->translator->t("errors.common.unauthorized"))), 401)
             : Response::redirect($this->url->url('login'));
 
         return $this->cookies->clear($response, Constants::TOKEN_COOKIE);
