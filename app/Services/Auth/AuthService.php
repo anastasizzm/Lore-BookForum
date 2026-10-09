@@ -48,7 +48,7 @@ final class AuthService
     /** @throws ForbiddenException */
     public function login(LoginForm $form) : string
     {
-        $errorBag = $this->loginFormValidator($form);
+        $errorBag = $this->loginFormValidator->validateOne($form);
         if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         $credits = $this->usersRepo->getAuthCredits($form->login);
@@ -64,7 +64,7 @@ final class AuthService
     /** @throws ValidationException */
     public function register(RegisterForm $form) : string
     {
-        $errorBag = $this->loginFormValidator($form);
+        $errorBag = $this->loginFormValidator->validateOne($form);
         if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{

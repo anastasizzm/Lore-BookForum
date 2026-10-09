@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Translators;
 
+use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
 use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class UserExceptionTranslator extends Translator
+final class UserExceptionTranslator extends ExceptionTranslator
 {
     /** FK: constraint → [поле, сообщение] */
     private const FK = [

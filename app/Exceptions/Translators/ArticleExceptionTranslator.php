@@ -5,11 +5,12 @@ namespace App\Exceptions\Translators;
 
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
+use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class ArticleExceptionTranslator extends Translator
+final class ArticleExceptionTranslator extends ExceptionTranslator
 {
     /** FK: constraint → [поле, сообщение] */
     private const FK = [

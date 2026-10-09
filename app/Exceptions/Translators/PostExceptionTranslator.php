@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Translators;
 
+use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
 use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class PostExceptionTranslator extends Translator
+final class PostExceptionTranslator extends ExceptionTranslator
 {
     private const CONTENT_MAX = 2000;
 

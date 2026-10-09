@@ -50,7 +50,10 @@ $container->instance(Jwt::class, new Jwt($settings));
 $container->instance(Database::class, new Database($settings));
 $container->instance(RedisClient::class, new RedisClient($settings));
 $container->instance(RouteRegistry::class, new RouteRegistry());
-$container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator($c->get(RouteRegistry::class), $settings));
+$container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator(
+    $c->get(RouteRegistry::class),
+    $settings,
+    $c->get(Translator::class)));
 $container->instance(Translator::class, new Translator(
     langPath: $settings->langPath,
     fallback: $settings->defaultLocale,

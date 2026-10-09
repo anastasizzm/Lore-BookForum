@@ -19,6 +19,9 @@ use App\Cache\Auth\PassResetCache;
 
 use App\Repositories\Users\UsersRepository;
 
+use App\Validators\Auth\MailOnlyFormValidator;
+use App\Validators\Auth\PassResetFormValidator;
+
 use App\Models\Email;
 
 use App\Exceptions\GoneException;
@@ -40,13 +43,15 @@ final class PasswordResetService
         private readonly PassResetCache $cache,
         private readonly TokenResetService $tokenResetService,
         private readonly Settings       $settings,
-        private readonly Translator $translator
+        private readonly Translator $translator,
+        private readonly MailOnlyFormValidator $mailFormValidator,
+        private readonly PassResetFormValidator $passResetFormValidator
     ) {}
 
     public function startReset(MailOnlyForm $form) : void 
     {
-        $errors = [];
-        if (!$form->validate($errors)) throw new ValidationException($errors);
+        $errorBag = $this->mailFormValidator->validateOne($form);
+        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
 
         $userId = $this->getId($form->email);
         
@@ -64,8 +69,8 @@ final class PasswordResetService
 
     public function completeReset(PassResetForm $form): void
     {
-        $errors = [];
-        if (!$form->validate($errors)) throw new ValidationException($errors);
+        $errorBag = $this->passResetFormValidator->validateOne($form);
+        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
 
         $userId = $this->consumeToken($form->token);
         $this->cache->forget($userId);
@@ -77,7 +82,7 @@ final class PasswordResetService
     {
         $id = $this->usersRepo->identifyByLogin($email);
         if ($id === null)
-            throw new ValidationException(['email' => [$this->translator->t("item_based.not_found", [":item" => $this->translator->t("display_names.account.m")])]]);
+            throw new ValidationException(['email' => [$this->translator->t("item_based.not_found", [":item" => $this->translator->t("display_names.account")])]]);
     
         return $id;
     }

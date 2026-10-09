@@ -19,6 +19,7 @@ use App\Lib\I18n\Translator;
 use App\Http\HttpException;
 
 use App\Forms\Auth\AccountCreditsForm;
+use App\Validators\Auth\AccountCreditsFormValidator;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
@@ -36,13 +37,14 @@ final class AccountService
         private readonly Jwt $jwt,
         private readonly UserExceptionTranslator $exceptionTranslator,
         private readonly EmailVerificationService $mailVerificationService,
-        private readonly Translator $translator
+        private readonly Translator $translator,
+        private readonly AccountCreditsFormValidator $accountCreditsFormValidator
     ){}
 
     public function changeCredits(int $userId, AccountCreditsForm $form) : void
     {
-        $errors = [];
-        if (!$form->validate($errors)) throw new ValidationException($errors);
+        $errorBag = $this->accountCreditsFormValidator->validateOne($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
         
         $currentCredits = $this->usersRepo->getAccountCredits($userId);
         if ($currentCredits === NULL) throw new NotFoundException($this->translator->t('errors.common.not_found'));

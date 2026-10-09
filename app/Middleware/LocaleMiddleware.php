@@ -33,7 +33,7 @@ final class LocaleMiddleware implements Middleware
     {
         $available = $this->translator->available();
 
-        $query = $ctx->query(Constants::LANG_HEADER);
+        $query = $ctx->query(Constants::LANG_QUERY);
         if (is_string($query) && in_array($query, $available, true)) {
             return $query;
         }

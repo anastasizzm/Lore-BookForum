@@ -1,12 +1,4 @@
 {
-    "user": {
-        "common": "User",
-        "m": "User",
-        "f": "User"
-    },
-    "account": {
-        "common": "Account",
-        "m": "Account",
-        "f": "Account"
-    }
+    "user": "User",
+    "account": "Account"
 }

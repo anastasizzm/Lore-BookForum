@@ -3,13 +3,14 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Translators;
 
+use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
 use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class BookExceptionTranslator extends Translator
+final class BookExceptionTranslator extends ExceptionTranslator
 {
     /** FK violations: constraint → [поле, сообщение] */
     private const FK = [
