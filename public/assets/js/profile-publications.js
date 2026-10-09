@@ -29,11 +29,15 @@
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        if (window.Messages) await window.Messages.fail(res, 'Could not load genres.');
+        throw new Error('HTTP ' + res.status);
+      }
       var data = await res.json();
       genres = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
     } catch (e) {
       console.error('[profile-publications] genres load failed:', e);
+      if (window.Messages && !/^HTTP/.test(e.message)) window.Messages.show('Network error. Try again.', { type: 'error' });
       menu.innerHTML = '<li class="dropdown__error">Failed to load</li>';
       return;
     }

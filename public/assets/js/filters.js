@@ -101,6 +101,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // false — only shows a warning, search still runs (handy with test data)
   const STRICT_ISBN_CHECKSUM = false;
 
+  // Ошибки/предупреждения — общими плашками (messages.js)
+  function notify(text, type) {
+    if (window.Messages) window.Messages.show(text, { type: type || 'error' });
+    else console.warn(text);
+  }
+
   function escapeHtml(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;')
@@ -135,9 +141,24 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        // Текст берём из ответа сервера; fromServer — чтобы не выдать за сетевую ошибку
+        const msg = window.Messages
+          ? await window.Messages.readError(res, 'Could not load the list.')
+          : 'Could not load the list (HTTP ' + res.status + ').';
+        const err = new Error(msg);
+        err.fromServer = true;
+        throw err;
+      }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (_) {
+        const err = new Error('Server error. Please try again later.');
+        err.fromServer = true;
+        throw err;
+      }
       const list = Array.isArray(data)
         ? data
         : (Array.isArray(data.items) ? data.items : []);
@@ -199,6 +220,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       dropdown.dispatchEvent(new CustomEvent('dropdown:populated', { bubbles: true }));
     } catch (e) {
       console.error('[filters] dynamic load failed:', kind, e);
+      notify(e && e.fromServer ? e.message : 'Network error. Try again.');
       menu.innerHTML = '<li class="dropdown__error">Failed to load</li>';
     }
   }
@@ -480,10 +502,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
       const r = showState();
       if (r.msg && r.blocking) {
-        inp.setCustomValidity(r.msg);
-        inp.reportValidity();
+        notify(r.msg);                      // вместо нативного пузыря reportValidity
         return;
       }
+      if (r.msg) notify(r.msg, 'warning');  // предупреждение: поиск всё равно уйдёт
       const changes = {};
       changes[inp.name] = inp.value.trim();
       navigateWith(changes);

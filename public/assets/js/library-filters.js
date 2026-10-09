@@ -191,6 +191,12 @@
   }
 
   // ---------- loading ----------
+  // Ошибки — общими плашками (messages.js)
+  const notify = (text) => {
+    if (window.Messages) window.Messages.show(text, { type: 'error' });
+    else console.warn(text);
+  };
+
   async function load({ append = false } = {}) {
     console.log('load called, sort =', state.sort);
     controller?.abort();
@@ -198,15 +204,25 @@
     if (!append) page = 1;
 
     root.classList.add('is-loading');
+    let received = false; // true, когда ответ получен: дальше ошибка уже не сетевая
     try {
       const res = await fetch(`${API}?${apiQuery()}`, {
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      received = true;
 
-      const json  = await res.json();
+      const raw = await res.text();
+      let json = null;
+      try { json = raw ? JSON.parse(raw) : null; } catch (_) { /* не JSON */ }
+      if (!res.ok || !json) {
+        notify(window.Messages
+          ? window.Messages.describe(res.status, json, raw, 'Could not load the list.')
+          : 'Could not load the list (HTTP ' + res.status + ').');
+        return;
+      }
+
       const items = json.items ?? json.data ?? [];
       const meta  = json.meta ?? {};
 
@@ -226,7 +242,9 @@
 
       if (more) more.hidden = !meta.hasNext;
     } catch (e) {
-      if (e.name !== 'AbortError') console.error('Library load failed', e);
+      if (e.name === 'AbortError') return;
+      console.error('Library load failed', e);
+      notify(received ? 'Could not display the list.' : 'Network error. Try again.');
     } finally {
       root.classList.remove('is-loading');
     }

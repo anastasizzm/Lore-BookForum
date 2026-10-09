@@ -90,20 +90,36 @@
       .replace(/'/g, '&#39;');
   }
 
+  // Ошибки — общими плашками (messages.js). У поля остаются красная рамка
+  // и значок «!» (текст — в title); сама плашка показывается при отправке.
+  var fieldErrors = {};
+
+  function notify(text, type) {
+    if (window.Messages) window.Messages.show(text, { type: type || 'error' });
+    else console.warn(text);
+  }
+
+  function showFieldErrors() {
+    var list = Object.keys(fieldErrors).map(function (k) { return fieldErrors[k]; })
+      .filter(Boolean);
+    if (list.length) notify(list.join('\n'));
+  }
+
   function setError(name, message) {
     var field = getField(name);
     var errorEl = getErrorEl(name);
+    fieldErrors[name] = message;
     if (field) field.classList.add('form-field__input--invalid');
     if (errorEl) {
-      errorEl.innerHTML =
-        '<span class="field-error-icon">!</span>' +
-        '<span class="field-error-text">' + escapeHtml(message) + '</span>';
+      errorEl.innerHTML = '<span class="field-error-icon" title="' +
+        escapeHtml(message) + '">!</span>';
     }
   }
 
   function clearError(name) {
     var field = getField(name);
     var errorEl = getErrorEl(name);
+    delete fieldErrors[name];
     if (field) field.classList.remove('form-field__input--invalid');
     if (errorEl) errorEl.innerHTML = '';
   }
@@ -194,20 +210,23 @@
 
   // --- Server errors on load (from PHP $errors) ---
 
+  var loadErrors = [];
   Object.keys(RULES).forEach(function (name) {
     var errorEl = getErrorEl(name);
     if (!errorEl) return;
-    var text = errorEl.textContent.trim();
-    if (text !== '') {
-      if (!errorEl.querySelector('.field-error-icon')) {
-        errorEl.innerHTML =
-          '<span class="field-error-icon">!</span>' +
-          '<span class="field-error-text">' + escapeHtml(text) + '</span>';
+    var icon = errorEl.querySelector('.field-error-icon');
+    var text = ((icon && icon.getAttribute('title')) || errorEl.textContent).trim();
+    if (text !== '' || icon) {
+      if (text !== '') loadErrors.push(text);
+      if (!icon) {
+        errorEl.innerHTML = '<span class="field-error-icon" title="' +
+          escapeHtml(text) + '">!</span>';
       }
       var field = getField(name);
       if (field) field.classList.add('form-field__input--invalid');
     }
   });
+  if (loadErrors.length) notify(loadErrors.join('\n'));
 
   // --- Save via PUT API ---
 
@@ -221,7 +240,8 @@
 
     Object.keys(errors).forEach(function (field) {
       var msgs = errors[field];
-      var message = Array.isArray(msgs) ? msgs[0] : String(msgs);
+      var first = Array.isArray(msgs) ? msgs[0] : msgs;
+      var message = first && typeof first === 'object' ? (first.message || '') : String(first);
       if (RULES[field]) {
         setError(field, message);
       }
@@ -239,6 +259,7 @@
     clearAllErrors();
 
     if (!validateAll()) {
+      showFieldErrors();
       var firstInvalid = form.querySelector('.form-field__input--invalid');
       if (firstInvalid) {
         firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -249,7 +270,7 @@
 
     var userId = extractUserId();
     if (!userId) {
-      alert('Cannot determine user id from URL.');
+      notify('Cannot determine user id from URL. Please reload the page.');
       return;
     }
 
@@ -258,6 +279,13 @@
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
+    }
+
+    function resetButton() {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     }
 
     var formData = new FormData(form);
@@ -279,35 +307,33 @@
       },
     })
       .then(function (response) {
-        if (response.status >= 200 && response.status < 300) {
-          window.location.href = '/users/' + userId;
-          return null;
-        }
+        return response.text().then(function (raw) {
+          var data = null;
+          try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
-        if (response.status === 400 || response.status === 422) {
-          return response.json()
-            .then(function (data) {
-              var errors = data && data.errors ? data.errors : data;
-              renderServerErrors(errors);
-              if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-              }
-            })
-            .catch(function () {
-              throw new Error('Invalid JSON in error response');
-            });
-        }
+          // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
+          if (response.ok && !/^\s*</.test(raw)) {
+            window.location.href = '/users/' + userId;
+            return;
+          }
 
-        throw new Error('HTTP ' + response.status);
+          if ((response.status === 400 || response.status === 422) && data) {
+            var errors = data.errors
+              || (data.error && typeof data.error === 'object' ? data.error.details : null);
+            renderServerErrors(errors);
+          }
+
+          // Текст ошибки — из ответа API (все сообщения одной плашкой)
+          notify(window.Messages
+            ? window.Messages.describe(response.status, data, raw, 'Could not save the profile (HTTP ' + response.status + ').')
+            : 'Could not save the profile (HTTP ' + response.status + ').');
+          resetButton();
+        });
       })
       .catch(function (err) {
         console.error('[profile-edit] save failed:', err);
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-        }
-        alert('Something went wrong. Please try again.');
+        resetButton();
+        notify('Network error. Try again.');
       });
   });
 

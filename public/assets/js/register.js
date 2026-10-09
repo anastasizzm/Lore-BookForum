@@ -11,11 +11,25 @@ function initRegisterPage() {
 
   let submitAttempted = false;
 
+  // Тексты ошибок показываем общей плашкой (messages.js), а не красным текстом
+  // под полем: у поля остаётся красная рамка и aria-invalid.
+  const errors = {};
+
   function setError(input, messageId, text) {
     const invalid = text !== "";
     input.classList.toggle("form-field__input--invalid", invalid);
     input.setAttribute("aria-invalid", String(invalid));
-    document.getElementById(messageId).textContent = text;
+    errors[messageId] = text;
+    // без messages.js — запасной вариант: старый текст под полем
+    document.getElementById(messageId).textContent = window.Messages ? "" : text;
+  }
+
+  // Все текущие ошибки формы — одной плашкой (вызывается при отправке)
+  function showErrors() {
+    const list = Object.values(errors).filter(Boolean);
+    if (list.length && window.Messages) {
+      window.Messages.show(list.join("\n"), { type: "error" });
+    }
   }
 
   function validateEmail() {
@@ -100,6 +114,7 @@ function initRegisterPage() {
     const confirmOk  = validatePasswordConfirm();
     if (!emailOk || !usernameOk || !nameOk || !surnameOk || !passwordOk || !confirmOk) {
       event.preventDefault();
+      showErrors();
     }
   });
 }

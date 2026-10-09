@@ -78,11 +78,25 @@ window.LoreFeedSearch = (function () {
     return location.pathname + (qs ? '?' + qs : ''); // без q: сервер фильтрует по автору
   }
 
+  // Ошибки — общими плашками (messages.js)
+  function notify(text) {
+    if (window.Messages) window.Messages.show(text, { type: 'error' });
+    else console.warn(text);
+  }
+
   function fetchPage(page) {
     return fetch(pageUrl(page), { credentials: 'same-origin' })
       .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
+        if (res.ok) return res.text();
+        // Текст берём из ответа сервера; fromServer — чтобы не выдать за сетевую
+        var reading = window.Messages
+          ? window.Messages.readError(res, 'Search failed. Try again.')
+          : Promise.resolve('Search failed (HTTP ' + res.status + ').');
+        return reading.then(function (msg) {
+          var err = new Error(msg);
+          err.fromServer = true;
+          throw err;
+        });
       })
       .then(function (html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
@@ -105,6 +119,7 @@ window.LoreFeedSearch = (function () {
     state.busy = true;
     setStatus('Searching…');
     setLoadMore(false);
+    var failed = false;
 
     var target = ensurePanel().querySelector('.stack');
     if (replace) target.replaceChildren();
@@ -122,14 +137,16 @@ window.LoreFeedSearch = (function () {
     }
 
     step(page)
-      .catch(function () {
-        setStatus('Search failed. Try again.');
+      .catch(function (err) {
+        failed = true;
+        console.error('[feed-search] failed:', err);
+        notify(err && err.fromServer ? err.message : 'Network error. Try again.');
       })
       .finally(function () {
         state.busy = false;
         setLoadMore(state.hasNext);
         setStatus(
-          target.children.length
+          failed || target.children.length
             ? ''
             : 'Nothing found for “' + (state.original || state.q) +
               '”. Try a book title.'

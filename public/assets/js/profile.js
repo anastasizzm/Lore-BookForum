@@ -34,12 +34,26 @@
       fetch('/api/books?creator=' + encodeURIComponent(userId) + '&include=' + include, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
-      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      }).then(function (r) {
+        if (r.ok) return r.json();
+        if (window.Messages) window.Messages.fail(r, 'Could not load publications.');
+        return null;
+      }).catch(function () {
+        if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
+        return null;
+      }),
 
       fetch('/api/articles?creator=' + encodeURIComponent(userId) + '&include=' + include, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
-      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      }).then(function (r) {
+        if (r.ok) return r.json();
+        if (window.Messages) window.Messages.fail(r, 'Could not load publications.');
+        return null;
+      }).catch(function () {
+        if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
+        return null;
+      }),
     ]);
 
     var books    = extractItems(responses[0]).map(function (i) { return { item: i, type: 'book' }; });

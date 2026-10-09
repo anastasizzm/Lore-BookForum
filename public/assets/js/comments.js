@@ -359,6 +359,11 @@
       var data = null;
       try { data = await res.json(); } catch (_) { data = null; }
       if (!res.ok || !data) {
+        if (window.Messages) {
+          window.Messages.show(
+            window.Messages.describe(res.status, data, '', 'Could not load replies.'),
+            { type: 'error' });
+        }
         syncRepliesToggle(card);   // ответов нет — не показываем пустую кнопку
         return;
       }
@@ -389,6 +394,7 @@
       syncRepliesToggle(card);
     } catch (err) {
       console.warn('GET ' + API_POSTS + '?parent= failed', err);
+      if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
       // Ответы не пришли — кнопку раскрытия прячем, чтобы не показывать пустоту
       syncRepliesToggle(card);
     } finally {
