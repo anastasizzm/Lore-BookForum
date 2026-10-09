@@ -45,8 +45,14 @@ final class AuthorizationMiddleware implements Middleware
 
         return match ($decision->status) {
             401     => Response::redirect($this->url->url('login'), 303),
-            404     => Response::html(View::render('message', ['statusCode' => 404, 'message' => "Not Found. $decision->reason. ERR_CODE: $decision->errorCode"]), 404),
-            default => Response::html(View::render('message', ['statusCode' => $decision->status, 'message' => "Forbidden. $decision->reason. ERR_CODE: $decision->errorCode"]), $decision->status),
+            404     => Response::html(View::render('message', ['statusCode' => 404, 'message' => $this->buildMessage("Not Found", $decision->reason, $decision->errorCode)]), 404),
+            default => Response::html(View::render('message', ['statusCode' => $decision->status, 'message' => $this->buildMessage("Forbidden", $decision->reason, $decision->errorCode)]), $decision->status),
         };
+    }
+
+    private function buildMessage(string $start, string $decisionKey, string $errorCode) : string 
+    {
+        $translated = $this->translator->t($decisionKey);
+        return "$start. $translated. ERR_CODE: $errorCode";
     }
 }
