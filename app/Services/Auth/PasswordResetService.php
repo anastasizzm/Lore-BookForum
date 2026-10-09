@@ -6,6 +6,7 @@ namespace App\Services\Auth;
 use App\Lib\Jwt;
 use App\Lib\Settings;
 use App\Lib\View;
+use App\Lib\I18n\Translator;
 
 use App\Http\UrlGenerator;
 
@@ -39,6 +40,7 @@ final class PasswordResetService
         private readonly PassResetCache $cache,
         private readonly TokenResetService $tokenResetService,
         private readonly Settings       $settings,
+        private readonly Translator $translator
     ) {}
 
     public function startReset(MailOnlyForm $form) : void 
@@ -75,7 +77,7 @@ final class PasswordResetService
     {
         $id = $this->usersRepo->identifyByLogin($email);
         if ($id === null)
-            throw new ValidationException(['email' => ['Account with this email not found']]);
+            throw new ValidationException(['email' => [$this->translator->t("item_based.not_found", [":item" => $this->translator->t("display_names.account.m")])]]);
     
         return $id;
     }
@@ -87,11 +89,11 @@ final class PasswordResetService
 
         $cachedHash = $this->cache->get($userId);
         if ($cachedHash === null) {
-            throw new GoneException('The link has expired');
+            throw new GoneException($this->translator->t("errors.mail.link_expired"));
         }
 
         if (!hash_equals($cachedHash, $this->fingerprint($rawToken))) {
-            throw new ForbiddenException('Invalid token');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
         }
 
         return $userId;
@@ -103,7 +105,7 @@ final class PasswordResetService
 
         if ($claims === null || ($claims['typ'] ?? null) !== self::RESET_TOKEN_TYP
         ) {
-            throw new ForbiddenException('Token is invalid');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
         }
 
         return $claims;
@@ -114,7 +116,7 @@ final class PasswordResetService
         $claims = $this->decodeToken($rawToken);
 
         if (!$this->jwt->verify($claims))
-            throw new ForbiddenException('Token is invalid');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
 
         return $claims;
     }
@@ -123,7 +125,7 @@ final class PasswordResetService
     {
         $userId = $claims['sub'] ?? null;
         if (empty($userId)) {
-            throw new BadRequestException('No user data provided');
+            throw new BadRequestException($this->translator->t("errors.mail.no_user_data"));
         }
 
         return (int) $userId;

@@ -20,4 +20,14 @@ abstract class Validator
      * @param ErrorBag $bag
      */
     public abstract function validate(mixed $item, ErrorBag $bag) : bool;
+
+    /**
+     * @param T $item
+     */
+    public function validateOne(mixed $item) : ErrorBag 
+    {
+        $bag = new ErrorBag();
+        $this->validate($item, $bag);
+        return $bag;
+    }
 }

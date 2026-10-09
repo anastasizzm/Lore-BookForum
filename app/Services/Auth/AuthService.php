@@ -14,6 +14,10 @@ use App\Models\Email;
 use App\Models\Auth\AuthCredits;
 
 use App\Lib\Jwt;
+use App\Lib\I18n\Translator;
+
+use App\Validators\Auth\RegisterFormValidator;
+use App\Validators\Auth\LoginFormValidator;
 
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
@@ -32,8 +36,11 @@ final class AuthService
         private readonly UsersRepository $usersRepo,
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
-        private readonly UserExceptionTranslator $translator,
-        private readonly EmailVerificationService $mailVerificationService
+        private readonly UserExceptionTranslator $exceptionTranslator,
+        private readonly EmailVerificationService $mailVerificationService,
+        private readonly LoginFormValidator $loginFormValidator,
+        private readonly RegisterFormValidator $registerFormValidator,
+        private readonly Translator $translator
     ){}
 
     /** @throws UnauthorizedException */
@@ -41,16 +48,15 @@ final class AuthService
     /** @throws ForbiddenException */
     public function login(LoginForm $form) : string
     {
-        $errors = [];
-        $isValid = $form->validate($errors);
-        if (!$isValid) throw new ValidationException($errors);
+        $errorBag = $this->loginFormValidator($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         $credits = $this->usersRepo->getAuthCredits($form->login);
         if (!$this->validateCredits($credits, $form))
-            throw new UnauthorizedException('Invalid login or password');
+            throw new UnauthorizedException($this->translator->t("errors.account.credits_invalid"));
 
         if ($credits->isBlocked)
-            throw new ForbiddenException('Account is blocked');
+            throw new ForbiddenException($this->translator->t("errors.account.account_block"));
 
         return $this->generateToken($credits->id, $credits->isVerified);
     }
@@ -58,9 +64,8 @@ final class AuthService
     /** @throws ValidationException */
     public function register(RegisterForm $form) : string
     {
-        $errors = [];
-        $isValid = $form->validate($errors);
-        if (!$isValid) throw new ValidationException($errors);
+        $errorBag = $this->loginFormValidator($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{
             $userId = $this->uow->transactional(function (PDO $pdo) use ($form): int 
@@ -74,7 +79,7 @@ final class AuthService
             return $this->generateToken($userId, false);
         }
         catch(\PDOException $e) {
-            throw $this->translator->translate($e);
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 

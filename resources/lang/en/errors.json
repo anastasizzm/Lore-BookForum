@@ -29,6 +29,8 @@
         "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
     },
     "account": {
+        "credits_invalid": "Invalid login or password",
+        "account_block": "Account is blocked",
         "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores",
         "token_empty": "Token is not provided",
         "email_format": "Invalid email format",
@@ -42,5 +44,13 @@
             "post": "The user should be either post owner or admin",
             "profile": "The user should be either profile owner or admin"
         }
+    },
+    "mail": {
+        "verify_mail": "Please verify your email",
+        "already_verified": "Already verified",
+        "link_expired": "The link has expired",
+        "invalid_token": "Invalid token",
+        "no_user_data": "No user data provided",
+        "no_email_data": "No email data provided"
     }
 }

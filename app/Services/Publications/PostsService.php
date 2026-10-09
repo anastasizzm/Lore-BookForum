@@ -10,6 +10,7 @@ use App\Forms\Publications\PostForm;
 
 use App\Extensions\PdoExtensions;
 
+use App\Validators\Publications\PostFormValidator;
 use App\Models\Criterias\Publications\PostsCriteria;
 use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Posts\Post;
@@ -26,7 +27,8 @@ final class PostsService
     public function __construct(
         private readonly PostsRepository $postsRepo,
         private readonly PostContextEnricher $enricher,
-        private readonly PostExceptionTranslator $translator
+        private readonly PostExceptionTranslator $translator,
+        private readonly PostFormValidator $postFormValidator
     ){}
 
     public function getList(PostsListQuery $query) : PaginatedList
@@ -100,8 +102,8 @@ final class PostsService
     
     public function addComment(int $creatorId, PostForm $form, ?int $parentId = NULL) : int
     {
-        $errors = [];
-        if (!$form->validate($errors)) throw new ValidationException($errors);
+        $errorBag = $this->postFormValidator->validateOne($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{
             return $this->postsRepo->addComment($creatorId, $form->publicationId, $form->content, $parentId);

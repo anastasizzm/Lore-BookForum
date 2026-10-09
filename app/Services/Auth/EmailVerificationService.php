@@ -25,6 +25,8 @@ use App\Exceptions\ForbiddenException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\BadRequestException;
 
+use App\Lib\I18n\Translator;
+
 use PDO;
 
 final class EmailVerificationService
@@ -40,6 +42,7 @@ final class EmailVerificationService
         private readonly MailVerifyCache $cache,
         private readonly TokenResetService $tokenResetService,
         private readonly UnitOfWork      $uow,
+        private readonly Translator $translator
     ) {}
 
     public function startVerification(int $userId, string $email): void
@@ -69,13 +72,13 @@ final class EmailVerificationService
     {
         $userId = $this->consumeToken($rawToken);
         if ($this->checkVerificationExists($userId))
-            throw new HttpException("Already verified", 302, ErrorCodes::ALREADY_DONE);
+            throw new HttpException($this->translator->t("errors.mail.already_verified"), 302, ErrorCodes::ALREADY_DONE);
 
         $ok = $this->uow->transactional(function (PDO $pdo) use ($userId): bool {
             return $this->users->markEmailVerified($userId);
         });
 
-        if (!$ok) throw new NotFoundException('The user not found');
+        if (!$ok) throw new NotFoundException($this->translator->t("item_based.not_found", [':item' => $this->translator->t('display_names.user.m')]));
         
         $this->tokenResetService->resetFromUser($userId);
         return $this->issueSessionToken($userId);
@@ -93,11 +96,11 @@ final class EmailVerificationService
 
         $cachedHash = $this->cache->get($userId);
         if ($cachedHash === null) {
-            throw new GoneException('The link has expired');
+            throw new GoneException($this->translator->t("errors.mail.link_expired"));
         }
 
         if (!hash_equals($cachedHash, $this->fingerprint($rawToken))) {
-            throw new ForbiddenException('Invalid token');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
         }
 
         // One-shot: the link dies the moment it is redeemed.
@@ -112,7 +115,7 @@ final class EmailVerificationService
 
         if ($claims === null || ($claims['typ'] ?? null) !== self::VERIFY_TOKEN_TYP
         ) {
-            throw new ForbiddenException('Token is invalid');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
         }
 
         return $claims;
@@ -123,7 +126,7 @@ final class EmailVerificationService
         $claims = $this->decodeToken($rawToken);
 
         if (!$this->jwt->verify($claims))
-            throw new ForbiddenException('Token is invalid');
+            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
 
         return $claims;
     }
@@ -132,7 +135,7 @@ final class EmailVerificationService
     {
         $email = $claims['email'] ?? null;
         if (empty($email))
-            throw new BadRequestException('No email data provided');
+            throw new BadRequestException($this->translator->t("errors.mail.no_user_data"));
 
         return $email;
     }
@@ -141,7 +144,7 @@ final class EmailVerificationService
     {
         $userId = $claims['sub'] ?? null;
         if (empty($userId)) {
-            throw new BadRequestException('No user data provided');
+            throw new BadRequestException($this->translator->t("errors.mail.no_email_data"));
         }
 
         return (int) $userId;
