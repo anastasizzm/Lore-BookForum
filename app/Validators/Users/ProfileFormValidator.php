@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Validators\Publications;
+namespace App\Validators\Users;
 
 use App\Validators\Validator;
 use App\Lib\I18n\Translator;
