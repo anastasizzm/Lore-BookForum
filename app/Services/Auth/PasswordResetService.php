@@ -82,7 +82,7 @@ final class PasswordResetService
     {
         $id = $this->usersRepo->identifyByLogin($email);
         if ($id === null)
-            throw new ValidationException(['email' => [$this->translator->t("item_based.not_found", [":item" => $this->translator->t("display_names.account")])]]);
+            throw new ValidationException(['email' => [$this->translator->t("item_based.not_found.m", [":item" => $this->translator->t("display_names.account")])]]);
     
         return $id;
     }

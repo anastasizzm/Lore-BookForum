@@ -78,7 +78,7 @@ final class EmailVerificationService
             return $this->users->markEmailVerified($userId);
         });
 
-        if (!$ok) throw new NotFoundException($this->translator->t("item_based.not_found", [':item' => $this->translator->t('display_names.user')]));
+        if (!$ok) throw new NotFoundException($this->translator->t("item_based.not_found.m", [':item' => $this->translator->t('display_names.user')]));
         
         $this->tokenResetService->resetFromUser($userId);
         return $this->issueSessionToken($userId);
