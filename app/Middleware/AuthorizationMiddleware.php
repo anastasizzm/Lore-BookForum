@@ -6,6 +6,7 @@ namespace App\Middleware;
 use App\Services\Auth\AuthorizationService;
 
 use App\Lib\Auth\Decision;
+use App\Lib\I18n\Translator;
 use App\Lib\View;
 
 use App\Http\HttpContext;
@@ -21,7 +22,8 @@ final class AuthorizationMiddleware implements Middleware
 {
     public function __construct(
         private readonly AuthorizationService $authz,
-        private readonly UrlGenerator         $url,
+        private readonly UrlGenerator $url,
+        private readonly Translator $translator
     ) {}
 
     public function handle(HttpContext $ctx, callable $next): Response

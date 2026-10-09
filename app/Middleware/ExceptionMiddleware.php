@@ -20,7 +20,9 @@ use App\Extensions\ResponseTemplates;
 
 final class ExceptionMiddleware implements Middleware
 {
-    public function __construct(private readonly UrlGenerator $url){}
+    public function __construct(
+        private readonly UrlGenerator $url
+    ){}
 
     public function handle(HttpContext $ctx, callable $next): Response
     {

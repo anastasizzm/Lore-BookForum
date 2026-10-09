@@ -1,8 +1,7 @@
 {
-    "login": "Войти",
-    "logout": "Выйти",
-    "save": "Сохранить",
-    "cancel": "Отмена",
-    "chapters_count": "Глав: :count",
-    "welcome_user": "Привет, :name!"
+    "singin": "Sign In",
+    "logout": "Logout",
+    "save": "Save",
+    "revert": "Revert",
+    "cancel": "Cancel"
 }
