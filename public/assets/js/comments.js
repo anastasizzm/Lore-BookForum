@@ -7,6 +7,9 @@
      * ник автора — без «@» (собачка только в упоминаниях внутри текста);
      * лайк справа и отцентрирован по комментарию, у ответов — тоже;
      * под текстом: дата и кнопка Reply;
+     * форма ответа открывается под тем узлом, по которому кликнули
+       (под ответом — если это Reply у ответа) и возвращается на место
+       под комментарием после закрытия/отправки;
      * ответы раскрываются кнопкой «View N more replies» ↔ «Show less»;
      * корневой список: «Show more comments» ↔ «Show less comments»;
      * комментарии читаются в хронологии (старые сверху, новые снизу).
@@ -537,11 +540,37 @@
     setRepliesExpanded(card, true);
   });
 
+  /* --- Форма ответа: живёт на своём месте — под основным комментарием;
+         при ответе на ответ переезжает под этот ответ и возвращается
+         назад при закрытии (запоминаем дом при первом переезде) --- */
+
+  function formHome(form) {
+    if (!form.__home && form.parentNode) {
+      form.__home = { parent: form.parentNode, next: form.nextSibling };
+    }
+    return form.__home;
+  }
+
+  function returnFormHome(form) {
+    var home = form.__home;
+    if (!home || !home.parent) return;
+    var next = home.next && home.next.parentNode === home.parent ? home.next : null;
+    home.parent.insertBefore(form, next);
+  }
+
+  function placeForm(form, replyEl) {
+    var body = replyEl && replyEl.querySelector('.comment-reply__body');
+    if (!body) return returnFormHome(form);
+    formHome(form);           // дом — пока форма ещё на нём
+    body.appendChild(form);   // сразу под датой/Reply этого ответа
+  }
+
   // Показать/скрыть форму ответа; при открытии подставляем @ник адресата.
   // Кнопка Reply есть и у главного комментария, и у каждого его ответа:
   // адресат — автор того узла, по которому кликнули, но POST всегда идёт
   // на главный комментарий — ответы не вкладываются, они идут одним
-  // плоским хронологическим списком.
+  // плоским хронологическим списком. Форма открывается под тем узлом,
+  // по которому кликнули: под ответом — если это Reply у ответа.
   document.addEventListener('click', function (e) {
     var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
     if (!replyBtn) return;
@@ -549,8 +578,19 @@
     if (!content) return;
     var form = content.querySelector('[data-reply-form]');
     if (!form) return;
-    var open = form.hidden;
+
+    var replyEl = replyBtn.closest('.comment-reply');
+    var body = replyEl && replyEl.querySelector('.comment-reply__body');
+
+    // Уже открыта «здесь же» — клик закрывает; открыта в другом месте —
+    // переезжаем к новому адресату; закрыта — открываем здесь
+    var atTarget = body
+      ? form.parentNode === body
+      : (!form.__home || form.parentNode === form.__home.parent);
+    var open = form.hidden || !atTarget;
+
     form.hidden = !open;
+    if (open) placeForm(form, replyEl); else returnFormHome(form);
 
     // У карточки одна форма — aria-expanded держим в sync у всех кнопок Reply
     Array.prototype.forEach.call(content.querySelectorAll('[data-reply-toggle]'), function (b) {
@@ -562,7 +602,6 @@
       if (first) {
         // Адресат: автор ответа — если кликнули Reply у ответа,
         // иначе автор самого комментария
-        var replyEl = replyBtn.closest('.comment-reply');
         var card = replyBtn.closest('[data-comment-id]');
         var target = (replyEl && replyEl.dataset.authorUsername)
                   || (card && card.dataset.authorUsername) || '';
@@ -671,6 +710,7 @@
 
         input.value = '';
         form.hidden = true;
+        returnFormHome(form);   // отправили — форма назад под комментарий
         // Закрыли форму — все её кнопки Reply (у комментария и у ответов)
         // снимаем с aria-expanded
         Array.prototype.forEach.call(card.querySelectorAll('[data-reply-toggle]'), function (b) {
