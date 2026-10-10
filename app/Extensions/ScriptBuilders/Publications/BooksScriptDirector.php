@@ -29,9 +29,8 @@ final class BooksScriptDirector extends PublicationsScriptDirector
 
     public function addBookSelectTemp() : self
     {
-        if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.creator_id,\npublications.icon_id,\npublications.created_at,\npublications.genre_id,\npublications.comments_count,\npublications.saved_count,\npublications.rating_avg,\npublications.description,\npublications.author_notes")
-            ->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn");
+        $this->addPublicationExtendedSelectTemp();
+        $this->tempBuilder->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn");
         return $this;
     }
 
@@ -55,16 +54,5 @@ final class BooksScriptDirector extends PublicationsScriptDirector
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("books.category_id = :categoryId", [':categoryId' => ScriptParam::asInt($categoryId)]);
         return $this;
-    }
-
-    protected function handleFallbackIncluding(string $prop) : void
-    {
-        switch($prop)
-        {
-            case 'category':
-                $this->tempBuilder->addJoin("INNER JOIN categories ON categories.id = books.category_id")
-                    ->addSelect("categories.id as c_id,\ncategories.title as c_title,\ncategories.created_at as c_created_at");
-                break;
-        }
     }
 }
