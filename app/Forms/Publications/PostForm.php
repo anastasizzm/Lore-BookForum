@@ -19,23 +19,4 @@ final readonly class PostForm implements Form
             content: trim($input['content'])
         );
     }
-
-    public function validate(array &$errors) : bool
-    {
-        $ok = true;
-        if (empty($this->publicationId))
-        {
-            $errors['publicationId'][] = 'The publication cant be empty';
-            $ok = false;
-        }
-
-        $lenStr = strlen($this->content);
-        if ($lenStr < 1 || $lenStr > 2000)
-        {
-            $errors['content'][] = 'The length must be between 1 and 2000';
-            $ok = false;
-        }
-
-        return $ok;
-    }
 }

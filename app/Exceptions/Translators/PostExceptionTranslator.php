@@ -3,49 +3,55 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Translators;
 
+use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Extensions\PdoExtensions;
+use App\Lib\I18n\Translator;
 use PDOException;
 use Throwable;
 
-final class PostExceptionTranslator
+final class PostExceptionTranslator extends ExceptionTranslator
 {
     private const CONTENT_MAX = 2000;
 
     /** FK: constraint → [поле, сообщение] */
     private const FK = [
         // publications (вставляется перед comments)
-        'publications_genre_id_fkey'   => ['genre_id',   'The genre does not exist'],
-        'publications_icon_id_fkey'    => ['icon_id',    'The icon does not exist'],
-        'publications_creator_id_fkey' => ['creator_id', 'The creator does not exist'],
+        'publications_genre_id_fkey'   => ['genre_id',   'errors.common.not_exists'],
+        'publications_icon_id_fkey'    => ['icon_id',    'errors.common.not_exists'],
+        'publications_creator_id_fkey' => ['creator_id', 'errors.common.not_exists'],
 
         // comments
-        'comments_publication_id_fkey' => ['publication_id', 'The publication does not exist'],
-        'comments_creator_id_fkey'     => ['creator_id',     'The user does not exist'],
+        'comments_publication_id_fkey' => ['publication_id', 'errors.common.not_exists'],
+        'comments_creator_id_fkey'     => ['creator_id',     'errors.common.not_exists'],
         'fk_comments_parent'           => [
             'parent_id',
-            'The parent comment does not exist or belongs to another publication',
+            'errors.common.not_exists',
         ],
     ];
 
     /** UNIQUE: constraint → [поле, сообщение] */
     private const UNIQUE = [
-        'comments_pkey'              => ['id', 'A comment with this ID already exists'],
-        'uq_comments_id_publication' => ['id', 'A comment with this ID already exists'],
+        'comments_pkey'              => ['id', 'errors.common.already_exists'],
+        'uq_comments_id_publication' => ['id', 'errors.common.already_exists'],
     ];
 
     /** NOT NULL: колонка → [поле, сообщение] */
     private const NOT_NULL = [
         // publications
-        'title'        => ['title',        'Title is required'],
-        'description'  => ['description',  'Description is required'],
-        'genre_id'     => ['genre_id',     'Genre is required'],
-        'author_notes' => ['author_notes', 'Author notes are required'],
+        'title'        => ['title',        'errors.common.required'],
+        'description'  => ['description',  'errors.common.required'],
+        'genre_id'     => ['genre_id',     'errors.common.required'],
+        'author_notes' => ['author_notes', 'errors.common.required'],
 
         // comments
-        'publication_id' => ['publication_id', 'Publication is required'],
-        'content'        => ['content',        'Content is required'],
+        'publication_id' => ['publication_id', 'errors.common.required'],
+        'content'        => ['content',        'errors.common.required'],
     ];
+
+    public function __construct(
+        private readonly Translator $translator
+    ){}
 
     public function translate(PDOException $e): Throwable
     {
@@ -72,9 +78,7 @@ final class PostExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function unique(PDOException $e): Throwable
@@ -91,9 +95,7 @@ final class PostExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function notNull(PDOException $e): Throwable
@@ -109,9 +111,7 @@ final class PostExceptionTranslator
             return $e;
         }
 
-        [$field, $message] = $entry;
-
-        return new ValidationException([$field => [$message]]);
+        return $this->raiseException($entry);
     }
 
     private function valueTooLong(PDOException $e): Throwable

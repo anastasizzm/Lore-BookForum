@@ -7,13 +7,10 @@
    ============================================ */
 
 /* ---------- CSRF ---------- */
-// Ники -> профили (users.js грузится раньше card-feed.js); фолбэк — без ссылок.
-const fcUsers = window.LoreUsers || {
-  remember: () => 0,
-  renderAuthor: (el, label) => { if (el) el.textContent = label || ''; },
-  renderText: (el, text) => { if (el) el.textContent = text || ''; },
-  withMention: (text) => String(text == null ? '' : text).trim(),
-};
+// Общая структура комментариев (карточка, ответы, «View N more replies» /
+// «Show less», пагинация «Show more/less comments») — comments.js:
+// та же разметка и логика, что на book/article details
+const fcComments = window.LoreComments || {};
 
 function csrfToken() {
   // cookie — источник правды (её сравнивает бэк); поле формы — запасной вариант
@@ -139,7 +136,9 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Показать/скрыть поле комментария
+  // Показать/скрыть встроенный ввод поста («Reply» в строке поста).
+  // Ответ на пост (корневой комментарий) начинается со строки "@ник"
+  // его автора — карточка несёт data-author-username (card-feed.php)
   const toggleBtn = e.target.closest('[data-comment-toggle]');
   if (toggleBtn) {
     const card = toggleBtn.closest('.card-feed');
@@ -148,33 +147,19 @@ document.addEventListener('click', (e) => {
     const open = form.hidden;
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', String(open));
-    if (open) form.querySelector('.comment-form__input').focus();
-    fcSetOpen(card, open);
-    return;
-  }
-
-  // Ответ на конкретный комментарий — открываем/закрываем его форму
-  const replyBtn = e.target.closest('[data-fc-reply]');
-  if (replyBtn) {
-    const node = replyBtn.closest('.feed-comment');
-    const form = node ? node.querySelector('[data-fc-reply-form]') : null;
-    if (!form) return;
-    const open = form.hidden;
-    form.hidden = !open;
-    replyBtn.setAttribute('aria-expanded', String(open));
     if (open) {
       const input = form.querySelector('.comment-form__input');
+      const target = card.dataset.authorUsername || '';
       if (input) {
-        // Ответ начинается с @ника автора комментария (если поле пустое)
-        const target = (node && node.dataset.authorUsername) || '';
-        if (target && input.value.trim() === '') {
+        // Поле пустое либо в нём остался «голый» @ник — подставляем автора поста
+        if (target && (!input.value.trim() || /^@\S+\s*$/.test(input.value))) {
           input.value = '@' + target + ' ';
           input.dispatchEvent(new Event('input', { bubbles: true }));
         }
         input.focus();
-        try { input.selectionStart = input.selectionEnd = input.value.length; } catch (_) {}
       }
     }
+    return;
   }
 });
 
@@ -213,8 +198,18 @@ document.addEventListener('submit', async (e) => {
   setFeedMsg(errEl, '');
   setFeedMsg(statusEl, '');
 
-  const text = input.value.trim();
+  let text = input.value.trim();
   if (text === '') return;
+
+  // Ответ на пост всегда начинается с "@ник" его автора (как у ответов
+  // на комментарий в comments.js): если пользователь стёр префикс —
+  // возвращаем его перед отправкой
+  const postAuthor = card ? (card.dataset.authorUsername || '') : '';
+  if (postAuthor && window.LoreUsers && typeof window.LoreUsers.withMention === 'function') {
+    text = window.LoreUsers.withMention(text, postAuthor);
+    input.value = text;
+  }
+
   if (text.length > MAX) return setFeedMsg(errEl, `Max length is ${MAX} characters`);
   if (!Number(form.dataset.postId)) return setFeedMsg(errEl, 'postId is missing');
   if (!Number(form.elements.publicationId.value)) return setFeedMsg(errEl, 'publicationId is missing');
@@ -271,84 +266,6 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
-/* ---------- Ответ на комментарий: POST /api/posts/{commentId} ---------- */
-document.addEventListener('submit', async (e) => {
-  const form = e.target.closest('[data-fc-reply-form]');
-  if (!form) return;
-  e.preventDefault();
-  if (form.dataset.sending === '1') return;
-
-  const node = form.closest('.feed-comment');
-  const card = form.closest('.card-feed');
-  const commentId = node ? Number(node.dataset.commentId) : 0;
-  const input = form.querySelector('.comment-form__input');
-  const submitBtn = form.querySelector('.comment-form__submit');
-  const errEl = form.querySelector('[data-comment-error]');
-  const statusEl = form.querySelector('[data-comment-status]');
-
-  setFeedMsg(errEl, '');
-  setFeedMsg(statusEl, '');
-
-  let text = input.value.trim();
-  if (text === '') return;
-  if (!commentId) return setFeedMsg(errEl, 'commentId is missing');
-
-  // Ответ отправляется с @ником автора комментария в начале текста
-  text = fcUsers.withMention(text, node ? node.dataset.authorUsername : '');
-  input.value = text;
-
-  if (form.dataset.lastSent === text) return setFeedMsg(errEl, 'You have already sent this comment.');
-
-  // publicationId берём из основной формы карточки — у комментариев он общий с постом
-  const mainForm = card ? card.querySelector('[data-feed-comment-form]') : null;
-  const publicationId = mainForm && mainForm.elements.publicationId
-      ? mainForm.elements.publicationId.value : '';
-  if (!Number(publicationId)) return setFeedMsg(errEl, 'publicationId is missing');
-
-  const body = new URLSearchParams();
-  const token = csrfToken();
-  if (token) body.set('_token', token);
-  body.set('publicationId', publicationId);
-  body.set('content', text);
-
-  form.dataset.sending = '1';
-  input.disabled = true;
-  submitBtn.disabled = true;
-
-  try {
-    const res = await fetch(`/api/posts/${commentId}`, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: csrfHeaders(),
-      body,
-    });
-
-    let data = null;
-    try { data = await res.json(); } catch (_) { /* не JSON */ }
-
-    if (res.status === 201) {
-      form.dataset.lastSent = text;
-      setFeedMsg(statusEl, 'Reply sent');
-      input.value = '';
-      form.hidden = true;
-
-      // Ответ привязан к этому же посту — вставляем сразу в его список
-      if (card && data && data.createdId) {
-        fcAppendOwn(card, data.createdId, text);
-      }
-    } else {
-      setFeedMsg(errEl, sendStatus(data, res, (s) => `Failed to send reply (HTTP ${s})`));
-    }
-  } catch (err) {
-    console.error('[feed] comment request failed:', err);
-    setFeedMsg(errEl, 'Network error. Try again.');
-  } finally {
-    form.dataset.sending = '0';
-    input.disabled = false;
-    submitBtn.disabled = input.value.trim() === '';
-  }
-});
-
 /* ============================================
    Ленивая подгрузка комментариев
    GET /api/posts?parent={postId}&page=N&ps=M&include=creator
@@ -358,7 +275,7 @@ const FEED_COMMENTS = {
   pageSize: 10,
 };
 
-const feedCommentsState = new WeakMap(); // card -> {page, hasNext, loading, gen, started}
+const feedCommentsState = new WeakMap(); // card -> {loaded, hasMore, loading, gen, started}
 
 function fcParts(card) {
   const root = card.querySelector('[data-feed-comments]');
@@ -367,24 +284,17 @@ function fcParts(card) {
     root,
     list: root.querySelector('[data-fc-list]'),
     status: root.querySelector('[data-fc-status]'),
-    more: root.querySelector('[data-fc-more]'),
   };
 }
 
 function fcState(card) {
   let st = feedCommentsState.get(card);
   if (!st) {
-    st = { page: 0, hasNext: false, loading: false, gen: 0, started: false };
+    // hasMore[N] — есть ли страница N+1; loaded — сколько страниц показано
+    st = { loaded: 0, hasMore: [], loading: false, gen: 0, started: false };
     feedCommentsState.set(card, st);
   }
   return st;
-}
-
-// createdAt приходит либо строкой, либо объектом {date: "..."} (DateTimeImmutable)
-function fcFormatDate(value) {
-  const raw = value && typeof value === 'object' ? value.date : value;
-  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
-  return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
 }
 
 /* ---------- Привязка к посту ---------- */
@@ -409,89 +319,44 @@ function fcBoundToPost(items, postId, feedIds) {
   });
 }
 
-function fcEsc(value) {
-  return String(value)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// Карточка комментария — та же, что на book/article details (comments.js):
+// ник без «@», лайк справа по центру, под текстом дата и Reply,
+// ответы — за кнопкой «View N more replies» / «Show less»
+function fcCommentNode(item) {
+  return fcComments.commentNode({
+    id: item.id,
+    author: (item.creator && (item.creator.username || item.creator.name)) || '',
+    authorId: item.creator && item.creator.id,
+    authorUsername: (item.creator && item.creator.username) || '',
+    initials: fcComments.initialsOf(item.creator),
+    avatar: fcComments.avatarOf(item.creator),
+    text: item.content || '',
+    date: fcComments.formatDate(item.createdAt),
+    likes: item.likesCount || 0,
+    liked: !!item.isLiked,
+    replies: Number(item.commentsCount) || 0,
+  });
 }
 
-const fcFirstChar = (s) => Array.from(s || '')[0] || '';
-
-function fcBuildItem(item, tpl) {
-  const node = tpl.content.firstElementChild.cloneNode(true);
-  const c = item.creator || {};
-
-  const initials = item.__initials
-    || ((fcFirstChar(c.name) + fcFirstChar(c.surname)).toUpperCase()
-        || fcFirstChar(c.username).toUpperCase());
-
-  // Аватар: пресет из настроек (эмодзи) / настоящая картинка / инициалы
-  const avatarRaw = c.avatar || '';
-  const av = (window.LoreAvatar && LoreAvatar.parse(avatarRaw)) || { type: 'none' };
-
-  const wrapInitials = node.querySelector('[data-fc-avatar-initials]');
-  const wrapImg = node.querySelector('[data-fc-avatar-img]');
-  const wrapEmoji = node.querySelector('[data-fc-avatar-emoji]');
-  if (wrapInitials && wrapImg) {
-    let used = wrapInitials;
-    if (av.type === 'image') used = wrapImg;
-    else if (av.type === 'emoji' && wrapEmoji) used = wrapEmoji;
-
-    [wrapInitials, wrapImg, wrapEmoji].forEach((w) => { if (w && w !== used) w.remove(); });
-    used.hidden = false;
-    used.innerHTML = used.innerHTML
-      .split('__INITIALS__').join(fcEsc(initials))
-      .split('__EMOJI__').join(av.type === 'emoji' ? av.emoji : '')
-      .split('__SRC__').join(fcEsc(av.type === 'image' ? encodeURI(av.src) : ''));
-    // Если картинка не отдастся — onerror в avatar.php покажет инициалы
-    const fallbackSpan = used.querySelector('.avatar span[hidden]');
-    if (fallbackSpan) fallbackSpan.textContent = initials;
-    // Фон пресета на самом .avatar (внутри шаблона)
-    if (window.LoreAvatar) LoreAvatar.paint(used.querySelector('.avatar'), av);
-  }
-
-  // textContent/fillAvatar: без XSS; ник автора и @упоминания — ссылки на профиль
-  fcUsers.renderAuthor(node.querySelector('[data-fc-author]'), c.username || '', c.id, c.username);
-  if (c.username) node.dataset.authorUsername = c.username;
-  fcUsers.renderText(node.querySelector('[data-fc-text]'), item.content || '');
-  node.querySelector('[data-fc-date]').textContent = fcFormatDate(item.createdAt);
-
-  if (item.id != null) {
-    node.dataset.commentId = item.id;
-    const likeBtn = node.querySelector('[data-like-btn]');
-    if (likeBtn) {
-      likeBtn.dataset.likeId = String(item.id);
-      const cnt = likeBtn.querySelector('[data-like-count]');
-      if (cnt) cnt.textContent = String(item.likesCount || 0);
-      // Признак «мой лайк» — из контекста юзера в ответе API
-      setLikedUI(likeBtn, !!item.isLiked);
-    }
-  }
-
-  return node;
-}
-
-async function fcLoad(card, reset = false) {
+/**
+ * GET /api/posts?parent={postId}&page=N — корневые комментарии поста.
+ * Страницы подгружает «Show more comments» (более старая встаёт ВЫШЕ
+ * показанной — хронология), «Show less comments» подгруженное убирает.
+ */
+async function fcLoad(card) {
   const parts = fcParts(card);
-  const tpl = document.getElementById('feed-comment-template');
-  const postId = Number(card.dataset.postId);
-  if (!parts || !tpl || !postId) return;
+  const postId = Number(card && card.dataset.postId);
+  if (!parts || !postId) return;
 
   const st = fcState(card);
-  if (reset) {
-    st.gen++;               // ответы на старые запросы будут отброшены
-    st.page = 0;
-    st.hasNext = false;
-    st.loading = false;
-    parts.list.replaceChildren();
-  }
   if (st.loading) return;
 
   const gen = st.gen;
-  const page = st.page + 1;
+  const page = st.loaded + 1;
+  const pagerOpts = { load: () => fcLoad(card) };
   st.loading = true;
-  parts.more.hidden = true;
-  setFeedMsg(parts.status, 'Loading comments…');
+  fcComments.syncPager(parts.list, st, pagerOpts);
+  if (page === 1) setFeedMsg(parts.status, 'Loading comments…');
 
   const params = new URLSearchParams({
     parent: String(postId),
@@ -501,16 +366,12 @@ async function fcLoad(card, reset = false) {
   });
   const url = `${FEED_COMMENTS.url}?${params}`;
 
-  const showError = (msg) => {
-    // Ошибка загрузки — плашкой; в самом списке остаётся только кнопка «Try again»
-    if (window.Messages) {
-      setFeedMsg(parts.status, '');
-      window.Messages.show(msg, { type: 'error' });
-    } else {
-      setFeedMsg(parts.status, msg);
-    }
-    parts.more.textContent = 'Try again';
-    parts.more.hidden = false;
+  const fail = (msg) => {
+    if (gen !== st.gen) return;
+    st.loading = false;
+    setFeedMsg(parts.status, msg);
+    // Кнопка остаётся — повторит неудачную загрузку
+    fcComments.syncPager(parts.list, st, pagerOpts);
   };
 
   let received = false; // true, когда ответ сервера получен: дальше ошибка уже не сетевая
@@ -527,7 +388,7 @@ async function fcLoad(card, reset = false) {
     if (gen !== st.gen) return; // пришёл устаревший ответ
 
     if (!res.ok || !data || !Array.isArray(data.items)) {
-      return showError(sendStatus(data, res, (s) => `Failed to load comments (HTTP ${s})`));
+      return fail(sendStatus(data, res, (s) => `Failed to load comments (HTTP ${s})`));
     }
 
     const bound = fcBoundToPost(data.items, postId, fcFeedPostIds());
@@ -540,45 +401,58 @@ async function fcLoad(card, reset = false) {
     });
 
     const frag = document.createDocumentFragment();
-    let added = 0;
-    bound.forEach((item) => {
+    const withReplies = [];
+    // API отдаёт created_at DESC, а читается в хронологии — разворачиваем
+    bound.slice().reverse().forEach((item) => {
       if (existing.has(Number(item.id))) return;
-      frag.appendChild(fcBuildItem(item, tpl));
-      added++;
+      const node = fcCommentNode(item);
+      if (!node) return;
+      node.dataset.page = String(page);   // «Show less comments» снимает страницы
+      frag.appendChild(node);
+      if (Number(item.commentsCount) > 0) withReplies.push(node);
     });
-    if (added) parts.list.appendChild(frag);
+    fcComments.insertPage(parts.list, frag, page);
 
-    st.page = page;
-    st.hasNext = !!(data.meta && data.meta.hasNext);
-    parts.more.textContent = 'Load more';
-    parts.more.hidden = !st.hasNext;
+    // Ответы комментариев подтягиваем сразу (GET ?parent={commentId}),
+    // иначе после F5 они пропадут
+    withReplies.forEach((node) => fcComments.loadReplies(node));
 
-    if (page === 1) {
-      if (parts.list.children.length > 0) {
-        setFeedMsg(parts.status, '');
-      } else {
-        // Либо сервер ничего не отдал, либо отдал посты ленты вместо комментариев
-        setFeedMsg(parts.status, data.items.length === 0
-          ? 'No comments yet.'
-          : 'Comments are unavailable right now.');
-      }
+    st.hasMore[page] = !!(data.meta && data.meta.hasNext);
+    st.loaded = page;
+    st.loading = false;
+    fcComments.syncPager(parts.list, st, pagerOpts);
+
+    if (page === 1 && parts.list.children.length === 0) {
+      // Либо сервер ничего не отдал, либо отдал посты ленты вместо комментариев
+      setFeedMsg(parts.status, data.items.length === 0
+        ? 'No comments yet.'
+        : 'Comments are unavailable right now.');
     } else {
       setFeedMsg(parts.status, '');
     }
   } catch (err) {
     if (gen !== st.gen) return;
     console.error('[feed] failed to load comments:', err);
-    showError(received ? 'Could not display the comments.' : 'Network error. Try again.');
+    fail(received ? 'Could not display the comments.' : 'Network error. Try again.');
   } finally {
     if (gen === st.gen) st.loading = false;
   }
 }
 
-// Показать/скрыть список вместе с формой; первая загрузка — при первом открытии
+// Ссылка «Show more/Show less» под постом — зеркало состояния списка
+function fcSyncExpandBtn(card, open) {
+  const btn = card.querySelector('[data-fc-expand]');
+  if (!btn) return;
+  btn.textContent = open ? 'Show less' : 'Show more';
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+// Показать/скрыть список; первая загрузка — при первом раскрытии
 function fcSetOpen(card, open) {
   const parts = fcParts(card);
   if (!parts) return;
   parts.root.hidden = !open;
+  fcSyncExpandBtn(card, open);
   if (!open) return;
 
   const st = fcState(card);
@@ -593,58 +467,104 @@ function fcSetOpen(card, open) {
   fcLoad(card);
 }
 
-// Свой комментарий/ответ — показываем сразу, он привязан к этому посту по построению
-function fcOwnItem(id, text) {
-  return {
-    id,
-    content: text,
-    likesCount: 0,
-    createdAt: new Date().toISOString(),
-    creator: { username: '', name: '', surname: '', avatar: '' },
-    __initials: '?',
-  };
-}
-
+// Свой комментарий отправлен — вставляем в КОНЕЦ списка этого поста
+// (хронология: старые сверху, новые снизу)
 function fcAppendOwn(card, id, text) {
-  const tpl = document.getElementById('feed-comment-template');
   const parts = fcParts(card);
-  if (!tpl || !parts) return;
+  if (!parts) return;
 
-  const item = fcOwnItem(id, text);
-  item.creator.username = card.dataset.cuName || '';
-  item.creator.id = Number(card.dataset.cuId || 0);
-  item.__initials = card.dataset.cuInitials || '?';
+  const node = fcComments.commentNode({
+    id,
+    author: card.dataset.cuName || '',
+    authorId: Number(card.dataset.cuId || 0),
+    authorUsername: card.dataset.cuName || '',
+    initials: card.dataset.cuInitials || '?',
+    avatar: card.dataset.cuAvatar || '',
+    text,
+    date: fcComments.formatDate(new Date().toISOString()),   // dd.mm.yyyy
+    likes: 0,
+    liked: false,
+    replies: 0,
+  });
+  if (!node) return;
 
-  const node = fcBuildItem(item, tpl);
-  parts.list.insertBefore(node, parts.list.firstChild);
+  parts.list.appendChild(node);
 
   fcState(card).started = true;
   parts.root.hidden = false;
+  fcSyncExpandBtn(card, true);   // ссылка под постом: «Show less»
   if (parts.status && parts.status.textContent === 'No comments yet.') {
     setFeedMsg(parts.status, '');
   }
 
-  // Синхронизируемся с сервером: когда API начнёт отдавать
-  // комментарии по parent, они подтянутся (дубликаты отсечёт fcLoad)
-  fcLoad(card);
+  // Первой загрузки ещё не было — подтягиваем список из БД; дубликат
+  // со своим id отсекут existing/insertPage в fcLoad
+  if (fcState(card).loaded === 0) fcLoad(card);
 }
 
-// Load more / Try again
+// «Show more» / «Show less» — раскрыть/свернуть список комментариев под постом
+// (маленькая серая ссылка под строкой поста вместо пилюли внизу блока)
 document.addEventListener('click', (e) => {
-  const more = e.target.closest('[data-fc-more]');
-  if (!more) return;
-  const card = more.closest('.card-feed');
-  if (card) fcLoad(card);
+  const btn = e.target.closest('[data-fc-expand]');
+  if (!btn) return;
+  const card = btn.closest('.card-feed');
+  if (!card) return;
+  const parts = fcParts(card);
+  if (!parts) return;
+
+  fcSetOpen(card, parts.root.hidden);
 });
 
-// Свой комментарий отправлен — вставляем его в список этого поста
-// (сервер отдаёт список лениво и порядок created_at DESC, новый окажется сверху)
+// Свой комментарий отправлен — вставляем в конец списка этого поста
+// (хронология: старые сверху, новые снизу)
 document.addEventListener('comment:created', (e) => {
   const card = e.target.closest && e.target.closest('.card-feed');
   if (!card) return;
   const detail = e.detail || {};
   if (!detail.id) return;
   fcAppendOwn(card, detail.id, detail.content || '');
+});
+
+/* ============================================
+   Название книги в посту -> details публикации.
+   В данных ленты (PublicationShort) нет типа публикации (book/article),
+   поэтому клик резолвит тип на лету: GET /books/{id} -> при 404
+   (renderNotFound) уходим на /articles/{id}. Результат кэшируется
+   по id, чтобы повторные клики не ходили в сеть.
+   ============================================ */
+const pubTypeCache = new Map();   // publicationId -> 'book' | 'article'
+
+function pubDetailsUrl(id, kind) {
+  return (kind === 'article' ? '/articles/' : '/books/') + id;
+}
+
+document.addEventListener('click', async (e) => {
+  const link = e.target.closest('[data-pub-link]');
+  if (!link) return;
+  if (e.defaultPrevented || e.button !== 0) return;
+  // Модификаторы (ctrl/cmd/shift) — не мешаем открытию в новой вкладке
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+
+  const id = Number(link.dataset.pubId);
+  if (!id) return;
+
+  let kind = pubTypeCache.get(id);
+  if (!kind) {
+    kind = 'book';
+    try {
+      const res = await fetch(pubDetailsUrl(id, 'book'), {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (res.status === 404) kind = 'article';
+    } catch (_) {
+      // Сеть недоступна — идём на страницу книги (стандартный фолбэк)
+    }
+    pubTypeCache.set(id, kind);
+  }
+
+  location.href = pubDetailsUrl(id, kind);
 });
 
 document.addEventListener('DOMContentLoaded', () => applyLikedState(document));

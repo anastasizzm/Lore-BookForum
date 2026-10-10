@@ -7,5 +7,5 @@ use App\Lib\Auth\AuthorizationRequirement;
 
 final class ProfileOwnerRequirement implements AuthorizationRequirement
 {
-    public function describe() : string { return 'The user should be either profile owner or admin'; }
+    public function describe() : string { return 'errors.policies.owner.profile'; }
 }

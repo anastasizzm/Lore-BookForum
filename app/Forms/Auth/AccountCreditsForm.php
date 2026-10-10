@@ -19,23 +19,4 @@ final readonly class AccountCreditsForm implements Form
             email: mb_strtolower(trim($input['email'] ?? '')),
         );
     }
-
-    public function validate(array &$errors) : bool
-    {
-        $ok = true;
-
-        if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $this->username))
-        {
-            $errors['username'][] = "Invalid username format";
-            $ok = false;
-        }
-
-        if (!filter_var($this->email, FILTER_VALIDATE_EMAIL))
-        {
-            $errors['email'][] = "Invalid email format";
-            $ok = false;
-        }
-
-        return $ok;
-    } 
 }

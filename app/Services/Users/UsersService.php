@@ -5,9 +5,10 @@ namespace App\Services\Users;
 
 use App\Cache\User\UserContextCache;
 
-use App\Forms\Users\UserForm;
+use App\Forms\Users\ProfileForm;
 
 use App\Services\Configuration\UnitOfWork;
+use App\Validators\Users\ProfileFormValidator;
 
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
@@ -22,7 +23,8 @@ final class UsersService
         private readonly UserContextCache $cache,
         private readonly UnitOfWork $uow,
         private readonly UsersRepository  $usersRepo,
-        private readonly UserExceptionTranslator $translator
+        private readonly UserExceptionTranslator $translator,
+        private readonly ProfileFormValidator $profileFormValidator
     ){}
 
     public function loadContext(int $userId): ?UserContext
@@ -68,11 +70,10 @@ final class UsersService
         return $this->usersRepo->retrieve($userId);
     }
 
-    public function editProfile(int $userId, UserForm $form)
+    public function editProfile(int $userId, ProfileForm $form)
     {
-        $errors = [];
-        $isValid = $form->validate($errors);
-        if (!$isValid) throw new ValidationException($errors);
+        $errorBag = $profileFormValidator->validateOne($form);
+        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
 
         try{
             $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);

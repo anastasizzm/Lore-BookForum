@@ -11,7 +11,7 @@ use App\Http\HttpContext;
 use App\Exceptions\ValidationException;
 use App\Extensions\Parsers\RouteParamParser;
 
-use App\Forms\Users\UserForm;
+use App\Forms\Users\ProfileForm;
 use App\Constants;
 
 final class UsersController extends Controller
@@ -25,7 +25,7 @@ final class UsersController extends Controller
         $userId = RouteParamParser::int(['userId' => $userId], 'userId');
 
         $formData = $context->request->body();
-        $this->usersService->editProfile($userId, UserForm::fromInput($formData));
+        $this->usersService->editProfile($userId, ProfileForm::fromInput($formData));
         return $this->jsonEmpty(201);
     }
 }

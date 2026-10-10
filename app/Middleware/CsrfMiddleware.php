@@ -5,6 +5,7 @@ namespace App\Middleware;
 
 use App\Lib\CsrfManager;
 use App\Lib\View;
+use App\Lib\I18n\Translator;
 
 use App\Http\HttpException;
 use App\Http\Middleware;
@@ -22,7 +23,12 @@ use App\Services\Configuration\CookieService;
 
 final class CsrfMiddleware implements Middleware
 {
-    public function __construct(private readonly CookieService $cookies) {}
+    private const CSRF_STATUS_CODE = 419;
+
+    public function __construct(
+        private readonly CookieService $cookies,
+        private readonly Translator $translator
+    ) {}
 
     public function handle(HttpContext $ctx, callable $next): Response
     {
@@ -33,8 +39,8 @@ final class CsrfMiddleware implements Middleware
         {
             if (!$isCsrfSet || !CsrfManager::verify($ctx->request, $csrf))
                 return $ctx->isApi()
-                ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::CSRF_FAIL, "CSRF token mismatch")), 419)
-                : Response::html('<h1>CSRF token mismatch</h1><p>Please reload the page and try again.</p>', 419);
+                ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::CSRF_FAIL, $this->translator->t("errors.common.csrf_fail"))), self::CSRF_STATUS_CODE)
+                : Response::html(View::render('message', ['message' => $this->translator->t("errors.common.csrf_fail"), 'statusCode' => self::CSRF_STATUS_CODE]), self::CSRF_STATUS_CODE);
                 
             $ctx->request->setAttribute(Constants::CSRF_ATTR, $csrf);
             return $next($ctx);

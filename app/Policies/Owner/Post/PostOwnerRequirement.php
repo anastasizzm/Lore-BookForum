@@ -7,5 +7,5 @@ use App\Lib\Auth\AuthorizationRequirement;
 
 final class PostOwnerRequirement implements AuthorizationRequirement
 {
-    public function describe() : string { return 'The user should be either post owner or admin'; }
+    public function describe() : string { return 'errors.policies.owner.post'; }
 }
