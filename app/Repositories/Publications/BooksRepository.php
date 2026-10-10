@@ -91,7 +91,7 @@ final class BooksRepository extends PublicationsRepository
         
         $userFilters = $criteria->userCriteria;
         if ($userFilters !== null){
-            $this->applyUserRelationFilters($userFilters);
+            $this->applyUserRelationCriteria($userFilters);
         }
 
         $this->director->addOrderTemp($criteria->sortBy)

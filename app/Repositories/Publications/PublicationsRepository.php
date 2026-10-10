@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories\Publications;
 
 use App\Models\Filters\Publications\PublicationsFilters;
-use App\Models\Filters\Publications\UserRelationFilters;
+use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Scripts\ScriptParam;
 
@@ -56,15 +56,15 @@ abstract class PublicationsRepository extends Repository
             $this->director->addCreatorTempFilter($filters->creatorId);
     }
 
-    protected function applyUserRelationFilters(UserRelationFilters $filters) : void 
+    protected function applyUserRelationCriteria(UserRelationCriteria $criteria) : void 
     {
         $this->director->addReadingStatusTempFilter(
-            $filters->status,
-            $filters->viewerId
+            $criteria->status,
+            $criteria->viewerId
         );
 
-        if ($filters->savedOnly)
-            $this->director->addSavedOnlyTempFilter($filters->viewerId);
+        if ($criteria->savedOnly)
+            $this->director->addSavedOnlyTempFilter($criteria->viewerId);
     }
 
     protected function addOrder(ScriptBuilder $builder, string $dataCteName, PublicationsSortBy $sort) : void 
