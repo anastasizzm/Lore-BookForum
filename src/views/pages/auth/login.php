@@ -1,6 +1,19 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
+<?php
+// Сохраняем ?lang= во всех ссылках и в action формы — бэк читает локаль
+// из query (LocaleMiddleware), без этого он уйдёт на Accept-Language.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.login_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -19,7 +32,9 @@
     <h1 class="login-card__title"><?= $tr('common.auth.login_title') ?></h1>
   </header>
 
-  <form class="login-form" id="loginForm" action="<?= $view->url('login') ?>" method="POST" novalidate>
+  <form class="login-form" id="loginForm"
+        action="<?= $view->e($withLang($view->url('login'))) ?>"
+        method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
@@ -48,8 +63,8 @@
     <button class="btn btn--primary" type="submit"><?= $tr('common.auth.sign_in') ?></button>
 
     <div class="login-form__links">
-      <a class="link" href="<?= $view->url('password.email') ?>"><?= $tr('common.auth.forgot') ?></a>
-      <a class="link" href="<?= $view->url('register') ?>"><?= $tr('common.auth.no_account') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('password.email'))) ?>"><?= $tr('common.auth.forgot') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('register'))) ?>"><?= $tr('common.auth.no_account') ?></a>
     </div>
   </form>
 

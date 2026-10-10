@@ -1,6 +1,17 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
+<?php
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.verify_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -25,17 +36,10 @@
     <p class="login-message__text"><?= $view->e($message ?? '') ?></p>
 
     <?php if (!empty($success)): ?>
-      <a class="btn btn--primary" href="<?= $view->url('login') ?>">
+      <a class="btn btn--primary" href="<?= $view->e($withLang($view->url('login'))) ?>">
         <?= $tr('common.auth.sign_in') ?>
       </a>
     <?php else:
-      /*
-        Resend verification.
-        Токен подтверждения приходит в адресе страницы (/auth/verify/{token}) —
-        контроллер его во view не передаёт, поэтому достаём его из URL и кладём
-        в скрытое поле формы `token`: бэк (POST /api/mail) читает именно его.
-        Адрес для resend берём из роутера ($view->url), без хардкода.
-      */
       $path  = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
       $match = [];
       $verifyToken = preg_match('#^/auth/verify/([^/]+)#', $path, $match) === 1
@@ -45,7 +49,7 @@
       <form class="login-message__form"
             data-verify-resend
             method="post"
-            action="<?= $view->e($view->url('api.sendmail')) ?>">
+            action="<?= $view->e($withLang($view->url('api.sendmail'))) ?>">
         <?= $view->csrfField() ?>
         <input type="hidden" name="token" value="<?= $view->e($verifyToken) ?>">
 
@@ -55,7 +59,6 @@
       </form>
     <?php endif; ?>
 
-    <!-- Сюда JS будет вставлять плашку при ошибке -->
     <div class="messages" data-verify-messages hidden></div>
 
   </div>

@@ -1,6 +1,17 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
+<?php
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.newpass_tab') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -24,7 +35,6 @@
   </p>
 
   <?php
-    // ошибки, у которых на форме нет своего поля (token и всё новое с бэка)
     $unboundErrors = [];
     foreach (($errors ?? []) as $field => $list) {
       if (in_array($field, ['password', 'password_confirm'], true)) continue;
@@ -41,18 +51,9 @@
     </div>
   <?php endif; ?>
 
-  <!--
-    Контракт с бэком:
-      POST /auth/password-reset/submit (url('password.reset.submit')), application/x-www-form-urlencoded
-        поля: token, password, password_confirm, csrf-поле
-      успех: страница message "The new password was successfully set"
-      ошибки: этот же шаблон с $errors[...] / $innerMessages;
-              невалидный/просроченный token -> страница message со статусом
-    token приходит в пути ссылки из письма (/auth/password-reset/{token}) и
-    передаётся во view контроллером; при ререндере с ошибкой его нет — тогда
-    берём из отправленной формы ($form['token']), иначе поле опустеет.
-  -->
-  <form class="login-form" id="passwordResetForm" action="<?= $view->url('password.reset.submit') ?>" method="POST" novalidate>
+  <form class="login-form" id="passwordResetForm"
+        action="<?= $view->e($withLang($view->url('password.reset.submit'))) ?>"
+        method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <input type="hidden" name="token" value="<?= $view->e($token ?? ($form['token'] ?? '')) ?>">
@@ -82,7 +83,7 @@
     <button class="btn btn--primary" type="submit"><?= $tr('common.auth.save_password') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->url('login') ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('login'))) ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
     </div>
   </form>
 

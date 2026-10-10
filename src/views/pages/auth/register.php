@@ -1,6 +1,17 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
+<?php
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.register_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -19,7 +30,9 @@
     <h1 class="login-card__title"><?= $tr('common.auth.register_title') ?></h1>
   </header>
 
-  <form class="login-form" id="registerForm" action="<?= $view->url('register') ?>" method="POST" novalidate>
+  <form class="login-form" id="registerForm"
+        action="<?= $view->e($withLang($view->url('register'))) ?>"
+        method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
@@ -95,7 +108,7 @@
     <button class="btn btn--primary" type="submit"><?= $tr('common.auth.sign_up') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->url('login') ?>"><?= $tr('common.auth.have_account') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('login'))) ?>"><?= $tr('common.auth.have_account') ?></a>
     </div>
   </form>
 

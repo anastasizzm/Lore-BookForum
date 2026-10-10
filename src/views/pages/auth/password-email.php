@@ -1,6 +1,17 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
+<?php
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.forgot_tab') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -24,7 +35,6 @@
   </p>
 
   <?php
-    // ошибки, у которых на форме нет своего поля (всё новое, что может прийти с бэка)
     $unboundErrors = [];
     foreach (($errors ?? []) as $field => $list) {
       if ($field === 'email') continue;
@@ -41,15 +51,9 @@
     </div>
   <?php endif; ?>
 
-  <!--
-    Контракт с бэком:
-      POST /auth/password-reset (url('password.email.submit')), application/x-www-form-urlencoded
-        поля: email, csrf-поле
-      успех: страница message "The link to reset your password was sent to your email"
-             (в письме — ссылка /auth/password-reset/{token})
-      ошибка: этот же шаблон с $errors['email'] / $innerMessages
-  -->
-  <form class="login-form" id="passwordEmailForm" action="<?= $view->url('password.email.submit') ?>" method="POST" novalidate>
+  <form class="login-form" id="passwordEmailForm"
+        action="<?= $view->e($withLang($view->url('password.email.submit'))) ?>"
+        method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
@@ -67,7 +71,7 @@
     <button class="btn btn--primary" type="submit"><?= $tr('common.auth.send_link') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->url('login') ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('login'))) ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
     </div>
   </form>
 
