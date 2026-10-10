@@ -29,7 +29,6 @@ readonly class Book extends PublicationExtended
         public string $publisher,
         public int $pagesCount,
         public ?string $isbn,
-        public Uuid $contentId
     ){
         parent::__construct(
             $id, 
@@ -73,7 +72,6 @@ readonly class Book extends PublicationExtended
             publisher: self::str($row, $prefix . 'publisher'),
             pagesCount: self::int($row, $prefix . 'pages'),
             isbn: self::strN($row, $prefix . 'isbn'),
-            contentId: self::uuid($row, $prefix . 'content_id')
         );
     }
 
@@ -87,7 +85,6 @@ readonly class Book extends PublicationExtended
             'publisher' => $this->publisher,
             'pagesCount' => $this->pagesCount,
             'isbn' => $this->isbn,
-            'contentId' => $this->contentId
         ];
     }
 }

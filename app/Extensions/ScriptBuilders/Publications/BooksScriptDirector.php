@@ -31,7 +31,7 @@ final class BooksScriptDirector extends PublicationsScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.creator_id,\npublications.icon_id,\npublications.created_at,\npublications.genre_id,\npublications.comments_count,\npublications.saved_count,\npublications.rating_avg,\npublications.description,\npublications.author_notes")
-            ->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn,\nbooks.content_id");
+            ->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn");
         return $this;
     }
 
