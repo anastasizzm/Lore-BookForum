@@ -16,6 +16,24 @@
 $form   = $form   ?? [];
 $errors = $errors ?? [];
 
+// Defence-in-depth: страница уже закрыта политикой profile_owner (403 на
+// роуте), но на уровне вьюхи тоже проверяем владельца — чужой профиль
+// не редактируем даже если как-то дотянуться до рендера.
+$editUserId  = (int) ($userData->id ?? 0);
+$currentUid  = (int) ($user->id ?? 0);
+$isOwnerEdit = $editUserId !== 0 && $editUserId === $currentUid;
+$canEdit     = $isOwnerEdit || (bool) ($user->isAdmin ?? false);
+?>
+<?php if (!$canEdit): ?>
+  <div class="login-message" role="alert">
+    <div class="login-message__status">403</div>
+    <p class="login-message__text">You are not allowed to edit this profile.</p>
+    <a class="btn btn--primary" href="/users/<?= $editUserId ?>">Back to profile</a>
+  </div>
+<?php else: ?>
+
+<?php
+
 $val = function (string $key, string $default = '') use ($form, $userData) {
     if (array_key_exists($key, $form) && $form[$key] !== null && $form[$key] !== '') {
         return (string)$form[$key];
@@ -203,5 +221,7 @@ if ($initials === '') {
   </section>
 
 </div>
+
+<?php endif; /* $canEdit — 403 для не-владельца */ ?>
 
 <?php $view->endBlock('content'); ?>

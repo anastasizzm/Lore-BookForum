@@ -5,8 +5,14 @@
    article details и ленты (feed).
    Одна и та же раскладка и поведение везде:
      * ник автора — без «@» (собачка только в упоминаниях внутри текста);
-     * лайк справа и отцентрирован по комментарию, у ответов — тоже;
-     * под текстом: дата и кнопка Reply;
+     * сердечко (лайк) внизу слева, рядом кнопка Reply;
+     * «три точки» сверху справа (на месте бывшего сердечка) — меню
+       удаления; видно ТОЛЬКО автору комментария/ответа, открывается
+       НАД кнопкой; «Delete» -> ConfirmModal «Are you sure to delete
+       your comment?» -> DELETE /api/posts/{id}; при ответе 204
+       комментарий помечается удалённым (заглушка «Comment deleted»);
+     * дата написания — внизу справа, под тремя точками, на одном
+       уровне с лайком/кнопкой Reply;
      * форма ответа открывается под тем узлом, по которому кликнули
        (под ответом — если это Reply у ответа) и возвращается на место
        под комментарием после закрытия/отправки;
@@ -202,6 +208,9 @@
       if (repliesCount > 0) moreBtn.textContent = repliesLabel(repliesCount);
     }
 
+    // Меню удаления — только автору комментария
+    syncOwnMenu(node, data.authorId);
+
     return node;
   }
 
@@ -211,6 +220,9 @@
     if (!tpl) return null;
 
     var node = tpl.content.firstElementChild.cloneNode(true);
+    // id ответа для удаления (DELETE /api/posts/{id}); у строки нет
+    // data-comment-id — она внутри карточки главного комментария
+    if (data.id != null && Number(data.id)) node.dataset.replyId = String(Number(data.id));
 
     var author = one('.comment-reply__author', node);
     if (author) {
@@ -242,6 +254,9 @@
         likeBtn.remove();
       }
     }
+
+    // Меню удаления — только автору ответа
+    syncOwnMenu(node, data.authorId);
 
     return node;
   }
@@ -287,6 +302,23 @@
       initials: d.cuInitials || '?',
       avatar: d.cuAvatar || ''
     };
+  }
+
+  /**
+   * Id текущего юзера на странице (меню «три точки» показываем только автору).
+   * Узел ещё не вставлен в DOM, поэтому смотрим на статичную секцию/карточку.
+   */
+  function myId() {
+    var sec = document.querySelector('[data-comments][data-me-id]');
+    if (sec) return Number(sec.dataset.meId || 0) || 0;
+    var card = document.querySelector('.card-feed[data-cu-id]');
+    return card ? (Number(card.dataset.cuId || 0) || 0) : 0;
+  }
+
+  /** Меню «три точки» — только автору комментария/ответа (скрываем весь врап с кнопкой). */
+  function syncOwnMenu(node, authorId) {
+    var wrap = one('[data-c-menu-wrap]', node);
+    if (wrap) wrap.hidden = !(Number(authorId) && Number(authorId) === myId());
   }
 
   /* ---------------- Ответы: раскрытие «View N more replies» ↔ «Show less» ---------------- */
@@ -548,6 +580,122 @@
     return 'Failed to send the reply (HTTP ' + res.status + ')';
   }
 
+  /* ---------------- Меню «три точки» и удаление комментария/ответа ---------------- */
+
+  /** Закрывает все открытые меню «три точки». */
+  function closeMenus(except) {
+    each(document.querySelectorAll('[data-c-menu]:not([hidden])'), function (menu) {
+      if (menu === except) return;
+      menu.hidden = true;
+      var btn = menu.parentNode && menu.parentNode.querySelector('[data-c-menu-toggle]');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // Открыть/закрыть меню (раскрывается НАД кнопкой — position: absolute в CSS)
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest && e.target.closest('[data-c-menu-toggle]');
+    if (!toggle) return;
+
+    var wrap = toggle.closest('[data-c-menu-wrap]');
+    var menu = wrap && one('[data-c-menu]', wrap);
+    if (!menu) return;
+
+    var open = menu.hidden;
+    closeMenus(open ? menu : null);
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  // Клик мимо меню / Escape — закрыть
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('[data-c-menu-wrap]')) return;
+    closeMenus();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMenus();
+  });
+
+  /**
+   * Удалённый комментарий/ответ: контент заменяется заглушкой,
+   * место в списке сохраняется (сервер отдал 204).
+   */
+  function markDeleted(node) {
+    if (!node) return;
+    node.dataset.deleted = '1';
+    node.classList.add('is-deleted');
+
+    // Скрываем всё интерактивное: лайк, Reply, меню, ответы, форму, футер с датой
+    each(node.querySelectorAll(
+      '[data-like-btn], [data-reply-toggle], [data-c-menu-wrap], [data-replies-toggle],' +
+      ' [data-reply-form], [data-replies], .comment-card__footer'
+    ), function (el) { el.hidden = true; });
+
+    var textEl = one('[data-c-text]', node) || one('.comment-reply__text', node);
+    if (textEl) {
+      textEl.textContent = 'Comment deleted';
+      textEl.classList.add('comment-card__text--deleted');
+    }
+  }
+
+  // Подтверждение + DELETE /api/posts/{id}; при 204 помечаем удалённым
+  document.addEventListener('click', async function (e) {
+    var delBtn = e.target.closest && e.target.closest('[data-c-delete]');
+    if (!delBtn) return;
+
+    // Ответ не имеет data-comment-id (он внутри карточки комментария) —
+    // его id лежит на самой строке ответа (data-reply-id)
+    var replyEl = delBtn.closest('.comment-reply');
+    var node = replyEl || delBtn.closest('[data-comment-id]');
+    var id = replyEl
+      ? Number(node && node.dataset.replyId || 0)
+      : Number(node && node.dataset.commentId || 0);
+    if (!node || !id || node.dataset.deleting === '1') return;
+
+    closeMenus();
+
+    var ask = (window.ConfirmModal && typeof window.ConfirmModal.confirm === 'function')
+      ? window.ConfirmModal.confirm({
+          title: 'Delete comment?',
+          message: 'Are you sure to delete your comment?',
+          confirmText: 'Delete',
+          danger: true
+        })
+      : Promise.resolve(window.confirm('Are you sure to delete your comment?'));
+
+    var confirmed = await ask;
+    if (!confirmed) return;
+
+    node.dataset.deleting = '1';
+    try {
+      var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+      var token = csrfToken();
+      if (token) headers['X-CSRF-Token'] = token;
+
+      var res = await fetch(API_POSTS + '/' + id, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: headers
+      });
+
+      if (res.status === 204) {
+        markDeleted(node);
+        return;
+      }
+
+      var msg = window.Messages
+        ? await window.Messages.readError(res, 'Could not delete the comment.')
+        : 'Could not delete the comment (HTTP ' + res.status + ').';
+      if (window.Messages) window.Messages.show(msg, { type: 'error' });
+      else console.warn(msg);
+    } catch (err) {
+      console.error('DELETE ' + API_POSTS + '/' + id + ' failed', err);
+      if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
+    } finally {
+      delete node.dataset.deleting;
+    }
+  });
+
   /* ---------------- Делегирование (document — переживает поздний DOM) ---------------- */
 
   // Раскрытие/сворачивание ответов: «View N more replies» ↔ «Show less»
@@ -591,7 +739,10 @@
   }
 
   function placeForm(form, replyEl) {
-    var body = replyEl && replyEl.querySelector('.comment-reply__body');
+    // Новый хост — .comment-reply__content (колонка: текст + футер);
+    // старый .comment-reply__body — фолбэк для старой разметки
+    var body = replyEl && (one('.comment-reply__content', replyEl)
+                        || one('.comment-reply__body', replyEl));
     if (!body) return returnFormHome(form);
     formHome(form);           // дом — пока форма ещё на нём
     body.appendChild(form);   // сразу под датой/Reply этого ответа
@@ -612,7 +763,8 @@
     if (!form) return;
 
     var replyEl = replyBtn.closest('.comment-reply');
-    var body = replyEl && replyEl.querySelector('.comment-reply__body');
+    var body = replyEl && (one('.comment-reply__content', replyEl)
+                        || one('.comment-reply__body', replyEl));
 
     // Уже открыта «здесь же» — клик закрывает; открыта в другом месте —
     // переезжаем к новому адресату; закрыта — открываем здесь
@@ -783,6 +935,9 @@
     scopeOf: scopeOf,
     publicationIdOf: publicationIdOf,
     meInfo: meInfo,
+    myId: myId,
+    syncOwnMenu: syncOwnMenu,
+    markDeleted: markDeleted,
     bumpCommentCount: bumpCommentCount,
     pagerState: pagerState,
     syncPager: syncPager,

@@ -68,7 +68,7 @@ readonly class Article extends PublicationExtended
         string $authorNotes,
         private int $typeId,
         public ?BasicModel $type,
-        public string $doi,
+        public ?string $doi,
         public ContentData $contentData
     ){
         parent::__construct(
