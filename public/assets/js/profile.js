@@ -136,7 +136,12 @@
 })();
 
 /* ============================================
-   PROFILE - posts (ответы пользователя под публикациями)
+   PROFILE - posts
+   Карточки постов ТАКИЕ ЖЕ, как в ленте (разметка card-feed.php):
+   пост = корневой комментарий, под ним плоский список комментариев
+   (без вложенности — один уровень, как на book/article details).
+   Лайки, Reply и комментарии обслуживает card-feed.js + comments.js:
+   нужны те же data-* атрибуты, что отдаёт card-feed.php.
    ============================================ */
 
 (function () {
@@ -154,9 +159,8 @@
   // createdAt = { date: "2026-10-10 07:57:35...", ... } -> "10.10.2026"
   function formatDate(value) {
     var raw = (value && typeof value === 'object') ? (value.date || '') : String(value || '');
-    var day = raw.split(' ')[0];
-    var parts = day.split('-');
-    return parts.length === 3 ? parts[2] + '.' + parts[1] + '.' + parts[0] : '';
+    var m = /(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    return m ? m[3] + '.' + m[2] + '.' + m[1] : '';
   }
 
   function emptyText(text) {
@@ -164,31 +168,153 @@
       escapeHtml(text) + '</p>';
   }
 
-  function renderPost(post) {
+  // Текст поста с переносами строк — как nl2br в card-feed.php
+  function textHtml(text) {
+    return escapeHtml(text).replace(/\r\n|\r|\n/g, '<br>');
+  }
+
+  /** Аватар строки поста — как в avatar.php/comments.js: пресет-эмодзи
+      или инициалы (файловые аватары в API не приходят). */
+  function paintAvatar(el, initials, raw) {
+    if (!el) return;
+    el.replaceChildren();
+    if (window.LoreAvatar) window.LoreAvatar.paint(el, null);   // сброс фона
+
+    var span = document.createElement('span');
+    span.textContent = initials || '?';
+
+    var parsed = (window.LoreAvatar && window.LoreAvatar.parse(raw)) || { type: 'none' };
+    if (parsed.type === 'emoji') {
+      var em = document.createElement('span');
+      em.className = 'avatar__emoji';
+      em.setAttribute('aria-hidden', 'true');
+      em.textContent = parsed.emoji;
+      el.appendChild(em);
+      if (window.LoreAvatar) window.LoreAvatar.paint(el, parsed);
+      return;
+    }
+    el.appendChild(span);
+  }
+
+  function initialsOf(user) {
+    var n = String((user && user.name) || '').trim();
+    var s = String((user && user.surname) || '').trim();
+    var v = (n.charAt(0) + s.charAt(0)).toUpperCase();
+    if (!v) v = String((user && user.username) || '').trim().charAt(0).toUpperCase() || '?';
+    return v;
+  }
+
+  var LIKE_SVG =
+    '<svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
+  /**
+   * Карточка поста — по разметке card-feed.php (feed-list.php):
+   * шапка книги, строка поста (аватар, ник->профиль, текст, сердечко +
+   * Reply слева, дата справа), форма ответа, «Show more» и скрытый
+   * список комментариев (data-feed-comments -> card-feed.js).
+   */
+  function renderPost(post, cu, authorFallback) {
+    var creator   = post.creator || {};
     var pub       = post.publication || {};
+    var postId    = Number(post.id || 0);
     var pubId     = Number(post.publicationId || pub.id || 0);
-    var pubTitle  = pub.title || 'Publication';
-    var content   = String(post.content || '').trim();
-    var date      = formatDate(post.createdAt);
+    var userId    = Number(creator.id || 0);
+    var userName  = String(creator.username || authorFallback || '');
+    var initials  = initialsOf(creator);
+    var avatarKey = String(creator.avatar || '');
+    var liked     = !!post.isLiked;
     var likes     = Number(post.likesCount || 0);
     var comments  = Number(post.commentsCount || 0);
+    var date      = formatDate(post.createdAt);
+    var text      = String(post.content || '');
 
-    // Тип публикации (book/article) в API не приходит — ссылку резолвит
-    // общий обработчик card-feed.js ([data-pub-link], см. «/books/{id} -> 404 -> /articles/{id}»)
-    var title = pubId
-      ? '<a class="profile-post__title" href="/books/' + pubId + '"' +
-        ' data-pub-link data-pub-id="' + pubId + '">' + escapeHtml(pubTitle) + '</a>'
-      : '<span class="profile-post__title">' + escapeHtml(pubTitle) + '</span>';
+    // Обложка книги: iconId -> /uploads/covers/{iconId} (как в feed-list.php);
+    // нет обложки — CSS-заглушка cover--empty
+    var iconId = (pub.iconId == null ? '' : String(pub.iconId));
+    var coverHtml = iconId
+      ? '<img src="' + escapeHtml('/uploads/covers/' + iconId) + '" alt="" class="card-feed__book-thumb">'
+      : '<span class="card-feed__book-thumb cover--empty" aria-hidden="true"></span>';
+
+    var bookHeader = '';
+    if (pubId && pub.title) {
+      bookHeader =
+        '<div class="card-feed__book-header">' +
+          coverHtml +
+          '<h3 class="card-feed__book-title">' +
+            '<a class="card-feed__book-link" href="/books/' + pubId + '"' +
+               ' data-pub-link data-pub-id="' + pubId + '">' + escapeHtml(pub.title) + '</a>' +
+          '</h3>' +
+        '</div>';
+    }
+
+    var authorHtml = userId
+      ? '<a href="/users/' + userId + '" class="user-link">' + escapeHtml(userName) + '</a>'
+      : escapeHtml(userName);
 
     return '' +
-      '<article class="profile-post card-base">' +
-        title +
-        (content ? '<p class="profile-post__text">' + escapeHtml(content) + '</p>' : '') +
-        '<p class="profile-post__meta">' +
-          (date ? '<span>' + date + '</span>' : '') +
-          '<span>&#9825; ' + likes + '</span>' +
-          '<span>&#128172; ' + comments + '</span>' +
-        '</p>' +
+      '<article class="card-base card-feed"' +
+        ' data-post-id="' + postId + '"' +
+        ' data-publication-id="' + pubId + '"' +
+        ' data-author-id="' + userId + '"' +
+        ' data-author-username="' + escapeHtml(userName) + '"' +
+        ' data-cu-id="' + cu.id + '"' +
+        ' data-cu-name="' + escapeHtml(cu.name) + '"' +
+        ' data-cu-initials="' + escapeHtml(cu.initials) + '"' +
+        ' data-cu-avatar="' + escapeHtml(cu.avatar) + '">' +
+        bookHeader +
+        '<div class="card-feed__body-section' + (bookHeader ? ' card-feed__body-section--with-book' : '') + '">' +
+          '<div class="card-feed__post">' +
+            '<div class="comment-card__inner">' +
+              '<div class="avatar avatar--sm" data-post-avatar><span>' + escapeHtml(initials) + '</span></div>' +
+              '<div class="comment-card__content">' +
+                '<div class="comment-card__main">' +
+                  '<div class="comment-card__head">' +
+                    '<div class="comment-card__author">' + authorHtml + '</div>' +
+                    '<div class="comment-card__text">' + textHtml(text) + '</div>' +
+                  '</div>' +
+                '</div>' +
+
+                '<div class="comment-card__footer">' +
+                  '<div class="comment-card__meta">' +
+                    '<button type="button" class="btn-icon-small btn-like comment-card__like' + (liked ? ' is-liked' : '') + '"' +
+                            ' data-like-btn data-liked="' + (liked ? '1' : '0') + '"' +
+                            ' aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="Like">' +
+                      LIKE_SVG +
+                      '<span data-like-count>' + likes + '</span>' +
+                    '</button>' +
+                    '<button type="button" class="comment-card__reply"' +
+                            ' data-comment-toggle aria-expanded="false" aria-label="Reply">Reply</button>' +
+                  '</div>' +
+                  '<span class="comment-card__date">' + escapeHtml(date) + '</span>' +
+                '</div>' +
+
+                '<form class="comment-form" action="/api/posts/' + postId + '" method="POST"' +
+                      ' data-feed-comment-form data-post-id="' + postId + '" novalidate hidden>' +
+                  '<input type="hidden" name="_token" value="">' +
+                  '<input type="hidden" name="publicationId" value="' + pubId + '">' +
+                  '<input type="text" class="comment-form__input" name="content" placeholder="Add a comment…" maxlength="500" autocomplete="off">' +
+                  '<button type="submit" class="comment-form__submit" disabled>Post</button>' +
+                  '<p data-comment-error role="alert" hidden' +
+                     ' style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>' +
+                  '<p data-comment-status role="status" hidden' +
+                     ' style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>' +
+                '</form>' +
+
+                '<button type="button" class="comment-card__more" data-fc-expand' +
+                        ' aria-expanded="false">Show more</button>' +
+
+                '<span class="visually-hidden" data-comment-count>' + comments + '</span>' +
+
+                '<div class="feed-comments" data-feed-comments hidden>' +
+                  '<div class="feed-comments__list" data-fc-list></div>' +
+                  '<p class="feed-comments__status" data-fc-status role="status" hidden></p>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
       '</article>';
   }
 
@@ -225,6 +351,16 @@
       return;
     }
 
+    // Текущий юзер — те же data-cu-*, что в card-feed.php (для своих комментариев)
+    var cu = {
+      id: parseInt(el.getAttribute('data-posts-cu-id'), 10) || 0,
+      name: el.getAttribute('data-posts-cu-name') || '',
+      initials: el.getAttribute('data-posts-cu-initials') || '?',
+      avatar: el.getAttribute('data-posts-cu-avatar') || '',
+    };
+    var authorFallback = el.getAttribute('data-posts-author-username') || '';
+    var csrf          = el.getAttribute('data-posts-csrf') || '';
+
     var page     = 1;
     var hasMore  = false;
     var loading  = false;
@@ -232,9 +368,23 @@
 
     function appendPosts(items) {
       if (moreBtn) { moreBtn.remove(); moreBtn = null; }
-      var html = items.map(renderPost).join('');
+      var html = items.map(function (post) { return renderPost(post, cu, authorFallback); }).join('');
       if (page === 1) el.innerHTML = html;
       else el.insertAdjacentHTML('beforeend', html);
+
+      // Аватары — через LoreAvatar (пресет-эмодзи или инициалы), без innerHTML
+      items.forEach(function (post, i) {
+        var node = el.children[el.children.length - items.length + i];
+        if (!node) return;
+        paintAvatar(
+          node.querySelector('[data-post-avatar]'),
+          initialsOf(post.creator),
+          String((post.creator && post.creator.avatar) || '')
+        );
+        // CSRF-поле формы ответа — из data-posts-csrf (карточка отрендерена в JS)
+        var tokenInput = node.querySelector('[data-feed-comment-form] [name="_token"]');
+        if (tokenInput) tokenInput.value = csrf;
+      });
     }
 
     function renderMore() {

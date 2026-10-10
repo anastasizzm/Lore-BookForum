@@ -18,12 +18,32 @@ if ($initials === '') {
 $avatarKey = (string) ($userData->avatar ?? '');
 
 $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
+
+// CSRF-токен для форм комментариев в карточках постов (карточки рендерит
+// profile.js в JS — поле _token заполняется из data-posts-csrf)
+$csrfToken = '';
+if (preg_match('/value="([^"]*)"/', $view->csrfField(), $m)) {
+    $csrfToken = html_entity_decode($m[1], ENT_QUOTES);
+}
+
+// Текущий пользователь — для карточек постов (те же data-cu-*, что в card-feed.php:
+// их читает card-feed.js для оптимистичной вставки своих комментариев)
+$cuInitials = mb_strtoupper(
+    mb_substr($user?->name    ?? '', 0, 1) . mb_substr($user?->surname ?? '', 0, 1)
+);
+if ($cuInitials === '') {
+    $cuInitials = mb_strtoupper(mb_substr($user?->username ?? '', 0, 1));
+}
 ?>
 
 <?php $view->startBlock('title'); ?><?= $view->e($displayName) ?> - Profile<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
+  <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
+       Show more/less); нужна card-feed.js (defer в main.php), который вешает
+       комментарии под пост — карточки постов тут те же, что в ленте -->
+  <script src="<?= $view->asset('js/comments.js') ?>"></script>
   <script src="/assets/js/profile.js" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -61,13 +81,21 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
       <?php endif; ?>
     </header>
 
-    <!-- Посты (ответы под книгами/статьями) грузит profile.js из
-         GET /api/posts?creator={userId}&include=creator%2Bpublication -->
+    <!-- Посты — карточки ТАКИЕ ЖЕ, как в ленте (разметка card-feed.php):
+         пост = корневой комментарий, под ним плоский список комментариев
+         (без вложенности, как на book/article details). Грузит profile.js
+         из GET /api/posts?creator={userId}&include=creator%2Bpublication -->
     <section class="profile-posts">
       <h2 class="profile-posts__title">Posts</h2>
       <div class="profile-posts__list"
            data-posts
-           data-posts-user-id="<?= (int)($userData->id ?? 0) ?>">
+           data-posts-user-id="<?= (int)($userData->id ?? 0) ?>"
+           data-posts-author-username="<?= $view->e($userData->username ?? '') ?>"
+           data-posts-cu-id="<?= (int)($user?->id ?? 0) ?>"
+           data-posts-cu-name="<?= $view->e($user?->username ?? '') ?>"
+           data-posts-cu-initials="<?= $view->e($cuInitials) ?>"
+           data-posts-cu-avatar="<?= $view->e($user?->avatar ?? '') ?>"
+           data-posts-csrf="<?= $view->e($csrfToken) ?>">
         <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
           Loading...
         </p>
