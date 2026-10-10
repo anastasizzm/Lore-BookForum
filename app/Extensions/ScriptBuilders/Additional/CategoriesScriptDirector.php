@@ -30,20 +30,28 @@ final class CategoriesScriptDirector extends ScriptDirector
     public function startTempFilter() : self
     {
         $this->startTemp('categories');
+        $this->tempBuilder->addJoin("INNER JOIN categories_translations ON categories_translations.genre_id = categories.id")
+            ->addJoin("INNER JOIN languages ON languages.code = categories_translations.code AND languages.is_active");
         return $this;
     }
 
-    public function addCategorySelectTemp() : self
+    public function addCategorySelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("categories.id,\ncategories.title,\ncategories.created_at");
+        $this->tempBuilder->addSelect("categories.id,\ncategories.created_at")
+            ->addSelect("COALESCE(
+                    MAX(CASE WHEN categories_translations.code = :currentCulture THEN categories_translations.title END),
+                    MAX(CASE WHEN categories_translations.code = :fallbackCulture THEN categories_translations.title END)
+                ) as title", [':currentCulture' => ScriptParam::asStr($currentLocale), ':fallbackCulture' => ScriptParam::asStr($fallbackLocale)])
+            ->setGroup("categories.id");
+        
         return $this;
     }
 
     public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("categories.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
+        $this->tempBuilder->addWhere("categories_translations.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
         return $this;
     }
 
@@ -51,7 +59,7 @@ final class CategoriesScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $order = match($sort){
-            BasicModelSortBy::Alphabet => 'categories.title',
+            BasicModelSortBy::Alphabet => 'title',
             BasicModelSortBy::Newest => 'categories.created_at DESC',
         };
         $this->tempBuilder->setOrder($order);
