@@ -5,6 +5,7 @@ namespace App\Repositories;
 
 use App\Lib\Data\Database;
 use App\Models\Scripts\ScriptData;
+use App\Models\Scripts\ScriptParam;
 use PDO;
 use PDOStatement;
 
@@ -26,7 +27,11 @@ abstract class Repository
     {
         $stmt = $this->pdo()->prepare($script);
         foreach($params as $key => $scriptParam)
-            $stmt->bindValue($key, $scriptParam->getValue(), $scriptParam->getType());
+        {
+            if ($scriptParam instanceof ScriptParam)
+               $stmt->bindValue($key, $scriptParam->getValue(), $scriptParam->getType());
+            else $stmt->bindValue($key, $scriptParam);
+        }
 
         $stmt->execute();
         return $stmt;

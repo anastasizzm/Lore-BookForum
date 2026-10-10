@@ -72,5 +72,13 @@ abstract class ScriptDirector
         return new ScriptData($sql, $params);
     }
 
+    public function getTempBuilder() : ScriptBuilder 
+    {
+        if ($this->tempBuilder === null)
+            throw new RuntimeException("Init temporary builder first with startTemp()");
+
+        return $this->tempBuilder->clone();
+    } 
+
     public abstract function getExistsScript(int $publicationId) : ScriptData;
 }

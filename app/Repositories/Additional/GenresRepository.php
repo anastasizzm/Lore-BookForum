@@ -8,6 +8,7 @@ use App\Extensions\ScriptBuilders\Additional\GenresScriptDirector;
 
 use PDO;
 use App\Lib\Data\Database;
+use App\Lib\I18n\Translator;
 
 use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
@@ -17,6 +18,7 @@ final class GenresRepository extends Repository
     private readonly GenresScriptDirector $director;
 
     public function __construct(
+        private readonly Translator $translator,
         Database $db
     ){
         parent::__construct($db);
@@ -30,7 +32,7 @@ final class GenresRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addGenreSelectTemp();
+        $this->director->startTempFilter()->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback());
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);

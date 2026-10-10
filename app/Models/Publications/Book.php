@@ -28,7 +28,7 @@ readonly class Book extends PublicationExtended
         public ?BasicModel $category,
         public string $publisher,
         public int $pagesCount,
-        public string $isbn,
+        public ?string $isbn,
         public Uuid $contentId
     ){
         parent::__construct(

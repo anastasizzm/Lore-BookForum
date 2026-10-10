@@ -4,25 +4,12 @@ declare(strict_types=1);
 namespace App\Extensions\ScriptBuilders;
 
 use App\Models\Scripts\ScriptParam;
+use RuntimeException;
 
 class ScriptBuilder
 {
-    private array $selectClauses;
-    private array $joinClauses;
-    private array $whereClauses;
-    private array $havingClauses;
-
-    private array $params;
-
-    private string $groupBy;
-    private string $orderBy;
-    private string $limit;
-
     private string $table;
-    private ?string $alias;
-
     private ?string $cache;
-
     private function clearCache()
     {
         $this->cache = NULL;
@@ -30,21 +17,20 @@ class ScriptBuilder
 
     protected function __construct(
         string $table = '',
-        ?string $alias = NULL
+        private ?string $alias = NULL,
+        private array $selectClauses = [],
+        private array $joinClauses = [],
+        private array $whereClauses = [],
+        private array $havingClauses = [],
+        private array $withClauses = [],
+        private bool $withRecursive = false,
+        private array $params = [],
+        private string $groupBy = '',
+        private string $orderBy = '',
+        private string $limit = '',
     ){
         $this->table = $table;
-        $this->alias = $alias;
-
         $this->cache = NULL;
-        $this->selectClauses = [];
-        $this->joinClauses = [];
-        $this->whereClauses = [];
-        $this->havingClauses = [];
-        $this->params = [];
-
-        $this->groupBy = '';
-        $this->orderBy = '';
-        $this->limit = '';
     }
 
     public static function withEmpty() : self
@@ -55,6 +41,24 @@ class ScriptBuilder
     public static function withTable(string $table, ?string $alias = NULL) : self
     {
         return new self($table, $alias);
+    }
+
+    public function clone() : self 
+    {
+        return new self(
+            $this->table,
+            $this->alias,
+            $this->selectClauses,
+            $this->joinClauses,
+            $this->whereClauses,
+            $this->havingClauses,
+            $this->withClauses,
+            $this->withRecursive,
+            $this->params,
+            $this->groupBy,
+            $this->orderBy ,
+            $this->limit
+        );
     }
 
     // --- setters
@@ -99,6 +103,34 @@ class ScriptBuilder
         $this->populateParams($params);
         $this->clearCache();
         return $this;
+    }
+
+    public function addWith(string $name, string $block, bool $materialized = false, array $params = []) : self 
+    {
+        $this->withClauses[$name] = [$block, $materialized];
+        $this->populateParams($params);
+        $this->clearCache();
+        return $this;
+    }
+
+    public function addWithRecursive(string $name, string $block, bool $materialized = false, array $params = []) : self 
+    {
+        $this->withRecursive = true;
+        return $this->addWith($name, $block, $materialized, $params);
+    }
+
+    public function addWithBuilder(string $name, ScriptBuilder $with, bool $materialized = false) : self 
+    {
+        $this->withClauses[$name] = [$with->build(), $materialized];
+        $this->populateParams($with->getParams());
+        $this->clearCache();
+        return $this;
+    } 
+
+    public function addWithBuilderRecursive(string $name, ScriptBuilder $with, bool $materialized = false) : self 
+    {
+        $this->withRecursive = true;
+        return $this->addWithBuilder($name, $with, $materialized);
     }
  
     public function setOrder(string $order, array $params = []) : self
@@ -186,6 +218,22 @@ class ScriptBuilder
         return $having;
     }
 
+    public function getWiths() : string 
+    {
+        $withs = implode(",\n\n", array_map(
+            static function (string $key, array $value){
+                $block = $value[0] ?? throw new RuntimeException("The with block is not provided");
+                $isMaterialized = $value[1] ?? false;
+                $materializedPart = $isMaterialized ? " MATERIALIZED " : ' ';
+                return "$key AS$materializedPart($block)";
+            },
+            array_keys($this->withClauses),
+            $this->withClauses
+        ));
+        if (!empty($withs)) $withs = "WITH" . ($this->withRecursive ? " RECURSIVE\n" : "\n") . $withs;
+        return $withs;
+    }
+
     public function getJoins() : string
     {
         return implode("\n", $this->joinClauses);
@@ -217,20 +265,22 @@ class ScriptBuilder
     {
         if (!empty($cache)) return $this->cache;
 
+        $withs = $this->getWiths();
         $select = $this->getSelect();
         $joins = $this->getJoins();
         $where = $this->getWhereAnd();
-        $order = $this->getOrderBy();
         $group = $this->getGroupBy();
+        $order = $this->getOrderBy();
         $having = $this->getHavingAnd();
         $limit = $this->getLimit();
 
         $sql = "
+            $withs
             $select
             $joins
             $where
-            $order
             $group
+            $order
             $having
             $limit
         ";
