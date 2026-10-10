@@ -220,8 +220,8 @@ class ScriptBuilder
         $select = $this->getSelect();
         $joins = $this->getJoins();
         $where = $this->getWhereAnd();
-        $order = $this->getOrderBy();
         $group = $this->getGroupBy();
+        $order = $this->getOrderBy();
         $having = $this->getHavingAnd();
         $limit = $this->getLimit();
 
@@ -229,8 +229,8 @@ class ScriptBuilder
             $select
             $joins
             $where
-            $order
             $group
+            $order
             $having
             $limit
         ";

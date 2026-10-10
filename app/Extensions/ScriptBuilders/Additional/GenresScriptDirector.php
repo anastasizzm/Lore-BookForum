@@ -30,20 +30,27 @@ final class GenresScriptDirector extends ScriptDirector
     public function startTempFilter() : self
     {
         $this->startTemp('genres');
+        $this->tempBuilder->addJoin("INNER JOIN genres_translations ON genres_translations.genre_id = genres.id")
+            ->addJoin("INNER JOIN languages ON languages.code = genres_translations.code AND languages.is_active");
         return $this;
     }
 
-    public function addGenreSelectTemp() : self
+    public function addGenreSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("genres.id,\ngenres.title,\ngenres.created_at");
+        $this->tempBuilder->addSelect("genres.id,\ngenres.created_at")
+            ->addSelect("COALESCE(
+                    MAX(CASE WHEN genres_translations.code = :currentCulture THEN genres_translations.title END),
+                    MAX(CASE WHEN genres_translations.code = :fallbackCulture THEN genres_translations.title END)
+                ) as title", [':currentCulture' => ScriptParam::asStr($currentLocale), ':fallbackCulture' => ScriptParam::asStr($fallbackLocale)])
+            ->setGroup("genres.id");
         return $this;
     }
 
     public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("genres.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
+        $this->tempBuilder->addWhere("genres_translations.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
         return $this;
     }
 
@@ -51,7 +58,7 @@ final class GenresScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $order = match($sort){
-            BasicModelSortBy::Alphabet => 'genres.title',
+            BasicModelSortBy::Alphabet => 'title',
             BasicModelSortBy::Newest => 'genres.created_at DESC',
         };
         $this->tempBuilder->setOrder($order);
