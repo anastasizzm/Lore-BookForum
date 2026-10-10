@@ -135,6 +135,8 @@ $items = array_map(
               'withBook'      => $publication !== null,
               'bookCover'     => $coverUrl,
               'bookTitle'     => $publication?->title  ?? '',
+              // Автор поста: ник в карточке ведёт на /users/{id}
+              'userId'        => (int) ($creator?->id ?? 0),
               'userInitials'  => $initials,
               'userName'      => $creator?->username   ?? '',
               // Сырой ключ аватара из БД ('cat', 'fox', 'default'...).
@@ -166,40 +168,58 @@ $items = array_map(
 <?php endif; ?>
 
 <!-- Шаблоны комментария под постом — ТЕ ЖЕ, что на book/article details
-     (клонирует comments.js): ник автора без @, лайк справа по центру,
-     под текстом дата и Reply, ответы — за кнопкой «View N more replies». -->
+     (клонирует comments.js): ник автора без @, три точки сверху справа
+     (только автору), внизу сердечко + Reply слева и дата справа,
+     ответы — за кнопкой «View N more replies». -->
 <template id="comment-card-template">
   <div class="comment-card">
     <div class="comment-card__inner">
       <div class="avatar avatar--sm"></div>
       <div class="comment-card__content">
-        <!-- Текст слева, лайк справа -->
+        <!-- Текст слева, «три точки» справа (на месте бывшего сердечка) -->
         <div class="comment-card__main">
           <div class="comment-card__head">
             <div class="comment-card__author" data-c-author></div>
             <div class="comment-card__text" data-c-text></div>
           </div>
 
-          <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) -->
-          <button type="button" class="btn-icon-small btn-like comment-card__like"
-                  data-like-btn
-                  data-like-id=""
-                  data-liked="0"
-                  aria-pressed="false" aria-label="Like">
-            <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span data-like-count>0</span>
-          </button>
+          <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
+               (comments.js скрывает врап, если authorId != мой id) -->
+          <div class="comment-card__actions" data-c-menu-wrap hidden>
+            <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
+                    aria-haspopup="true" aria-expanded="false" aria-label="Comment options">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="8" cy="3" r="1.5"/>
+                <circle cx="8" cy="8" r="1.5"/>
+                <circle cx="8" cy="13" r="1.5"/>
+              </svg>
+            </button>
+            <div class="comment-card__menu" data-c-menu hidden>
+              <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
+                      data-c-delete>Delete</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Под текстом: дата и кнопка ответа -->
+        <!-- Под текстом: сердечко + Reply слева, дата справа
+             (на одном уровне, под «тремя точками») -->
         <div class="comment-card__footer">
           <div class="comment-card__meta">
-            <span data-c-date></span>
+            <!-- Лайк комментария: общий обработчик card-feed.js (POST/DELETE /api/posts/{id}/like) -->
+            <button type="button" class="btn-icon-small btn-like comment-card__like"
+                    data-like-btn
+                    data-like-id=""
+                    data-liked="0"
+                    aria-pressed="false" aria-label="Like">
+              <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span data-like-count>0</span>
+            </button>
             <button type="button" class="comment-card__reply" data-reply-toggle
                     aria-expanded="false" aria-label="Reply">Reply</button>
           </div>
+          <span class="comment-card__date" data-c-date></span>
         </div>
 
         <!-- Ещё ниже: «View N more replies» / «Show less» (comments.js) -->
@@ -227,28 +247,49 @@ $items = array_map(
   <div class="comment-reply">
     <div class="avatar avatar--sm"></div>
     <div class="comment-reply__content">
-      <div class="comment-reply__body">
-        <div class="comment-reply__author"></div>
-        <div class="comment-reply__text"></div>
-        <!-- Под текстом: дата и Reply — как у основного комментария.
-             Ответ на ответ идёт в тот же плоский список (без вложенности) -->
-        <div class="comment-card__meta comment-reply__meta">
-          <span data-reply-date></span>
+      <!-- Текст слева, «три точки» справа (на месте бывшего сердечка) -->
+      <div class="comment-reply__row">
+        <div class="comment-reply__body">
+          <div class="comment-reply__author"></div>
+          <div class="comment-reply__text"></div>
+        </div>
+        <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
+             (comments.js скрывает врап, если authorId != мой id) -->
+        <div class="comment-card__actions comment-reply__actions" data-c-menu-wrap hidden>
+          <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
+                  aria-haspopup="true" aria-expanded="false" aria-label="Reply options">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="8" cy="3" r="1.5"/>
+              <circle cx="8" cy="8" r="1.5"/>
+              <circle cx="8" cy="13" r="1.5"/>
+            </svg>
+          </button>
+          <div class="comment-card__menu" data-c-menu hidden>
+            <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
+                    data-c-delete>Delete</button>
+          </div>
+        </div>
+      </div>
+      <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
+      <div class="comment-card__footer comment-reply__footer">
+        <div class="comment-card__meta">
+          <!-- Лайк ответа — как у комментария -->
+          <button type="button" class="btn-icon-small btn-like comment-reply__like"
+                  data-like-btn
+                  data-like-id=""
+                  data-liked="0"
+                  aria-pressed="false" aria-label="Like">
+            <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-like-count>0</span>
+          </button>
+          <!-- Ответ на ответ идёт в тот же плоский список (без вложенности) -->
           <button type="button" class="comment-card__reply" data-reply-toggle
                   aria-expanded="false" aria-label="Reply">Reply</button>
         </div>
+        <span class="comment-card__date" data-reply-date></span>
       </div>
-      <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
-      <button type="button" class="btn-icon-small btn-like comment-reply__like"
-              data-like-btn
-              data-like-id=""
-              data-liked="0"
-              aria-pressed="false" aria-label="Like">
-        <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span data-like-count>0</span>
-      </button>
     </div>
   </div>
 </template>

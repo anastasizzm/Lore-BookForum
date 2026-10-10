@@ -52,6 +52,13 @@ return function(Router $router)
     $router->get('/books', [App\Controllers\Publications\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
     $router->get('/books/saved', [App\Controllers\Publications\BooksController::class, 'savedList'], 'books.saved', AuthPolicy::Auth);
     $router->get('/books/{bookId}', [App\Controllers\Publications\BooksController::class, 'retrieve'], 'books.retrieve', AuthPolicy::Auth);
+    // Чтение книги (страница без JS: toolbar + canvas)
+    $router->get('/books/{bookId}/read', function (HttpContext $ctx, $bookId) {
+        return Response::html(View::render('book/book-read', [
+            'bookId' => (int) $bookId,
+            'page'   => max(1, (int) $ctx->query('page')),
+        ]));
+    }, 'books.read', AuthPolicy::Auth);
     
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
     $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
