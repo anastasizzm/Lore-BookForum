@@ -66,4 +66,8 @@ return [
             'name'    => $_ENV['MAIL_FROM_NAME'] ?? 'Lore',
         ],
     ],
+
+    'storage' => [
+        
+    ]
 ];

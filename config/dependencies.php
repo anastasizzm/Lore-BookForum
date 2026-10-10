@@ -5,7 +5,7 @@ use App\Http\RouteRegistry;
 use App\Http\UrlGenerator;
 use App\Http\RouteUrlGenerator;
 
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use App\Lib\Data\Database;
 use App\Lib\Data\RedisClient;
 use App\Lib\Container;
@@ -55,9 +55,9 @@ $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGener
     $settings,
     $c->get(Translator::class)));
 $container->instance(Translator::class, new Translator(
-    langPath: $settings->langPath,
-    fallback: $settings->defaultLocale,
-    available: $settings->availableLocales
+    langPath: $settings->i18n->path,
+    fallback: $settings->i18n->default,
+    available: $settings->i18n->available
 ));
 
 //Services

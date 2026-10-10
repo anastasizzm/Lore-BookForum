@@ -1,16 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Lib\Storage;
-
-final readonly class StoredFile
-{
-    public function __construct(
-        public string $path,
-        public string $mimeType,
-        public int    $size,
-    ) {}
-}
+namespace App\Storage;
 
 interface FileStorage
 {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Http\HttpException;
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use App\Http\Router;
 use App\Lib\Container;
 use App\Http\Pipeline;

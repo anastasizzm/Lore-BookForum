@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Lib\Data;
 
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use Redis;
 use RedisException;
 use RuntimeException;
@@ -23,17 +23,17 @@ final class RedisClient
         try {
             $redis = new Redis();
             $redis->connect(
-                $this->settings->redisHost,
-                $this->settings->redisPort,
+                $this->settings->redis->host,
+                $this->settings->redis->port,
                 timeout: 1.0,
             );
 
-            if ($this->settings->redisPassword !== '') {
-                $redis->auth($this->settings->redisPassword);
+            if ($this->settings->redis->password !== '') {
+                $redis->auth($this->settings->redis->password);
             }
 
-            if ($this->settings->redisDatabase > 0) {
-                $redis->select($this->settings->redisDatabase);
+            if ($this->settings->redis->database > 0) {
+                $redis->select($this->settings->redis->database);
             }
 
             return $this->redis = $redis;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Lib\Data;
 
 use PDO;
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use RuntimeException;
 
 final class Database

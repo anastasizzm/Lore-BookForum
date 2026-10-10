@@ -8,6 +8,7 @@ use Throwable;
 use App\Http\UrlGenerator;
 use App\Lib\I18n\Translator;
 use App\Constants;
+use App\Lib\Settings\Settings;
 
 final class View
 {
@@ -49,7 +50,7 @@ final class View
             throw new RuntimeException("Failed to take 'Translator' from container");
 
         foreach (
-            [$settings->pagesPath, $settings->layoutsPath, $settings->partialsPath]
+            [$settings->views->pages, $settings->views->layouts, $settings->views->partials]
             as $path
         ) {
             if (!is_dir($path)) {
@@ -255,9 +256,9 @@ final class View
         }
 
         $base = match ($type) {
-            'pages'    => $this->settings->pagesPath,
-            'layouts'  => $this->settings->layoutsPath,
-            'partials' => $this->settings->partialsPath,
+            'pages'    => $this->settings->views->pages,
+            'layouts'  => $this->settings->views->layouts,
+            'partials' => $this->settings->views->partials,
             default    => throw new RuntimeException("Unknown view type: $type"),
         };
 

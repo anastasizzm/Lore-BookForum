@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Lib;
 
+use App\Lib\Settings\Settings;
 use RuntimeException;
 
 final class Jwt
@@ -131,7 +132,7 @@ final class Jwt
             return false;
         }
 
-        $issuer = $this->settings->jwtIssuer ?? null;
+        $issuer = $this->settings->jwt->issuer ?? null;
         if ($issuer !== null && ($claims['iss'] ?? null) !== $issuer) {
             return false;
         }
@@ -150,7 +151,7 @@ final class Jwt
         $now = time();
 
         return [
-            'iss' => $this->settings->jwtIssuer,
+            'iss' => $this->settings->jwt->issuer,
             'sub' => (string) $userId,
             'typ' => $typ,
             'iat' => $now,
@@ -162,7 +163,7 @@ final class Jwt
 
     private function secret(): string
     {
-        $secret = $this->settings->jwtSecret ?? null;
+        $secret = $this->settings->jwt->secret ?? null;
 
         if ($secret === null || $secret === '') {
             throw new RuntimeException(
@@ -180,12 +181,12 @@ final class Jwt
 
     private function accessTtl(): int
     {
-        return max(60, $this->settings->jwtAccessTtl ?? 3600); // default 1 hour
+        return max(60, $this->settings->jwt->accessTtl ?? 3600); // default 1 hour
     }
 
     private function refreshTtl(): int
     {
-        return max(3600, $this->settings->jwtRefreshTtl ?? 60 * 60 * 24 * 30); // 30 days
+        return max(3600, $this->settings->jwt->refreshTtl ?? 60 * 60 * 24 * 30); // 30 days
     }
 
     private static function b64(string $data): string

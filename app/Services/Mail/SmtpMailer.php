@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Mail;
 
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 
 use App\Models\Email;
 
@@ -60,16 +60,16 @@ final class SmtpMailer implements Mailer
 
     private function buildMailer(): PHPMailer
     {
-        $s = $this->settings;
+        $s = $this->settings->mail;
         $m = new PHPMailer(exceptions: true);
 
         $m->isSMTP();
-        $m->Host       = $s->mailHost;
-        $m->Port       = $s->mailPort;
-        $m->SMTPAuth   = $s->mailUsername !== '';
-        $m->Username   = $s->mailUsername;
-        $m->Password   = $s->mailPassword;
-        $m->SMTPSecure = match ($s->mailEncryption) {
+        $m->Host       = $s->host;
+        $m->Port       = $s->port;
+        $m->SMTPAuth   = $s->username !== '';
+        $m->Username   = $s->username;
+        $m->Password   = $s->password;
+        $m->SMTPSecure = match ($s->encryption) {
             'tls'  => PHPMailer::ENCRYPTION_STARTTLS,
             'ssl'  => PHPMailer::ENCRYPTION_SMTPS,
             ''     => '',
@@ -77,8 +77,8 @@ final class SmtpMailer implements Mailer
         };
         $m->CharSet = 'UTF-8';
 
-        $m->setFrom($s->mailFromAddress, $s->mailFromName);
-        $m->Timeout = 10;   // секунд — не даём SMTP зависать
+        $m->setFrom($s->from->address, $s->from->name);
+        $m->Timeout = 10;
 
         return $m;
     }
