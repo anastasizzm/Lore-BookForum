@@ -135,6 +135,8 @@ $items = array_map(
               'withBook'      => $publication !== null,
               'bookCover'     => $coverUrl,
               'bookTitle'     => $publication?->title  ?? '',
+              // Автор поста: ник в карточке ведёт на /users/{id}
+              'userId'        => (int) ($creator?->id ?? 0),
               'userInitials'  => $initials,
               'userName'      => $creator?->username   ?? '',
               // Сырой ключ аватара из БД ('cat', 'fox', 'default'...).

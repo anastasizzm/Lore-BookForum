@@ -136,7 +136,9 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  // Показать/скрыть встроенный ввод поста («Reply» в строке поста)
+  // Показать/скрыть встроенный ввод поста («Reply» в строке поста).
+  // Ответ на пост (корневой комментарий) начинается со строки "@ник"
+  // его автора — карточка несёт data-author-username (card-feed.php)
   const toggleBtn = e.target.closest('[data-comment-toggle]');
   if (toggleBtn) {
     const card = toggleBtn.closest('.card-feed');
@@ -145,7 +147,18 @@ document.addEventListener('click', (e) => {
     const open = form.hidden;
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', String(open));
-    if (open) form.querySelector('.comment-form__input').focus();
+    if (open) {
+      const input = form.querySelector('.comment-form__input');
+      const target = card.dataset.authorUsername || '';
+      if (input) {
+        // Поле пустое либо в нём остался «голый» @ник — подставляем автора поста
+        if (target && (!input.value.trim() || /^@\S+\s*$/.test(input.value))) {
+          input.value = '@' + target + ' ';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        input.focus();
+      }
+    }
     return;
   }
 });
@@ -185,8 +198,18 @@ document.addEventListener('submit', async (e) => {
   setFeedMsg(errEl, '');
   setFeedMsg(statusEl, '');
 
-  const text = input.value.trim();
+  let text = input.value.trim();
   if (text === '') return;
+
+  // Ответ на пост всегда начинается с "@ник" его автора (как у ответов
+  // на комментарий в comments.js): если пользователь стёр префикс —
+  // возвращаем его перед отправкой
+  const postAuthor = card ? (card.dataset.authorUsername || '') : '';
+  if (postAuthor && window.LoreUsers && typeof window.LoreUsers.withMention === 'function') {
+    text = window.LoreUsers.withMention(text, postAuthor);
+    input.value = text;
+  }
+
   if (text.length > MAX) return setFeedMsg(errEl, `Max length is ${MAX} characters`);
   if (!Number(form.dataset.postId)) return setFeedMsg(errEl, 'postId is missing');
   if (!Number(form.elements.publicationId.value)) return setFeedMsg(errEl, 'publicationId is missing');
@@ -500,6 +523,48 @@ document.addEventListener('comment:created', (e) => {
   const detail = e.detail || {};
   if (!detail.id) return;
   fcAppendOwn(card, detail.id, detail.content || '');
+});
+
+/* ============================================
+   Название книги в посту -> details публикации.
+   В данных ленты (PublicationShort) нет типа публикации (book/article),
+   поэтому клик резолвит тип на лету: GET /books/{id} -> при 404
+   (renderNotFound) уходим на /articles/{id}. Результат кэшируется
+   по id, чтобы повторные клики не ходили в сеть.
+   ============================================ */
+const pubTypeCache = new Map();   // publicationId -> 'book' | 'article'
+
+function pubDetailsUrl(id, kind) {
+  return (kind === 'article' ? '/articles/' : '/books/') + id;
+}
+
+document.addEventListener('click', async (e) => {
+  const link = e.target.closest('[data-pub-link]');
+  if (!link) return;
+  if (e.defaultPrevented || e.button !== 0) return;
+  // Модификаторы (ctrl/cmd/shift) — не мешаем открытию в новой вкладке
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+
+  const id = Number(link.dataset.pubId);
+  if (!id) return;
+
+  let kind = pubTypeCache.get(id);
+  if (!kind) {
+    kind = 'book';
+    try {
+      const res = await fetch(pubDetailsUrl(id, 'book'), {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (res.status === 404) kind = 'article';
+    } catch (_) {
+      // Сеть недоступна — идём на страницу книги (стандартный фолбэк)
+    }
+    pubTypeCache.set(id, kind);
+  }
+
+  location.href = pubDetailsUrl(id, kind);
 });
 
 document.addEventListener('DOMContentLoaded', () => applyLikedState(document));

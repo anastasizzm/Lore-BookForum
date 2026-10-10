@@ -9,6 +9,7 @@
  *   $withBook      — true/false, показывать ли блок книги
  *   $bookCover     — обложка книги
  *   $bookTitle     — название книги
+ *   $userId        — id автора поста (ссылка на профиль: /users/{id})
  *   $userInitials  — инициалы
  *   $userAvatar    — ключ аватара из БД: 'cat', 'fox', ... или 'default'
  *                    (как его показать — решает partial avatar.php)
@@ -28,6 +29,7 @@ $publicationId = (int) ($publicationId ?? 0);
 $withBook      = $withBook     ?? false;
 $bookCover     = $bookCover    ?? '';
 $bookTitle     = $bookTitle    ?? '';
+$userId        = (int) ($userId ?? 0);
 $userInitials  = $userInitials ?? '';
 $userAvatar    = $userAvatar   ?? '';
 $userName      = $userName     ?? '';
@@ -47,9 +49,13 @@ $currentUserAvatar   = $currentUserAvatar   ?? '';
 $liked = (bool) ($liked ?? false);
 ?>
 <!-- data-publication-id — publicationId для ответа (comments.js),
-     data-cu-* — текущий юзер для оптимистичной вставки своего комментария -->
+     data-author-id/-username — автор поста: его профиль и @упоминание
+     в ответе (card-feed.js/users.js), data-cu-* — текущий юзер для
+     оптимистичной вставки своего комментария -->
 <article class="card-base card-feed" data-post-id="<?= $postId ?>"
          data-publication-id="<?= $publicationId ?>"
+         data-author-id="<?= $userId ?>"
+         data-author-username="<?= $view->e($userName) ?>"
          data-cu-initials="<?= $view->e($currentUserInitials) ?>"
          data-cu-name="<?= $view->e($currentUserName) ?>"
          data-cu-id="<?= $currentUserId ?>"
@@ -63,16 +69,22 @@ $liked = (bool) ($liked ?? false);
       <?php else: ?>
         <span class="card-feed__book-thumb cover--empty" aria-hidden="true"></span>
       <?php endif; ?>
-      <h3 class="card-feed__book-title"><?= $view->e($bookTitle) ?></h3>
+      <!-- Название книги ведёт в details публикации. Тип (book/article)
+           в данных ленты не приходит — резолвит card-feed.js
+           ([data-pub-link]: /books/{id}, при 404 — /articles/{id}) -->
+      <h3 class="card-feed__book-title">
+        <a class="card-feed__book-link" href="/books/<?= $publicationId ?>"
+           data-pub-link data-pub-id="<?= $publicationId ?>"><?= $view->e($bookTitle) ?></a>
+      </h3>
     </div>
   <?php endif; ?>
 
   <div class="card-feed__body-section<?= $withBook ? ' card-feed__body-section--with-book' : '' ?>">
     <!--
-      Пост = корневой комментарий (макет ленты): та же строка, что и у
-      комментариев ниже — 32px аватар, синий ник, тёмно-синий текст,
-      серая дата + синий Reply, сердце справа на уровне ника.
-      Reply раскрывает встроенный ввод (POST /api/posts/{postId}).
+      Пост = корневой комментарий: раскладка строки ТА ЖЕ, что у ответов
+      под ним — аватар, ник+текст, под текстом сердечко + Reply слева и
+      дата справа. Ник ведёт на профиль автора (/users/{id}).
+      Reply раскрывает встроенный ввод и подставляет @ник автора поста.
     -->
     <div class="card-feed__post">
       <div class="comment-card__inner">
@@ -84,28 +96,33 @@ $liked = (bool) ($liked ?? false);
         <div class="comment-card__content">
           <div class="comment-card__main">
             <div class="comment-card__head">
-              <div class="comment-card__author"><?= $view->e($userName) ?></div>
+              <div class="comment-card__author">
+                <?php if ($userId > 0): ?>
+                  <a href="/users/<?= $userId ?>" class="user-link"><?= $view->e($userName) ?></a>
+                <?php else: ?>
+                  <?= $view->e($userName) ?>
+                <?php endif; ?>
+              </div>
               <div class="comment-card__text"><?= nl2br($view->e($text)) ?></div>
             </div>
-
-            <!-- Лайк поста — та же кнопка, что у комментариев (card-feed.js) -->
-            <button type="button" class="btn-icon-small btn-like comment-card__like"
-                    data-like-btn data-liked="<?= $liked ? '1' : '0' ?>"
-                    aria-pressed="<?= $liked ? 'true' : 'false' ?>" aria-label="Like">
-              <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span data-like-count><?= (int)$likes ?></span>
-            </button>
           </div>
 
           <div class="comment-card__footer">
             <div class="comment-card__meta">
-              <span><?= $view->e($date) ?></span>
+              <!-- Лайк поста — та же кнопка, что у комментариев (card-feed.js) -->
+              <button type="button" class="btn-icon-small btn-like comment-card__like"
+                      data-like-btn data-liked="<?= $liked ? '1' : '0' ?>"
+                      aria-pressed="<?= $liked ? 'true' : 'false' ?>" aria-label="Like">
+                <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span data-like-count><?= (int)$likes ?></span>
+              </button>
               <!-- Reply открывает/закрывает встроенный ввод (card-feed.js) -->
               <button type="button" class="comment-card__reply"
                       data-comment-toggle aria-expanded="false" aria-label="Reply">Reply</button>
             </div>
+            <span class="comment-card__date"><?= $view->e($date) ?></span>
           </div>
 
           <!--

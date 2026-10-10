@@ -405,6 +405,18 @@ textarea.form-field__input {
   margin: 0;
 }
 
+/* Название книги — ссылка на details (/books/{id} | /articles/{id},
+   резолвит card-feed.js): выглядит как обычный заголовок */
+.card-feed__book-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-feed__book-link:hover,
+.card-feed__book-link:focus-visible {
+  text-decoration: underline;
+}
+
 .card-feed__body-section {
   display: flex;
   flex-direction: column;
