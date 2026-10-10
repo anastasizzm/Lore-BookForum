@@ -1,6 +1,7 @@
 <?php $view->extends('auth'); ?>
+<?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
-<?php $view->startBlock('title'); ?>Set new password — Lore<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.auth.newpass_tab') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,13 +14,13 @@
 
   <header class="login-card__header">
     <span class="login-card__logo">
-      <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
+      <img src="/assets/img/logo.svg" alt="<?= $tr('common.auth.logo_alt') ?>" width="56" height="56">
     </span>
-    <h1 class="login-card__title">Set new password</h1>
+    <h1 class="login-card__title"><?= $tr('common.auth.newpass_title') ?></h1>
   </header>
 
   <p class="login-card__text">
-    Create a new password for your account. It must be at least 8 characters long.
+    <?= $tr('common.auth.newpass_text') ?>
   </p>
 
   <?php
@@ -57,9 +58,9 @@
     <input type="hidden" name="token" value="<?= $view->e($token ?? ($form['token'] ?? '')) ?>">
 
     <div class="form-field">
-      <label class="visually-hidden" for="resetPassword">New password</label>
+      <label class="visually-hidden" for="resetPassword"><?= $tr('common.auth.newpass_label') ?></label>
       <input class="form-field__input" type="password" id="resetPassword" name="password"
-             placeholder="Enter new password" autocomplete="new-password" maxlength="64"
+             placeholder="<?= $tr('common.auth.newpass_placeholder') ?>" autocomplete="new-password" maxlength="64"
              aria-describedby="resetPasswordError">
       <p class="form-field__error" id="resetPasswordError" aria-live="polite"></p>
       <?php foreach (($errors['password'] ?? []) as $err): ?>
@@ -68,9 +69,9 @@
     </div>
 
     <div class="form-field">
-      <label class="visually-hidden" for="resetPasswordConfirm">Confirm new password</label>
+      <label class="visually-hidden" for="resetPasswordConfirm"><?= $tr('common.auth.newpass_repeat_label') ?></label>
       <input class="form-field__input" type="password" id="resetPasswordConfirm" name="password_confirm"
-             placeholder="Repeat new password" autocomplete="new-password" maxlength="64"
+             placeholder="<?= $tr('common.auth.newpass_repeat_placeholder') ?>" autocomplete="new-password" maxlength="64"
              aria-describedby="resetPasswordConfirmError">
       <p class="form-field__error" id="resetPasswordConfirmError" aria-live="polite"></p>
       <?php foreach (($errors['password_confirm'] ?? []) as $err): ?>
@@ -78,10 +79,10 @@
       <?php endforeach; ?>
     </div>
 
-    <button class="btn btn--primary" type="submit">Save new password</button>
+    <button class="btn btn--primary" type="submit"><?= $tr('common.auth.save_password') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->url('login') ?>">Back to sign in</a>
+      <a class="link" href="<?= $view->url('login') ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
     </div>
   </form>
 

@@ -1,4 +1,5 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php
 // userId из URL: /users/{id}/books или /users/{id}/articles
@@ -17,7 +18,7 @@ if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
     $userName = trim(($user->name ?? '') . ' ' . ($user->surname ?? ''));
     if ($userName === '') $userName = $user->username ?? '';
 }
-if ($userName === '') $userName = 'User #' . $userId;
+if ($userName === '') $userName = $view->t('common.profile.user_fallback', ['id' => $userId]);
 
 $filter_open = ($filterState ?? 'closed') === 'open';
 
@@ -27,7 +28,7 @@ $searchQuery = $q['q'] ?? '';
 $view->setBlock('selectedTab', 'profile');
 ?>
 
-<?php $view->startBlock('title'); ?>Publications of <?= $view->e($userName) ?> - Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.profile.publications_of', ['name' => $userName]) ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
@@ -40,21 +41,21 @@ ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => 'Search',
+    'placeholder' => $view->t('common.feed.search'),
     'value'       => $searchQuery,
 ]);
 ?>
 <button type="button"
         class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
         data-filter-toggle
-        aria-label="Filters">
+        aria-label="<?= $tr('common.common.filters') ?>">
   <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'Publications',
+    'title'   => $view->t('common.profile.publications'),
     'actions' => $pageActions,
 ]);
 
@@ -94,7 +95,7 @@ $view->include('library-filters', [
       </div>
       <div>
         <h2 class="books-panel__title"><?= $view->e($userName) ?></h2>
-        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> items</p>
+        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> <?= $tr('common.common.items') ?></p>
       </div>
     </div>
   </header>
@@ -103,7 +104,7 @@ $view->include('library-filters', [
 
     <div class="empty-state">
       <p class="empty-state__text">
-        <?= $isArticles ? 'No articles yet.' : 'No books yet.' ?>
+        <?= $isArticles ? $tr('common.library.no_articles') : $tr('common.library.no_books') ?>
       </p>
     </div>
 

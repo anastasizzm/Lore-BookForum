@@ -115,15 +115,22 @@ if (!empty($book->iconId)) {
 
 /* ---------- Статус чтения -> кнопка ---------- */
 
+// Короткий помощник: перевод + экранирование (ключи — resources/lang/*/common.json)
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+
 $readingButtons = [
-    'new'         => ['label' => 'Start reading',  'modifier' => 'start'],
-    'in_progress' => ['label' => 'Resume reading', 'modifier' => 'resume'],
-    'finished'    => ['label' => 'Read again',     'modifier' => 'again'],
+    'new'         => ['label' => $view->t('common.book.start'),  'modifier' => 'start'],
+    'in_progress' => ['label' => $view->t('common.book.resume'), 'modifier' => 'resume'],
+    'finished'    => ['label' => $view->t('common.book.again'),  'modifier' => 'again'],
 ];
 if (!isset($readingButtons[$readingStatus])) {
     $readingStatus = 'new';
 }
 $readingBtn = $readingButtons[$readingStatus];
+
+// Читалка: GET /books/{id}/read. «Resume» продолжит с сохранённой страницы
+// (её помнит book-read.js), «Read again» открывает с первой.
+$readHref = '/books/' . $bookId . '/read' . ($readingStatus === 'finished' ? '?page=1' : '');
 
 /* ---------- Комментарии ---------- */
 /**
@@ -156,7 +163,7 @@ $meAvatar = (string) ($me->avatar ?? '');
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
 
-<?php $view->startBlock('title'); ?>Book details<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.book.page_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
@@ -165,14 +172,14 @@ $meAvatar = (string) ($me->avatar ?? '');
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
-    <h1 class="book-page-title">Book details</h1>
+    <h1 class="book-page-title"><?= $tr('common.book.page_title') ?></h1>
   </div>
 
   <div class="book-details">
     <div class="book-details__cover-col">
       <div class="book-details__cover">
         <img src="<?= $view->e($coverUrl) ?>"
-             alt="<?= $view->e($book->title ?? '') ?> cover"
+             alt="<?= $tr('common.book.cover_alt', ['title' => (string) ($book->title ?? '')]) ?>"
              onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
       </div>
 
@@ -183,15 +190,15 @@ $meAvatar = (string) ($me->avatar ?? '');
                 data-book-id="<?= $bookId ?>"
                 data-save-url="/api/books/<?= $bookId ?>/save"
                 aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
-                aria-label="<?= $isSaved ? 'Remove from saved' : 'Save book' ?>">
+                aria-label="<?= $isSaved ? $tr('common.book.unsave') : $tr('common.book.save') ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
         </button>
-        <button type="button"
-                class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
-                data-start-reading
-                data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></button>
+        <a href="<?= $view->e($readHref) ?>"
+           class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
+           data-start-reading
+           data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></a>
       </div>
 
       <div class="book-rating">
@@ -199,7 +206,7 @@ $meAvatar = (string) ($me->avatar ?? '');
           <span class="book-rating__stars"
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
-                aria-label="Rating <?= $view->e(number_format($rating, 1)) ?> out of 5">
+                aria-label="<?= $tr('common.book.rating_aria', ['value' => number_format($rating, 1)]) ?>">
             ★★★★★
           </span>
           <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
@@ -212,8 +219,8 @@ $meAvatar = (string) ($me->avatar ?? '');
         </span>
       </div>
 
-      <div class="rate" data-rate role="radiogroup" aria-label="Rate this book">
-        <span class="rate__label">Click to Rate:</span>
+      <div class="rate" data-rate role="radiogroup" aria-label="<?= $tr('common.book.rate_group') ?>">
+        <span class="rate__label"><?= $tr('common.book.rate_label') ?></span>
         <div class="rate__stars">
           <?php for ($i = 1; $i <= 5; $i++): ?>
             <button type="button"
@@ -221,7 +228,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                     data-rate-value="<?= $i ?>"
                     role="radio"
                     aria-checked="false"
-                    aria-label="<?= $i ?> out of 5">
+                    aria-label="<?= $tr('common.book.rate_star', ['value' => $i]) ?>">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
               </svg>
@@ -234,21 +241,21 @@ $meAvatar = (string) ($me->avatar ?? '');
     <div class="card-base info-box">
       <h2 class="info-box__title"><?= $view->e($book->title ?? '') ?></h2>
       <p class="info-box__meta"><?= $view->e($authorName) ?></p>
-      <p class="info-box__meta">Creation date: <?= $view->e($createdAt) ?></p>
+      <p class="info-box__meta"><?= $tr('common.book.created', ['value' => $createdAt]) ?></p>
       <?php if ($genreTitle !== ''): ?>
-        <p class="info-box__meta">Genre: <?= $view->e($genreTitle) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.genre', ['value' => $genreTitle]) ?></p>
       <?php endif; ?>
       <?php if ($categoryTitle !== ''): ?>
-        <p class="info-box__meta">Category: <?= $view->e($categoryTitle) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.category', ['value' => $categoryTitle]) ?></p>
       <?php endif; ?>
       <?php if ($seriesTitle !== ''): ?>
-        <p class="info-box__meta">Book series: <?= $view->e($seriesTitle) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.series', ['value' => $seriesTitle]) ?></p>
       <?php endif; ?>
       <?php if ($publisherTitle !== ''): ?>
-        <p class="info-box__meta">Publisher: <?= $view->e($publisherTitle) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.publisher', ['value' => $publisherTitle]) ?></p>
       <?php endif; ?>
       <?php if ($isbn !== ''): ?>
-        <p class="info-box__meta">ISBN: <?= $view->e($isbn) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.isbn', ['value' => $isbn]) ?></p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
@@ -256,8 +263,8 @@ $meAvatar = (string) ($me->avatar ?? '');
           $view->include('tabs', [
               'variant' => 'outline',
               'items'   => [
-                  ['label' => 'Annotation', 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => 'Table of contents', 'href' => '#toc', 'active' => false, 'row' => 'toc'],
+                  ['label' => $view->t('common.book.tab_annotation'), 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
+                  ['label' => $view->t('common.book.tab_toc'), 'href' => '#toc', 'active' => false, 'row' => 'toc'],
               ],
           ]);
         ?>
@@ -266,12 +273,12 @@ $meAvatar = (string) ($me->avatar ?? '');
           <?php if ($annotation !== ''): ?>
             <p class="info-box__body"><?= nl2br($view->e($annotation)) ?></p>
           <?php else: ?>
-            <p class="info-box__body">Annotation is not available yet.</p>
+            <p class="info-box__body"><?= $tr('common.book.no_annotation') ?></p>
           <?php endif; ?>
 
           <?php if ($authorNote !== ''): ?>
             <div class="book-tabs-panel__note">
-              <strong>Author's Note:</strong><br>
+              <strong><?= $tr('common.book.author_note') ?></strong><br>
               <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
@@ -279,7 +286,7 @@ $meAvatar = (string) ($me->avatar ?? '');
 
         <div class="card-base book-tabs-panel__content" data-row="toc" hidden>
           <?php if (empty($tableOfContents)): ?>
-            <p class="info-box__body">Table of contents is not available yet.</p>
+            <p class="info-box__body"><?= $tr('common.book.no_toc') ?></p>
           <?php else: ?>
             <ol class="info-box__body">
               <?php foreach ($tableOfContents as $chapter): ?>
@@ -303,7 +310,7 @@ $meAvatar = (string) ($me->avatar ?? '');
            data-me-initials="<?= $view->e($meInitials) ?>"
            data-me-avatar="<?= $view->e($meAvatar ?? '') ?>">
     <h2 class="comments-section__title">
-      Comments: <span data-comments-count><?= (int) $totalComments ?></span>
+      <?= $tr('common.comments.title') ?> <span data-comments-count><?= (int) $totalComments ?></span>
     </h2>
 
     <!--
@@ -330,9 +337,9 @@ $meAvatar = (string) ($me->avatar ?? '');
           <div class="comment-card__row">
             <input class="comment-card__input" type="text" name="content"
                    maxlength="2000" autocomplete="off"
-                   placeholder="Input comments...">
+                   placeholder="<?= $tr('common.comments.placeholder') ?>">
             <!-- Кнопка отправки (галочка): без неё Enter не выглядел «отправкой» (P0-2) -->
-            <button type="submit" class="comment-card__send" data-comment-send disabled aria-label="Send comment">
+            <button type="submit" class="comment-card__send" data-comment-send disabled aria-label="<?= $tr('common.comments.send') ?>">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -347,7 +354,7 @@ $meAvatar = (string) ($me->avatar ?? '');
     </form>
 
     <p class="comments-section__empty" data-comments-empty<?= empty($comments) ? '' : ' hidden' ?>>
-      Be the first to comment.
+      <?= $tr('common.comments.first') ?>
     </p>
 
     <!-- Список комментариев: сервер его не передаёт, book.js наполняет из API (P0-5) -->
@@ -384,7 +391,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                         data-like-btn
                         data-like-id="<?= $cId ?>"
                         data-liked="<?= $cLiked ? '1' : '0' ?>"
-                        aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="Like">
+                        aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="<?= $tr('common.comments.like') ?>">
                   <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -397,7 +404,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                 <div class="comment-card__meta">
                   <span><?= $view->e($comment['date']) ?></span>
                   <button type="button" class="comment-card__reply" data-reply-toggle
-                          aria-expanded="false" aria-label="Reply">Reply</button>
+                          aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
                 </div>
               </div>
 
@@ -406,8 +413,8 @@ $meAvatar = (string) ($me->avatar ?? '');
               <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
               <form class="comment-reply-form" data-reply-form hidden>
-                <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-                <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+                <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+                <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -442,7 +449,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                     data-like-btn
                     data-like-id=""
                     data-liked="0"
-                    aria-pressed="false" aria-label="Like">
+                    aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
               <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -455,7 +462,7 @@ $meAvatar = (string) ($me->avatar ?? '');
             <div class="comment-card__meta">
               <span data-c-date></span>
               <button type="button" class="comment-card__reply" data-reply-toggle
-                      aria-expanded="false" aria-label="Reply">Reply</button>
+                      aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
             </div>
           </div>
 
@@ -463,8 +470,8 @@ $meAvatar = (string) ($me->avatar ?? '');
           <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
           <form class="comment-reply-form" data-reply-form hidden>
-            <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-            <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+            <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+            <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -497,7 +504,7 @@ $meAvatar = (string) ($me->avatar ?? '');
           <div class="comment-card__meta comment-reply__meta">
             <span data-reply-date></span>
             <button type="button" class="comment-card__reply" data-reply-toggle
-                    aria-expanded="false" aria-label="Reply">Reply</button>
+                    aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
           </div>
         </div>
         <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
@@ -505,7 +512,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                 data-like-btn
                 data-like-id=""
                 data-liked="0"
-                aria-pressed="false" aria-label="Like">
+                aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
           <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>

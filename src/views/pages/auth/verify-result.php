@@ -1,6 +1,7 @@
 <?php $view->extends('auth'); ?>
+<?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
-<?php $view->startBlock('title'); ?>Email verification<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.auth.verify_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +14,7 @@
 
   <header class="login-card__header">
     <span class="login-card__logo">
-      <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
+      <img src="/assets/img/logo.svg" alt="<?= $tr('common.auth.logo_alt') ?>" width="56" height="56">
     </span>
   </header>
 
@@ -25,7 +26,7 @@
 
     <?php if (!empty($success)): ?>
       <a class="btn btn--primary" href="<?= $view->url('login') ?>">
-        Sign in
+        <?= $tr('common.auth.sign_in') ?>
       </a>
     <?php else:
       /*
@@ -49,7 +50,7 @@
         <input type="hidden" name="token" value="<?= $view->e($verifyToken) ?>">
 
         <button type="submit" class="btn btn--primary" data-verify-retry>
-          Resend verification
+          <?= $tr('common.auth.resend') ?>
         </button>
       </form>
     <?php endif; ?>

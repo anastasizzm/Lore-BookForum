@@ -1,8 +1,9 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'saved'); ?>
 
-<?php $view->startBlock('title'); ?>Saved — Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.saved.title') ?> — <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('content'); ?>
 
@@ -50,9 +51,9 @@ $f = match ($statusParam) {
 // Сортировка — тот же ключ 'sort' и те же значения, что в library-list.
 // Пустой sort у бэкенда = Newest (PublicationsSortBy::Newest).
 $sortOptions = $sortOptions ?? [
-    'newest'     => 'Newest',
-    'popularity' => 'Popularity',
-    'alpha'      => 'A to Z',
+    'newest'     => $view->t('common.sort.newest'),
+    'popularity' => $view->t('common.sort.popularity'),
+    'alpha'      => $view->t('common.sort.alpha'),
 ];
 $sort = $currentSort ?? ($_GET['sort'] ?? '');
 if (!is_string($sort) || !isset($sortOptions[$sort])) $sort = 'newest';
@@ -102,22 +103,22 @@ ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => 'Search saved books',
+    'placeholder' => $view->t('common.saved.search'),
     'value'       => $q,
 ]);
 ?>
 <button type="button"
         class="btn-icon filter-toggle"
         data-filter-toggle
-        aria-label="Filters">
+        aria-label="<?= $tr('common.common.filters') ?>">
   <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
-    'title'    => 'Saved',
-    'subtitle' => 'Your bookmarked books, discussions, and reading lists.',
+    'title'    => $view->t('common.saved.title'),
+    'subtitle' => $view->t('common.saved.subtitle'),
     'actions'  => $pageActions,
 ]);
 
@@ -134,9 +135,9 @@ $view->include('library-filters', [
 
   <div class="empty-state">
     <p class="empty-state__text">
-      You have no saved books yet.
-      <a href="<?= $view->e($view->url('books')) ?>" class="link">Browse the library</a>
-      and save what you like.
+      <?= $tr('common.saved.empty_before') ?>
+      <a href="<?= $view->e($view->url('books')) ?>" class="link"><?= $tr('common.saved.empty_link') ?></a>
+      <?= $tr('common.saved.empty_after') ?>
     </p>
   </div>
 
@@ -155,9 +156,9 @@ $view->include('library-filters', [
           </svg>
         </div>
         <div>
-          <h2 class="books-panel__title">Saved books</h2>
+          <h2 class="books-panel__title"><?= $tr('common.saved.panel_title') ?></h2>
           <p class="books-panel__meta">
-            <span data-saved-count><?= $shown ?></span><?= $hasNext ? '+' : '' ?> items · Updated today
+            <span data-saved-count><?= $shown ?></span><?= $hasNext ? '+' : '' ?> <?= $tr('common.saved.meta_suffix') ?>
           </p>
         </div>
       </div>
@@ -178,7 +179,7 @@ $view->include('library-filters', [
           ];
       }
       $view->include('dropdown', [
-          'label'   => 'Sort: ' . $sortLabel,
+          'label'   => $view->t('common.sort.label', ['value' => $sortLabel]),
           'key'     => 'sort',
           'options' => $sortDropdown,
       ]);
@@ -187,9 +188,9 @@ $view->include('library-filters', [
 
     <?php if (empty($cards)): ?>
       <p class="empty-state__text">
-        <?= $q !== '' ? 'Nothing found for your search.' : 'No books here yet.' ?>
+        <?= $q !== '' ? $tr('common.saved.not_found') : $tr('common.saved.none_here') ?>
         <?php if ($page > 1): ?>
-          <a href="<?= $view->e($link(['q' => $q])) ?>" class="link">Back to the first page</a>
+          <a href="<?= $view->e($link(['q' => $q])) ?>" class="link"><?= $tr('common.saved.first_page') ?></a>
         <?php endif; ?>
       </p>
     <?php else: ?>
@@ -206,19 +207,19 @@ $view->include('library-filters', [
 
     <!-- Показывается из saved.js, когда на странице сняли закладки со всех книг -->
     <p class="empty-state__text" data-saved-empty hidden>
-      No saved books left on this page.
-      <a href="<?= $view->e($link(['q' => $q])) ?>" class="link">Reload</a>
+      <?= $tr('common.saved.none_left') ?>
+      <a href="<?= $view->e($link(['q' => $q])) ?>" class="link"><?= $tr('common.saved.reload') ?></a>
     </p>
 
     <?php if ($page > 1 || $hasNext): ?>
-      <nav class="books-panel__pager" aria-label="Pagination">
+      <nav class="books-panel__pager" aria-label="<?= $tr('common.saved.pagination') ?>">
         <?php if ($page > 1): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'page' => $page > 2 ? $page - 1 : null])) ?>">Previous</a>
+             href="<?= $view->e($link(['q' => $q, 'page' => $page > 2 ? $page - 1 : null])) ?>"><?= $tr('common.saved.prev') ?></a>
         <?php endif; ?>
         <?php if ($hasNext): ?>
           <a class="btn btn--secondary"
-             href="<?= $view->e($link(['q' => $q, 'page' => $page + 1])) ?>">Next</a>
+             href="<?= $view->e($link(['q' => $q, 'page' => $page + 1])) ?>"><?= $tr('common.saved.next') ?></a>
         <?php endif; ?>
       </nav>
     <?php endif; ?>

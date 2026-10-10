@@ -1,6 +1,7 @@
 <?php $view->extends('auth'); ?>
+<?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
-<?php $view->startBlock('title'); ?>Reset password — Lore<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.auth.forgot_tab') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,13 +14,13 @@
 
   <header class="login-card__header">
     <span class="login-card__logo">
-      <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
+      <img src="/assets/img/logo.svg" alt="<?= $tr('common.auth.logo_alt') ?>" width="56" height="56">
     </span>
-    <h1 class="login-card__title">Forgot password?</h1>
+    <h1 class="login-card__title"><?= $tr('common.auth.forgot_title') ?></h1>
   </header>
 
   <p class="login-card__text">
-    Enter the email you signed up with and we'll send you a link to set a new password.
+    <?= $tr('common.auth.forgot_text') ?>
   </p>
 
   <?php
@@ -52,10 +53,10 @@
     <?= $view->csrfField() ?>
 
     <div class="form-field">
-      <label class="visually-hidden" for="passwordEmail">Email</label>
+      <label class="visually-hidden" for="passwordEmail"><?= $tr('common.auth.email_label') ?></label>
       <input class="form-field__input" type="email" id="passwordEmail" name="email"
              value="<?= $view->e($form['email'] ?? '') ?>"
-             placeholder="Enter email" autocomplete="email" maxlength="254"
+             placeholder="<?= $tr('common.auth.email_placeholder') ?>" autocomplete="email" maxlength="254"
              aria-describedby="passwordEmailError">
       <p class="form-field__error" id="passwordEmailError" aria-live="polite"></p>
       <?php foreach (($errors['email'] ?? []) as $err): ?>
@@ -63,10 +64,10 @@
       <?php endforeach; ?>
     </div>
 
-    <button class="btn btn--primary" type="submit">Send reset link</button>
+    <button class="btn btn--primary" type="submit"><?= $tr('common.auth.send_link') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->url('login') ?>">Back to sign in</a>
+      <a class="link" href="<?= $view->url('login') ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
     </div>
   </form>
 

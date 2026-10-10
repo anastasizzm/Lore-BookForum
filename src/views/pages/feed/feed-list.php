@@ -1,8 +1,9 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'for-you'); ?>
 
-<?php $view->startBlock('title'); ?>For you — Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.feed.title') ?> — <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('content'); ?>
 
@@ -43,13 +44,13 @@ ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => 'Search',
+    'placeholder' => $view->t('common.feed.search'),
     'value'       => $searchQuery ?? '',
 ]);
 $searchHtml = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'For you',
+    'title'   => $view->t('common.feed.title'),
     'actions' => $searchHtml,
 ]);
 ?>
@@ -86,7 +87,7 @@ $items = array_map(
 <?php if (empty($items)): ?>
 
   <div class="empty-state">
-    <p class="empty-state__text">No posts yet. Be the first to share your thoughts.</p>
+    <p class="empty-state__text"><?= $tr('common.feed.empty') ?></p>
   </div>
 
 <?php else: ?>
@@ -158,7 +159,7 @@ $items = array_map(
     <?php if (($meta['hasNext'] ?? false)): ?>
       <div class="feed-panel__load-more">
         <a href="?page=<?= ($meta['page'] ?? 1) + 1 ?><?= !empty($searchQuery) ? '&q=' . urlencode($searchQuery) : '' ?>"
-           class="btn btn--secondary">Load more</a>
+           class="btn btn--secondary"><?= $tr('common.common.load_more') ?></a>
       </div>
     <?php endif; ?>
   </div>
@@ -185,7 +186,7 @@ $items = array_map(
                   data-like-btn
                   data-like-id=""
                   data-liked="0"
-                  aria-pressed="false" aria-label="Like">
+                  aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
             <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -198,7 +199,7 @@ $items = array_map(
           <div class="comment-card__meta">
             <span data-c-date></span>
             <button type="button" class="comment-card__reply" data-reply-toggle
-                    aria-expanded="false" aria-label="Reply">Reply</button>
+                    aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
           </div>
         </div>
 
@@ -206,8 +207,8 @@ $items = array_map(
         <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
         <form class="comment-reply-form" data-reply-form hidden>
-          <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-          <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+          <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+          <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -235,7 +236,7 @@ $items = array_map(
         <div class="comment-card__meta comment-reply__meta">
           <span data-reply-date></span>
           <button type="button" class="comment-card__reply" data-reply-toggle
-                  aria-expanded="false" aria-label="Reply">Reply</button>
+                  aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
         </div>
       </div>
       <!-- Лайк ответа — как у комментария: справа и отцентрирован -->
@@ -243,7 +244,7 @@ $items = array_map(
               data-like-btn
               data-like-id=""
               data-liked="0"
-              aria-pressed="false" aria-label="Like">
+              aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
         <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>

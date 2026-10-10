@@ -1,8 +1,9 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'profile'); ?>
 
-<?php $view->startBlock('title'); ?>Edit profile - Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.profile.edit') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/profile.css') ?>">
@@ -37,8 +38,8 @@ if ($initials === '') {
 ?>
 
 <?php $view->include('page-header', [
-    'title'    => 'Edit profile',
-    'subtitle' => 'Update your personal information and account credentials.',
+    'title'    => $view->t('common.profile.edit'),
+    'subtitle' => $view->t('common.profile.edit_subtitle'),
 ]); ?>
 
 <div class="profile-edit-grid">
@@ -57,11 +58,11 @@ if ($initials === '') {
       <?= $view->csrfField() ?>
       <input type="hidden" name="_method" value="PUT">
 
-      <h2 class="profile-edit__section-title">Profile</h2>
+      <h2 class="profile-edit__section-title"><?= $tr('common.profile.section_profile') ?></h2>
 
-      <h3 class="profile-edit__section-subtitle">Avatar</h3>
+      <h3 class="profile-edit__section-subtitle"><?= $tr('common.profile.avatar') ?></h3>
 
-      <div class="avatar-picker" role="radiogroup" aria-label="Choose an avatar">
+      <div class="avatar-picker" role="radiogroup" aria-label="<?= $tr('common.profile.avatar_aria') ?>">
         <?php foreach ($avatarOptions as $id => $preset): ?>
           <label class="avatar-picker__option" data-avatar="<?= $view->e($id) ?>">
             <input type="radio"
@@ -88,7 +89,7 @@ if ($initials === '') {
       <div class="form-row--two-cols">
 
         <div class="form-field">
-          <label for="profileName">Name</label>
+          <label for="profileName"><?= $tr('common.profile.name') ?></label>
           <input class="form-field__input"
                  type="text"
                  id="profileName"
@@ -105,7 +106,7 @@ if ($initials === '') {
         </div>
 
         <div class="form-field">
-          <label for="profileSurname">Surname</label>
+          <label for="profileSurname"><?= $tr('common.profile.surname') ?></label>
           <input class="form-field__input"
                  type="text"
                  id="profileSurname"
@@ -124,19 +125,19 @@ if ($initials === '') {
       </div>
 
       <div class="form-field">
-        <label for="profileBio">Biography</label>
+        <label for="profileBio"><?= $tr('common.profile.bio') ?></label>
         <textarea class="form-field__input form-field__input--textarea"
                   id="profileBio"
                   name="bio"
                   rows="6"
                   maxlength="500"
-                  placeholder="Tell readers about yourself..."><?= $view->e($val('bio')) ?></textarea>
+                  placeholder="<?= $tr('common.profile.bio_placeholder') ?>"><?= $view->e($val('bio')) ?></textarea>
         <p class="form-field__error" data-error-for="bio"></p>
       </div>
 
       <div class="profile-edit__actions">
-        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>">Cancel</a>
-        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>"><?= $tr('common.common.cancel') ?></a>
+        <button class="btn btn--primary" type="submit"><?= $tr('common.profile.save_changes') ?></button>
       </div>
     </form>
 
@@ -156,10 +157,10 @@ if ($initials === '') {
       <?= $view->csrfField() ?>
       <input type="hidden" name="_method" value="PUT">
 
-      <h2 class="profile-edit__section-title">Account credentials</h2>
+      <h2 class="profile-edit__section-title"><?= $tr('common.profile.account_title') ?></h2>
 
       <div class="form-field">
-        <label for="profileUsername">Username</label>
+        <label for="profileUsername"><?= $tr('common.profile.username') ?></label>
         <input class="form-field__input"
                type="text"
                id="profileUsername"
@@ -177,7 +178,7 @@ if ($initials === '') {
       </div>
 
       <div class="form-field">
-        <label for="profileEmail">Email</label>
+        <label for="profileEmail"><?= $tr('common.profile.email') ?></label>
         <input class="form-field__input"
                type="email"
                id="profileEmail"
@@ -194,8 +195,8 @@ if ($initials === '') {
       </div>
 
       <div class="profile-edit__actions">
-        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>">Cancel</a>
-        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>"><?= $tr('common.common.cancel') ?></a>
+        <button class="btn btn--primary" type="submit"><?= $tr('common.profile.save_changes') ?></button>
       </div>
     </form>
 
