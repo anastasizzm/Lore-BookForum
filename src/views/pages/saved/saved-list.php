@@ -10,18 +10,12 @@
 <?php
 /**
  * Данные от BooksController::savedList / ArticlesController::savedList:
- *   $items — массив Publication (id, title, iconId, creator, getCreatorId()...)
+ *   $items — массив Publication
  *   $meta  — ['page', 'pageSize', 'hasNext', 'type']
- * Необязательно: $searchQuery, $currentSort, $sortOptions (иначе берутся из ?q= и ?sort=)
  */
 $items    = $items ?? [];
 $meta     = $meta  ?? [];
 
-/**
- * Бэкенд отдаёт элементы обёрнутыми в WithContext<TItem, TContext> (item + контекст
- * юзера: isSaved / isEditor / readingStatus). Вьюхе нужен сам объект публикации —
- * разворачиваем, чтобы не ловить "undefined property" и "getCreatorId() on WithContext".
- */
 $items = array_map(
     static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
     $items
@@ -30,15 +24,11 @@ $page     = max(1, (int) ($meta['page'] ?? 1));
 $pageSize = (int) ($meta['pageSize'] ?? 0);
 $hasNext  = (bool) ($meta['hasNext'] ?? false);
 
+$isArticles = ($meta['type'] ?? 'book') === 'article';
+
 $q = $searchQuery ?? ($_GET['q'] ?? '');
 $q = is_string($q) ? trim($q) : '';
 
-// ВАЖНО: 'f' занят под состояние панели фильтров (open/closed) в app.js.
-// Табы Saved фильтруются параметром 'status' — ровно тем, что читает бэкенд
-// (App\Models\Enums\ReadingStatus: none | reading | ended):
-//   status=reading -> 'To read', status=ended -> 'Finished', иначе -> 'All'.
-// Старый ?rf=to-read|finished здесь намеренно не читается: его бэкенд игнорирует,
-// из-за чего подсвеченный таб расходился с реально отрисованным списком.
 $statusParam = strtolower((string) ($_GET['status'] ?? ''));
 if (!in_array($statusParam, ['reading', 'ended'], true)) $statusParam = null;
 
@@ -48,8 +38,6 @@ $f = match ($statusParam) {
     default   => 'all',
 };
 
-// Сортировка — тот же ключ 'sort' и те же значения, что в library-list.
-// Пустой sort у бэкенда = Newest (PublicationsSortBy::Newest).
 $sortOptions = $sortOptions ?? [
     'newest'     => $view->t('common.sort.newest'),
     'popularity' => $view->t('common.sort.popularity'),
@@ -59,10 +47,8 @@ $sort = $currentSort ?? ($_GET['sort'] ?? '');
 if (!is_string($sort) || !isset($sortOptions[$sort])) $sort = 'newest';
 $sortLabel = $sortOptions[$sort];
 
-// TODO: уточнить у бэка, как отдаются обложки по icon_id (files.id)
 $coversBase = '/uploads/covers/';
 
-// Publication -> параметры для card-book
 $cards = [];
 foreach ($items as $p) {
     $creator = $p->creator ?? null;
@@ -81,24 +67,29 @@ foreach ($items as $p) {
     ];
 }
 
-// Ссылки сохраняют поиск, фильтр и сортировку
-$baseUrl = $view->url('books.saved');
-$link = static function (array $params) use ($baseUrl, $sort, $statusParam): string {
-    // текущие ?sort= и ?status= не должны теряться; явное значение в $params главнее
-    $params += ['sort' => $sort === 'newest' ? null : $sort, 'status' => $statusParam];
+// Локаль для всех ссылок страницы: если её не сохранять, клик по сортировке
+// или пагинации уводит на URL без ?lang=, и бэк переключается на fallback.
+$currentLang = $_GET['lang'] ?? null;
+if (!is_string($currentLang) || $currentLang === '') {
+    $currentLang = method_exists($view, 'locale') ? $view->locale() : null;
+}
 
+$baseUrl = $view->url('books.saved');
+$link = static function (array $params) use ($baseUrl, $sort, $statusParam, $currentLang): string {
+    $params += [
+        'sort'   => $sort === 'newest' ? null : $sort,
+        'status' => $statusParam,
+        'lang'   => $currentLang,
+    ];
     $params = array_filter($params, static fn($v) => $v !== null && $v !== '');
     $qs = http_build_query($params);
     return $baseUrl . ($qs !== '' ? '?' . $qs : '');
 };
 
-// Сколько книг показано (нижняя граница, если есть следующая страница)
 $shown = ($page - 1) * $pageSize + count($cards);
 ?>
 
 <?php
-// В page-header кладём поиск + кнопку фильтров.
-// Enter в поле поиска ловит filters.js::setupSearch и сохраняет остальные параметры.
 ob_start();
 $view->include('input', [
     'type'        => 'search',
@@ -122,8 +113,6 @@ $view->include('page-header', [
     'actions'  => $pageActions,
 ]);
 
-// Панель фильтров: Books ↔ Articles + Genre / Status / Type
-// bookHref/articleHref ведут на saved-варианты, чтобы табы не уводили в общую библиотеку
 $view->include('library-filters', [
     'filterState' => $filterState ?? 'closed',
     'bookHref'    => '/books/saved',
@@ -143,9 +132,8 @@ $view->include('library-filters', [
 
 <?php else: ?>
 
-  <section class="books-panel">
+  <section class="books-panel" data-saved-page>
 
-    <!-- CSRF-токен для fetch-запросов (save) -->
     <div hidden data-csrf><?= $view->csrfField() ?></div>
 
     <header class="books-panel__head">
@@ -163,13 +151,7 @@ $view->include('library-filters', [
         </div>
       </div>
 
-      <!-- Дублирующийся фильтр «All / To read / Finished» убран:
-           статус читается только в открывающемся меню фильтров
-           (library-filters: табы внутри панели ?status=reading|ended). -->
-
       <?php
-      // Сортировка. На Saved нет library-filters.js, поэтому пункты — обычные
-      // ссылки; $link сам дописывает текущие q / status / sort.
       $sortDropdown = [];
       foreach ($sortOptions as $key => $text) {
           $sortDropdown[] = [
@@ -197,15 +179,13 @@ $view->include('library-filters', [
       <div class="grid-books" data-saved-grid>
         <?php foreach ($cards as $card): ?>
           <?php $view->include('card-book', $card + [
-              'saved' => true, // на странице Saved все книги сохранены
-              // кнопка Save: /api/articles/{id}/save для статей, /api/books/{id}/save для книг
-              'saveType' => ($meta['type'] ?? 'book') === 'article' ? 'article' : 'book',
+              'saved' => true,
+              'saveType' => $isArticles ? 'article' : 'book',
           ]); ?>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
-    <!-- Показывается из saved.js, когда на странице сняли закладки со всех книг -->
     <p class="empty-state__text" data-saved-empty hidden>
       <?= $tr('common.saved.none_left') ?>
       <a href="<?= $view->e($link(['q' => $q])) ?>" class="link"><?= $tr('common.saved.reload') ?></a>

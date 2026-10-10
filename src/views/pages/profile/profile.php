@@ -4,6 +4,25 @@
 <?php
 $view->setBlock('selectedTab', 'profile');
 
+// Сохраняем текущую локаль во всех ссылках — бэк читает язык из ?lang=,
+// иначе переход на другую страницу переключит его на Accept-Language.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+/** Обёртка над $view->url(): добавляет ?lang=<текущая> ко всем ссылкам. */
+$url = static function (string $name, array $params = []) use ($view, $langQuery): string {
+    $base = $view->url($name, $params);
+    if ($langQuery === null || $langQuery === '') return $base;
+    return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
+/** Для произвольного пути (например, /users/{id}/edit) — та же логика. */
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
 $displayName = trim(($userData->name ?? '') . ' ' . ($userData->surname ?? ''));
 if ($displayName === '') $displayName = $userData->username;
 
@@ -39,7 +58,7 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
         <?php $view->include('avatar', [
             'size'     => 'lg',
             'initials' => $initials,
-            'icon'   => $avatarKey,
+            'icon'     => $avatarKey,
         ]); ?>
       </div>
 
@@ -50,7 +69,7 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
 
       <?php if ($isOwner): ?>
         <a class="btn-icon profile-header__edit"
-           href="/users/<?= (int)$userData->id ?>/edit"
+           href="<?= $view->e($withLang('/users/' . (int)$userData->id . '/edit')) ?>"
            aria-label="<?= $tr('common.profile.edit') ?>"
            title="<?= $tr('common.profile.edit') ?>">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,7 +106,7 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
            data-publications
            data-publications-user-id="<?= (int)$userData->id ?>"
            data-publications-limit="5"
-           data-publications-more-url="<?= $view->e($view->url('users.profile.books', ['userId' => (int) $userData->id])) ?>">
+           data-publications-more-url="<?= $view->e($url('users.profile.books', ['userId' => (int) $userData->id])) ?>">
         <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
           <?= $tr('common.common.loading') ?>
         </p>

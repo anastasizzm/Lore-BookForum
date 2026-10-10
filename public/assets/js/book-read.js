@@ -1,16 +1,12 @@
 import * as pdfjsLib from './pdfjs/pdf.min.mjs';
 
-/* ============================================
-   Читалка PDF: загрузка из API, prev / next / zoom.
-   Разметка — src/views/book/book-read.php (data-reader-*).
-   ============================================ */
-
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdfjs/pdf.worker.min.mjs';
 
 const root = document.querySelector('[data-reader]');
 if (root) init(root);
 
 async function init(root) {
+  const t = (key, params) => window.LoreI18n ? LoreI18n.t(key, params) : key;
   const $ = (sel) => root.querySelector(sel);
 
   const canvas  = $('[data-reader-canvas]');
@@ -34,20 +30,16 @@ async function init(root) {
     status.hidden = !text;
   };
 
-  // ---------- адрес файла ----------
-  // Основной: data-pdf-url. Для проверки без бэка: ?src=/test.pdf
-  // (только путь на этом же сайте; на проде эту ветку можно удалить).
   let url = root.dataset.pdfUrl || '';
   const src = new URLSearchParams(location.search).get('src');
   if (src && src.startsWith('/') && !src.startsWith('//')) url = src;
 
   if (!url) {
     setStatus('');
-    toast('The book file is not available yet.');
+    toast(t('js.book_file_missing'));
     return;
   }
 
-  // ---------- загрузка ----------
   let pdf;
   try {
     const res = await fetch(url, {
@@ -56,7 +48,7 @@ async function init(root) {
     });
     if (!res.ok) {
       setStatus('');
-      await window.Messages?.fail(res, 'Could not load the book file.');
+      await window.Messages?.fail(res, t('js.book_file_load_failed'));
       return;
     }
     const data = await res.arrayBuffer();
@@ -70,12 +62,11 @@ async function init(root) {
     console.error('[reader] load failed', e);
     setStatus('');
     toast(e && e.name === 'InvalidPDFException'
-      ? 'The file is not a valid PDF.'
-      : 'Could not open the book. Try again.');
+      ? t('js.pdf_invalid')
+      : t('js.book_open_failed'));
     return;
   }
 
-  // ---------- состояние ----------
   let zoom = 1;
   let pageNum = 1;
   let renderTask = null;
@@ -92,9 +83,7 @@ async function init(root) {
   setStatus('');
   render();
 
-  // ---------- рендер ----------
   async function render() {
-    // уже рисуем: отменяем текущую отрисовку, после неё нарисуем актуальную страницу
     if (renderTask) {
       queued = true;
       renderTask.cancel();
@@ -102,11 +91,10 @@ async function init(root) {
     }
 
     let page;
-    try {
-      page = await pdf.getPage(pageNum);
-    } catch (e) {
+    try { page = await pdf.getPage(pageNum); }
+    catch (e) {
       console.error('[reader] getPage failed', e);
-      toast('Could not display the page.');
+      toast(t('js.page_render_failed'));
       return;
     }
 
@@ -126,21 +114,15 @@ async function init(root) {
       transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
     });
 
-    try {
-      await renderTask.promise;
-    } catch (e) {
+    try { await renderTask.promise; }
+    catch (e) {
       if (!e || e.name !== 'RenderingCancelledException') {
         console.error('[reader] render failed', e);
-        toast('Could not display the page.');
+        toast(t('js.page_render_failed'));
       }
-    } finally {
-      renderTask = null;
-    }
+    } finally { renderTask = null; }
 
-    if (queued) {
-      queued = false;
-      return render();
-    }
+    if (queued) { queued = false; return render(); }
     syncUi();
   }
 
@@ -165,14 +147,10 @@ async function init(root) {
     render();
   }
 
-  function setZoom(z) {
-    zoom = clamp(z, Z_MIN, Z_MAX);
-    render();
-  }
+  function setZoom(z) { zoom = clamp(z, Z_MIN, Z_MAX); render(); }
 
   function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
 
-  // ---------- управление ----------
   root.addEventListener('click', (e) => {
     if (e.target.closest('[data-reader-prev]'))            goTo(pageNum - 1);
     else if (e.target.closest('[data-reader-next]'))       goTo(pageNum + 1);

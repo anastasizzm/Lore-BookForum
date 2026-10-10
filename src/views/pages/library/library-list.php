@@ -15,7 +15,10 @@ if ($type === null) {
 }
 
 $pageTitle  = $isArticles ? $view->t('common.library.all_articles') : $view->t('common.library.all_books');
-$tabKey     = $isArticles ? 'articles'      : 'library';
+// Таб в сайдбаре — «Библиотека» и для книг, и для статей: отдельной
+// иконки «Статьи» в sidebar нет, поэтому active-плашка должна гореть
+// на обоих разделах.
+$tabKey     = 'library';
 $emptyText  = $isArticles ? $view->t('common.library.no_articles') : $view->t('common.library.no_books');
 $searchHint = $isArticles ? $view->t('common.library.search_articles') : $view->t('common.library.search_books');
 $apiBase    = $isArticles ? '/api/articles'  : '/api/books';
@@ -54,7 +57,6 @@ $view->include('library-filters', [
 ]);
 
 // ---- Сортировка ----
-// Дефолт синхронизирован с library-filters.js (DEFAULTS.sort = 'popularity').
 $sort_options = $sortOptions ?? [
     'newest'     => $view->t('common.sort.newest'),
     'popularity' => $view->t('common.sort.popularity'),
@@ -65,11 +67,22 @@ $current_sort  = $currentSort ?? 'newest';
 if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
 $current_label = $sort_options[$current_sort];
 
+// href — только страховка на случай, если JS не загрузился.
+// Сохраняем текущие параметры (включая lang), чтобы переход без JS
+// не терял язык.
+$preservedKeys = ['q', 'genre', 'status', 'isbn', 'doi', 'kind', 'f', 'lang'];
+$preserved = array_filter(
+    $_GET,
+    static fn($k) => in_array($k, $preservedKeys, true),
+    ARRAY_FILTER_USE_KEY
+);
+
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
+    $sortHref = '?' . http_build_query(array_merge($preserved, ['sort' => $key]));
     $dropdownOptions[] = [
         'label' => $text,
-        'href'  => '?sort=' . urlencode($key),
+        'href'  => $sortHref,
         'value' => $key,
     ];
 }

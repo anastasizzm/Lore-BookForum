@@ -3,6 +3,24 @@
 
 <?php $view->setBlock('selectedTab', 'profile'); ?>
 
+<?php
+// Сохраняем локаль во всех ссылках и в action форм — иначе бэк после
+// сохранения профиля переключится на Accept-Language и вернёт другую локаль.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
+/** Скрытое поле формы: гарантирует, что PUT/GET-запрос унесёт lang на бэк. */
+$langField = $langQuery !== null && $langQuery !== ''
+    ? '<input type="hidden" name="lang" value="' . $view->e($langQuery) . '">'
+    : '';
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.profile.edit') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -28,7 +46,7 @@ $canEdit     = $isOwnerEdit || (bool) ($user->isAdmin ?? false);
   <div class="login-message" role="alert">
     <div class="login-message__status">403</div>
     <p class="login-message__text">You are not allowed to edit this profile.</p>
-    <a class="btn btn--primary" href="/users/<?= $editUserId ?>">Back to profile</a>
+    <a class="btn btn--primary" href="<?= $view->e($withLang('/users/' . $editUserId)) ?>">Back to profile</a>
   </div>
 <?php else: ?>
 
@@ -67,13 +85,14 @@ if ($initials === '') {
        ============================================================ -->
   <section class="profile-edit card-base">
 
-    <form action="/users/<?= (int)$userData->id ?>/profile/edit"
+    <form action="<?= $view->e($withLang('/users/' . (int)$userData->id . '/profile/edit')) ?>"
           method="POST"
           id="profileEditForm"
           data-profile-form
-          data-endpoint="/api/users/<?= (int)$userData->id ?>/profile/edit"
+          data-endpoint="<?= $view->e($withLang('/api/users/' . (int)$userData->id . '/profile/edit')) ?>"
           novalidate>
       <?= $view->csrfField() ?>
+      <?= $langField ?>
       <input type="hidden" name="_method" value="PUT">
 
       <h2 class="profile-edit__section-title"><?= $tr('common.profile.section_profile') ?></h2>
@@ -154,7 +173,7 @@ if ($initials === '') {
       </div>
 
       <div class="profile-edit__actions">
-        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>"><?= $tr('common.common.cancel') ?></a>
+        <a class="btn btn--secondary" href="<?= $view->e($withLang('/users/' . (int)$userData->id)) ?>"><?= $tr('common.common.cancel') ?></a>
         <button class="btn btn--primary" type="submit"><?= $tr('common.profile.save_changes') ?></button>
       </div>
     </form>
@@ -166,13 +185,14 @@ if ($initials === '') {
        ============================================================ -->
   <section class="profile-edit card-base">
 
-    <form action="/users/<?= (int)$userData->id ?>/credits/edit"
+    <form action="<?= $view->e($withLang('/users/' . (int)$userData->id . '/credits/edit')) ?>"
           method="POST"
           id="profileAccountForm"
           data-profile-form
-          data-endpoint="/api/users/<?= (int)$userData->id ?>/credits/edit"
+          data-endpoint="<?= $view->e($withLang('/api/users/' . (int)$userData->id . '/credits/edit')) ?>"
           novalidate>
       <?= $view->csrfField() ?>
+      <?= $langField ?>
       <input type="hidden" name="_method" value="PUT">
 
       <h2 class="profile-edit__section-title"><?= $tr('common.profile.account_title') ?></h2>
@@ -213,7 +233,7 @@ if ($initials === '') {
       </div>
 
       <div class="profile-edit__actions">
-        <a class="btn btn--secondary" href="/users/<?= (int)$userData->id ?>"><?= $tr('common.common.cancel') ?></a>
+        <a class="btn btn--secondary" href="<?= $view->e($withLang('/users/' . (int)$userData->id)) ?>"><?= $tr('common.common.cancel') ?></a>
         <button class="btn btn--primary" type="submit"><?= $tr('common.profile.save_changes') ?></button>
       </div>
     </form>

@@ -1,20 +1,16 @@
 "use strict";
 
-/* ============================================
-   Book details / Article details
-   ============================================ */
 (function () {
-  // Закладка (Save): обработчик [data-save-book] / [data-save-article] лежит в app.js
-  // (POST/DELETE /api/books|articles/{id}/save)
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
 
   // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
     startReading.addEventListener('click', function () {
-      var status = startReading.dataset.readingStatus; // new | in_progress | finished
-      // TODO: new -> открыть с первой главы
-      //       in_progress -> открыть с сохранённого места
-      //       finished -> сбросить прогресс и открыть с начала
+      var status = startReading.dataset.readingStatus;
+      // TODO: new -> открыть с первой главы; in_progress -> с сохранённого места
     });
   }
 
@@ -22,7 +18,7 @@
   var rate = document.querySelector('[data-rate]');
   if (rate) {
     var stars = rate.querySelectorAll('[data-rate-value]');
-    var current = 0; // TODO: подставить оценку пользователя, если она уже есть
+    var current = 0;
 
     var paint = function (value) {
       stars.forEach(function (star, i) {
@@ -33,25 +29,14 @@
 
     stars.forEach(function (star) {
       var value = Number(star.dataset.rateValue);
-
-      // Предпросмотр при наведении
-      star.addEventListener('mouseenter', function () {
-        paint(value);
-      });
-
-      // Выбор оценки; повторный клик по той же звезде снимает оценку
+      star.addEventListener('mouseenter', function () { paint(value); });
       star.addEventListener('click', function () {
         current = current === value ? 0 : value;
         paint(current);
-        // TODO: отправить оценку на сервер (current, 0 = снять оценку)
       });
     });
 
-    // Убрали курсор: возвращаем выбранную оценку
-    rate.addEventListener('mouseleave', function () {
-      paint(current);
-    });
-
+    rate.addEventListener('mouseleave', function () { paint(current); });
     paint(current);
   }
 
@@ -64,36 +49,16 @@
       tab.addEventListener('click', function (e) {
         e.preventDefault();
         var target = tab.dataset.rowTarget;
-
-        tabs.forEach(function (t) {
-          t.classList.toggle('is-active', t === tab);
-        });
-
-        panels.forEach(function (panel) {
-          panel.hidden = panel.dataset.row !== target;
-        });
+        tabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); });
+        panels.forEach(function (panel) { panel.hidden = panel.dataset.row !== target; });
       });
     });
   }
-
-  /* ==========================================================
-     КОММЕНТАРИИ (P0-1 / P0-2 / P0-4 / P0-5)
-     - отправка: Enter в поле и кнопка-галочка ведут в одну отправку,
-       обработчики висят на document (работают даже если DOM
-       отрисовался позже, чем этот скрипт);
-     - успех: ЛЮБОЙ 2xx без payload-а с ошибкой (201 и 200 равнозначны);
-     - список: подгружается из БД через GET /api/posts?publication=…,
-       потому что контроллер страницы комментарии не отдаёт;
-     - лайки: отдаём общему обработчику card-feed.js
-       ([data-like-btn] -> POST/DELETE /api/posts/{id}/like).
-     ========================================================== */
 
   var API_POSTS = '/api/posts';
   var COMMENT_MAX = 2000;
   var PAGE_SIZE = 20;
 
-  // Ники -> профили (users.js). Фолбэк — если файл не догрузился,
-  // текст всё равно отрисуется, просто без ссылок.
   var Users = window.LoreUsers || {
     remember: function () { return 0; },
     renderAuthor: function (el, label) { if (el) el.textContent = label || ''; },
@@ -101,14 +66,10 @@
     withMention: function (text) { return String(text == null ? '' : text).trim(); }
   };
 
-  function one(sel, root) {
-    return (root || document).querySelector(sel);
-  }
+  function one(sel, root) { return (root || document).querySelector(sel); }
 
   function setMsg(el, text) {
     if (!el) return;
-
-    // Ошибки отправки и «Comment sent» — общими плашками (messages.js)
     var isError  = el.hasAttribute('data-comment-error') || el.hasAttribute('data-reply-error');
     var isStatus = el.hasAttribute('data-comment-status');
     if ((isError || isStatus) && window.Messages) {
@@ -117,24 +78,15 @@
       if (text) window.Messages.show(text, { type: isError ? 'error' : 'success' });
       return;
     }
-
     el.textContent = text || '';
     el.hidden = !text;
   }
 
-  /** Ошибка из payload-а ответа ('' — если ответ успешный). */
   function payloadError(data) {
-    // Считаем ответом-ошибкой только тело с error / errors ({ error: { code, message, details } })
     if (!data || typeof data !== 'object' || (!data.error && !data.errors)) return '';
     return window.Messages ? window.Messages.fromPayload(data) : '';
   }
 
-  /**
-   * Человеческий текст ошибки для не-2xx / HTML-ответов.
-   * Бэкенд отдаёт страницу-заглушку с кодом в .login-message__status,
-   * но при этом HTTP-статус у неё может быть 200 — код достаём из разметки,
-   * чтобы вместо «Failed to send comment (HTTP 200)» показать причину.
-   */
   function failureText(res, raw) {
     var body = raw || '';
     var code = /class="login-message__status"[^>]*>\s*(\d{3})\s*</.exec(body);
@@ -142,19 +94,16 @@
 
     if (code) {
       var msg = text ? text[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
-      return (msg || 'Request rejected') + ' (HTTP ' + code[1] + ')';
+      return (msg || t('js.request_rejected')) + ' (HTTP ' + code[1] + ')';
     }
     if (/^\s*</.test(body)) {
-      return 'Server returned an unexpected page (HTTP ' + res.status + '). The comment was not saved.';
+      return t('js.unexpected_page_comment', { status: res.status });
     }
-    return 'Failed to send the comment (HTTP ' + res.status + ')';
+    return t('js.send_comment_failed', { status: res.status });
   }
 
   function formatDate(value) {
-    // API отдаёт DateTimeImmutable как {date, timezone_type, timezone}
-    var raw = (value && typeof value === 'object' && !(value instanceof Date))
-      ? value.date
-      : value;
+    var raw = (value && typeof value === 'object' && !(value instanceof Date)) ? value.date : value;
     if (raw instanceof Date) raw = raw.toISOString();
     var m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
     return m ? m[3] + '.' + m[2] + '.' + m[1] : '';
@@ -171,12 +120,8 @@
     return v;
   }
 
-  /** Значение users.avatar как есть: '' | 'default' | пресет | файл. */
-  function avatarOf(user) {
-    return String((user && user.avatar) || '');
-  }
+  function avatarOf(user) { return String((user && user.avatar) || ''); }
 
-  /** Собирает <div class="avatar …"> без innerHTML (без XSS). */
   function fillAvatar(avatar, initials, raw) {
     if (!avatar) return;
     avatar.replaceChildren();
@@ -185,7 +130,6 @@
     var span = document.createElement('span');
     span.textContent = initials || '?';
 
-    // Аватар-пресет (настройки профиля) — эмодзи, а не битая картинка
     var parsed = (window.LoreAvatar && LoreAvatar.parse(raw)) || { type: 'none' };
     if (parsed.type === 'emoji') {
       var em = document.createElement('span');
@@ -196,11 +140,7 @@
       if (window.LoreAvatar) LoreAvatar.paint(avatar, parsed);
       return;
     }
-
-    if (parsed.type !== 'image') {
-      avatar.appendChild(span);
-      return;
-    }
+    if (parsed.type !== 'image') { avatar.appendChild(span); return; }
 
     var img = document.createElement('img');
     img.alt = '';
@@ -208,44 +148,31 @@
     avatar.appendChild(img);
     avatar.appendChild(span);
     span.hidden = true;
-    img.onerror = function () {
-      img.hidden = true;
-      span.hidden = false;
-    };
+    img.onerror = function () { img.hidden = true; span.hidden = false; };
   }
 
-  /** Карточка комментария из <template id="comment-card-template">. */
   function commentNode(data) {
     var tpl = document.getElementById('comment-card-template');
     if (!tpl) return null;
-
     var node = tpl.content.firstElementChild.cloneNode(true);
     if (data.id != null && Number(data.id)) node.dataset.commentId = String(Number(data.id));
-
-    // эмодзи пресета или инициалы (см. avatar.js)
     fillAvatar(one('.avatar', node), data.initials, data.avatar || '');
     var author = one('[data-c-author]', node);
     if (author) Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
-    // для ответа: кому пишем (@ник) — лежит на карточке
     if (data.authorUsername) node.dataset.authorUsername = data.authorUsername;
     if (data.authorId) node.dataset.authorId = String(Number(data.authorId));
-    var text = one('[data-c-text]', node);
-    Users.renderText(text, data.text || '');            // текст + @упоминания ссылками
+    Users.renderText(one('[data-c-text]', node), data.text || '');
     var date = one('[data-c-date]', node);
     if (date) date.textContent = data.date || '';
 
     var likeBtn = one('[data-like-btn]', node);
     if (likeBtn) {
       if (Number(data.id)) {
-        likeBtn.dataset.likeId = String(Number(data.id));  // общий like из card-feed.js
+        likeBtn.dataset.likeId = String(Number(data.id));
         var cnt = one('[data-like-count]', likeBtn);
         if (cnt) cnt.textContent = String(Number(data.likes) || 0);
-      } else {
-        likeBtn.remove(); // без id лайк некуда отправлять
-      }
+      } else { likeBtn.remove(); }
     }
-
-    // Состояние «мой лайк» — признак isLiked из контекста юзера в ответе API
     if (likeBtn && typeof setLikedUI === 'function') setLikedUI(likeBtn, !!data.liked);
     return node;
   }
@@ -271,11 +198,9 @@
     return node;
   }
 
-  /** GET /api/posts?publication={id}&include=creator — корневые комментарии из БД. */
   async function loadComments(page, append) {
     var section = sectionEl();
     if (!section) return;
-
     var pubId = Number(section.dataset.publicationId || 0);
     if (!pubId) return;
 
@@ -294,20 +219,17 @@
 
       var data = null;
       var raw = '';
-      try {
-        raw = await res.text();
-        data = raw ? JSON.parse(raw) : null;
-      } catch (_) { data = null; }
+      try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
       if (!res.ok || !data) {
         console.warn('GET ' + API_POSTS, res.status, raw.slice(0, 200));
         if (window.Messages) {
           window.Messages.show(
-            window.Messages.describe(res.status, data, raw, 'Could not load comments.'),
+            window.Messages.describe(res.status, data, raw, t('js.comments_load_failed')),
             { type: 'error' });
         }
         if (!append && listEl() && !listEl().children.length) {
-          setMsg(emptyEl(), 'Comments are unavailable right now. Please reload the page.');
+          setMsg(emptyEl(), t('js.comments_unavailable'));
         }
         return;
       }
@@ -320,10 +242,7 @@
         if (list) list.replaceChildren();
       }
 
-      // Комментарии с ответами подтягиваем сразу: ответы живут отдельно
-      // (GET /api/posts?parent={id}), иначе после F5 они пропадут.
       var withReplies = [];
-
       items.forEach(function (item) {
         var node = appendComment({
           id: item.id,
@@ -337,22 +256,18 @@
           likes: item.likesCount || 0,
           liked: !!item.isLiked
         }, false);
-
         if (node && Number(item.commentsCount) > 0) withReplies.push(node);
       });
-
       withReplies.forEach(function (node) { loadReplies(node); });
 
       if (emptyEl()) {
         var n = listEl() ? listEl().children.length : 0;
         emptyEl().hidden = n > 0;
       }
-
-      // «Показать ещё», если комментариев больше одной страницы
       if (data.meta && data.meta.hasNext) renderMore(page || 1);
     } catch (err) {
       console.warn('GET ' + API_POSTS + ' failed', err);
-      if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
+      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
     }
   }
 
@@ -367,10 +282,10 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn--secondary btn--pill';
-    btn.textContent = 'Show more comments';
+    btn.textContent = t('js.show_more_comments');
     btn.addEventListener('click', function () {
       var next = loadedPage + 1;
-      wrap.remove();               // снимаем до загрузки, чтобы кнопка не дублировалась
+      wrap.remove();
       loadComments(next, true);
     });
 
@@ -378,7 +293,6 @@
     list.parentNode.insertBefore(wrap, list.nextSibling);
   }
 
-  /** Отправка комментария: POST /api/posts (content, publicationId, _token). */
   async function submitComment(form) {
     if (!form || form.dataset.sending === '1') return;
 
@@ -392,18 +306,15 @@
     setMsg(statusEl, '');
 
     var text = (input.value || '').trim();
-    if (text === '') {
-      setMsg(errEl, 'Comment cannot be empty');
-      return;
-    }
+    if (text === '') { setMsg(errEl, t('js.comment_empty')); return; }
     if (text.length > COMMENT_MAX) {
-      setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
+      setMsg(errEl, t('js.max_length', { max: COMMENT_MAX }));
       return;
     }
 
     var pubInput = one('input[name="publicationId"]', form);
     if (!Number(pubInput && pubInput.value)) {
-      setMsg(errEl, 'Cannot send the comment: the publication id is missing on this page.');
+      setMsg(errEl, t('js.publication_id_missing_comment'));
       return;
     }
 
@@ -426,31 +337,17 @@
 
       var data = null;
       var raw = '';
-      try {
-        raw = await res.text();
-        data = raw ? JSON.parse(raw) : null;
-      } catch (_) { data = null; }
-
-      console.log('POST ' + (form.action || API_POSTS), res.status, data || raw.slice(0, 200));
+      try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
       var serverError = payloadError(data);
-      // HTML-страница-заглушка = ответ бэкенда с ошибкой, хотя HTTP у неё
-      // может быть 200 (см. renderNotFound/renderForbid -> Response::html()
-      // без статуса). Такой ответ успехом не считаем.
       var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
-      // Любой HTML-ответ (в т.ч. PHP Fatal error с кодом 200) — это не успех:
-      // API при успехе отдаёт JSON ({"createdId": N}).
       if (/^\s*</.test(raw)) htmlErrorPage = true;
 
-      // Успех = любой 2xx без ошибки в payload-е. 201 и 200 равнозначны:
-      // раньше здесь проверялся строго 201, и штатный ответ в 200
-      // превращался в «Failed to send comment (HTTP 200)» (P0-1).
       if (res.ok && !serverError && !htmlErrorPage) {
-        setMsg(statusEl, 'Comment sent');
+        setMsg(statusEl, t('js.comment_sent'));
         input.value = '';
 
         bumpCount();
-
         var created = data ? (data.createdId != null ? data.createdId : data.id) : null;
         var me = meInfo();
         var node = appendComment({
@@ -466,7 +363,6 @@
           liked: false
         }, true);
 
-        // Своя аватарка/инициалы берутся из формы (там они уже отрендерены)
         var formAvatar = one('.avatar', form);
         if (node && formAvatar) {
           var nodeAvatar = one('.avatar', node);
@@ -477,9 +373,7 @@
           nodeAuthor.textContent = (one('.comment-card__author', form) || {}).textContent || '';
         }
 
-        // Ответ не-JSON (страница-заглушка) — сверяемся с БД, что реально сохранилось
         if (!data) window.setTimeout(function () { loadComments(1, false); }, 700);
-
         if (typeof applyLikedState === 'function') applyLikedState(document);
         return;
       }
@@ -487,7 +381,7 @@
       setMsg(errEl, serverError || failureText(res, raw));
     } catch (err) {
       console.warn('POST ' + API_POSTS + ' failed', err);
-      setMsg(errEl, 'Network error. Try again.');
+      setMsg(errEl, t('js.network_error'));
     } finally {
       delete form.dataset.sending;
       input.readOnly = false;
@@ -498,9 +392,6 @@
     }
   }
 
-  // ---- Делегирование: отправка по Enter (P0-1) ----
-  // Кнопка отправки может быть disabled — Enter всё равно отправляет:
-  // иначе неявная отправка формы браузером не срабатывает.
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== 'NumpadEnter') return;
     var input = e.target.closest && e.target.closest('[data-comment-form] input[name="content"]');
@@ -509,7 +400,6 @@
     submitComment(input.closest('[data-comment-form]'));
   });
 
-  // ---- Делегирование: отправка по кнопке/нативному submit (P0-2) ----
   document.addEventListener('submit', function (e) {
     var form = e.target.closest && e.target.closest('[data-comment-form]');
     if (!form) return;
@@ -517,7 +407,6 @@
     submitComment(form);
   });
 
-  // ---- Делегирование: активация галочки + сброс сообщений ----
   document.addEventListener('input', function (e) {
     var input = e.target.closest && e.target.closest('[data-comment-form] input[name="content"]');
     if (!input) return;
@@ -528,40 +417,28 @@
     setMsg(one('[data-comment-status]', form), '');
   });
 
-  /* ----------------------------------------------------------
-     Ответы на комментарии:
-       отправка — POST /api/posts/{commentId} (content, publicationId, _token);
-       загрузка — GET  /api/posts?parent={commentId}&include=creator.
-     ---------------------------------------------------------- */
-
   var REPLY_PAGE_SIZE = 50;
 
   function csrfTokenValue() {
-    // cookie — источник правды (её сравнивает бэк); поле формы — запасной вариант
     var fromCookie = window.LoreCsrf ? LoreCsrf.token() : '';
     if (fromCookie) return fromCookie;
     var el = one('[data-comment-form] input[name="_token"]') || one('input[name="_token"]');
     return el ? el.value : '';
   }
 
-  /** Текущий юзер — из атрибутов секции комментариев (book-details.php). */
   function meInfo() {
     var section = sectionEl() || document;
     return {
       id: Number(section.dataset.meId || 0),
-      // author — как API вернёт creator.username, иначе после F5 имя «мигает»
-      // между «Имя Фамилия» (data-me-name) и логином
       author:   section.dataset.meUsername || section.dataset.meName || '',
       initials: section.dataset.meInitials || '?',
       avatar:   section.dataset.meAvatar || ''
     };
   }
 
-  /** Строка ответа из <template id="reply-template"> (без innerHTML — без XSS). */
   function replyNode(data) {
     var tpl = document.getElementById('reply-template');
     if (!tpl) return null;
-
     var node = tpl.content.firstElementChild.cloneNode(true);
     var author = one('.comment-reply__author', node);
     Users.renderAuthor(author, data.author, data.authorId, data.authorUsername);
@@ -578,16 +455,11 @@
     return node;
   }
 
-  /** GET /api/posts?parent={commentId}&include=creator — ответы из БД. */
   async function loadReplies(card) {
     var commentId = Number((card && card.dataset.commentId) || 0);
     if (!commentId) return;
-
     var params = new URLSearchParams({
-      parent: String(commentId),
-      page: '1',
-      ps: String(REPLY_PAGE_SIZE),
-      include: 'creator'
+      parent: String(commentId), page: '1', ps: String(REPLY_PAGE_SIZE), include: 'creator'
     });
 
     try {
@@ -595,24 +467,20 @@
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
       });
-
       var data = null;
       try { data = await res.json(); } catch (_) { data = null; }
       if (!res.ok || !data) {
         if (window.Messages) {
           window.Messages.show(
-            window.Messages.describe(res.status, data, '', 'Could not load replies.'),
+            window.Messages.describe(res.status, data, '', t('js.replies_load_failed')),
             { type: 'error' });
         }
         return;
       }
-
       var items = Array.isArray(data.items) ? data.items : [];
       var list = one('[data-replies]', card);
       if (!list) return;
-
       list.replaceChildren();
-      // API отдаёт created_at DESC — ответы читаются сверху вниз, разворачиваем
       items.slice().reverse().forEach(function (item) {
         appendReply(card, {
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
@@ -626,11 +494,10 @@
       });
     } catch (err) {
       console.warn('GET ' + API_POSTS + '?parent= failed', err);
-      if (window.Messages) window.Messages.show('Network error. Try again.', { type: 'error' });
+      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
     }
   }
 
-  // Показать/скрыть форму ответа; при открытии подставляем @ник автора
   document.addEventListener('click', function (e) {
     var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
     if (!replyBtn) return;
@@ -644,7 +511,6 @@
     if (open) {
       var first = form.querySelector('input');
       if (first) {
-        // Ответ начинается с @ника автора комментария (если поле пустое)
         var card = replyBtn.closest('[data-comment-id]');
         var target = (card && card.dataset.authorUsername) || '';
         if (target && first.value.trim() === '') {
@@ -652,14 +518,11 @@
           first.dispatchEvent(new Event('input', { bubbles: true }));
         }
         first.focus();
-        try {
-          first.selectionStart = first.selectionEnd = first.value.length;
-        } catch (_) { /* type=text в старых браузерах */ }
+        try { first.selectionStart = first.selectionEnd = first.value.length; } catch (_) {}
       }
     }
   });
 
-  // Post активна, только когда есть текст
   document.addEventListener('input', function (e) {
     var input = e.target.closest && e.target.closest('.comment-reply-form__input');
     if (!input) return;
@@ -669,7 +532,6 @@
     setMsg(form ? one('[data-reply-error]', form) : null, '');
   });
 
-  // Отправка ответа: POST /api/posts/{commentId}
   document.addEventListener('submit', async function (e) {
     var form = e.target.closest && e.target.closest('[data-reply-form]');
     if (!form) return;
@@ -683,21 +545,20 @@
     var text = input ? (input.value || '').trim() : '';
 
     setMsg(errEl, '');
-
     if (!card) return;
     var commentId = Number(card.dataset.commentId || 0);
-    if (!commentId) return setMsg(errEl, 'Cannot send the reply: the comment id is missing.');
+    if (!commentId) return setMsg(errEl, t('js.comment_id_missing'));
     if (text === '') return;
 
-    // Ответ отправляется с @ником автора комментария в начале текста
     text = Users.withMention(text, card.dataset.authorUsername || '');
     if (input) input.value = text;
-
-    if (text.length > COMMENT_MAX) return setMsg(errEl, 'Max length is ' + COMMENT_MAX + ' characters');
+    if (text.length > COMMENT_MAX) {
+      return setMsg(errEl, t('js.max_length', { max: COMMENT_MAX }));
+    }
 
     var section = sectionEl();
     var pubId = Number((section && section.dataset.publicationId) || 0);
-    if (!pubId) return setMsg(errEl, 'Cannot send the reply: the publication id is missing on this page.');
+    if (!pubId) return setMsg(errEl, t('js.publication_id_missing'));
 
     var body = new URLSearchParams();
     body.set('content', text);
@@ -716,13 +577,9 @@
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: body
       });
-
       var data = null;
       var raw = '';
-      try {
-        raw = await res.text();
-        data = raw ? JSON.parse(raw) : null;
-      } catch (_) { data = null; }
+      try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
       var serverError = payloadError(data);
       var htmlErrorPage = /class="login-message__(status|text)/.test(raw);
@@ -737,20 +594,17 @@
           avatar: me.avatar,
           text: text
         });
-
-        bumpCount(); // счётчик публикации включает ответы (считает триггер в БД)
-
+        bumpCount();
         input.value = '';
         form.hidden = true;
         var toggle = one('[data-reply-toggle]', card);
         if (toggle) toggle.setAttribute('aria-expanded', 'false');
         return;
       }
-
       setMsg(errEl, serverError || failureText(res, raw));
     } catch (err) {
       console.warn('POST ' + API_POSTS + '/' + commentId + ' failed', err);
-      setMsg(errEl, 'Network error. Try again.');
+      setMsg(errEl, t('js.network_error'));
     } finally {
       delete form.dataset.sending;
       input.readOnly = false;
@@ -758,9 +612,6 @@
     }
   });
 
-  /* ----------------------------------------------------------
-     Загрузка списка из БД при открытии страницы (P0-5)
-     ---------------------------------------------------------- */
   function initComments() {
     var section = sectionEl();
     if (!section) return;

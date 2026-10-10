@@ -2,10 +2,10 @@
 // FILTER PANEL — segmented tabs, dynamic dropdowns (genres, article-types)
 // ============================================
 
-/**
- * Позиционирует белый индикатор внутри segmented-контрола.
- * instant=true — без анимации (первый рендер / показ скрытого ряда).
- */
+function tFilter(key, params) {
+  return window.LoreI18n ? LoreI18n.t(key, params) : key;
+}
+
 function updateSegmentIndicator(tabsEl, instant = false) {
   const active = tabsEl.querySelector('.tab.is-active');
   if (!active) return;
@@ -26,21 +26,14 @@ function updateSegmentIndicator(tabsEl, instant = false) {
   }
 }
 
-/* Initial setup for all segmented tabs on the page */
 document.querySelectorAll('.tabs--segmented').forEach(tabsEl => {
   updateSegmentIndicator(tabsEl, true);
   window.addEventListener('resize', () => updateSegmentIndicator(tabsEl, true));
 });
 
-
-/* ============================================
-   TABS — clicks inside filter panel
-   ============================================ */
-
 document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   tab.addEventListener('click', (e) => {
     const href = tab.getAttribute('href') || '';
-    // Реальная ссылка (не #anchor) — пусть работает как обычная навигация
     if (href && !href.startsWith('#')) return;
 
     e.preventDefault();
@@ -56,7 +49,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       updateSegmentIndicator(tabsEl);
     }
 
-    // Переключение рядов (Books ↔ Articles)
     const target = tab.getAttribute('data-row-target');
     if (target && panel) {
       panel.querySelectorAll('.filter-panel__row').forEach(row => {
@@ -72,36 +64,25 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   });
 });
 
-
-/* ============================================
-   DYNAMIC DROPDOWNS + ISBN/DOI + SEARCH
-   ============================================ */
-
 (function () {
   'use strict';
 
-  // ---------- dynamic dropdowns ----------
-
   const SOURCES = {
     genres: {
-      url:      '/api/additional/genres',
-      param:    'genre',
-      allLabel: 'All genres',
+      url:         '/api/additional/genres',
+      param:       'genre',
+      allLabelKey: 'js.all_genres',
     },
     types: {
-      url:      '/api/additional/types',
-      param:    'kind',
-      allLabel: 'All types',
+      url:         '/api/additional/types',
+      param:       'kind',
+      allLabelKey: 'js.all_types',
     },
   };
 
-  const cache = new Map(); // url -> array
-
-  // true  — a wrong ISBN check digit blocks the search
-  // false — only shows a warning, search still runs (handy with test data)
+  const cache = new Map();
   const STRICT_ISBN_CHECKSUM = false;
 
-  // Ошибки/предупреждения — общими плашками (messages.js)
   function notify(text, type) {
     if (window.Messages) window.Messages.show(text, { type: type || 'error' });
     else console.warn(text);
@@ -109,11 +90,8 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   function escapeHtml(str) {
     return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function stripParam(key) {
@@ -137,15 +115,15 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     const all = [];
     for (let p = 1; p <= 20; p++) {
+      // URL для /api/additional/* — патч fetch добавит ?lang=
       const res = await fetch(url + '?page=' + p, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
       if (!res.ok) {
-        // Текст берём из ответа сервера; fromServer — чтобы не выдать за сетевую ошибку
         const msg = window.Messages
-          ? await window.Messages.readError(res, 'Could not load the list.')
-          : 'Could not load the list (HTTP ' + res.status + ').';
+          ? await window.Messages.readError(res, tFilter('js.list_load_failed'))
+          : tFilter('js.list_load_failed') + ' (HTTP ' + res.status + ').';
         const err = new Error(msg);
         err.fromServer = true;
         throw err;
@@ -155,7 +133,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       try {
         data = await res.json();
       } catch (_) {
-        const err = new Error('Server error. Please try again later.');
+        const err = new Error(tFilter('js.server_error'));
         err.fromServer = true;
         throw err;
       }
@@ -165,8 +143,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
       all.push(...list);
 
-      // Если сервер отдал плоский массив — пагинации нет, выходим
-      // Если отдал объект {items, meta} — идём дальше только при hasNext
       if (Array.isArray(data) || !(data.meta && data.meta.hasNext)) break;
     }
 
@@ -182,7 +158,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const menu = dropdown.querySelector('.dropdown__menu');
     if (!menu) return;
 
-    menu.innerHTML = '<li class="dropdown__loading">Loading...</li>';
+    menu.innerHTML = '<li class="dropdown__loading">' + escapeHtml(tFilter('common.loading')) + '</li>';
 
     try {
       const list = await fetchAll(src.url);
@@ -194,7 +170,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       const items = [
         {
           id:     'all',
-          title:  src.allLabel,
+          title:  tFilter(src.allLabelKey),
           href:   stripParam(src.param),
           active: isAll,
         },
@@ -216,16 +192,13 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         '</li>'
       ).join('');
 
-      // library-filters.js слушает это событие и обновляет подпись кнопки
       dropdown.dispatchEvent(new CustomEvent('dropdown:populated', { bubbles: true }));
     } catch (e) {
       console.error('[filters] dynamic load failed:', kind, e);
-      notify(e && e.fromServer ? e.message : 'Network error. Try again.');
-      menu.innerHTML = '<li class="dropdown__error">Failed to load</li>';
+      notify(e && e.fromServer ? e.message : tFilter('js.network_error'));
+      menu.innerHTML = '<li class="dropdown__error">' + escapeHtml(tFilter('js.load_failed')) + '</li>';
     }
   }
-
-  // ---------- navigation helper (keeps all other params) ----------
 
   function navigateWith(changes) {
     const url = new URL(window.location.href);
@@ -238,22 +211,11 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     window.location.href = url.toString();
   }
 
-  // ---------- ISBN ----------
-  //
-  // Формат приложения задан схемой БД и ошибкой бэкенда:
-  //   storage/db/schema.sql:  books.isbn ~ '^\d{3}-\d{1}-\d{3}-\d{5}-\d{1}$'
-  //   BookExceptionTranslator: "ISBN must match the format XXX-X-XXX-XXXXX-X"
-  // Поиск делает ILIKE isbn || '%', поэтому поле обязано собирать номер
-  // ровно в этом виде — иначе полный ISBN не находит ничего.
-  const ISBN_GROUPS = [3, 1, 3, 5, 1];                       // 978-0-306-40615-2
-  const ISBN_HINT = 'Format: 978-0-306-40615-2 (13 digits, 978/979)';
-  const DOI_HINT = 'Format: 10.5555/123456';
-
-  // Сколько набрано цифр, когда группа ISBN только что завершилась:
-  // 978 | 9780 | 9780306 | 978030640615 — после них сразу ставим «-»
+  const ISBN_GROUPS = [3, 1, 3, 5, 1];
+  const ISBN_HINT = tFilter('js.isbn_hint');
+  const DOI_HINT  = tFilter('js.doi_hint');
   const ISBN_GROUP_ENDS = [3, 4, 7, 12];
 
-  // Только цифры: колонка хранит \d и дефисы, ISBN-10 (и «X») не сохраняются
   function isbnClean(raw) {
     let out = '';
     const src = String(raw);
@@ -264,7 +226,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return out;
   }
 
-  // Дефис встаёт, как только набрана следующая группа: 978-0-306-40615-2
   function isbnFormat(c) {
     const parts = [];
     let i = 0;
@@ -276,13 +237,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return parts.join('-');
   }
 
-  // В БД попадают только 978/979 — остальное не группируем, а показываем ошибку
   function isbnShapeOk(c) {
     return c.length <= 3 || /^97[89]/.test(c);
   }
 
   function isbnChecksumOk(c) {
-    if (c.length !== 13) return true;                        // номер ещё набирается
+    if (c.length !== 13) return true;
     let sum = 0;
     for (let i = 0; i < 12; i++) sum += Number(c[i]) * (i % 2 ? 3 : 1);
     return (10 - (sum % 10)) % 10 === Number(c[12]);
@@ -292,29 +252,15 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const c = isbnClean(value);
     if (c === '') return { msg: '', blocking: false };
     if (!isbnShapeOk(c)) {
-      return {
-        msg: 'ISBN must be 13 digits starting with 978 or 979 — ' + ISBN_HINT,
-        blocking: true,
-      };
+      return { msg: tFilter('js.isbn_shape', { hint: ISBN_HINT }), blocking: true };
     }
     if (c.length < 13) return { msg: '', blocking: false };
     if (!isbnChecksumOk(c)) {
-      // STRICT_ISBN_CHECKSUM = false — предупреждение, поиск всё равно уйдёт
-      // (в сиде контрольные разряды случайные, искать по ним всё равно нужно)
-      return {
-        msg: 'ISBN check digit does not match (search still runs)',
-        blocking: STRICT_ISBN_CHECKSUM,
-      };
+      return { msg: tFilter('js.isbn_checksum'), blocking: STRICT_ISBN_CHECKSUM };
     }
     return { msg: '', blocking: false };
   }
 
-  // ---------- DOI ----------
-
-  // Разбирает вставку из ссылки или цитаты:
-  // "https://doi.org/10.5555/1", "doi:10.5555/1", кавычки, пробелы, «.» в конце.
-  // Точку в конце убираем только у готового DOI — иначе «10.» при наборе
-  // превратится в «1» и точку придётся набирать заново.
   function doiNormalize(raw) {
     let v = String(raw).trim();
     v = v.replace(/^["'«»“”‘’]+|["'«»“”‘’]+$/g, '');
@@ -325,46 +271,30 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return v;
   }
 
-  // deleting=true — пользователь стирает символ: «10» не дополняем до «10.»,
-  // иначе точку нельзя было бы удалить.
   function doiFormat(raw, deleting) {
     let v = doiNormalize(raw);
-    if (/^10\d/.test(v)) v = '10.' + v.slice(2);             // 105555 -> 10.5555
-    else if (v === '10' && !deleting) v = '10.';             // 10 -> 10.
+    if (/^10\d/.test(v)) v = '10.' + v.slice(2);
+    else if (v === '10' && !deleting) v = '10.';
     return v.slice(0, 200);
   }
 
-  // Схема БД: articles.doi ~ '^10\.\d+\/\d+$', ошибка бэкенда:
-  // "DOI must match the format 10.XXXX/YYYY" — префикс из цифр,
-  // цифровой суффикс. Поле — фильтр поиска, поэтому частичный ввод
-  // (10.5555, 10.5555/) тоже валиден: он находится как префикс.
   function doiValidate(value) {
     if (value === '') return { msg: '', blocking: false };
-
-    // Префикс набирается: 1 -> 10 -> 10. -> 10.5555
     if (value === '1' || value === '10' || value === '10.') return { msg: '', blocking: false };
     if (/^10\.\d{1,7}$/.test(value)) return { msg: '', blocking: false };
-
-    // Восемь и более цифр без «/» — суффикс забыли набрать
     if (/^10\.\d{8,}$/.test(value)) {
-      return { msg: 'DOI is missing "/" after the prefix — ' + DOI_HINT, blocking: true };
+      return { msg: tFilter('js.doi_missing_slash', { hint: DOI_HINT }), blocking: true };
     }
-
-    // Суффикс набирается и готовое значение: 10.5555/123456
     if (/^10\.\d+\/\d*$/.test(value)) return { msg: '', blocking: false };
-
     if (/^10\.\d+\//.test(value)) {
-      return { msg: 'DOI suffix must be digits — ' + DOI_HINT, blocking: true };
+      return { msg: tFilter('js.doi_suffix_digits', { hint: DOI_HINT }), blocking: true };
     }
     if (/^10\./.test(value)) {
-      return { msg: 'DOI prefix must be digits after "10." — ' + DOI_HINT, blocking: true };
+      return { msg: tFilter('js.doi_prefix_digits', { hint: DOI_HINT }), blocking: true };
     }
-    return { msg: 'DOI must start with "10." — ' + DOI_HINT, blocking: true };
+    return { msg: tFilter('js.doi_start', { hint: DOI_HINT }), blocking: true };
   }
 
-  // ---------- caret helpers ----------
-
-  // Caret position in `formatted` after `sig` significant (non-hyphen) chars
   function caretFromSig(formatted, sig) {
     if (sig <= 0) return 0;
     let count = 0;
@@ -375,10 +305,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return formatted.length;
   }
 
-  // ---------- ISBN / DOI inputs ----------
-
-  // Как быстро применять ввод, если страница фильтрует обычным переходом
-  // (Saved, публикации профиля): перезагружаем не на каждую клавишу.
   const FILTER_NAV_DELAY = 500;
 
   function setupFormattedInput(inp) {
@@ -388,14 +314,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const hint = isIsbn ? ISBN_HINT : DOI_HINT;
     let navTimer = 0;
 
-    /**
-     * Применяет фильтр поля, пока пользователь печатает.
-     *
-     * Страница библиотеки перехватывает cancelable-событие `filter:input`
-     * (library-filters.js) и фильтрует через API без перезагрузки. Если
-     * обработчика нет — значение уходит в URL: иначе ввод в ISBN/DOI ни к
-     * чему не приводит (Saved, публикации профиля).
-     */
     function applyFilter() {
       const key = inp.dataset.filterKey || inp.name;
       if (!key) return;
@@ -407,10 +325,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         cancelable: true,
         detail: { key: key, value: inp.value.trim() },
       });
-      if (!inp.dispatchEvent(ev)) return;      // страница с API-фильтром
-
-      // Неверный формат не отправляем (на библиотеке так же делает
-      // library-filters.js: is-invalid не попадает ни в URL, ни в API)
+      if (!inp.dispatchEvent(ev)) return;
       if (inp.classList.contains('is-invalid')) return;
 
       navTimer = window.setTimeout(function () {
@@ -420,26 +335,16 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       }, FILTER_NAV_DELAY);
     }
 
-    /**
-     * deleting=true — пользователь стирает символ: разделитель в конце
-     * автоматически не добавляем, иначе его нельзя было бы удалить.
-     */
     function format(raw, caretPos, deleting) {
       const atEnd = caretPos == null || caretPos >= raw.length;
 
       if (isIsbn) {
         const c = isbnClean(raw);
-        // Не 978/979 — расставлять дефисы некуда: оставляем как есть,
-        // ошибку покажет isbnValidate (иначе получается чужой формат)
         const shapeOk = isbnShapeOk(c);
         let formatted = shapeOk ? isbnFormat(c) : c;
-
-        // Группа только что завершилась — сразу ставим дефис:
-        // 978 -> 978-, 9780 -> 978-0-
         if (!deleting && atEnd && shapeOk && ISBN_GROUP_ENDS.indexOf(c.length) !== -1) {
           formatted += '-';
         }
-
         const sig = caretPos == null ? null : isbnClean(raw.slice(0, caretPos)).length;
         return {
           formatted,
@@ -458,12 +363,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     function showState() {
       const r = validate(inp.value);
       const hasMsg = !!r.msg;
-      // Красным — только то, что блокирует поиск; предупреждение
-      // (контрольный разряд) показываем янтарным, поиск продолжает работать
       inp.classList.toggle('is-invalid', hasMsg && r.blocking);
       inp.classList.toggle('is-warning', hasMsg && !r.blocking);
       inp.setAttribute('aria-invalid', hasMsg && r.blocking ? 'true' : 'false');
-      inp.title = r.msg || hint;   // пока ошибки нет — подсказка с верным форматом
+      inp.title = r.msg || hint;
       return r;
     }
 
@@ -487,7 +390,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       const pos = inp.selectionStart;
       const sel = inp.selectionEnd;
 
-      // Backspace/Delete next to an auto-inserted hyphen: hop over it
       if (isIsbn && pos === sel) {
         if (e.key === 'Backspace' && pos > 0 && inp.value[pos - 1] === '-') {
           inp.setSelectionRange(pos - 1, pos - 1);
@@ -498,30 +400,29 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      window.clearTimeout(navTimer);   // переход по Enter вместо отложенного
+      window.clearTimeout(navTimer);
 
       const r = showState();
-      if (r.msg && r.blocking) {
-        notify(r.msg);                      // вместо нативного пузыря reportValidity
-        return;
-      }
-      if (r.msg) notify(r.msg, 'warning');  // предупреждение: поиск всё равно уйдёт
+      if (r.msg && r.blocking) { notify(r.msg); return; }
+      if (r.msg) notify(r.msg, 'warning');
       const changes = {};
       changes[inp.name] = inp.value.trim();
       navigateWith(changes);
     });
 
-    // Normalize value that came from the URL on page load
     const initial = format(inp.value, null, true);
     inp.value = initial.formatted;
     showState();
   }
 
-  // ---------- search box (?q=) ----------
-
   function setupSearch(inp) {
+    // На страницах с [data-library] (library-list, saved-list) поиск
+    // обрабатывает library-filters.js — через fetch, без перезагрузки,
+    // с сохранением ?lang=. Здесь не навешиваем свой обработчик, чтобы
+    // Enter не приводил к полному переходу и не сбрасывал язык.
+    if (document.querySelector('[data-library]')) return;
+
     function go() {
-      // Лента: поиск идёт по названию книги на клиенте — см. feed-search.js
       if (window.LoreFeedSearch) {
         window.LoreFeedSearch.go(inp.value.trim());
         return;
@@ -535,12 +436,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       go();
     });
 
-    // Clear ("x") button of type="search"
     inp.addEventListener('search', function () {
       if (inp.value === '' && new URL(window.location.href).searchParams.has('q')) go();
     });
 
-    // If the input sits inside a <form>, don't let it reload without our params
     if (inp.form) {
       inp.form.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -549,15 +448,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     }
   }
 
-  // ---------- init ----------
-
-  /**
-   * Возвращает фокус в поле ISBN/DOI, из которого ушли по URL.
-   * Фильтр применяется прямо во время ввода (см. applyFilter), поэтому
-   * без этого после перехода печатать дальше приходилось бы, кликая по
-   * полю заново. Фокусируем только открытую панель — иначе страница
-   * прыгала бы к скрытому полю.
-   */
   function restoreFilterFocus() {
     const panel = document.querySelector('[data-filter-panel]');
     if (!panel || panel.hidden) return;
@@ -576,20 +466,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   function init() {
     document.querySelectorAll('input[name="q"]').forEach(setupSearch);
-
-    document
-      .querySelectorAll('[data-filter-panel] input.filter-input[data-format]')
+    document.querySelectorAll('[data-filter-panel] input.filter-input[data-format]')
       .forEach(setupFormattedInput);
-
-    document
-      .querySelectorAll('[data-dropdown][data-dynamic]')
+    document.querySelectorAll('[data-dropdown][data-dynamic]')
       .forEach(function (dd) {
         const row = dd.closest('.filter-panel__row');
-        // Пропускаем dropdown'ы в скрытых рядах (books/ articles)
         if (row && row.hidden) return;
         populateDynamic(dd);
       });
-
     restoreFilterFocus();
   }
 

@@ -2,6 +2,23 @@
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php
+// Сохраняем локаль — иначе клик по табу Book/Articles или Reset уводит
+// на URL без ?lang= и бэк переключается на Accept-Language.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
+$url = static function (string $name, array $params = []) use ($view, $langQuery): string {
+    $base = $view->url($name, $params);
+    if ($langQuery === null || $langQuery === '') return $base;
+    return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
 // userId из URL: /users/{id}/books или /users/{id}/articles
 $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 $path   = parse_url($uri, PHP_URL_PATH);
@@ -63,8 +80,8 @@ $view->include('library-filters', [
     'filterState' => $filterState ?? 'closed',
     'isArticles'  => $isArticles,
     'basePath'    => $path,
-    'bookHref'    => $view->url('users.profile.books',    ['userId' => $userId]),
-    'articleHref' => $view->url('users.profile.articles', ['userId' => $userId]),
+    'bookHref'    => $url('users.profile.books',    ['userId' => $userId]),
+    'articleHref' => $url('users.profile.articles', ['userId' => $userId]),
 ]);
 ?>
 
@@ -115,16 +132,17 @@ $view->include('library-filters', [
         <?php
           $year = $item->createdAt ? $item->createdAt->format('Y') : '';
 
-          $url = $isArticles
+          $itemUrl = $isArticles
             ? '/articles/' . (int)$item->id
             : '/books/' . (int)$item->id;
+          $itemUrl = $withLang($itemUrl);
 
           // Обложка: если у item есть coverUrl/cover — используем; иначе сразу cover--empty
           $coverUrl = $item->coverUrl ?? ($item->cover ?? null);
           $hasCover = !empty($coverUrl);
         ?>
         <article class="card-base card-book">
-          <a class="card-book__link" href="<?= $view->e($url) ?>">
+          <a class="card-book__link" href="<?= $view->e($itemUrl) ?>">
             <div class="card-book__cover <?= $hasCover ? '' : 'cover--empty' ?>">
               <?php if ($hasCover): ?>
                 <img src="<?= $view->e($coverUrl) ?>" alt="" loading="lazy">

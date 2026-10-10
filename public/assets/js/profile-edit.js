@@ -1,29 +1,17 @@
-/* ============================================
-   PROFILE EDIT - one script for both forms
-   --------------------------------------------
-   Обслуживает все формы form[data-profile-form] на странице.
-   Endpoint каждой формы берётся из её атрибута data-endpoint:
-     - data-endpoint="/api/users/{id}/profile/edit"  → name, surname, bio, avatar
-     - data-endpoint="/api/users/{id}/credits/edit"  → username, email
-   Валидация запускается только по тем полям, которые реально
-   присутствуют в конкретной форме (см. validateField → if (!field)).
-   ============================================ */
-
 (function () {
   'use strict';
 
-  // ============================================
-  // AVATAR PICKER (работает, если на странице есть .avatar-picker)
-  // ============================================
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
   function initAvatarPicker() {
     document.querySelectorAll('.avatar-picker').forEach(function (picker) {
       var options = picker.querySelectorAll('.avatar-picker__option');
-
       options.forEach(function (opt) {
         var radio = opt.querySelector('.avatar-picker__radio');
         if (radio && radio.checked) opt.classList.add('is-selected');
       });
-
       options.forEach(function (opt) {
         opt.addEventListener('click', function () {
           options.forEach(function (o) { o.classList.remove('is-selected'); });
@@ -33,24 +21,18 @@
     });
   }
 
-  // ============================================
-  // ОБЩИЕ RULES для двух форм
-  // ============================================
   var NAME_RE     = /^[\p{L}\p{M}\s'\-]+$/u;
   var USERNAME_RE = /^[A-Za-z0-9_.\-]{3,30}$/;
 
   var RULES = {
-    name:     { required: true,  maxLength: 64,  pattern: NAME_RE, message: 'Letters, spaces, \' and - only.' },
-    surname:  { required: true,  maxLength: 64,  pattern: NAME_RE, message: 'Letters, spaces, \' and - only.' },
-    username: { required: true,  pattern: USERNAME_RE,             message: 'A-Z, a-z, 0-9, . - _ only. 3-30 chars.' },
-    email:    { required: true,  email: true, maxLength: 255,      message: 'Format: name@domain.com' },
-    bio:      { required: false, maxLength: 500,                   message: 'Max 500 chars.' },
-    avatar:   { required: true,  message: 'Pick an avatar.' },
+    name:     { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'js.rule_name' },
+    surname:  { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'js.rule_name' },
+    username: { required: true,  pattern: USERNAME_RE,                 msgKey: 'js.rule_username' },
+    email:    { required: true,  email: true, maxLength: 255,          msgKey: 'js.rule_email' },
+    bio:      { required: false, maxLength: 500,                       msgKey: 'js.rule_bio' },
+    avatar:   { required: true,                                        msgKey: 'js.rule_avatar' },
   };
 
-  // ============================================
-  // Helpers
-  // ============================================
   function escapeHtml(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -67,24 +49,16 @@
     return m ? m[1] : null;
   }
 
-  // ============================================
-  // Инициализация одной формы
-  // ============================================
   function initForm(form) {
     var endpoint = form.getAttribute('data-endpoint');
-    if (!endpoint) {
-      console.warn('[profile-edit] form without data-endpoint — skipped');
-      return;
-    }
+    if (!endpoint) { console.warn('[profile-edit] form without data-endpoint — skipped'); return; }
 
     var fieldErrors = {};
-
     function getField(name)   { return form.querySelector('[name="' + name + '"]'); }
     function getErrorEl(name) { return form.querySelector('[data-error-for="' + name + '"]'); }
 
     function showFieldErrors() {
-      var list = Object.keys(fieldErrors).map(function (k) { return fieldErrors[k]; })
-        .filter(Boolean);
+      var list = Object.keys(fieldErrors).map(function (k) { return fieldErrors[k]; }).filter(Boolean);
       if (list.length) notify(list.join('\n'));
     }
 
@@ -107,37 +81,32 @@
       if (errorEl) errorEl.innerHTML = '';
     }
 
-    function clearAllErrors() {
-      Object.keys(RULES).forEach(clearError);
-    }
+    function clearAllErrors() { Object.keys(RULES).forEach(clearError); }
 
-    // --- Validate one field ---
     function validateField(name) {
       var rule = RULES[name];
       if (!rule) return true;
 
       if (name === 'avatar') {
         var checked = form.querySelector('input[name="avatar"]:checked');
-        if (rule.required && !checked) { setError(name, rule.message); return false; }
+        if (rule.required && !checked) { setError(name, t(rule.msgKey)); return false; }
         clearError(name);
         return true;
       }
 
       var field = getField(name);
-      // Поля нет в этой форме — правило не применяется.
       if (!field) return true;
 
       var value = (field.value || '').trim();
-
-      if (rule.required && value === '') { setError(name, rule.message); return false; }
+      if (rule.required && value === '') { setError(name, t(rule.msgKey)); return false; }
       if (!rule.required && value === '') { clearError(name); return true; }
 
       if (rule.email) {
         var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRe.test(value)) { setError(name, rule.message); return false; }
+        if (!emailRe.test(value)) { setError(name, t(rule.msgKey)); return false; }
       }
-      if (rule.pattern && !rule.pattern.test(value))       { setError(name, rule.message); return false; }
-      if (rule.maxLength && value.length > rule.maxLength) { setError(name, rule.message); return false; }
+      if (rule.pattern && !rule.pattern.test(value))       { setError(name, t(rule.msgKey)); return false; }
+      if (rule.maxLength && value.length > rule.maxLength) { setError(name, t(rule.msgKey)); return false; }
 
       clearError(name);
       return true;
@@ -145,13 +114,10 @@
 
     function validateAll() {
       var ok = true;
-      Object.keys(RULES).forEach(function (name) {
-        if (!validateField(name)) ok = false;
-      });
+      Object.keys(RULES).forEach(function (name) { if (!validateField(name)) ok = false; });
       return ok;
     }
 
-    // --- Live handlers ---
     Object.keys(RULES).forEach(function (name) {
       if (name === 'avatar') {
         form.querySelectorAll('input[name="avatar"]').forEach(function (radio) {
@@ -167,7 +133,6 @@
       });
     });
 
-    // --- Server errors on load (from PHP $errors) ---
     var loadErrors = [];
     Object.keys(RULES).forEach(function (name) {
       var errorEl = getErrorEl(name);
@@ -201,7 +166,6 @@
       }
     }
 
-    // --- Submit ---
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearAllErrors();
@@ -217,30 +181,23 @@
       }
 
       var userId = extractUserId();
-      if (!userId) {
-        notify('Cannot determine user id from URL. Please reload the page.');
-        return;
-      }
+      if (!userId) { notify(t('js.user_id_missing')); return; }
 
       var submitBtn = form.querySelector('button[type="submit"]');
-      var originalText = submitBtn ? submitBtn.textContent : 'Save changes';
+      var originalText = submitBtn ? submitBtn.textContent : '';
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+        submitBtn.textContent = t('js.saving');
       }
 
       function resetButton() {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-        }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
       }
 
       var formData = new FormData(form);
       formData.delete('_method');
       var csrfValue = window.LoreCsrf ? LoreCsrf.token() : '';
       if (csrfValue) formData.set('_token', csrfValue);
-
       var body = new URLSearchParams(formData).toString();
 
       fetch(endpoint, {
@@ -269,24 +226,21 @@
               renderServerErrors(errors);
             }
 
+            var fallback = t('js.save_failed', { status: response.status });
             notify(window.Messages
-              ? window.Messages.describe(response.status, data, raw,
-                  'Could not save the changes (HTTP ' + response.status + ').')
-              : 'Could not save the changes (HTTP ' + response.status + ').');
+              ? window.Messages.describe(response.status, data, raw, fallback)
+              : fallback);
             resetButton();
           });
         })
         .catch(function (err) {
           console.error('[profile-edit] save failed for', endpoint, err);
           resetButton();
-          notify('Network error. Try again.');
+          notify(t('js.network_error'));
         });
     });
   }
 
-  // ============================================
-  // Точка входа
-  // ============================================
   document.querySelectorAll('form[data-profile-form]').forEach(initForm);
   initAvatarPicker();
 })();
