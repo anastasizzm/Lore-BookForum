@@ -134,3 +134,161 @@
     if (el) loadSidebar(el);
   });
 })();
+
+/* ============================================
+   PROFILE - posts (ответы пользователя под публикациями)
+   ============================================ */
+
+(function () {
+  'use strict';
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // createdAt = { date: "2026-10-10 07:57:35...", ... } -> "10.10.2026"
+  function formatDate(value) {
+    var raw = (value && typeof value === 'object') ? (value.date || '') : String(value || '');
+    var day = raw.split(' ')[0];
+    var parts = day.split('-');
+    return parts.length === 3 ? parts[2] + '.' + parts[1] + '.' + parts[0] : '';
+  }
+
+  function emptyText(text) {
+    return '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">' +
+      escapeHtml(text) + '</p>';
+  }
+
+  function renderPost(post) {
+    var pub       = post.publication || {};
+    var pubId     = Number(post.publicationId || pub.id || 0);
+    var pubTitle  = pub.title || 'Publication';
+    var content   = String(post.content || '').trim();
+    var date      = formatDate(post.createdAt);
+    var likes     = Number(post.likesCount || 0);
+    var comments  = Number(post.commentsCount || 0);
+
+    // Тип публикации (book/article) в API не приходит — ссылку резолвит
+    // общий обработчик card-feed.js ([data-pub-link], см. «/books/{id} -> 404 -> /articles/{id}»)
+    var title = pubId
+      ? '<a class="profile-post__title" href="/books/' + pubId + '"' +
+        ' data-pub-link data-pub-id="' + pubId + '">' + escapeHtml(pubTitle) + '</a>'
+      : '<span class="profile-post__title">' + escapeHtml(pubTitle) + '</span>';
+
+    return '' +
+      '<article class="profile-post card-base">' +
+        title +
+        (content ? '<p class="profile-post__text">' + escapeHtml(content) + '</p>' : '') +
+        '<p class="profile-post__meta">' +
+          (date ? '<span>' + date + '</span>' : '') +
+          '<span>&#9825; ' + likes + '</span>' +
+          '<span>&#128172; ' + comments + '</span>' +
+        '</p>' +
+      '</article>';
+  }
+
+  function postsUrl(userId, page) {
+    // URLSearchParams кодирует '+' -> '%2B': сервер обязан получить
+    // include=creator+publication (пробел в этом параметре роняет бэкенд)
+    var params = new URLSearchParams({
+      creator: String(userId),
+      include: 'creator+publication',
+      page: String(page),
+    });
+    return '/api/posts?' + params.toString();
+  }
+
+  async function fetchPage(userId, page) {
+    var res = await fetch(postsUrl(userId, page), {
+      headers: { 'Accept': 'application/json' },
+      credentials: 'same-origin',
+    });
+    if (!res.ok) {
+      if (window.Messages) window.Messages.fail(res, 'Could not load posts.');
+      return null;
+    }
+    return res.json();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.querySelector('[data-posts][data-posts-user-id]');
+    if (!el) return;
+
+    var userId = parseInt(el.getAttribute('data-posts-user-id'), 10) || 0;
+    if (!userId) {
+      el.innerHTML = emptyText('No posts yet.');
+      return;
+    }
+
+    var page     = 1;
+    var hasMore  = false;
+    var loading  = false;
+    var moreBtn  = null;
+
+    function appendPosts(items) {
+      if (moreBtn) { moreBtn.remove(); moreBtn = null; }
+      var html = items.map(renderPost).join('');
+      if (page === 1) el.innerHTML = html;
+      else el.insertAdjacentHTML('beforeend', html);
+    }
+
+    function renderMore() {
+      if (moreBtn) { moreBtn.remove(); moreBtn = null; }
+      if (!hasMore) return;
+      moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'pagination__btn profile-posts__more';
+      moreBtn.textContent = 'Show more';
+      moreBtn.addEventListener('click', async function () {
+        if (loading) return;
+        loading = true;
+        moreBtn.textContent = 'Loading...';
+        try {
+          var data = await fetchPage(userId, page + 1);
+          if (data) {
+            page += 1;
+            hasMore = !!(data.meta && data.meta.hasNext);
+            appendPosts(data.items || []);
+            renderMore();
+          } else {
+            moreBtn.textContent = 'Show more';
+          }
+        } finally {
+          loading = false;
+        }
+      });
+      el.appendChild(moreBtn);
+    }
+
+    (async function load() {
+      var data;
+      try {
+        data = await fetchPage(userId, page);
+      } catch (e) {
+        console.error('[profile] posts load failed:', e);
+        el.innerHTML = emptyText('Failed to load posts.');
+        return;
+      }
+
+      if (!data) {
+        el.innerHTML = emptyText('Failed to load posts.');
+        return;
+      }
+
+      var items = data.items || [];
+      if (items.length === 0) {
+        el.innerHTML = emptyText('No posts yet.');
+        return;
+      }
+
+      hasMore = !!(data.meta && data.meta.hasNext);
+      appendPosts(items);
+      renderMore();
+    })();
+  });
+})();

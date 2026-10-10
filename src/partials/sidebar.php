@@ -102,6 +102,12 @@
                 <span>Help</span>
             </button>
 
+            <!-- Смена пароля: страница /auth/password-reset (роут password.email) -->
+            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
+                <span class="settings-menu__icon">&#128273;</span>
+                <span>Change password</span>
+            </a>
+
             <button type="button" class="settings-menu__item">
                 <span class="settings-menu__icon">§</span>
                 <span>Privacy Policy</span>

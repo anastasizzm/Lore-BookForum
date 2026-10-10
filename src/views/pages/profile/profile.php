@@ -48,8 +48,9 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
       </div>
 
       <?php if ($isOwner): ?>
+        <!-- Роут users.profile.edit: /users/{userId}/profile/edit (раньше вёл на /users/{id}/edit -> 404) -->
         <a class="btn-icon profile-header__edit"
-           href="/users/<?= (int)$userData->id ?>/edit"
+           href="<?= $view->url('users.profile.edit', ['userId' => (int)$userData->id]) ?>"
            aria-label="Edit profile"
            title="Edit profile">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -60,9 +61,17 @@ $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
       <?php endif; ?>
     </header>
 
+    <!-- Посты (ответы под книгами/статьями) грузит profile.js из
+         GET /api/posts?creator={userId}&include=creator%2Bpublication -->
     <section class="profile-posts">
       <h2 class="profile-posts__title">Posts</h2>
-      <p class="empty-state__text">No posts yet.</p>
+      <div class="profile-posts__list"
+           data-posts
+           data-posts-user-id="<?= (int)($userData->id ?? 0) ?>">
+        <p class="profile-sidebar-box__text profile-sidebar-box__text--muted">
+          Loading...
+        </p>
+      </div>
     </section>
 
   </div>

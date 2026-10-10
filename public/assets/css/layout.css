@@ -314,6 +314,12 @@ body.is-sidebar-expanded .sidebar-overlay {
   background: var(--color-overlay);
 }
 
+/* Пункт-ссылка (Change password) — как обычный пункт меню */
+a.settings-menu__item {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
 .settings-menu__icon {
   display: inline-flex;
   align-items: center;
