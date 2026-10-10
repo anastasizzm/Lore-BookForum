@@ -19,20 +19,4 @@ final class LoginForm implements Form
             password: (string) ($input['password'] ?? ''),
         );
     }
-
-    public function validate(array &$errors): bool
-    {
-        $ok = true;
-        if ($this->login === '') {
-            $errors['login'][] = 'Login is required';
-            $ok = false;
-        }
-
-        if (strlen($this->password) == 0) {
-            $errors['password'][] = 'Password cannot be empty';
-            $ok = false;
-        }
-
-        return $ok;
-    }
 }

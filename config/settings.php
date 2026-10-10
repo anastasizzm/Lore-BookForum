@@ -9,6 +9,7 @@ return [
 
     'middleware' => [
         App\Middleware\ExceptionMiddleware::class,
+        App\Middleware\LocaleMiddleware::class,
         App\Middleware\JwtMiddleware::class,
         App\Middleware\TokenBlockerMiddleware::class,
         App\Middleware\CsrfMiddleware::class,
@@ -20,6 +21,12 @@ return [
         'pages' => $baseDir . '/src/views/pages',
         'layouts' => $baseDir . '/src/layouts',
         'partials' => $baseDir . '/src/partials'
+    ],
+
+    'i18n' => [
+        'default' => $_ENV['APP_LOCALE'] ?? 'en',
+        'available' => ['en', 'ru'],
+        'path' => $baseDir . '/resources/lang'
     ],
 
     'appUrl' => $_ENV['APP_URL'] ?? throw new RuntimeException('APP_URL not set'),

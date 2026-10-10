@@ -17,16 +17,4 @@ final readonly class MailOnlyForm implements Form
             email: mb_strtolower(trim((string) ($input['email'] ?? ''))),
         );
     }
-
-    public function validate(array &$errors): bool
-    {
-        $ok = true;
-
-        if (!filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'][] = 'Invalid email format';
-            $ok = false;
-        }
-
-        return $ok;
-    }
 }

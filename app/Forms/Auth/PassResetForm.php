@@ -19,22 +19,4 @@ final readonly class PassResetForm implements Form
             password: (string) ($input['password'] ?? ''),
         );
     }
-
-    public function validate(array &$errors): bool
-    {
-        $ok = true;
-
-        if (empty($this->token))
-        {
-            $errors['token'][] = 'Token is not provided';
-            $ok = false;
-        }
-
-        if (strlen($this->password) < 8) {
-            $errors['password'][] = 'Password must be at least 8 characters';
-            $ok = false;
-        }
-
-        return $ok;
-    }
 }
