@@ -1,17 +1,14 @@
-/* ============================================
-   PROFILE - lazy load publications (sidebar)
-   ============================================ */
-
 (function () {
   'use strict';
 
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
   function escapeHtml(str) {
     return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function extractItems(data) {
@@ -29,22 +26,31 @@
 
   async function fetchAll(userId) {
     var include = 'creator';
-
     var responses = await Promise.all([
       fetch('/api/books?creator=' + encodeURIComponent(userId) + '&include=' + include, {
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
-
+        headers: { 'Accept': 'application/json' }, credentials: 'same-origin',
+      }).then(function (r) {
+        if (r.ok) return r.json();
+        if (window.Messages) window.Messages.fail(r, t('js.publications_load_failed'));
+        return null;
+      }).catch(function () {
+        if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+        return null;
+      }),
       fetch('/api/articles?creator=' + encodeURIComponent(userId) + '&include=' + include, {
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-      }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+        headers: { 'Accept': 'application/json' }, credentials: 'same-origin',
+      }).then(function (r) {
+        if (r.ok) return r.json();
+        if (window.Messages) window.Messages.fail(r, t('js.publications_load_failed'));
+        return null;
+      }).catch(function () {
+        if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+        return null;
+      }),
     ]);
 
     var books    = extractItems(responses[0]).map(function (i) { return { item: i, type: 'book' }; });
     var articles = extractItems(responses[1]).map(function (i) { return { item: i, type: 'article' }; });
-
     var all = books.concat(articles);
 
     all.sort(function (a, b) {
@@ -52,7 +58,6 @@
       var db = b.item.createdAt && b.item.createdAt.date ? b.item.createdAt.date : '';
       return db.localeCompare(da);
     });
-
     return all;
   }
 
@@ -60,14 +65,12 @@
     var url = type === 'book'
       ? '/books/' + encodeURIComponent(item.id)
       : '/articles/' + encodeURIComponent(item.id);
-    var label = type === 'book' ? 'Book' : 'Article';
+    var label = t(type === 'book' ? 'js.book' : 'js.article');
     var year  = formatYear(item.createdAt);
 
     return '' +
       '<a class="profile-publications__item" href="' + url + '">' +
-        '<span class="profile-publications__cover cover--empty" aria-hidden="true">' +
-          // обложки в API нет — рисуем CSS-заглушку (.cover--empty, component.css)
-        '</span>' +
+        '<span class="profile-publications__cover cover--empty" aria-hidden="true"></span>' +
         '<span class="profile-publications__info">' +
           '<span class="profile-publications__title">' + escapeHtml(item.title) + '</span>' +
           '<span class="profile-publications__meta">' + label + (year ? ' - ' + year : '') + '</span>' +
@@ -80,24 +83,27 @@
     var limit   = parseInt(el.getAttribute('data-publications-limit') || '7', 10);
     var moreUrl = el.getAttribute('data-publications-more-url') || '';
 
-    el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">Loading...</p>';
+    el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
+      + escapeHtml(t('common.loading')) + '</p>';
 
     if (!userId || userId === '0') {
-      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">No publications yet.</p>';
+      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
+        + escapeHtml(t('js.no_publications')) + '</p>';
       return;
     }
 
     var all;
-    try {
-      all = await fetchAll(userId);
-    } catch (e) {
+    try { all = await fetchAll(userId); }
+    catch (e) {
       console.error('[profile] publications load failed:', e);
-      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">Failed to load.</p>';
+      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
+        + escapeHtml(t('js.publications_failed_short')) + '</p>';
       return;
     }
 
     if (all.length === 0) {
-      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">No publications yet.</p>';
+      el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
+        + escapeHtml(t('js.no_publications')) + '</p>';
       return;
     }
 
@@ -106,11 +112,11 @@
       return renderItem(entry.item, entry.type);
     }).join('');
 
-            if (moreUrl && all.length > 0) {
+    if (moreUrl && all.length > 0) {
       var more = document.createElement('a');
       more.className = 'profile-publications__more';
       more.href = moreUrl;
-      more.textContent = 'See all publications';
+      more.textContent = t('js.see_all_publications');
       el.appendChild(more);
     }
   }

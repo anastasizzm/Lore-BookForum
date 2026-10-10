@@ -15,6 +15,12 @@ $basePath    = $basePath    ?? $currentPath;
 $bookHref    = $bookHref    ?? '/books';
 $articleHref = $articleHref ?? '/articles';
 
+// Текущая локаль — чтобы не потерять ?lang= при переходах (Books ↔ Articles,
+// Reset, табы статуса). Бэк определяет язык именно по этому параметру.
+$lang = isset($_GET['lang']) && is_string($_GET['lang'])
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
 // Current URL params
 parse_str($_SERVER['QUERY_STRING'] ?? '', $params);
 unset($params['page']);
@@ -23,6 +29,8 @@ if ($filter_open) {
 } else {
     unset($params['f']);
 }
+// Локаль всегда в params — дальше все ссылки её унаследуют.
+if ($lang) $params['lang'] = $lang;
 
 // Link to the current page with changed params
 $link = static function (array $set = [], array $drop = []) use ($params, $basePath): string {
@@ -30,8 +38,9 @@ $link = static function (array $set = [], array $drop = []) use ($params, $baseP
     return $basePath . ($p ? '?' . http_build_query($p) : '');
 };
 
-// When switching Books/Articles keep only shared params
-$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre']));
+// When switching Books/Articles keep only shared params — ВАЖНО: lang тоже сохраняем,
+// иначе при переходе на /articles бэк сбросит локаль на фолбэк.
+$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'lang']));
 $tabHref = static function (string $href) use ($keep): string {
     if (!$keep) return $href;
     return $href . (str_contains($href, '?') ? '&' : '?') . http_build_query($keep);
@@ -49,15 +58,15 @@ $switcher = [
     'type'    => 'tabs',
     'variant' => 'segmented',
     'items' => [
-        ['label' => 'Books',    'href' => $tabHref($bookHref),    'icon' => $bookIcon, 'active' => !$isArticles],
-        ['label' => 'Articles', 'href' => $tabHref($articleHref), 'icon' => $postIcon, 'active' => $isArticles],
+        ['label' => $view->t('common.filter.books'),    'href' => $tabHref($bookHref),    'icon' => $bookIcon, 'active' => !$isArticles],
+        ['label' => $view->t('common.filter.articles'), 'href' => $tabHref($articleHref), 'icon' => $postIcon, 'active' => $isArticles],
     ],
 ];
 
 // Genre dropdown — динамический, из /api/additional/genres
 $genreDropdown = [
     'type'    => 'dropdown',
-    'label'   => 'Genre',
+    'label'   => $view->t('common.filter.genre'),
     'key'     => 'genre',
     'dynamic' => 'genres',
     'options' => [],
@@ -66,13 +75,13 @@ $genreDropdown = [
 // Type dropdown — статический, значения совпадают с enum ArticleType
 $typeDropdown = [
     'type'    => 'dropdown',
-    'label'   => 'Type',
+    'label'   => $view->t('common.filter.type'),
     'key'     => 'kind',
-    'dynamic' => 'types',       // ← теперь грузим через fetch
+    'dynamic' => 'types',
     'options' => [],
 ];
 
-// Reset clears filters but keeps search (q) and panel state (f)
+// Reset clears filters but keeps search (q), panel state (f) and locale (lang)
 $resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'kind', 'sort']);
 
 $filter_rows = [
@@ -86,25 +95,21 @@ $filter_rows = [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
-                    // 'value' = значение enum App\Models\Enums\ReadingStatus (none|reading|ended).
-                    // Раньше здесь был 'finished' — такой ?status= падает в бэке с
-                    // TypeError (UserRelationCriteria получает null), поэтому и href,
-                    // и value обязаны быть 'ended'.
-                    ['label' => 'All',      'href' => $link([], ['status']),          'key' => 'status', 'value' => 'all',     'active' => $status === ''],
-                    ['label' => 'Reading',  'href' => $link(['status' => 'reading']), 'key' => 'status', 'value' => 'reading', 'active' => $status === 'reading'],
-                    ['label' => 'Finished', 'href' => $link(['status' => 'ended']),   'key' => 'status', 'value' => 'ended',   'active' => $status === 'ended'],
+                    ['label' => $view->t('common.filter.all'),      'href' => $link([], ['status']),          'key' => 'status', 'value' => 'all',     'active' => $status === ''],
+                    ['label' => $view->t('common.filter.reading'),  'href' => $link(['status' => 'reading']), 'key' => 'status', 'value' => 'reading', 'active' => $status === 'reading'],
+                    ['label' => $view->t('common.filter.finished'), 'href' => $link(['status' => 'ended']),   'key' => 'status', 'value' => 'ended',   'active' => $status === 'ended'],
                 ],
             ],
             [
                 'type'        => 'input',
                 'name'        => 'isbn',
-                'placeholder' => 'ISBN',
+                'placeholder' => $view->t('common.filter.isbn'),
                 'value'       => $isbn,
                 'format'      => 'isbn',
                 'maxlength'   => 17,
                 'inputmode'   => 'text',
             ],
-            ['type' => 'reset', 'href' => $resetHref],
+            ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
         ],
     ],
     [
@@ -117,13 +122,13 @@ $filter_rows = [
             [
                 'type'        => 'input',
                 'name'        => 'doi',
-                'placeholder' => 'DOI',
+                'placeholder' => $view->t('common.filter.doi'),
                 'value'       => $doi,
                 'format'      => 'doi',
                 'maxlength'   => 200,
                 'inputmode'   => 'text',
             ],
-            ['type' => 'reset', 'href' => $resetHref],
+            ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
         ],
     ],
 ];

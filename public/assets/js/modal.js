@@ -1,43 +1,19 @@
 "use strict";
 
-/* ============================================
-   CONFIRM MODAL — универсальная плашка подтверждения
-   Плашка по центру экрана, фон затемнён (src/partials/confirm-modal.php).
-
-   Программно (удаление поста и т.п.):
-
-     ConfirmModal.confirm({
-       title: 'Delete post?',
-       message: 'This action cannot be undone.',
-       confirmText: 'Delete',
-       danger: true
-     }).then(function (confirmed) {
-       if (confirmed) deletePost();
-     });
-
-   Декларативно (кнопка/ссылка):
-
-     <button type="submit"
-             data-confirm="You will need to sign in again to continue."
-             data-confirm-title="Log out?"
-             data-confirm-ok="Log out"
-             data-confirm-danger>Log out</button>
-
-   При подтверждении: кнопка-submit отправляет свою форму,
-   ссылка переходит по href, иначе срабатывает событие
-   "confirm:accepted" (bubbles) на исходном элементе.
-   ============================================ */
 (function (global) {
-  var DEFAULTS = {
-    title: 'Are you sure?',
-    message: '',
-    confirmText: 'Confirm',
-    cancelText: 'Cancel',
-    danger: false
-  };
+  function defaults() {
+    var t = global.LoreI18n ? global.LoreI18n.t : function (k) { return k; };
+    return {
+      title:       t('confirm.title'),
+      message:     '',
+      confirmText: t('confirm.ok'),
+      cancelText:  t('cancel'),
+      danger:      false
+    };
+  }
 
-  var els = null;      // узлы плашки
-  var pending = null;  // { resolve } — текущий открытый запрос
+  var els = null;
+  var pending = null;
   var lastFocus = null;
 
   function dialogMarkup() {
@@ -59,7 +35,6 @@
 
     var root = document.querySelector('[data-confirm-modal]');
     if (!root) {
-      // Плашки нет в разметке — создаём её сами, чтобы API работало везде
       root = document.createElement('div');
       root.className = 'modal';
       root.setAttribute('data-confirm-modal', '');
@@ -91,33 +66,19 @@
   function focusables() {
     return Array.prototype.slice.call(
       els.root.querySelectorAll('button, [href], input, select, textarea, [tabindex]')
-    ).filter(function (el) {
-      return !el.disabled && el.offsetParent !== null;
-    });
+    ).filter(function (el) { return !el.disabled && el.offsetParent !== null; });
   }
 
   function onKeydown(e) {
     if (!pending) return;
-
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      finish(false);
-      return;
-    }
-
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); return; }
     if (e.key === 'Tab') {
       var items = focusables();
       if (!items.length) return;
       var first = items[0];
       var last = items[items.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     }
   }
 
@@ -127,7 +88,6 @@
     if (target && target.isConnected && target.offsetParent !== null) {
       try { target.focus(); return; } catch (_) {}
     }
-    // Исходный элемент скрыт (например, меню закрылось) — фокус на его триггер
     var fallback = document.querySelector('[data-settings-toggle]');
     if (fallback) { try { fallback.focus(); } catch (_) {} }
   }
@@ -136,36 +96,30 @@
     if (!pending) return;
     var resolve = pending.resolve;
     pending = null;
-
     els.root.hidden = true;
     document.body.classList.remove('is-modal-open');
     document.removeEventListener('keydown', onKeydown, true);
     restoreFocus();
-
     resolve(result);
   }
 
   function normalize(options) {
+    var DEFAULTS = defaults();
     var opts = options || {};
     return {
-      title: (typeof opts.title === 'string' && opts.title !== '') ? opts.title : DEFAULTS.title,
-      message: typeof opts.message === 'string' ? opts.message
-             : (typeof opts.text === 'string' ? opts.text : DEFAULTS.message),
+      title:       (typeof opts.title === 'string' && opts.title !== '') ? opts.title : DEFAULTS.title,
+      message:     typeof opts.message === 'string' ? opts.message
+                 : (typeof opts.text === 'string' ? opts.text : DEFAULTS.message),
       confirmText: (typeof opts.confirmText === 'string' && opts.confirmText !== '') ? opts.confirmText : DEFAULTS.confirmText,
-      cancelText: (typeof opts.cancelText === 'string' && opts.cancelText !== '') ? opts.cancelText : DEFAULTS.cancelText,
-      danger: opts.danger === undefined ? DEFAULTS.danger : !!opts.danger
+      cancelText:  (typeof opts.cancelText === 'string' && opts.cancelText !== '') ? opts.cancelText : DEFAULTS.cancelText,
+      danger:      opts.danger === undefined ? DEFAULTS.danger : !!opts.danger
     };
   }
 
-  /**
-   * Открывает плашку и возвращает Promise<boolean>:
-   * true — подтверждено, false — отменено (кнопка, Esc, клик по фону).
-   */
   function open(options) {
     var opts = normalize(options);
     ensureRoot();
-
-    if (pending) finish(false); // защита от двух плашек одновременно
+    if (pending) finish(false);
 
     els.title.textContent = opts.title;
     els.text.textContent = opts.message;
@@ -181,51 +135,37 @@
     document.addEventListener('keydown', onKeydown, true);
     els.cancel.focus();
 
-    return new Promise(function (resolve) {
-      pending = { resolve: resolve };
-    });
+    return new Promise(function (resolve) { pending = { resolve: resolve }; });
   }
 
-  /** Действие после подтверждения декларативного элемента. */
   function runAction(el) {
     var type = (el.getAttribute('type') || '').toLowerCase();
     var isSubmit = (el.tagName === 'BUTTON' && (type === 'submit' || type === ''))
                 || (el.tagName === 'INPUT' && (type === 'submit' || type === 'image'));
-
     if (isSubmit) {
       var form = el.form || el.closest('form');
-      // Нативный submit: событие submit не вызывается — рекурсии с модалкой нет
       if (form) { form.submit(); return; }
     }
-
     if (el.tagName === 'A' && el.getAttribute('href')) {
       global.location.href = el.getAttribute('href');
       return;
     }
-
     el.dispatchEvent(new CustomEvent('confirm:accepted', { bubbles: true }));
   }
 
-  // Декларативное использование: любые элементы с [data-confirm]
   document.addEventListener('click', function (e) {
     var trigger = e.target && e.target.closest ? e.target.closest('[data-confirm]') : null;
     if (!trigger) return;
-
     e.preventDefault();
-
+    var DEFAULTS = defaults();
     open({
-      title: trigger.getAttribute('data-confirm-title') || DEFAULTS.title,
-      message: trigger.getAttribute('data-confirm') || '',
+      title:       trigger.getAttribute('data-confirm-title') || DEFAULTS.title,
+      message:     trigger.getAttribute('data-confirm') || '',
       confirmText: trigger.getAttribute('data-confirm-ok') || DEFAULTS.confirmText,
-      cancelText: trigger.getAttribute('data-confirm-cancel') || DEFAULTS.cancelText,
-      danger: trigger.hasAttribute('data-confirm-danger')
-    }).then(function (confirmed) {
-      if (confirmed) runAction(trigger);
-    });
+      cancelText:  trigger.getAttribute('data-confirm-cancel') || DEFAULTS.cancelText,
+      danger:      trigger.hasAttribute('data-confirm-danger')
+    }).then(function (confirmed) { if (confirmed) runAction(trigger); });
   });
 
-  global.ConfirmModal = {
-    confirm: open,
-    open: open
-  };
+  global.ConfirmModal = { confirm: open, open: open };
 })(window);

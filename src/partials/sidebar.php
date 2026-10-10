@@ -1,8 +1,58 @@
 <?php $selectedTab = $view->block('selectedTab'); ?>
 <?php
+  // Короткий помощник: перевод + экранирование (ключи — resources/lang/*/common.json)
+  $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+
+  // Текущая локаль: бэк определяет её по ?lang= (см. LocaleMiddleware),
+  // затем cookie, затем Accept-Language. Чтобы при переходах внутри сайта
+  // язык не слетал, во ВСЕ ссылки сайдбара добавляем ?lang=<текущая>.
+  $curLocale = $view->locale();
+
+  $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+      ? $_GET['lang']
+      : (method_exists($view, 'locale') ? $view->locale() : null);
+
+  /**
+   * Обёртка над $view->url() — сохраняет ?lang= во всех ссылках сайдбара.
+   * Использование: $url('home'), $url('books'), $url('books.saved').
+   */
+  $url = static function (string $name, array $params = []) use ($view, $langQuery): string {
+      $base = $view->url($name, $params);
+      if ($langQuery === null || $langQuery === '') return $base;
+      return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+  };
+
+  // Переключатель языка: тот же адрес с ?lang=xx (остальные параметры сохраняются).
+  // Выбор запоминает бэк (cookie preferred_language).
+  $langUrl = static function (string $code): string {
+      $uri  = $_SERVER['REQUEST_URI'] ?? '/';
+      $path = parse_url($uri, PHP_URL_PATH) ?: '/';
+      parse_str((string) parse_url($uri, PHP_URL_QUERY), $q);
+      $q['lang'] = $code;
+      return $path . '?' . http_build_query($q);
+  };
+
+  // Доступные языки: код => название на самом языке. Новый язык = одна строка здесь
+  // + папка resources/lang/<код>/ + код в i18n.available (config).
+  $languages = ['en' => 'English', 'ru' => 'Русский'];
+  $curLangName = $languages[$curLocale] ?? strtoupper($curLocale);
+?>
+<?php
   // P1-5: без id (гость / шаринг не отработал) ссылка вела на /users/0 -> 404.
+  // Профиль — единственная ссылка, которая строится не через $view->url(),
+  // поэтому ?lang= добавляем в неё вручную через тот же $langQuery.
   $profileId  = (int) ($currentUserId ?? 0);
-  $profileUrl = $profileId > 0 ? '/users/' . $profileId : $view->url('login');
+
+  if ($profileId > 0) {
+      $profileBase = '/users/' . $profileId;
+  } else {
+      $profileBase = $view->url('login');
+  }
+
+  $profileUrl = $profileBase
+      . ($langQuery !== null && $langQuery !== ''
+          ? (str_contains($profileBase, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery)
+          : '');
 
   // Аватар вместо «фигурки человечка»: main.php отдаёт $me (текущий
   // пользователь, UserContext). 'default'/гость — остаётся прежняя иконка.
@@ -15,7 +65,7 @@
         <!-- Профиль -->
         <a href="<?= $view->e($profileUrl) ?>"
            class="nav-item mobile-nav-btn nav-profile <?= $selectedTab === 'profile' ? 'active' : '' ?>"
-           title="Profile"
+           title="<?= $tr('common.sidebar.profile') ?>"
            <?= $selectedTab === 'profile' ? 'aria-current="page"' : '' ?>>
             <span class="nav-icon">
                 <?php if ($mePreset !== null): ?>
@@ -27,39 +77,45 @@
                     </svg>
                 <?php endif ?>
             </span>
-            <span class="nav-text">Profile</span>
+            <span class="nav-text"><?= $tr('common.sidebar.profile') ?></span>
         </a>
 
         <!-- Добавлен блок sidebar-nav-group для отступа и увеличенного расстояния -->
         <div class="sidebar-nav-group">
             <!-- Лента -->
-            <a href="<?= $view->url('home') ?>" class="nav-item mobile-nav-btn <?= $selectedTab === 'for-you' ? 'active' : '' ?>" title="Feed">
+            <a href="<?= $view->e($url('home')) ?>"
+               class="nav-item mobile-nav-btn <?= $selectedTab === 'for-you' ? 'active' : '' ?>"
+               title="<?= $tr('common.sidebar.feed') ?>">
                 <span class="nav-icon">
                     <svg width="24" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M6 6.89454C6 10.5063 8.24165 11.475 8.85924 18.0378C8.88973 18.3758 9.07273 18.5785 9.44634 18.5785H15.5537C15.9273 18.5785 16.1103 18.3758 16.1408 18.0378C16.7584 11.475 19 10.5063 19 6.89454C19 3.62814 16.1331 1 12.4962 1C8.86686 1 6 3.62814 6 6.89454ZM7.27331 6.89454C7.27331 4.24387 9.66745 2.254 12.4962 2.254C15.3326 2.254 17.7267 4.24387 17.7267 6.89454C17.7267 9.69538 15.7977 10.4613 14.9666 17.3245H10.0334C9.19473 10.4613 7.27331 9.69538 7.27331 6.89454ZM9.43871 20.5683H15.5613C15.8587 20.5683 16.0874 20.3356 16.0874 20.0428C16.0874 19.7499 15.8587 19.5171 15.5613 19.5171H9.43871C9.14135 19.5171 8.91261 19.7499 8.91261 20.0428C8.91261 20.3356 9.14135 20.5683 9.43871 20.5683ZM12.4962 23.3167C14.0135 23.3167 15.2411 22.5958 15.3249 21.507H9.67508C9.74369 22.5958 10.9713 23.3167 12.4962 23.3167Z" fill="currentColor"/>
                     </svg>
                 </span>
-                <span class="nav-text">Feed</span>
+                <span class="nav-text"><?= $tr('common.sidebar.feed') ?></span>
             </a>
 
             <!-- Библиотека -->
-            <a href="<?= $view->url('books') ?>" class="nav-item mobile-nav-btn <?= $selectedTab === 'library' ? 'active' : '' ?>" title="Library">
+            <a href="<?= $view->e($url('books')) ?>"
+               class="nav-item mobile-nav-btn <?= in_array($selectedTab, ['library', 'articles'], true) ? 'active' : '' ?>"
+               title="<?= $tr('common.sidebar.library') ?>">
                 <span class="nav-icon">
                     <svg width="24" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M0.00146484 21.1979C0.00146484 22.6736 0.701482 23.428 2.17477 23.428H16.3786C17.8438 23.428 18.5438 22.6736 18.5438 21.1979V2.23005C18.5438 0.754403 17.8438 0 16.3786 0H14.2704C12.7971 0 12.0971 0.754403 12.0971 2.23005V6.57408C11.8611 6.49948 11.5925 6.45802 11.2913 6.45802H6.6842C6.37488 6.45802 6.10627 6.49948 5.87022 6.57408V5.05699C5.87022 3.57305 5.1702 2.82695 3.70504 2.82695H2.17477C0.701482 2.82695 0.00146484 3.57305 0.00146484 5.05699V21.1979ZM1.3608 21.0819V5.15647C1.3608 4.53472 1.67011 4.21139 2.31315 4.21139H3.56666C4.20972 4.21139 4.51088 4.53472 4.51088 5.15647V22.0435H2.31315C1.67011 22.0435 1.3608 21.7202 1.3608 21.0819ZM5.87022 22.0435V8.79585C5.87022 8.16579 6.17952 7.84248 6.82256 7.84248H11.1448C11.7959 7.84248 12.0971 8.16579 12.0971 8.79585V22.0435H5.87022ZM13.4565 22.0435V2.33782C13.4565 1.70777 13.7576 1.38446 14.4007 1.38446H16.2321C16.8833 1.38446 17.1845 1.70777 17.1845 2.33782V21.0819C17.1845 21.7202 16.8833 22.0435 16.2321 22.0435H13.4565ZM6.87954 9.88187C6.87954 10.2052 7.12373 10.4622 7.45747 10.4622H10.518C10.8436 10.4622 11.0878 10.2052 11.0878 9.88187C11.0878 9.56684 10.8436 9.31813 10.518 9.31813H7.45747C7.12373 9.31813 6.87954 9.56684 6.87954 9.88187ZM6.87954 19.9958C6.87954 20.3191 7.12373 20.5762 7.45747 20.5762H10.518C10.8436 20.5762 11.0878 20.3191 11.0878 19.9958C11.0878 19.6809 10.8436 19.4321 10.518 19.4321H7.45747C7.12373 19.4321 6.87954 19.6809 6.87954 19.9958ZM19.4961 21.4797C19.6671 22.9389 20.4241 23.6353 21.8892 23.4363L23.0695 23.2953C24.5346 23.0963 25.137 22.3088 24.9742 20.8331L23.2567 4.78342C23.0939 3.31606 22.3206 2.61139 20.8555 2.81865L19.6751 2.95959C18.2019 3.16684 17.5914 3.9544 17.7624 5.42176L19.4961 21.4797ZM20.8229 21.1979L19.1299 5.36373C19.0647 4.73367 19.3334 4.40207 19.9763 4.31916L20.8718 4.21139C21.5148 4.12021 21.8567 4.42695 21.9217 5.04041L23.6149 20.8829C23.6881 21.5212 23.4195 21.8528 22.7765 21.9357L21.8648 22.0435C21.2299 22.1347 20.8962 21.8363 20.8229 21.1979Z" fill="currentColor"/>
                     </svg>
                 </span>
-                <span class="nav-text">Library</span>
+                <span class="nav-text"><?= $tr('common.sidebar.library') ?></span>
             </a>
 
             <!-- Сохранённые -->
-            <a href="<?= $view->url('books.saved') ?>" class="nav-item mobile-nav-btn <?= $selectedTab === 'saved' ? 'active' : '' ?>" title="Saved">
+            <a href="<?= $view->e($url('books.saved')) ?>"
+               class="nav-item mobile-nav-btn <?= $selectedTab === 'saved' ? 'active' : '' ?>"
+               title="<?= $tr('common.sidebar.saved') ?>">
                 <span class="nav-icon">
                     <svg width="20" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M2 2.5C2 1.83696 2.21401 1.20107 2.59494 0.732233C2.97587 0.263392 3.49253 0 4.03125 0L12.1562 0C12.695 0 13.2116 0.263392 13.5926 0.732233C13.9735 1.20107 14.1875 1.83696 14.1875 2.5V19.375C14.1875 19.4881 14.1625 19.599 14.1153 19.6959C14.0681 19.7929 14.0004 19.8723 13.9194 19.9257C13.8384 19.979 13.7472 20.0044 13.6554 19.999C13.5637 19.9936 13.4748 19.9576 13.3984 19.895L8.09375 16.3762L2.78914 19.895C2.71267 19.9576 2.62383 19.9936 2.53208 19.999C2.44033 20.0044 2.3491 19.979 2.26812 19.9257C2.18714 19.8723 2.11944 19.7929 2.07223 19.6959C2.02501 19.599 2.00005 19.4881 2 19.375V2.5ZM4.03125 1.25C3.76189 1.25 3.50356 1.3817 3.31309 1.61612C3.12263 1.85054 3.01562 2.16848 3.01562 2.5V18.2075L7.81242 15.105C7.89576 15.0367 7.99364 15.0003 8.09375 15.0003C8.19386 15.0003 8.29174 15.0367 8.37508 15.105L13.1719 18.2075V2.5C13.1719 2.16848 13.0649 1.85054 12.8744 1.61612C12.6839 1.3817 12.4256 1.25 12.1562 1.25H4.03125Z" fill="currentColor"/>
                     </svg>
                 </span>
-                <span class="nav-text">Saved</span>
+                <span class="nav-text"><?= $tr('common.sidebar.saved') ?></span>
             </a>
         </div>
     </nav>
@@ -69,7 +125,7 @@
         <button type="button"
                 class="nav-item mobile-nav-btn"
                 data-settings-toggle
-                aria-label="More"
+                aria-label="<?= $tr('common.sidebar.more') ?>"
                 aria-expanded="false">
             <span class="nav-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -78,33 +134,64 @@
                     <circle cx="12" cy="18" r="2" fill="currentColor"/>
                 </svg>
             </span>
-            <span class="nav-text">More</span>
+            <span class="nav-text"><?= $tr('common.sidebar.more') ?></span>
         </button>
 
         <!-- Меню с настройками -->
         <div class="settings-menu" data-settings-menu hidden>
+            <!-- Выбор языка: раскрывающийся список (<details>, без JS); язык запоминает бэк -->
+            <details class="settings-menu__lang">
+                <summary class="settings-menu__item settings-menu__lang-summary"
+                         aria-label="<?= $tr('common.language.switch') ?>">
+                    <span class="settings-menu__icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M3 12h18"/>
+                            <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>
+                        </svg>
+                    </span>
+                    <span class="settings-menu__lang-label"><?= $tr('common.language.label') ?></span>
+                    <span class="settings-menu__lang-current"><?= $view->e($curLangName) ?></span>
+                    <span class="settings-menu__lang-arrow" aria-hidden="true">&#9662;</span>
+                </summary>
+                <ul class="settings-menu__lang-list">
+                    <?php foreach ($languages as $code => $name): ?>
+                        <li>
+                            <a href="<?= $view->e($langUrl($code)) ?>"
+                               class="settings-menu__lang-link<?= $curLocale === $code ? ' is-active' : '' ?>"
+                               hreflang="<?= $view->e($code) ?>" lang="<?= $view->e($code) ?>"
+                               <?= $curLocale === $code ? 'aria-current="true"' : '' ?>>
+                                <span><?= $view->e($name) ?></span>
+                                <?php if ($curLocale === $code): ?><span aria-hidden="true">&#10003;</span><?php endif; ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </details>
+
             <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
                 <?= $view->csrfField() ?>
                 <!-- Подтверждение Log out — универсальная плашка confirm-modal (см. modal.js) -->
                 <button type="submit"
                         class="settings-menu__item"
-                        data-confirm="You will need to sign in again to continue."
-                        data-confirm-title="Log out?"
-                        data-confirm-ok="Log out"
+                        data-confirm="<?= $tr('common.sidebar.logout_text') ?>"
+                        data-confirm-title="<?= $tr('common.sidebar.logout_title') ?>"
+                        data-confirm-ok="<?= $tr('common.sidebar.logout') ?>"
                         data-confirm-danger>
                     <span class="settings-menu__icon">↩</span>
-                    <span>Log out</span>
+                    <span><?= $tr('common.sidebar.logout') ?></span>
                 </button>
             </form>
 
             <button type="button" class="settings-menu__item">
                 <span class="settings-menu__icon">?</span>
-                <span>Help</span>
+                <span><?= $tr('common.sidebar.help') ?></span>
             </button>
 
             <button type="button" class="settings-menu__item">
                 <span class="settings-menu__icon">§</span>
-                <span>Privacy Policy</span>
+                <span><?= $tr('common.sidebar.privacy') ?></span>
             </button>
         </div>
     </div>

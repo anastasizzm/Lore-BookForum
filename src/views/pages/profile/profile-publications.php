@@ -1,6 +1,24 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php
+// Сохраняем локаль — иначе клик по табу Book/Articles или Reset уводит
+// на URL без ?lang= и бэк переключается на Accept-Language.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
+$url = static function (string $name, array $params = []) use ($view, $langQuery): string {
+    $base = $view->url($name, $params);
+    if ($langQuery === null || $langQuery === '') return $base;
+    return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+
 // userId из URL: /users/{id}/books или /users/{id}/articles
 $uri    = $_SERVER['REQUEST_URI'] ?? '/';
 $path   = parse_url($uri, PHP_URL_PATH);
@@ -17,7 +35,7 @@ if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
     $userName = trim(($user->name ?? '') . ' ' . ($user->surname ?? ''));
     if ($userName === '') $userName = $user->username ?? '';
 }
-if ($userName === '') $userName = 'User #' . $userId;
+if ($userName === '') $userName = $view->t('common.profile.user_fallback', ['id' => $userId]);
 
 $filter_open = ($filterState ?? 'closed') === 'open';
 
@@ -27,7 +45,7 @@ $searchQuery = $q['q'] ?? '';
 $view->setBlock('selectedTab', 'profile');
 ?>
 
-<?php $view->startBlock('title'); ?>Publications of <?= $view->e($userName) ?> - Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.profile.publications_of', ['name' => $userName]) ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/profile.css">
@@ -40,21 +58,21 @@ ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => 'Search',
+    'placeholder' => $view->t('common.feed.search'),
     'value'       => $searchQuery,
 ]);
 ?>
 <button type="button"
         class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
         data-filter-toggle
-        aria-label="Filters">
+        aria-label="<?= $tr('common.common.filters') ?>">
   <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'Publications',
+    'title'   => $view->t('common.profile.publications'),
     'actions' => $pageActions,
 ]);
 
@@ -62,8 +80,8 @@ $view->include('library-filters', [
     'filterState' => $filterState ?? 'closed',
     'isArticles'  => $isArticles,
     'basePath'    => $path,
-    'bookHref'    => $view->url('users.profile.books',    ['userId' => $userId]),
-    'articleHref' => $view->url('users.profile.articles', ['userId' => $userId]),
+    'bookHref'    => $url('users.profile.books',    ['userId' => $userId]),
+    'articleHref' => $url('users.profile.articles', ['userId' => $userId]),
 ]);
 ?>
 
@@ -94,7 +112,7 @@ $view->include('library-filters', [
       </div>
       <div>
         <h2 class="books-panel__title"><?= $view->e($userName) ?></h2>
-        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> items</p>
+        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> <?= $tr('common.common.items') ?></p>
       </div>
     </div>
   </header>
@@ -103,30 +121,37 @@ $view->include('library-filters', [
 
     <div class="empty-state">
       <p class="empty-state__text">
-        <?= $isArticles ? 'No articles yet.' : 'No books yet.' ?>
+        <?= $isArticles ? $tr('common.library.no_articles') : $tr('common.library.no_books') ?>
       </p>
     </div>
 
   <?php else: ?>
 
-    <div class="grid-publications">
+    <div class="grid-books">
       <?php foreach ($items as $item): ?>
         <?php
           $year = $item->createdAt ? $item->createdAt->format('Y') : '';
 
-          $url = $isArticles
+          $itemUrl = $isArticles
             ? '/articles/' . (int)$item->id
             : '/books/' . (int)$item->id;
+          $itemUrl = $withLang($itemUrl);
+
+          // Обложка: если у item есть coverUrl/cover — используем; иначе сразу cover--empty
+          $coverUrl = $item->coverUrl ?? ($item->cover ?? null);
+          $hasCover = !empty($coverUrl);
         ?>
-        <a class="publication-card" href="<?= $view->e($url) ?>">
-          <span class="publication-card__cover">
-            <img src="/img/book-placeholder.svg" alt="" loading="lazy">
-          </span>
-          <span class="publication-card__title"><?= $view->e($item->title) ?></span>
-          <span class="publication-card__meta">
-            <?= $isArticles ? 'Article' : 'Book' ?><?= $year ? ' - ' . $view->e($year) : '' ?>
-          </span>
-        </a>
+        <article class="card-base card-book">
+          <a class="card-book__link" href="<?= $view->e($itemUrl) ?>">
+            <div class="card-book__cover <?= $hasCover ? '' : 'cover--empty' ?>">
+              <?php if ($hasCover): ?>
+                <img src="<?= $view->e($coverUrl) ?>" alt="" loading="lazy">
+              <?php endif; ?>
+            </div>
+            <h3 class="card-book__title"><?= $view->e($item->title) ?></h3>
+          </a>
+          <p class="card-book__author"><?= $view->e($userName) ?></p>
+        </article>
       <?php endforeach; ?>
     </div>
 

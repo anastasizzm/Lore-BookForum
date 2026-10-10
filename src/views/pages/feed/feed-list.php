@@ -1,8 +1,9 @@
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'for-you'); ?>
 
-<?php $view->startBlock('title'); ?>For you — Book App<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.feed.title') ?> — <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('content'); ?>
 
@@ -43,13 +44,13 @@ ob_start();
 $view->include('input', [
     'type'        => 'search',
     'name'        => 'q',
-    'placeholder' => 'Search',
+    'placeholder' => $view->t('common.feed.search'),
     'value'       => $searchQuery ?? '',
 ]);
 $searchHtml = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'For you',
+    'title'   => $view->t('common.feed.title'),
     'actions' => $searchHtml,
 ]);
 ?>
@@ -86,7 +87,7 @@ $items = array_map(
 <?php if (empty($items)): ?>
 
   <div class="empty-state">
-    <p class="empty-state__text">No posts yet. Be the first to share your thoughts.</p>
+    <p class="empty-state__text"><?= $tr('common.feed.empty') ?></p>
   </div>
 
 <?php else: ?>
@@ -160,7 +161,7 @@ $items = array_map(
     <?php if (($meta['hasNext'] ?? false)): ?>
       <div class="feed-panel__load-more">
         <a href="?page=<?= ($meta['page'] ?? 1) + 1 ?><?= !empty($searchQuery) ? '&q=' . urlencode($searchQuery) : '' ?>"
-           class="btn btn--secondary">Load more</a>
+           class="btn btn--secondary"><?= $tr('common.common.load_more') ?></a>
       </div>
     <?php endif; ?>
   </div>
@@ -217,7 +218,7 @@ $items = array_map(
               <span data-like-count>0</span>
             </button>
             <button type="button" class="comment-card__reply" data-reply-toggle
-                    aria-expanded="false" aria-label="Reply">Reply</button>
+                    aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
           </div>
           <span class="comment-card__date" data-c-date></span>
         </div>
@@ -226,8 +227,8 @@ $items = array_map(
         <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
         <form class="comment-reply-form" data-reply-form hidden>
-          <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-          <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+          <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+          <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -286,7 +287,7 @@ $items = array_map(
           </button>
           <!-- Ответ на ответ идёт в тот же плоский список (без вложенности) -->
           <button type="button" class="comment-card__reply" data-reply-toggle
-                  aria-expanded="false" aria-label="Reply">Reply</button>
+                  aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
         </div>
         <span class="comment-card__date" data-reply-date></span>
       </div>

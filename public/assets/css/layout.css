@@ -325,6 +325,62 @@ body.is-sidebar-expanded .sidebar-overlay {
   flex-shrink: 0;
 }
 
+/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков */
+.settings-menu__lang {
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  margin-bottom: var(--space-1, 4px);
+  padding-bottom: var(--space-1, 4px);
+}
+
+.settings-menu__lang-summary {
+  list-style: none;
+}
+.settings-menu__lang-summary::-webkit-details-marker { display: none; }
+
+.settings-menu__lang-label { flex: 1; }
+
+.settings-menu__lang-current {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.settings-menu__lang-arrow {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+.settings-menu__lang[open] .settings-menu__lang-arrow { transform: rotate(180deg); }
+
+.settings-menu__lang-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;          /* когда языков станет много — список прокручивается */
+  overflow-y: auto;
+}
+
+.settings-menu__lang-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.settings-menu__lang-link:hover { background: var(--color-overlay); }
+.settings-menu__lang-link.is-active {
+  font-weight: 600;
+  color: var(--color-primary, #1e293b);
+  pointer-events: none;       /* текущий язык повторно не открываем */
+}
+
 /* Аватар в сайдбаре: кружок и эмодзи крупнее */
 .nav-profile .avatar--xs {
   width: 36px;

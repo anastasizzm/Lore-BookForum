@@ -1,27 +1,23 @@
-/* ============================================
-   PROFILE PUBLICATIONS - genres dropdown + reset
-   ============================================ */
-
 (function () {
   'use strict';
 
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
   function escapeHtml(str) {
     return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   async function initGenresDropdown() {
     var dropdown = document.querySelector('[data-dropdown][data-dynamic="publications-genres"]');
     if (!dropdown) return;
-
     var menu = dropdown.querySelector('.dropdown__menu');
     if (!menu) return;
 
-    menu.innerHTML = '<li class="dropdown__loading">Loading...</li>';
+    menu.innerHTML = '<li class="dropdown__loading">' + escapeHtml(t('common.loading')) + '</li>';
 
     var genres;
     try {
@@ -29,12 +25,18 @@
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        if (window.Messages) await window.Messages.fail(res, t('.js.genres_load_failed'));
+        throw new Error('HTTP ' + res.status);
+      }
       var data = await res.json();
       genres = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
     } catch (e) {
       console.error('[profile-publications] genres load failed:', e);
-      menu.innerHTML = '<li class="dropdown__error">Failed to load</li>';
+      if (window.Messages && !/^HTTP/.test(e.message)) {
+        window.Messages.show(t('js.network_error'), { type: 'error' });
+      }
+      menu.innerHTML = '<li class="dropdown__error">' + escapeHtml(t('js.load_failed')) + '</li>';
       return;
     }
 
@@ -43,21 +45,16 @@
 
     function urlWithGenre(genreId) {
       var p = new URLSearchParams(window.location.search);
-      if (genreId) p.set('genre', genreId);
-      else p.delete('genre');
+      if (genreId) p.set('genre', genreId); else p.delete('genre');
       p.delete('page');
       var qs = p.toString();
       return window.location.pathname + (qs ? '?' + qs : '');
     }
 
     var items = [
-      { title: 'All genres', href: urlWithGenre(null), active: !currentGenre },
+      { title: t('js.all_genres'), href: urlWithGenre(null), active: !currentGenre },
       ...genres.map(function (g) {
-        return {
-          title: g.title,
-          href: urlWithGenre(String(g.id)),
-          active: String(g.id) === currentGenre,
-        };
+        return { title: g.title, href: urlWithGenre(String(g.id)), active: String(g.id) === currentGenre };
       }),
     ];
 
@@ -71,9 +68,9 @@
     if (label) {
       if (currentGenre) {
         var found = genres.find(function (g) { return String(g.id) === currentGenre; });
-        label.textContent = 'Genre: ' + (found ? found.title : 'All');
+        label.textContent = t('js.genre_label', { value: found ? found.title : t('js.all_genres') });
       } else {
-        label.textContent = 'Genre: All';
+        label.textContent = t('js.genre_label', { value: t('js.all_genres') });
       }
     }
   }
@@ -86,7 +83,6 @@
           !document.querySelector('.grid-publications') &&
           !document.querySelector('.books-panel')) return;
 
-      // Reset only clears query params on publications pages
       var path = window.location.pathname;
       if (!/\/users\/\d+\/(books|articles)/.test(path)) return;
 

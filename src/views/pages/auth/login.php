@@ -1,6 +1,20 @@
 <?php $view->extends('auth'); ?>
+<?php $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p)); ?>
 
-<?php $view->startBlock('title'); ?>Sign in to Lore<?php $view->endBlock('title'); ?>
+<?php
+// Сохраняем ?lang= во всех ссылках и в action формы — бэк читает локаль
+// из query (LocaleMiddleware), без этого он уйдёт на Accept-Language.
+$langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : null);
+
+$withLang = static function (string $path) use ($langQuery): string {
+    if ($langQuery === null || $langQuery === '') return $path;
+    return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+};
+?>
+
+<?php $view->startBlock('title'); ?><?= $tr('common.auth.login_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,19 +27,21 @@
 
   <header class="login-card__header">
     <span class="login-card__logo">
-      <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
+      <img src="/assets/img/logo.svg" alt="<?= $tr('common.auth.logo_alt') ?>" width="56" height="56">
     </span>
-    <h1 class="login-card__title">Sign in to Lore</h1>
+    <h1 class="login-card__title"><?= $tr('common.auth.login_title') ?></h1>
   </header>
 
-  <form class="login-form" id="loginForm" action="<?= $view->url('login') ?>" method="POST" novalidate>
+  <form class="login-form" id="loginForm"
+        action="<?= $view->e($withLang($view->url('login'))) ?>"
+        method="POST" novalidate>
     <?= $view->csrfField() ?>
 
     <div class="form-field">
-      <label class="visually-hidden" for="loginLogin">Login or email</label>
+      <label class="visually-hidden" for="loginLogin"><?= $tr('common.auth.login_label') ?></label>
       <input class="form-field__input" type="text" id="loginLogin" name="login"
              value="<?= $view->e($form['login'] ?? '') ?>"
-             placeholder="Enter login or email" autocomplete="username" maxlength="254"
+             placeholder="<?= $tr('common.auth.login_placeholder') ?>" autocomplete="username" maxlength="254"
              aria-describedby="loginLoginError">
       <p class="form-field__error" id="loginLoginError" aria-live="polite"></p>
       <?php foreach (($errors['login'] ?? []) as $err): ?>
@@ -34,9 +50,9 @@
     </div>
 
     <div class="form-field">
-      <label class="visually-hidden" for="loginPassword">Password</label>
+      <label class="visually-hidden" for="loginPassword"><?= $tr('common.auth.password_label') ?></label>
       <input class="form-field__input" type="password" id="loginPassword" name="password"
-             placeholder="Enter password" autocomplete="current-password" maxlength="64"
+             placeholder="<?= $tr('common.auth.password_placeholder') ?>" autocomplete="current-password" maxlength="64"
              aria-describedby="loginPasswordError">
       <p class="form-field__error" id="loginPasswordError" aria-live="polite"></p>
       <?php foreach (($errors['password'] ?? []) as $err): ?>
@@ -44,11 +60,11 @@
       <?php endforeach; ?>
     </div>
 
-    <button class="btn btn--primary" type="submit">Sign in</button>
+    <button class="btn btn--primary" type="submit"><?= $tr('common.auth.sign_in') ?></button>
 
     <div class="login-form__links">
-      <a class="link" href="<?= $view->url('password.email') ?>">Forgot password?</a>
-      <a class="link" href="<?= $view->url('register') ?>">Don't have account?</a>
+      <a class="link" href="<?= $view->e($withLang($view->url('password.email'))) ?>"><?= $tr('common.auth.forgot') ?></a>
+      <a class="link" href="<?= $view->e($withLang($view->url('register'))) ?>"><?= $tr('common.auth.no_account') ?></a>
     </div>
   </form>
 
