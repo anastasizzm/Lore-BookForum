@@ -12,6 +12,7 @@ final readonly class ArticlesFilters extends PublicationsFilters
         ?int $creatorId = null,
         ?string $search = null,
         public ?int $typeId = null,
+        public ?int $bookId = null,
         public ?string $doi = null,
     ) {
         parent::__construct($genreId, $creatorId, $search);
@@ -37,6 +38,7 @@ final readonly class ArticlesFilters extends PublicationsFilters
             creatorId: $parent->creatorId,
             search: $parent->search,
             typeId: QueryParser::optionalPositiveInt($q, 'type'),
+            bookId: QueryParser::optionalPositiveInt($q, 'book'),
             doi: QueryParser::optionalString($q, 'doi'),
         );
     }

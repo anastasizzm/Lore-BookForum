@@ -34,16 +34,16 @@ abstract class PublicationsScriptDirector extends ScriptDirector
 
     public function addPublicationSelectTemp() : self
     {
-        if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.creator_id,\npublications.icon_id,\npublications.created_at,\npublications.genre_id");
+        $this->addPublicationShortSelectTemp();
+        $this->tempBuilder->addSelect("publications.genre_id,\npublications.creator_id");
         
         return $this;
     }
 
     public function addPublicationExtendedSelectTemp() : self
     {
-        if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.creator_id,\npublications.icon_id,\npublications.created_at,\npublications.genre_id,\nnpublications.comments_count,\nnpublications.saved_count,\nnpublications.rating_avg,\nnpublications.description,\nnpublications.author_notes");
+        $this->addPublicationSelectTemp();
+        $this->tempBuilder->addSelect("publications.comments_count,\npublications.saved_count,\npublications.rating_avg,\npublications.description,\npublications.author_notes");
         return $this;
     }
 
@@ -113,36 +113,6 @@ abstract class PublicationsScriptDirector extends ScriptDirector
         $this->tempBuilder->setOrder($order);
         return $this;
     }
-
-    public function addIncludesTemp(array $includeObjects) : self
-    {
-        if (!$this->isTempStarted()) $this->startTempFilter();
-        foreach($includeObjects as $prop)
-        {
-            $prop = strtolower($prop);
-            switch($prop)
-            {
-                case 'creator':
-                    $this->tempBuilder->addJoin('INNER JOIN users ON users.id = publications.creator_id')
-                        ->addJoin('INNER JOIN profiles ON profiles.user_id = users.id')
-                        ->addSelect("users.id as u_id,\nusers.username as u_username")
-                        ->addSelect("profiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar");
-                    break;
-                
-                case 'genre':
-                    $this->tempBuilder->addJoin('INNER JOIN genres ON genres.id = publications.genre_id')
-                        ->addSelect("genres.id as g_id,\ngenres.title as g_title,\ngenres.created_at as g_created_at");
-                    break;
-                default:
-                    $this->handleFallbackIncluding($prop);
-                    break;
-            }
-        }
-
-        return $this;
-    }
-
-    protected abstract function handleFallbackIncluding(string $prop) : void;
 
     public function buildTempFilter() : ScriptData
     {
