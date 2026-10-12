@@ -272,12 +272,13 @@
                   '<div class="comment-card__meta">' +
                     '<button type="button" class="btn-icon-small btn-like comment-card__like' + (liked ? ' is-liked' : '') + '"' +
                             ' data-like-btn data-liked="' + (liked ? '1' : '0') + '"' +
-                            ' aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="Like">' +
+                            ' aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="' + t('comments.like') + '">' +
                       LIKE_SVG +
                       '<span data-like-count>' + likes + '</span>' +
                     '</button>' +
                     '<button type="button" class="comment-card__reply"' +
-                            ' data-comment-toggle aria-expanded="false" aria-label="Reply">Reply</button>' +
+                            ' data-comment-toggle aria-expanded="false" aria-label="' + t('comments.reply') + '">' +
+                            t('comments.reply') + '</button>' +
                   '</div>' +
                   '<span class="comment-card__date">' + escapeHtml(date) + '</span>' +
                 '</div>' +
@@ -286,8 +287,8 @@
                       ' data-feed-comment-form data-post-id="' + postId + '" novalidate hidden>' +
                   '<input type="hidden" name="_token" value="">' +
                   '<input type="hidden" name="publicationId" value="' + pubId + '">' +
-                  '<input type="text" class="comment-form__input" name="content" placeholder="Add a comment…" maxlength="500" autocomplete="off">' +
-                  '<button type="submit" class="comment-form__submit" disabled>Post</button>' +
+                  '<input type="text" class="comment-form__input" name="content" placeholder="' + t('comments.add_comment') + '" maxlength="500" autocomplete="off">' +
+                  '<button type="submit" class="comment-form__submit" disabled>' + t('comments.post') + '</button>' +
                   '<p data-comment-error role="alert" hidden' +
                      ' style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>' +
                   '<p data-comment-status role="status" hidden' +
@@ -295,7 +296,7 @@
                 '</form>' +
 
                 '<button type="button" class="comment-card__more" data-fc-expand' +
-                        ' aria-expanded="false">Show more</button>' +
+                        ' aria-expanded="false">' + t('js.show_more') + '</button>' +
 
                 '<span class="visually-hidden" data-comment-count>' + comments + '</span>' +
 
