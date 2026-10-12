@@ -410,7 +410,7 @@ if (!empty($article->iconId)) {
 
                 <!-- Лайк уходит вниз (рядом с Reply); здесь — «три точки»:
                      меню удаления, раскрывается НАД кнопкой; только для автора -->
-                <div class="comment-card__actions" data-c-menu-wrap>
+                <div class="comment-card__actions" data-c-menu-wrap hidden>
                   <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
                           aria-haspopup="true" aria-expanded="false" aria-label="Comment options">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
