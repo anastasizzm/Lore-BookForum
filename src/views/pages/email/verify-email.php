@@ -3,14 +3,15 @@
 /** @var string $token — токен из письма */
 $verifyUrl = $verifyUrl ?? '';
 $logoUrl = $view->fullAsset('img/logo.png');
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $view->e($view->locale()) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Подтвердите email — Lore BookForum</title>
+  <title><?= $tr('common.email.verify_title') ?> — Lore BookForum</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F3F6FB;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F3F6FB;">
@@ -31,16 +32,15 @@ $logoUrl = $view->fullAsset('img/logo.png');
           <!-- Заголовок -->
           <tr>
             <td align="center" style="padding:16px 32px 0 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:24px;line-height:32px;font-weight:700;color:#29466F;">
-              Подтвердите ваш email
+              <?= $tr('common.email.verify_heading') ?>
             </td>
           </tr>
 
           <!-- Приветствие -->
           <tr>
             <td style="padding:16px 32px 0 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#2F405D;">
-              Здравствуйте!<br><br>
-              Добро пожаловать в Lore BookForum. Чтобы завершить регистрацию,
-              подтвердите адрес электронной почты, нажав на кнопку ниже.
+              <?= $tr('common.email.verify_hello') ?><br><br>
+              <?= $tr('common.email.verify_text') ?>
             </td>
           </tr>
 
@@ -49,7 +49,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
             <td align="center" style="padding:28px 32px;">
               <a href="<?= $verifyUrl ?>" target="_blank"
                  style="display:inline-block;background-color:#5876A6;color:#FFFFFF;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">
-                Verify email
+                <?= $tr('common.email.verify_button') ?>
               </a>
             </td>
           </tr>
@@ -64,7 +64,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
           <!-- Подпись -->
           <tr>
             <td style="padding:16px 32px 32px 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#2F405D;">
-              С уважением,<br>
+              <?= $tr('common.email.signature') ?><br>
               <strong style="color:#29466F;">Lore BookForum</strong>
             </td>
           </tr>
@@ -74,8 +74,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
           <tr>
             <td align="center" style="padding:16px 16px 0 16px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#6F84A5;">
-              Вы получили это письмо, потому что этот адрес был указан при регистрации на Lore BookForum.
-              Если это были не вы — просто проигнорируйте письмо.
+              <?= $tr('common.email.verify_footer') ?>
             </td>
           </tr>
         </table>

@@ -36,6 +36,9 @@ if ($article === null) {
     return;
 }
 
+// Короткий помощник: перевод + экранирование (ключи — resources/lang/*/common.json)
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+
 /* ---------- Универсальное приведение к строке ---------- */
 $str = static function ($v): string {
     if ($v === null) return '';
@@ -156,7 +159,7 @@ if (!empty($article->iconId)) {
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
 
-<?php $view->startBlock('title'); ?>Article details<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.article.page_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
@@ -165,7 +168,7 @@ if (!empty($article->iconId)) {
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
-    <h1 class="book-page-title">Article details</h1>
+    <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
   </div>
 
   <div class="book-details">
@@ -183,7 +186,7 @@ if (!empty($article->iconId)) {
                 data-article-id="<?= $articleId ?>"
                 data-save-url="/api/articles/<?= $articleId ?>/save"
                 aria-pressed="<?= $isSaved ? 'true' : 'false' ?>"
-                aria-label="<?= $isSaved ? 'Remove from saved' : 'Save article' ?>">
+                aria-label="<?= $isSaved ? $tr('common.book.unsave') : $tr('common.article.save') ?>">
           <svg width="14" height="18" viewBox="0 0 14 18" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
           </svg>
@@ -195,7 +198,7 @@ if (!empty($article->iconId)) {
               : '#annotation';
         ?>
         <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
-          <?= $isBookExcerpt ? 'Open book' : 'Read article' ?>
+          <?= $isBookExcerpt ? $tr('common.article.open_book') : $tr('common.article.read') ?>
         </a>
       </div>
 
@@ -204,7 +207,7 @@ if (!empty($article->iconId)) {
           <span class="book-rating__stars"
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
-                aria-label="Rating <?= $view->e(number_format($rating, 1)) ?> out of 5">
+                aria-label="<?= $tr('common.book.rating_aria', ['value' => number_format($rating, 1)]) ?>">
             ★★★★★
           </span>
           <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
@@ -217,8 +220,8 @@ if (!empty($article->iconId)) {
         </span>
       </div>
 
-      <div class="rate" data-rate role="radiogroup" aria-label="Rate this article">
-        <span class="rate__label">Click to Rate:</span>
+      <div class="rate" data-rate role="radiogroup" aria-label="<?= $tr('common.article.rate_group') ?>">
+        <span class="rate__label"><?= $tr('common.book.rate_label') ?></span>
         <div class="rate__stars">
           <?php for ($i = 1; $i <= 5; $i++): ?>
             <button type="button"
@@ -226,7 +229,7 @@ if (!empty($article->iconId)) {
                     data-rate-value="<?= $i ?>"
                     role="radio"
                     aria-checked="false"
-                    aria-label="<?= $i ?> out of 5">
+                    aria-label="<?= $tr('common.book.rate_star', ['value' => $i]) ?>">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95L12 2.5z"/>
               </svg>
@@ -239,28 +242,28 @@ if (!empty($article->iconId)) {
     <div class="card-base info-box">
       <h2 class="info-box__title"><?= $view->e($article->title ?? '') ?></h2>
       <p class="info-box__meta"><?= $view->e($authorName) ?></p>
-      <p class="info-box__meta">Creation date: <?= $view->e($createdAt) ?></p>
+      <p class="info-box__meta"><?= $tr('common.book.created', ['value' => $createdAt]) ?></p>
       <?php if ($genreTitle !== ''): ?>
-        <p class="info-box__meta">Genre: <?= $view->e($genreTitle) ?></p>
+        <p class="info-box__meta"><?= $tr('common.book.genre', ['value' => $genreTitle]) ?></p>
       <?php endif; ?>
 
       <?php if ($isBookExcerpt): ?>
-        <p class="info-box__meta">Type: Article from the book</p>
+        <p class="info-box__meta"><?= $tr('common.article.type_excerpt') ?></p>
         <?php if ($bookTitle !== ''): ?>
           <p class="info-box__meta">
-            Book: <?= $view->e($bookTitle) ?>
+            <?= $tr('common.article.book_line', ['value' => $bookTitle]) ?>
             <?php if (!empty($pageStart)): ?>
-              (pp. <?= (int) $pageStart ?>–<?= (int) $pageEnd ?>)
+              <?= $tr('common.article.pages_short', ['from' => (int) $pageStart, 'to' => (int) $pageEnd]) ?>
             <?php endif; ?>
           </p>
         <?php endif; ?>
       <?php else: ?>
-        <p class="info-box__meta">Type: Standalone article</p>
+        <p class="info-box__meta"><?= $tr('common.article.type_standalone') ?></p>
       <?php endif; ?>
 
       <?php /* P0-3: Type идёт выше DOI — как в макете */ ?>
       <?php if ($doi !== ''): ?>
-        <p class="info-box__meta">DOI: <?= $view->e($doi) ?></p>
+        <p class="info-box__meta"><?= $tr('common.article.doi', ['value' => $doi]) ?></p>
       <?php endif; ?>
 
       <div class="book-tabs-panel">
@@ -268,8 +271,8 @@ if (!empty($article->iconId)) {
           $view->include('tabs', [
               'variant' => 'outline',
               'items'   => [
-                  ['label' => 'Annotation', 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => $isBookExcerpt ? 'Excerpt' : 'Content', 'href' => '#content', 'active' => false, 'row' => 'content'],
+                  ['label' => $view->t('common.book.tab_annotation'), 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
+                  ['label' => $isBookExcerpt ? $view->t('common.article.tab_excerpt') : $view->t('common.article.tab_content'), 'href' => '#content', 'active' => false, 'row' => 'content'],
               ],
           ]);
         ?>
@@ -278,12 +281,12 @@ if (!empty($article->iconId)) {
           <?php if ($annotation !== ''): ?>
             <p class="info-box__body" id="annotation"><?= nl2br($view->e($annotation)) ?></p>
           <?php else: ?>
-            <p class="info-box__body" id="annotation">Annotation is not available yet.</p>
+            <p class="info-box__body" id="annotation"><?= $tr('common.book.no_annotation') ?></p>
           <?php endif; ?>
 
           <?php if ($authorNote !== ''): ?>
             <div class="book-tabs-panel__note">
-              <strong>Author's Note:</strong><br>
+              <strong><?= $tr('common.book.author_note') ?></strong><br>
               <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
@@ -292,17 +295,17 @@ if (!empty($article->iconId)) {
         <div class="card-base book-tabs-panel__content" data-row="content" hidden>
           <?php if ($isBookExcerpt): ?>
             <p class="info-box__body">
-              The full text is taken from the book
-              <strong><?= $view->e($bookTitle !== '' ? $bookTitle : 'Untitled') ?></strong><?php
+              <?= $tr('common.article.excerpt_intro') ?>
+              <strong><?= $bookTitle !== '' ? $view->e($bookTitle) : $tr('common.article.untitled') ?></strong><?php
                 if (!empty($pageStart)):
-                  ?>, pages <?= (int) $pageStart ?>–<?= (int) $pageEnd ?><?php
+                  ?><?= $tr('common.article.excerpt_pages', ['from' => (int) $pageStart, 'to' => (int) $pageEnd]) ?><?php
                 endif;
               ?>.
             </p>
             <!-- P1-6: ссылка ведёт на страницу книги -->
-            <p><a class="link" href="<?= $view->e($bookId > 0 ? '/books/' . $bookId : '#') ?>">Go to the book</a></p>
+            <p><a class="link" href="<?= $view->e($bookId > 0 ? '/books/' . $bookId : '#') ?>"><?= $tr('common.article.go_to_book') ?></a></p>
           <?php elseif ($content === ''): ?>
-            <p class="info-box__body">The article text is not available yet.</p>
+            <p class="info-box__body"><?= $tr('common.article.no_text') ?></p>
           <?php else: ?>
             <div class="info-box__body article-content">
               <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
@@ -329,7 +332,7 @@ if (!empty($article->iconId)) {
            data-me-initials="<?= $view->e($meInitials) ?>"
            data-me-avatar="<?= $view->e($meAvatar ?? '') ?>">
     <h2 class="comments-section__title">
-      Comments: <span data-comments-count><?= (int) $totalComments ?></span>
+      <?= $tr('common.comments.title') ?> <span data-comments-count><?= (int) $totalComments ?></span>
     </h2>
 
     <!--
@@ -356,9 +359,9 @@ if (!empty($article->iconId)) {
           <div class="comment-card__row">
             <input class="comment-card__input" type="text" name="content"
                    maxlength="2000" autocomplete="off"
-                   placeholder="Input comments...">
+                   placeholder="<?= $tr('common.comments.placeholder') ?>">
             <!-- Кнопка отправки (галочка): без неё Enter не выглядел «отправкой» (P0-2) -->
-            <button type="submit" class="comment-card__send" data-comment-send disabled aria-label="Send comment">
+            <button type="submit" class="comment-card__send" data-comment-send disabled aria-label="<?= $tr('common.comments.send') ?>">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -373,7 +376,7 @@ if (!empty($article->iconId)) {
     </form>
 
     <p class="comments-section__empty" data-comments-empty<?= empty($comments) ? '' : ' hidden' ?>>
-      Be the first to comment.
+      <?= $tr('common.comments.first') ?>
     </p>
 
     <!-- Список комментариев: сервер его не передаёт, book.js наполняет из API (P0-5) -->
@@ -438,7 +441,7 @@ if (!empty($article->iconId)) {
                     <span data-like-count><?= $cLikes ?></span>
                   </button>
                   <button type="button" class="comment-card__reply" data-reply-toggle
-                          aria-expanded="false" aria-label="Reply">Reply</button>
+                          aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
                 </div>
                 <span class="comment-card__date"><?= $view->e($comment['date']) ?></span>
               </div>
@@ -447,8 +450,8 @@ if (!empty($article->iconId)) {
               <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
               <form class="comment-reply-form" data-reply-form hidden>
-                <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-                <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+                <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+                <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
@@ -512,7 +515,7 @@ if (!empty($article->iconId)) {
                 <span data-like-count>0</span>
               </button>
               <button type="button" class="comment-card__reply" data-reply-toggle
-                      aria-expanded="false" aria-label="Reply">Reply</button>
+                      aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
             </div>
             <span class="comment-card__date" data-c-date></span>
           </div>
@@ -521,8 +524,8 @@ if (!empty($article->iconId)) {
           <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
           <form class="comment-reply-form" data-reply-form hidden>
-            <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-            <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+            <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+            <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -586,7 +589,7 @@ if (!empty($article->iconId)) {
             </button>
             <!-- Ответ на ответ идёт в тот же плоский список (без вложенности) -->
             <button type="button" class="comment-card__reply" data-reply-toggle
-                    aria-expanded="false" aria-label="Reply">Reply</button>
+                    aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
           </div>
           <span class="comment-card__date" data-reply-date></span>
         </div>

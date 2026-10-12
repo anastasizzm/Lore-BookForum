@@ -30,3 +30,6 @@ $RECYCLE.BIN/
 *.lnk
 
 /vendor/
+
+# pdf.js: скачанная библиотека (cmaps, шрифты, worker) — не храним в репозитории
+/public/assets/js/pdfjs/

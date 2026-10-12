@@ -1,6 +1,7 @@
 <?php $view->extends('auth'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
-<?php $view->startBlock('title'); ?>Message<?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.message.title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,7 +14,7 @@
 
   <header class="login-card__header login-card__header--center">
     <span class="login-card__logo">
-      <img src="/assets/img/logo.svg" alt="Lore logo" width="56" height="56">
+      <img src="/assets/img/logo.svg" alt="<?= $tr('common.auth.logo_alt') ?>" width="56" height="56">
     </span>
   </header>
 
