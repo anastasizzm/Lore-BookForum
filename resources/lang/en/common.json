@@ -9,7 +9,10 @@
         "cancel": "Cancel",
         "filters": "Filters",
         "items": "items",
-        "load_more": "Load more"
+        "load_more": "Load more",
+        "prev": "Previous",
+        "next": "Next",
+        "pagination": "Pagination"
     },
     "sidebar": {
         "profile": "Profile",
