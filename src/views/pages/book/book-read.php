@@ -25,11 +25,12 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 ?>
 
 <?php $view->extends('main'); ?>
+<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
-<?php $view->setBlock('selectedTab', 'books'); ?>
+<?php $view->setBlock('selectedTab', 'library'); ?>
 
 <?php $view->startBlock('title'); ?>
-  <?= $title !== '' ? $view->e($title) . ' — ' : '' ?>Read — Book App
+  <?= $title !== '' ? $view->e($title) . ' — ' : '' ?><?= $tr('common.reader.title') ?> — <?= $tr('common.common.app_name') ?>
 <?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -44,29 +45,29 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
          data-pdf-url="<?= $view->e($pdfUrl) ?>">
 
   <div class="reader__toolbar">
-    <button type="button" class="reader__btn" data-reader-prev aria-label="Previous page" disabled>
+    <button type="button" class="reader__btn" data-reader-prev aria-label="<?= $tr('common.reader.prev_aria') ?>" disabled>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span>Prev</span>
+      <span><?= $tr('common.reader.prev') ?></span>
     </button>
 
     <div class="reader__toolbar-group">
-      <button type="button" class="reader__btn" data-reader-zoom-out aria-label="Zoom out">−</button>
+      <button type="button" class="reader__btn" data-reader-zoom-out aria-label="<?= $tr('common.reader.zoom_out') ?>">−</button>
       <span class="reader__page">
-        Page
+        <?= $tr('common.reader.page') ?>
         <input class="reader__page-num" type="number" min="1" value="1"
-               data-reader-page aria-label="Page number" style="width:4ch;text-align:center">
+               data-reader-page aria-label="<?= $tr('common.reader.page_aria') ?>">
         / <span data-reader-total>–</span>
       </span>
-      <button type="button" class="reader__btn" data-reader-zoom-in aria-label="Zoom in">+</button>
+      <button type="button" class="reader__btn" data-reader-zoom-in aria-label="<?= $tr('common.reader.zoom_in') ?>">+</button>
       <button type="button" class="reader__btn" data-reader-zoom-reset
-              aria-label="Reset zoom" data-reader-zoom-label>100%</button>
+              aria-label="<?= $tr('common.reader.zoom_reset') ?>" data-reader-zoom-label>100%</button>
     </div>
 
-    <button type="button" class="reader__btn" data-reader-next aria-label="Next page" disabled>
-      <span>Next</span>
+    <button type="button" class="reader__btn" data-reader-next aria-label="<?= $tr('common.reader.next_aria') ?>" disabled>
+      <span><?= $tr('common.reader.next') ?></span>
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round"/>
@@ -74,16 +75,16 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
     </button>
   </div>
 
-  <p class="reader__status" data-reader-status>Loading…</p>
+  <p class="reader__status" data-reader-status><?= $tr('common.reader.loading') ?></p>
 
   <div class="reader__canvas-wrap" data-reader-stage>
     <canvas class="reader__canvas" width="816" height="1056" data-reader-canvas
-            aria-label="<?= $title !== '' ? $view->e($title) : 'Book page' ?>">
-      Your browser does not support the canvas element.
+            aria-label="<?= $title !== '' ? $view->e($title) : $tr('common.reader.canvas_label') ?>">
+      <?= $tr('common.reader.canvas_fallback') ?>
     </canvas>
   </div>
 
-  <p><a href="<?= $view->e($backUrl) ?>">&larr; Back to the book</a></p>
+  <p><a href="<?= $view->e($backUrl) ?>">&larr; <?= $tr('common.reader.back') ?></a></p>
 
 </section>
 

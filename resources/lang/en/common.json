@@ -216,6 +216,22 @@
         "reset_warning": "If you didn't request this, just ignore this email — your password will stay the same. The link works for a limited time.",
         "signature": "Best regards,"
     },
+        "reader": {
+        "title": "Read",
+        "prev": "Prev",
+        "next": "Next",
+        "prev_aria": "Previous page",
+        "next_aria": "Next page",
+        "zoom_in": "Zoom in",
+        "zoom_out": "Zoom out",
+        "zoom_reset": "Reset zoom",
+        "page": "Page",
+        "page_aria": "Page number",
+        "loading": "Loading…",
+        "back": "Back to the book",
+        "canvas_label": "Book page",
+        "canvas_fallback": "Your browser does not support the canvas element."
+    },
     "js": {
         "network_error": "Network error. Try again.",
         "server_error": "Server error. Please try again later.",

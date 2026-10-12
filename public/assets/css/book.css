@@ -301,7 +301,8 @@
   }
 }
 
-/* ---------------- reader (book-read.php, без JS) ---------------- */
+/* ---------------- reader (book-read.php + book-read.js) ----------------
+   Заменяет ваш прежний блок «reader (book-read.php, без JS)» в book.css целиком. */
 
 .reader {
   display: flex;
@@ -346,37 +347,75 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.reader__btn:hover,
-.reader__btn:focus-visible {
+.reader__btn:not(:disabled):hover,
+.reader__btn:not(:disabled):focus-visible {
   background: var(--color-bg-subtle, #F3F6FB);
   border-color: var(--color-primary, #1A3760);
 }
 
+/* Prev / Next блокируются в начале и в конце книги (book-read.js) */
+.reader__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .reader__page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--fs-small, 14px);
   color: var(--color-text-muted, #6F84A5);
   white-space: nowrap;
 }
 
+/* Номер страницы теперь поле ввода (можно перейти на любую страницу) */
 .reader__page-num {
+  width: 5ch;
+  padding: 4px 6px;
+  font: inherit;
   font-weight: 600;
+  text-align: center;
   color: var(--color-text, #1A3760);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-sm, 8px);
+  -moz-appearance: textfield;
+}
+.reader__page-num::-webkit-outer-spin-button,
+.reader__page-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
+/* «Loading…» до загрузки PDF */
+.reader__status {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #6F84A5);
+}
+.reader__status[hidden] { display: none; }
+
+/* Область страницы. Без justify-content: center — при zoom больше 100%
+   такая страница обрезалась бы слева и до левого края было бы не доскроллить;
+   по центру её держит margin: 0 auto у canvas. */
 .reader__canvas-wrap {
   display: flex;
-  justify-content: center;
-  padding: var(--space-4, 24px) 0;
+  padding: var(--space-4, 24px);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: var(--radius-lg, 16px);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* Размер canvas задаёт book-read.js (inline width/height), поэтому
+   max-width: 100%, height: auto и сжатие во flex-контейнере отключены */
 .reader__canvas {
   display: block;
-  max-width: 100%;
-  height: auto;
+  flex: none;
+  margin: 0 auto;
+  max-width: none;
   background: #fff;
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: 4px;
@@ -384,8 +423,36 @@
 }
 
 @media (max-width: 767px) {
+  .reader {
+    gap: var(--space-3, 16px);
+  }
+
   .reader__toolbar {
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .reader__canvas-wrap {
+    padding: var(--space-2, 12px);
+  }
+}
+
+/* ---------- 375px и узкие экраны ---------- */
+@media (max-width: 480px) {
+  /* первая строка: Prev и Next, вторая — масштаб и счётчик страниц */
+  .reader__toolbar > [data-reader-prev] { order: 1; flex: 1 1 0; }
+  .reader__toolbar > [data-reader-next] { order: 2; flex: 1 1 0; }
+  .reader__toolbar-group {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-2, 8px);
+  }
+
+  /* удобная зона нажатия на телефоне */
+  .reader__btn {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
