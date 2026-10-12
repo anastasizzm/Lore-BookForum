@@ -189,6 +189,23 @@
                 <span><?= $tr('common.sidebar.help') ?></span>
             </button>
 
+            <!-- Смена пароля без письма (страница auth/change-password.php)
+                 ПАРКОВАНА: роуты password.change нельзя добавить — routes.php
+                 и endpoints.php заморожены (правки запрещены). Ссылка временно
+                 ведёт на сброс по почте. Вид src/views/pages/auth/change-password.php
+                 сохранён — вернуть фичу можно, добавив роуты, когда разрешат. -->
+            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
+                <span class="settings-menu__icon">
+                    <!-- Замочек — SVG в стиле остальных иконок сайдбара (fill: currentColor) -->
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <rect x="2.75" y="7" width="10.5" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="10.5" r="1.1" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span>Change password</span>
+            </a>
+
             <button type="button" class="settings-menu__item">
                 <span class="settings-menu__icon">§</span>
                 <span><?= $tr('common.sidebar.privacy') ?></span>

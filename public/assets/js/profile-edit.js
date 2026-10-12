@@ -88,6 +88,10 @@
       if (!rule) return true;
 
       if (name === 'avatar') {
+        // Аватара в форме может не быть (credits-форма: username/email) —
+        // тогда правило не применяется, как и для любых других отсутствующих
+        // полей (см. «Поля нет в этой форме» ниже)
+        if (!form.querySelector('input[name="avatar"]')) { clearError(name); return true; }
         var checked = form.querySelector('input[name="avatar"]:checked');
         if (rule.required && !checked) { setError(name, t(rule.msgKey)); return false; }
         clearError(name);
@@ -216,6 +220,16 @@
             try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
             if (response.ok && !/^\s*</.test(raw)) {
+              // 202 — email изменён: бэк уже сохранил username/email, но новый
+              // адрес требует подтверждения письмом. Показываем сообщение бэка
+              // и уходим в профиль с задержкой, чтобы плашка успела прочитаться.
+              if (response.status === 202) {
+                var notice = (data && data.data && data.data.message)
+                  || 'Please verify your new email.';
+                if (window.Messages) window.Messages.show(notice, { type: 'success' });
+                setTimeout(function () { window.location.href = '/users/' + userId; }, 2200);
+                return;
+              }
               window.location.href = '/users/' + userId;
               return;
             }
