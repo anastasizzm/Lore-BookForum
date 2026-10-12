@@ -92,6 +92,24 @@ $liked = (bool) ($liked ?? false);
               </div>
               <div class="comment-card__text"><?= nl2br($view->e($text)) ?></div>
             </div>
+
+            <!-- Меню поста: «три точки» для удаления своего поста;
+                 comments.js (syncPostMenu) скрывает врап, если author != мой id -->
+            <div class="comment-card__actions" data-c-menu-wrap hidden>
+              <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
+                      aria-haspopup="true" aria-expanded="false"
+                      aria-label="<?= $tr('common.comments.options') ?>">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="8" cy="3" r="1.5"/>
+                  <circle cx="8" cy="8" r="1.5"/>
+                  <circle cx="8" cy="13" r="1.5"/>
+                </svg>
+              </button>
+              <div class="comment-card__menu" data-c-menu hidden>
+                <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
+                        data-c-delete><?= $tr('common.js.delete') ?></button>
+              </div>
+            </div>
           </div>
 
           <div class="comment-card__footer">

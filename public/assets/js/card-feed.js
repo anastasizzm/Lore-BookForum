@@ -331,6 +331,7 @@ document.addEventListener('submit', async (e) => {
 });
 
 const FEED_COMMENTS = { url: '/api/posts', pageSize: 10 };
+const FC_REPLY_PAGE_SIZE = 50;
 const feedCommentsState = new WeakMap();
 
 function fcParts(card) {
@@ -398,8 +399,62 @@ function fcCommentNode(item) {
     date: fcFormatDate(item.createdAt),
     likes: item.likesCount || 0,
     liked: !!item.isLiked,
-    replies: Number(item.commentsCount) || 0,
+    // В ленте/профиле один уровень: тумблер «View N more replies» не
+    // показываем — ответы кладутся плоско в конец списка (fcLoadChildren)
+    replies: 0,
   });
+}
+
+/**
+ * Фида/профиль — один уровень комментариев: ответы НЕ вкладываются внутрь
+ * родителя (тумблеров «View N more replies» в плоском списке нет), а
+ * добавляются плоско В КОНЕЦ списка. Рекурсивно — для 3+ уровней тоже.
+ * GET ?parent={commentId}&page=1 (хронология: старые сверху, новые снизу).
+ */
+async function fcLoadChildren(card, node, page) {
+  const parts = fcParts(card);
+  if (!parts || !parts.list) return;
+  const commentId = Number(node.dataset.commentId || 0);
+  if (!commentId) return;
+
+  const params = new URLSearchParams({
+    parent: String(commentId),
+    page: '1',
+    ps: String(FC_REPLY_PAGE_SIZE),
+    include: 'creator',
+  });
+
+  let data = null;
+  try {
+    const res = await fetch(`${FEED_COMMENTS.url}?${params}`, {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) return;
+    data = await res.json();
+  } catch (err) {
+    console.warn('[feed] failed to load replies of comment', commentId, err);
+    return;
+  }
+  if (!data || !Array.isArray(data.items)) return;
+
+  const existing = new Set();
+  parts.list.querySelectorAll('[data-comment-id]').forEach((n) => {
+    const id = Number(n.dataset.commentId);
+    if (id) existing.add(id);
+  });
+
+  // API отдаёт created_at DESC, а читается в хронологии — разворачиваем
+  for (const item of data.items.slice().reverse()) {
+    if (existing.has(Number(item.id))) continue;
+    const child = fcCommentNode(item);
+    if (!child) continue;
+    child.dataset.page = String(page); // «Show less comments» убирает страницу вместе с ответами
+    parts.list.appendChild(child);
+    if (Number(item.commentsCount) > 0) {
+      await fcLoadChildren(card, child, page); // ответы на ответы — тоже плоско в конец
+    }
+  }
 }
 
 /**
@@ -485,8 +540,13 @@ async function fcLoad(card) {
     fcComments.insertPage(parts.list, frag, page);
 
     // Ответы комментариев подтягиваем сразу (GET ?parent={commentId}),
-    // иначе после F5 они пропадут
-    withReplies.forEach((node) => fcComments.loadReplies(node));
+    // иначе после F5 они пропадут. Вложенности в ленте/профиле нет —
+    // ответы ложатся плоско В КОНЕЦ списка (fcLoadChildren)
+    (async () => {
+      for (const node of withReplies) {
+        await fcLoadChildren(card, node, page);
+      }
+    })();
 
     st.hasMore[page] = !!(data.meta && data.meta.hasNext);
     st.loaded = page;
@@ -650,4 +710,8 @@ function fcLocalizeStaticButtons() {
 document.addEventListener('DOMContentLoaded', () => {
   applyLikedState(document);
   fcLocalizeStaticButtons();
+  // Меню удаления строк постов (фид): показываем, если пост мой
+  document.querySelectorAll('.card-feed[data-post-id]').forEach((card) => {
+    if (typeof fcComments.syncPostMenu === 'function') fcComments.syncPostMenu(card);
+  });
 });

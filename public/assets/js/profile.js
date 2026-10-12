@@ -201,6 +201,14 @@
       '<path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
 
+  // Три точки (меню удаления поста) — как в card-feed.php/comment-card-template
+  var DOTS_SVG =
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<circle cx="8" cy="3" r="1.5"/>' +
+      '<circle cx="8" cy="8" r="1.5"/>' +
+      '<circle cx="8" cy="13" r="1.5"/>' +
+    '</svg>';
+
   /**
    * Карточка поста — по разметке card-feed.php (feed-list.php):
    * шапка книги, строка поста (аватар, ник->профиль, текст, сердечко +
@@ -265,6 +273,18 @@
                   '<div class="comment-card__head">' +
                     '<div class="comment-card__author">' + authorHtml + '</div>' +
                     '<div class="comment-card__text">' + textHtml(text) + '</div>' +
+                  '</div>' +
+                  // Меню поста: «три точки» для удаления своего поста
+                  // (comments.js syncPostMenu скрывает, если author != мой id)
+                  '<div class="comment-card__actions" data-c-menu-wrap hidden>' +
+                    '<button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle' +
+                            ' aria-haspopup="true" aria-expanded="false" aria-label="' + t('comments.options') + '">' +
+                      DOTS_SVG +
+                    '</button>' +
+                    '<div class="comment-card__menu" data-c-menu hidden>' +
+                      '<button type="button" class="comment-card__menu-item comment-card__menu-item--danger"' +
+                              ' data-c-delete>' + t('js.delete') + '</button>' +
+                    '</div>' +
                   '</div>' +
                 '</div>' +
 
@@ -377,6 +397,10 @@
         // CSRF-поле формы ответа — из data-posts-csrf (карточка отрендерена в JS)
         var tokenInput = node.querySelector('[data-feed-comment-form] [name="_token"]');
         if (tokenInput) tokenInput.value = csrf;
+        // Меню поста (три точки): показываем, если пост мой
+        if (window.LoreComments && typeof window.LoreComments.syncPostMenu === 'function') {
+          window.LoreComments.syncPostMenu(node);
+        }
       });
     }
 

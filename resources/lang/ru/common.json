@@ -299,6 +299,8 @@
         "delete_comment_title": "Удалить комментарий?",
         "delete_comment_text": "Вы уверены, что хотите удалить свой комментарий?",
         "delete_comment_failed": "Не удалось удалить комментарий.",
+        "delete_post_title": "Удалить пост?",
+        "delete_post_text": "Вы уверены, что хотите удалить свой пост?",
         "show_more": "Показать ещё",
         "show_less": "Свернуть",
         "show_more_comments": "Показать ещё комментарии",
