@@ -125,6 +125,9 @@ document.addEventListener('click', (e) => {
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', String(open));
     if (open) {
+      // Открываем чистую форму — без прошлых ошибок/статусов
+      setFeedMsg(form.querySelector('[data-comment-error]'), '');
+      setFeedMsg(form.querySelector('[data-comment-status]'), '');
       const input = form.querySelector('.comment-form__input');
       const target = card.dataset.authorUsername || '';
       if (input) {
@@ -231,6 +234,11 @@ document.addEventListener('submit', async (e) => {
       form.dataset.lastSent = text;
       setFeedMsg(statusEl, t('js.comment_sent'));
       input.value = '';
+      // Успех — поле ввода закрываем (как у reply-формы); сам комментарий
+      // появится в списке через comment:created → fcAppendOwn
+      form.hidden = true;
+      const toggle = card ? card.querySelector('[data-comment-toggle]') : null;
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
 
       const countEl = card ? card.querySelector('[data-comment-count]') : null;
       if (countEl) countEl.textContent = (parseInt(countEl.textContent, 10) || 0) + 1;
@@ -253,7 +261,7 @@ document.addEventListener('submit', async (e) => {
     form.dataset.sending = '0';
     input.disabled = false;
     submitBtn.disabled = input.value.trim() === '';
-    input.focus();
+    if (!form.hidden) input.focus();
   }
 });
 
@@ -573,6 +581,7 @@ async function fcLoad(card) {
 function fcSyncExpandBtn(card, open) {
   const btn = card.querySelector('[data-fc-expand]');
   if (!btn) return;
+  btn.hidden = false; // синк вызывается только когда комментарии есть
   btn.textContent = open ? t('js.show_less') : t('js.show_more');
   btn.setAttribute('aria-expanded', String(open));
 }

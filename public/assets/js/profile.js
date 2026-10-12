@@ -209,6 +209,12 @@
       '<circle cx="8" cy="13" r="1.5"/>' +
     '</svg>';
 
+  // Галочка отправки комментария — как у reply-формы в шаблоне
+  var CHECK_SVG =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
   /**
    * Карточка поста — по разметке card-feed.php (feed-list.php):
    * шапка книги, строка поста (аватар, ник->профиль, текст, сердечко +
@@ -308,7 +314,8 @@
                   '<input type="hidden" name="_token" value="">' +
                   '<input type="hidden" name="publicationId" value="' + pubId + '">' +
                   '<input type="text" class="comment-form__input" name="content" placeholder="' + t('comments.add_comment') + '" maxlength="500" autocomplete="off">' +
-                  '<button type="submit" class="comment-form__submit" disabled>' + t('comments.post') + '</button>' +
+                  '<button type="submit" class="comment-form__submit" disabled' +
+                          ' aria-label="' + t('comments.post') + '">' + CHECK_SVG + '</button>' +
                   '<p data-comment-error role="alert" hidden' +
                      ' style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>' +
                   '<p data-comment-status role="status" hidden' +
@@ -316,6 +323,7 @@
                 '</form>' +
 
                 '<button type="button" class="comment-card__more" data-fc-expand' +
+                        (comments > 0 ? '' : ' hidden') +
                         ' aria-expanded="false">' + t('js.show_more') + '</button>' +
 
                 '<span class="visually-hidden" data-comment-count>' + comments + '</span>' +
