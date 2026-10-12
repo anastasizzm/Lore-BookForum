@@ -113,6 +113,12 @@
         "newpass_repeat_label": "Confirm new password",
         "newpass_repeat_placeholder": "Repeat new password",
         "save_password": "Save new password",
+        "changepass_tab": "Change password — Lore",
+        "changepass_title": "Change password",
+        "changepass_text": "Set a new password for your account. It must be at least 8 characters long.",
+        "changepass_submit": "Change password",
+        "changepass_back": "Back to feed",
+        "changepass_done": "The password has been changed successfully.",
         "verify_title": "Email verification",
         "resend": "Resend verification"
     },

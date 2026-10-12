@@ -113,6 +113,12 @@
         "newpass_repeat_label": "Подтвердите новый пароль",
         "newpass_repeat_placeholder": "Повторите новый пароль",
         "save_password": "Сохранить пароль",
+        "changepass_tab": "Смена пароля — Lore",
+        "changepass_title": "Смена пароля",
+        "changepass_text": "Установите новый пароль для аккаунта. Он должен содержать не меньше 8 символов.",
+        "changepass_submit": "Сменить пароль",
+        "changepass_back": "Назад к ленте",
+        "changepass_done": "Пароль успешно изменён.",
         "verify_title": "Подтверждение email",
         "resend": "Отправить письмо ещё раз"
     },
