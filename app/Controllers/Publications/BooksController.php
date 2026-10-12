@@ -139,4 +139,10 @@ final class BooksController extends Controller
             ]);
         }
     }
+
+    public function read(HttpContext $context, string $bookId) 
+    {
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
+
+    }
 }
