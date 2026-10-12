@@ -117,6 +117,10 @@
       if (!rule) return true;
 
       if (name === 'avatar') {
+        // Аватара в форме может не быть (credits-форма: username/email) —
+        // тогда правило не применяется, как и для любых других отсутствующих
+        // полей (см. «Поля нет в этой форме» ниже)
+        if (!form.querySelector('input[name="avatar"]')) { clearError(name); return true; }
         var checked = form.querySelector('input[name="avatar"]:checked');
         if (rule.required && !checked) { setError(name, rule.message); return false; }
         clearError(name);
