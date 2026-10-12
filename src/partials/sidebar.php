@@ -102,8 +102,9 @@
                 <span>Help</span>
             </button>
 
-            <!-- Смена пароля: страница /auth/password-reset (роут password.email) -->
-            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
+            <!-- Смена пароля: своя страница /auth/change-password (роут password.change,
+                 замыкание в config/routes.php; раньше вёл на /auth/password-reset — форму письма) -->
+            <a href="<?= $view->url('password.change') ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">
                     <!-- Замочек — SVG в стиле остальных иконок сайдбара (fill: currentColor) -->
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

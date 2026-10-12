@@ -19,6 +19,11 @@ $avatarKey = (string) ($userData->avatar ?? '');
 
 $isOwner = (int) ($user->id ?? 0) === (int) ($userData->id ?? 0);
 
+// Кнопка Edit: владелец профиля ИЛИ админ (админ редактирует любые профили —
+// ту же проверку делает политика profile_owner: context->isAdmin || owner;
+// обычный пользователь, как и раньше, видит кнопку только у себя)
+$canEdit = $isOwner || (bool) ($user->isAdmin ?? false);
+
 // CSRF-токен для форм комментариев в карточках постов (карточки рендерит
 // profile.js в JS — поле _token заполняется из data-posts-csrf)
 $csrfToken = '';
@@ -67,7 +72,7 @@ if ($cuInitials === '') {
         <p class="profile-header__username">@<?= $view->e($userData->username ?? '') ?></p>
       </div>
 
-      <?php if ($isOwner): ?>
+      <?php if ($canEdit): ?>
         <!-- Роут users.profile.edit: /users/{userId}/profile/edit (раньше вёл на /users/{id}/edit -> 404) -->
         <a class="btn-icon profile-header__edit"
            href="<?= $view->url('users.profile.edit', ['userId' => (int)$userData->id]) ?>"
