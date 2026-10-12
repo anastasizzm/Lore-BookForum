@@ -1,5 +1,13 @@
 <?php $view->extends('main'); ?>
 
+<?php
+// ВНИМАНИЕ: вид ПАРКОВАН — роуты password.change / password.change.submit
+// нельзя зарегистрировать (routes.php и endpoints.php заморожены, правки
+// запрещены). Файл сохранён, чтобы вернуть фичу одной правкой: перенести
+// два замыкания обратно (см. историю коммитов 79716b7/4cf63a5).
+// Сайдбар на эту страницу пока не ссылается.
+?>
+
 <?php $view->startBlock('title'); ?>Change password - Book App<?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
