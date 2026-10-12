@@ -54,7 +54,14 @@
         "no_email_data": "No email data provided"
     },
     "files": {
-        "upload_error": "Upload failed (ERR_CODE :code)",
+        "ini_size": "File exceeds server limit",
+        "form_size": "File exceeds form limit",
+        "partial": "File was only partially uploaded",
+        "no_file": "No file was uploaded",
+        "no_tmp_dir": "Server has no temp directory",
+        "cant_write": "Server cannot write to disk",
+        "extension": "Upload stopped by extension",
+        "upload_fail": "Upload failed",
         "file_empty": "File is empty",
         "file_large": "File is too large (max :max MB)",
         "invalid_upload": "Invalid upload",

@@ -43,7 +43,7 @@ return function(Router $router)
 
     // Users
     $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', 'profile_owner');
-
+    
 
     // Files
     $router->get('/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);

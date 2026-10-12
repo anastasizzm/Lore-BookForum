@@ -32,14 +32,8 @@ final class LocalFileStorage implements FileStorage
         $relative = $this->buildPath($uuid, $extension);
         $absolute = $this->absolutePath($relative);
 
-        if (!is_uploaded_file($localPath)) {
-            if (!rename($localPath, $absolute)) {
-                throw new RuntimeException("Cannot move file to: $absolute");
-            }
-        } else {
-            if (!move_uploaded_file($localPath, $absolute)) {
-                throw new RuntimeException("Cannot upload file to: $absolute");
-            }
+        if (!move_uploaded_file($localPath, $absolute)) {
+            throw new RuntimeException("Cannot move file to: $absolute");
         }
 
         $size = filesize($absolute);

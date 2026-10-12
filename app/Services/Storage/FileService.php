@@ -103,9 +103,13 @@ final class FileService
         }
 
         $errors = [];
+        $error = $upload['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($error !== UPLOAD_ERR_OK) {
+            $errors['file'][] = $this->translator->t($this->describeUploadError($error));
+        }
 
-        if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            $errors['file'][] = $this->translator->t('errors.files.upload_error', [':code' => $upload['error']]);
+        if (!is_uploaded_file((string) $upload['tmp_name'])) {
+            $errors['file'][] = $this->translator->t('errors.files.invalid_upload');
         }
 
         $size = (int) ($upload['size'] ?? 0);
@@ -119,12 +123,22 @@ final class FileService
             $errors['file'][] = $this->translator->t('errors.files.file_large', [":max" => $maxMb]);
         }
 
-        if (!is_uploaded_file((string) $upload['tmp_name'])) {
-            $errors['file'][] = $this->translator->t('errors.files.invalid_upload');
-        }
-
         if ($errors != [])
             throw new ValidationException($errors);
+    }
+
+    private function describeUploadError(int $error): string
+    {   
+        return match ($error) {
+            UPLOAD_ERR_INI_SIZE   => 'errors.files.ini_size',
+            UPLOAD_ERR_FORM_SIZE  => 'errors.files.form_size',
+            UPLOAD_ERR_PARTIAL    => 'errors.files.partial',
+            UPLOAD_ERR_NO_FILE    => 'errors.files.no_file',
+            UPLOAD_ERR_NO_TMP_DIR => 'errors.files.no_tmp_dir',
+            UPLOAD_ERR_CANT_WRITE => 'errors.files.cant_write',
+            UPLOAD_ERR_EXTENSION  => 'errors.files.extension',
+            default               => 'errors.files.upload_fail',
+        };
     }
 
     private function detectMime(string $path, string $category): string

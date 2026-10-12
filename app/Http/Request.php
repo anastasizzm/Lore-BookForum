@@ -46,7 +46,7 @@ final class Request
             $_GET,
             $headers,
             $_COOKIE,
-            $_FILES,
+            self::normalizeFiles($_FILES),
             $_SERVER,
         );
     }
@@ -120,5 +120,38 @@ final class Request
     public function getAttribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;
+    }
+
+    private static function normalizeFiles(array $files): array
+    {
+        $result = [];
+
+        foreach ($files as $field => $file) {
+            $result[$field] = self::normalizeField($file);
+        }
+
+        return $result;
+    }  
+    
+    private static function normalizeField(array $file): array
+    {
+        if (!is_array($file['name'] ?? null)) {
+            return [$file];
+        }
+
+        $result = [];
+        $count  = count($file['name']);
+
+        for ($i = 0; $i < $count; $i++) {
+            $result[] = [
+                'name'     => $file['name'][$i],
+                'type'     => $file['type'][$i],
+                'tmp_name' => $file['tmp_name'][$i],
+                'error'    => $file['error'][$i],
+                'size'     => $file['size'][$i],
+            ];
+        }
+
+        return $result;
     }
 }
