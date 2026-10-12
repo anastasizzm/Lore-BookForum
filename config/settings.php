@@ -17,7 +17,7 @@ return [
         App\Middleware\ViewGlobalsMiddleware::class,
     ],
 
-    'views_dir' => [
+    'views' => [
         'pages' => $baseDir . '/src/views/pages',
         'layouts' => $baseDir . '/src/layouts',
         'partials' => $baseDir . '/src/partials'
@@ -29,7 +29,8 @@ return [
         'path' => $baseDir . '/resources/lang'
     ],
 
-    'appUrl' => $_ENV['APP_URL'] ?? throw new RuntimeException('APP_URL not set'),
+    'appUrl' => $_ENV['APP_URL'] ?? 
+        throw new RuntimeException('APP_URL not set'),
 
     'public_dir' => $baseDir . '/public',
 
@@ -68,6 +69,23 @@ return [
     ],
 
     'storage' => [
-        
+        'path' => $baseDir . '/storage/uploads',
+        'allowed' => [
+            'cover' => [
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/webp' => 'webp',
+            ],
+            'book' => [
+                'application/pdf'      => 'pdf',
+                'application/epub+zip' => 'epub',
+                'application/x-mobipocket-ebook' => 'mobi',
+                'application/x-fictionbook+xml'  => 'fb2',
+            ],
+        ],
+        'max_sizes' => [
+            'cover'  => 5 * 1024 * 1024, // 5 МБ
+            'book'   => 100 * 1024 * 1024, // 100 МБ
+        ]
     ]
 ];

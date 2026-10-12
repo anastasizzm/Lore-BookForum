@@ -4,19 +4,21 @@ declare(strict_types=1);
 namespace App\Storage;
 
 use RuntimeException;
+use App\Models\Files\StoredFile;
+use App\Lib\Settings\StorageSettings;
 
 final class LocalFileStorage implements FileStorage
 {
-    public function __construct(
-        private readonly string $root,
-        private readonly int $permissions = 0755,
-    ) {
-        $this->root = rtrim($root, '/\\');
+    private const int PERMISSIONS = 0755;
 
-        if (!is_dir($this->root)) {
-            if (!mkdir($this->root, $this->permissions, true) && !is_dir($this->root)) {
-                throw new RuntimeException("Cannot create storage root: {$this->root}");
-            }
+    public function __construct(
+        private readonly StorageSettings $settings
+    ){
+        if (!is_dir($settings->path))
+        {
+           if (!mkdir($settings->path, self::PERMISSIONS, true) && !is_dir($settings->path)) {
+                throw new RuntimeException("Cannot create storage root: {$settings->path}");
+            } 
         }
     }
 
@@ -28,15 +30,8 @@ final class LocalFileStorage implements FileStorage
         string $mimeType,
     ): StoredFile {
         $relative = $this->buildPath($uuid, $extension);
-        $absolute = $this->root . '/' . $relative;
+        $absolute = $this->absolutePath($relative);
 
-        $dir = dirname($absolute);
-
-        if (!is_dir($dir) && !mkdir($dir, $this->permissions, true) && !is_dir($dir)) {
-            throw new RuntimeException("Cannot create directory: $dir");
-        }
-
-        // move_uploaded_file только для tmp upload; для локального файла — rename
         if (!is_uploaded_file($localPath)) {
             if (!rename($localPath, $absolute)) {
                 throw new RuntimeException("Cannot move file to: $absolute");
@@ -62,24 +57,23 @@ final class LocalFileStorage implements FileStorage
 
     public function delete(string $path): void
     {
-        $absolute = $this->root . '/' . $path;
+        $absolute = $this->settings->path . '/' . $path;
 
         if (is_file($absolute)) {
             unlink($absolute);
 
-            // Опционально: удалить пустые префиксные папки
             $this->cleanupEmptyDirs(dirname($absolute));
         }
     }
 
     public function exists(string $path): bool
     {
-        return is_file($this->root . '/' . $path);
+        return is_file($this->settings->path . '/' . $path);
     }
 
     public function absolutePath(string $path): string
     {
-        return $this->root . '/' . $path;
+        return $this->settings->path . '/' . $path;
     }
 
     private function buildPath(string $uuid, string $extension): string
@@ -98,10 +92,10 @@ final class LocalFileStorage implements FileStorage
 
     private function cleanupEmptyDirs(string $dir): void
     {
-        // Не поднимаемся выше root
-        while (str_starts_with($dir, $this->root) && $dir !== $this->root) {
+        $root = $this->settings->path;
+        while (str_starts_with($dir, $root) && $dir !== $root) {
             if (!is_dir($dir) || count(scandir($dir)) > 2) {
-                return;   // не пустая
+                return;
             }
 
             rmdir($dir);

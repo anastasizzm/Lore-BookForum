@@ -6,6 +6,13 @@ use App\Http\UrlGenerator;
 use App\Http\RouteUrlGenerator;
 
 use App\Lib\Settings\Settings;
+use App\Lib\Settings\I18nSettings;
+use App\Lib\Settings\JwtSettings;
+use App\Lib\Settings\MailSettings;
+use App\Lib\Settings\RedisSettings;
+use App\Lib\Settings\StorageSettings;
+use App\Lib\Settings\ViewsSettings;
+
 use App\Lib\Data\Database;
 use App\Lib\Data\RedisClient;
 use App\Lib\Container;
@@ -42,10 +49,17 @@ use App\Repositories\Users\ProfilesRepository;
 $registry = new PolicyRegistry();
 require __DIR__ . '/policies.php';
 
+//Settings
+$container->instance(I18nSettings::class, $settings->i18n);
+$container->instance(JwtSettings::class, $settings->jwt);
+$container->instance(MailSettings::class, $settings->mail);
+$container->instance(RedisSettings::class, $settings->redis);
+$container->instance(StorageSettings::class, $settings->storage);
+$container->instance(ViewsSettings::class, $settings->views);
+$container->instance(Settings::class, $settings);
 
 //Basics
 $container->instance(PolicyRegistry::class, $registry);
-$container->instance(Settings::class, $settings);
 $container->instance(Jwt::class, new Jwt($settings));
 $container->instance(Database::class, new Database($settings));
 $container->instance(RedisClient::class, new RedisClient($settings));

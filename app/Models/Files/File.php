@@ -13,7 +13,7 @@ final readonly class File extends Dto
         public string $path,
         public string $category,
         public string $originalName,
-        public string $contentType,
+        public string $mimeType,
         public int $size,
         public int $uploadedBy,
         public DateTimeImmutable $createdAt,
@@ -26,7 +26,7 @@ final readonly class File extends Dto
             path: self::str($row, $prefix . 'path'),
             category: self::str($row, $prefix . 'category'),
             originalName: self::str($row, $prefix . 'original_name'),
-            contentType: self::str($row, $prefix . 'content_type'),
+            mimeType: self::str($row, $prefix . 'mime_type'),
             size: self::int($row, $prefix . 'size_bytes'),
             uploadedBy: self::int($row, $prefix . 'uploaded_by'),
             createdAt: self::dt($row, $prefix . 'created_at')

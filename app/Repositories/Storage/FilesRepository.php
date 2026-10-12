@@ -5,10 +5,10 @@ namespace App\Storage\Repositories;
 
 use App\Repositories\Repository;
 
-use App\Files\FileCategory;
+use App\Models\Enums\FileCategory;
 use App\Lib\Database;
 use App\Models\Uuid;
-use App\Models\File;
+use App\Models\Files\File;
 
 use DateTimeImmutable;
 use PDO;
@@ -26,13 +26,13 @@ final class FilesRepository extends Repository
         string $path,
         string $category,
         string $originalName,
-        string $contentType,
+        string $mimeType,
         int $size,
         int $uploadedBy,
     ): void {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO files (id, path, category, original_name, content_type, size_bytes, uploaded_by)
-             VALUES (:id, :path, :category, :name, :contentType, :size, :uploadedBy)'
+            'INSERT INTO files (id, path, category, original_name, mime_type, size_bytes, uploaded_by)
+             VALUES (:id, :path, :category, :name, :mimeType, :size, :uploadedBy)'
         );
 
         $stmt->execute([
@@ -40,7 +40,7 @@ final class FilesRepository extends Repository
             ':path' => $path,
             ':category' => $category,
             ':name' => $originalName,
-            ':contentType' => $contentType,
+            ':mimeType' => $mimeType,
             ':size' => $size,
             ':uploadedBy' => $uploadedBy,
         ]);
@@ -49,7 +49,7 @@ final class FilesRepository extends Repository
     public function findById(Uuid $id): ?File
     {
         $stmt = $this->db->pdo()->prepare(
-            'SELECT id, path, category, original_name, content_type, size_bytes, uploaded_by, created_at
+            'SELECT id, path, category, original_name, mime_type, size_bytes, uploaded_by, created_at
              FROM files WHERE id = :id'
         );
         $stmt->execute([':id' => $id->toString()]);

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Storage;
 
+use App\Models\Files\StoredFile;
+
 interface FileStorage
 {
     /**
@@ -23,6 +25,5 @@ interface FileStorage
 
     public function exists(string $path): bool;
 
-    /** Абсолютный путь для чтения (PHP-стриминг, X-Accel). */
     public function absolutePath(string $path): string;
 }
