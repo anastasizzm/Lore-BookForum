@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $view->e($view->locale()) ?>">
 <?php $view->include('head'); ?>
+
 <!-- Аватар-пресеты (эмодзи из настроек) для JS-рендера комментариев -->
 <script src="<?= $view->asset('js/avatar.js') ?>"></script>
-<!-- Плашки и разбор ошибок API (Messages.show / Messages.readError) -->
-<script src="<?= $view->asset('js/messages.js') ?>"></script>
-<script src="/assets/js/card-feed.js" defer></script>
 <!-- Профили: ник автора и @упоминания -> /users/{id} (используют book.js и card-feed.js) -->
 <script src="<?= $view->asset('js/users.js') ?>"></script>
+<!-- Лента: лайки, комментарии (использует users.js и avatar.js) -->
+<script src="<?= $view->asset('js/card-feed.js') ?>" defer></script>
+
 <body>
 
   <div class="sidebar-overlay" data-sidebar-overlay></div>
@@ -44,7 +45,6 @@
     </div>
   </main>
 
-  <script src="/assets/js/csrf.js"></script>
   <script src="<?= $view->asset('js/modal.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>

@@ -298,7 +298,8 @@ textarea.form-field__input {
 
 /* Мелкие обложки: иконка крупнее относительно коробки */
 .card-feed__book-thumb.cover--empty,
-.profile-publications__cover.cover--empty {
+.profile-publications__cover.cover--empty,
+.publication-card__cover.cover--empty {
   background-size: 60%;
 }
 

@@ -3,14 +3,15 @@
 /** @var string $token — токен из письма */
 $resetUrl = $resetUrl ?? '';
 $logoUrl = $view->fullAsset('img/logo.png');
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 ?>
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="<?= $view->e($view->locale()) ?>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Сброс пароля — Lore BookForum</title>
+  <title><?= $tr('common.email.reset_title') ?> — Lore BookForum</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F3F6FB;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F3F6FB;">
@@ -31,15 +32,14 @@ $logoUrl = $view->fullAsset('img/logo.png');
           <!-- Заголовок -->
           <tr>
             <td align="center" style="padding:16px 32px 0 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:24px;line-height:32px;font-weight:700;color:#29466F;">
-              Сброс пароля
+              <?= $tr('common.email.reset_heading') ?>
             </td>
           </tr>
 
           <!-- Текст -->
           <tr>
             <td style="padding:16px 32px 0 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#2F405D;">
-              Вы запросили сброс пароля для вашего аккаунта на Lore BookForum.
-              Нажмите на кнопку ниже, чтобы задать новый пароль.
+              <?= $tr('common.email.reset_text') ?>
             </td>
           </tr>
 
@@ -48,7 +48,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
             <td align="center" style="padding:28px 32px;">
               <a href="<?= $resetUrl ?>" target="_blank"
                  style="display:inline-block;background-color:#5876A6;color:#FFFFFF;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;">
-                Reset password
+                <?= $tr('common.email.reset_button') ?>
               </a>
             </td>
           </tr>
@@ -60,7 +60,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
                      style="background-color:#FDF6EA;border-left:4px solid #E9A23B;border-radius:8px;">
                 <tr>
                   <td style="padding:12px 16px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#2F405D;">
-                    Если вы не запрашивали сброс — проигнорируйте письмо. Ваш пароль останется прежним.
+                    <?= $tr('common.email.reset_warning') ?>
                   </td>
                 </tr>
               </table>
@@ -77,7 +77,7 @@ $logoUrl = $view->fullAsset('img/logo.png');
           <!-- Подпись -->
           <tr>
             <td style="padding:16px 32px 32px 32px;font-family:Inter,Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:#2F405D;">
-              С уважением,<br>
+              <?= $tr('common.email.signature') ?><br>
               <strong style="color:#29466F;">Lore BookForum</strong>
             </td>
           </tr>

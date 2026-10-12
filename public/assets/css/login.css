@@ -131,6 +131,112 @@
   justify-content: center;
 }
 
+/* ============================================
+   lang-switch — переключатель языка.
+   Два варианта: fab (плавающая иконка) и inline (кнопка в потоке).
+   Открывается через <details> — без JS.
+   ============================================ */
+
+.lang-switch {
+  font-family: inherit;
+}
+
+/* --- Trigger (общая база) --- */
+.lang-switch__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #FFFFFF;
+  border: 1px solid #D6E0EF;
+  border-radius: 999px;
+  color: #29466F;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background .15s, border-color .15s;
+}
+
+.lang-switch__trigger::-webkit-details-marker { display: none; }
+.lang-switch__trigger:hover { background: #F3F6FB; border-color: #B9C9E1; }
+.lang-switch[open] .lang-switch__trigger { background: #F3F6FB; border-color: #B9C9E1; }
+
+.lang-switch__icon { display: inline-flex; }
+.lang-switch__current { letter-spacing: .02em; }
+
+/* --- Список языков --- */
+.lang-switch__list {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #FFFFFF;
+  border: 1px solid #D6E0EF;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(41, 70, 111, .16);
+  min-width: 140px;
+}
+
+.lang-switch__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #29466F;
+  font-size: 13px;
+  text-decoration: none;
+  transition: background .12s;
+}
+.lang-switch__link:hover { background: #F3F6FB; }
+.lang-switch__link.is-active { background: #EAF0FA; font-weight: 600; }
+.lang-switch__check { color: #5876A6; }
+
+/* --- Вариант: fab (плавающая иконка) --- */
+.lang-switch--fab {
+  position: fixed;
+  bottom: 16px;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(41, 70, 111, .12);
+  border-radius: 999px;
+}
+.lang-switch--fab.lang-switch--left  { left: 16px; }
+.lang-switch--fab.lang-switch--right { right: 16px; }
+
+.lang-switch--fab .lang-switch__trigger { box-shadow: none; }
+
+.lang-switch--fab .lang-switch__list {
+  position: absolute;
+  bottom: calc(100% + 8px);
+}
+.lang-switch--fab.lang-switch--left  .lang-switch__list { left: 0; }
+.lang-switch--fab.lang-switch--right .lang-switch__list { right: 0; }
+
+/* --- Вариант: inline (в потоке, для шапки/sidebar) --- */
+.lang-switch--inline {
+  position: relative;
+  display: inline-block;
+}
+.lang-switch--inline .lang-switch__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+}
+
+/* --- Компактный вид в контексте sidebar (по желанию) --- */
+.lang-switch--inline.lang-switch--compact .lang-switch__trigger {
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.lang-switch--inline.lang-switch--compact .lang-switch__trigger:hover {
+  background: rgba(88, 118, 166, .08);
+}
+
 /* ---------------- mobile ---------------- */
 
 @media (max-width: 600px) {

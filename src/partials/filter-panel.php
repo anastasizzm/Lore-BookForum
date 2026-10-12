@@ -45,10 +45,8 @@ $filter_open = $filter_open ?? false;
                  <?php endif; ?>>
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
-        <button type="button"
-                class="filter-reset"
-                data-filter-reset>
-          &#10005; Reset
+        <button type="button" class="filter-reset" data-filter-reset>
+          &#10005; <?= $view->e($control['label'] ?? 'Reset') ?>
         </button>
 
         <?php endif; ?>

@@ -33,7 +33,7 @@ final class UsersRepository extends Repository
         return $row === false ? null : AuthCredits::fromRow($row);
     }
 
-    public function getAccountCredits(string $userId) : ?AccountCredits 
+    public function getAccountCredits(int $userId) : ?AccountCredits 
     {
         $stmt = $this->pdo()->prepare(
             'SELECT id, email, username FROM users WHERE id = :userId LIMIT 1'

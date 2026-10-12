@@ -12,16 +12,18 @@
  *   $userId        — id автора поста (ссылка на профиль: /users/{id})
  *   $userInitials  — инициалы
  *   $userAvatar    — ключ аватара из БД: 'cat', 'fox', ... или 'default'
- *                    (как его показать — решает partial avatar.php)
  *   $userName      — имя пользователя
  *   $text          — текст поста/коммента
  *   $likes         — число лайков
  *   $comments      — число комментариев
  *   $date          — дата строкой
- *   $currentUserInitials — инициалы текущего пользователя (для своих комментариев)
+ *   $currentUserInitials — инициалы текущего пользователя
  *   $currentUserName     — логин текущего пользователя
  *   $currentUserAvatar   — ключ аватара текущего пользователя
  */
+
+// Короткий помощник: перевод + экранирование (ключи — resources/lang/*/common.json)
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
 // Безопасные значения по умолчанию
 $postId        = (int) ($postId        ?? 0);
@@ -44,14 +46,9 @@ $currentUserName     = $currentUserName     ?? '';
 $currentUserId       = (int) ($currentUserId ?? 0);
 $currentUserAvatar   = $currentUserAvatar   ?? '';
 
-// «Мой лайк» приходит из PostContext (isLiked) — API /api/posts отдаёт его
-// вместе с каждым постом. Раньше состояние хранилось в localStorage и расходилось с БД.
+// «Мой лайк» приходит из PostContext (isLiked)
 $liked = (bool) ($liked ?? false);
 ?>
-<!-- data-publication-id — publicationId для ответа (comments.js),
-     data-author-id/-username — автор поста: его профиль и @упоминание
-     в ответе (card-feed.js/users.js), data-cu-* — текущий юзер для
-     оптимистичной вставки своего комментария -->
 <article class="card-base card-feed" data-post-id="<?= $postId ?>"
          data-publication-id="<?= $publicationId ?>"
          data-author-id="<?= $userId ?>"
@@ -64,14 +61,10 @@ $liked = (bool) ($liked ?? false);
   <?php if ($withBook): ?>
     <div class="card-feed__book-header">
       <?php if ($bookCover !== ''): ?>
-        <?php /* не загрузится — app.js заменит <img> на CSS-заглушку */ ?>
         <img src="<?= $view->e($bookCover) ?>" alt="" class="card-feed__book-thumb">
       <?php else: ?>
         <span class="card-feed__book-thumb cover--empty" aria-hidden="true"></span>
       <?php endif; ?>
-      <!-- Название книги ведёт в details публикации. Тип (book/article)
-           в данных ленты не приходит — резолвит card-feed.js
-           ([data-pub-link]: /books/{id}, при 404 — /articles/{id}) -->
       <h3 class="card-feed__book-title">
         <a class="card-feed__book-link" href="/books/<?= $publicationId ?>"
            data-pub-link data-pub-id="<?= $publicationId ?>"><?= $view->e($bookTitle) ?></a>
@@ -80,12 +73,6 @@ $liked = (bool) ($liked ?? false);
   <?php endif; ?>
 
   <div class="card-feed__body-section<?= $withBook ? ' card-feed__body-section--with-book' : '' ?>">
-    <!--
-      Пост = корневой комментарий: раскладка строки ТА ЖЕ, что у ответов
-      под ним — аватар, ник+текст, под текстом сердечко + Reply слева и
-      дата справа. Ник ведёт на профиль автора (/users/{id}).
-      Reply раскрывает встроенный ввод и подставляет @ник автора поста.
-    -->
     <div class="card-feed__post">
       <div class="comment-card__inner">
         <?php $view->include('avatar', [
@@ -109,56 +96,44 @@ $liked = (bool) ($liked ?? false);
 
           <div class="comment-card__footer">
             <div class="comment-card__meta">
-              <!-- Лайк поста — та же кнопка, что у комментариев (card-feed.js) -->
+              <!-- Лайк поста -->
               <button type="button" class="btn-icon-small btn-like comment-card__like"
                       data-like-btn data-liked="<?= $liked ? '1' : '0' ?>"
-                      aria-pressed="<?= $liked ? 'true' : 'false' ?>" aria-label="Like">
+                      aria-pressed="<?= $liked ? 'true' : 'false' ?>"
+                      aria-label="<?= $tr('common.comments.like') ?>">
                 <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <span data-like-count><?= (int)$likes ?></span>
               </button>
-              <!-- Reply открывает/закрывает встроенный ввод (card-feed.js) -->
+              <!-- Reply: открывает/закрывает встроенный ввод -->
               <button type="button" class="comment-card__reply"
-                      data-comment-toggle aria-expanded="false" aria-label="Reply">Reply</button>
+                      data-comment-toggle aria-expanded="false"
+                      aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
             </div>
             <span class="comment-card__date"><?= $view->e($date) ?></span>
           </div>
 
-          <!--
-            Ответ на пост: POST /api/posts/{postId}, application/x-www-form-urlencoded
-              поля: content, publicationId, csrf-поле
-              успех: 201 {"createdId": N}
-              ошибка: не-201, JSON с errors / message
-            Отправку делает card-feed.js (fetch); форма вшита в строку поста
-            и раскрывается кнопкой Reply (без разделителя сверху).
-          -->
+          <!-- Ответ на пост -->
           <form class="comment-form" action="/api/posts/<?= $postId ?>" method="POST"
                 data-feed-comment-form data-post-id="<?= $postId ?>" novalidate hidden>
             <?= $view->csrfField() ?>
             <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
-            <input type="text" class="comment-form__input" name="content" placeholder="Add a comment…" maxlength="500" autocomplete="off">
-            <button type="submit" class="comment-form__submit" disabled>Post</button>
+            <input type="text" class="comment-form__input" name="content"
+                   placeholder="<?= $tr('common.comments.add_comment') ?>" maxlength="500" autocomplete="off">
+            <button type="submit" class="comment-form__submit" disabled><?= $tr('common.comments.post') ?></button>
             <p data-comment-error role="alert" hidden
                style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
             <p data-comment-status role="status" hidden
                style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>
           </form>
 
-          <!-- Маленькая серая ссылка раскрытия — вместо пилюли «Show less» внизу -->
+          <!-- Ссылка «Show more» / «Show less» -->
           <button type="button" class="comment-card__more" data-fc-expand
-                  aria-expanded="false">Show more</button>
+                  aria-expanded="false"><?= $tr('common.js.show_more') ?></button>
 
-          <!-- Счётчик нужен card-feed.js (ленивая загрузка), по макету не виден -->
           <span class="visually-hidden" data-comment-count><?= (int)$comments ?></span>
 
-          <!--
-            Комментарии к посту: GET /api/posts?parent={postId}.
-            Подгружаются лениво при первом раскрытии (card-feed.js), порядок —
-            хронологический; кнопки «Show more/less comments» ставит comments.js.
-            Блок вложен в колонку контента поста — уходит вправо под ник,
-            как ответы; одна общая линия слева — у body-section--with-book.
-          -->
           <div class="feed-comments" data-feed-comments hidden>
             <div class="feed-comments__list" data-fc-list></div>
             <p class="feed-comments__status" data-fc-status role="status" hidden></p>

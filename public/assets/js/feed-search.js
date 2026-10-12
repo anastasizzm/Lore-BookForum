@@ -2,48 +2,28 @@
 
 /* ============================================
    Поиск в ленте по НАЗВАНИЮ КНИГИ.
-
-   Серверный ?q= в ленте ищет по users.username (бэкенд:
-   PostsScriptDirector::addSearchTempFilter — ILIKE по логину автора
-   поста), поэтому запрос «Название книги» в лучшем случае ничего не
-   находил. Логика здесь:
-     1) страницы ленты забираются БЕЗ ?q (иначе сервер опять отфильтрует
-        по автору) — постранично, не больше MAX_PAGES за раз;
-     2) остаются только карточки, у которых .card-feed__book-title
-        содержит запрос без учёта регистра (посты без книги не подходят —
-        искать по названию книги — по названию книги);
-     3) ?q= остаётся в URL (pushState), чтобы ссылку можно было
-        копировать: при перезагрузке поиск выполнится здесь же;
-     4) «Load more» при активном поиске догружает СЛЕДУЮЩУЮ страницу
-        ленты и оставляет совпавшие карточки из неё.
-
-   filters.js делегирует сюда из setupSearch() (см. window.LoreFeedSearch),
-   скрипт подключается только на странице ленты.
+   Все URL, которые уходят на сервер, идут через withLang() —
+   бэк читает локаль из ?lang=, поэтому он должен быть всегда.
    ============================================ */
 
 window.LoreFeedSearch = (function () {
-  // Потолок авто-сканирования за один поиск (как у выпадающих списков
-  // в filters.js). Дальше — только по кнопке «Load more».
-  var MAX_PAGES = 20;
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+  var withLang = function (url) {
+    return window.LoreI18n && typeof LoreI18n.withLang === 'function'
+      ? LoreI18n.withLang(url)
+      : url;
+  };
 
+  var MAX_PAGES = 20;
   var state = { q: '', page: 1, hasNext: false, busy: false };
 
-  // ---------- разметка ----------
-
-  function stack() {
-    var panel = document.querySelector('.feed-panel');
-    return panel ? panel.querySelector('.stack') : null;
-  }
-
-  // Сервер мог отрендерить и «No posts yet», и карточки с чужим
-  // результатом поиска по автору — приводим страницу к своему виду.
   function ensurePanel() {
     var panel = document.querySelector('.feed-panel');
     if (panel) return panel;
-
     var empty = document.querySelector('.empty-state');
     if (empty) empty.hidden = true;
-
     panel = document.createElement('div');
     panel.className = 'feed-panel';
     panel.innerHTML = '<div class="stack"></div>';
@@ -69,20 +49,32 @@ window.LoreFeedSearch = (function () {
     if (el) el.hidden = !show;
   }
 
-  // ---------- данные ----------
-
   function pageUrl(page) {
     var p = new URLSearchParams();
     if (page > 1) p.set('page', String(page));
     var qs = p.toString();
-    return location.pathname + (qs ? '?' + qs : ''); // без q: сервер фильтрует по автору
+    // withLang добавит ?lang=<locale> — иначе бэк на этом fetch-запросе
+    // не поймёт, какую локаль отдать в карточках.
+    return withLang(location.pathname + (qs ? '?' + qs : ''));
+  }
+
+  function notify(text) {
+    if (window.Messages) window.Messages.show(text, { type: 'error' });
+    else console.warn(text);
   }
 
   function fetchPage(page) {
     return fetch(pageUrl(page), { credentials: 'same-origin' })
       .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
+        if (res.ok) return res.text();
+        var reading = window.Messages
+          ? window.Messages.readError(res, t('js.search_failed'))
+          : Promise.resolve(t('js.search_failed_http', { status: res.status }));
+        return reading.then(function (msg) {
+          var err = new Error(msg);
+          err.fromServer = true;
+          throw err;
+        });
       })
       .then(function (html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
@@ -103,8 +95,9 @@ window.LoreFeedSearch = (function () {
   function scan(page, replace) {
     if (state.busy) return;
     state.busy = true;
-    setStatus('Searching…');
+    setStatus(t('js.searching'));
     setLoadMore(false);
+    var failed = false;
 
     var target = ensurePanel().querySelector('.stack');
     if (replace) target.replaceChildren();
@@ -122,64 +115,57 @@ window.LoreFeedSearch = (function () {
     }
 
     step(page)
-      .catch(function () {
-        setStatus('Search failed. Try again.');
+      .catch(function (err) {
+        failed = true;
+        console.error('[feed-search] failed:', err);
+        notify(err && err.fromServer ? err.message : t('js.network_error'));
       })
       .finally(function () {
         state.busy = false;
         setLoadMore(state.hasNext);
         setStatus(
-          target.children.length
+          failed || target.children.length
             ? ''
-            : 'Nothing found for “' + (state.original || state.q) +
-              '”. Try a book title.'
+            : t('js.nothing_found', { query: state.original || state.q })
         );
       });
   }
 
-  // ---------- API (его дергает filters.js) ----------
-
   function go(query) {
     var q = String(query || '').trim();
+
+    // Поле очистили — возвращаем обычную ленту. withLang — чтобы
+    // не потерять ?lang=, иначе бэк перейдёт на Accept-Language.
     if (!q) {
-      // Поле очистили — возвращаем обычную ленту (сервер без ?q)
-      location.href = location.pathname;
+      location.href = withLang(location.pathname);
       return;
     }
 
     state.q = q.toLowerCase();
     state.original = q;
 
-    // Делимая ссылка: перезагрузка страницы повторит поиск
+    // Делимая ссылка: перезагрузка повторит поиск на том же языке.
+    // new URL(location.href) — все существующие параметры (включая lang) сохраняются.
     var url = new URL(location.href);
     url.searchParams.set('q', q);
     url.searchParams.delete('page');
+    // Явно гарантируем lang — на случай, если его не было в URL изначально.
+    if (window.LoreI18n && LoreI18n.locale) url.searchParams.set('lang', LoreI18n.locale);
     history.pushState(null, '', url.pathname + url.search);
 
     scan(1, true);
   }
 
-  // Продолжить поиск со следующей страницы ленты (кнопка Load more)
-  document.addEventListener(
-    'click',
-    function (e) {
-      if (!state.q) return;
-      var link = e.target.closest && e.target.closest('.feed-panel__load-more a');
-      if (!link) return;
-      e.preventDefault();
-      if (state.busy || !state.hasNext) return;
-      scan(state.page + 1, false);
-    },
-    true
-  );
+  document.addEventListener('click', function (e) {
+    if (!state.q) return;
+    var link = e.target.closest && e.target.closest('.feed-panel__load-more a');
+    if (!link) return;
+    e.preventDefault();
+    if (state.busy || !state.hasNext) return;
+    scan(state.page + 1, false);
+  }, true);
 
-  // Back/Forward после pushState — перечитываем страницу с сервера,
-  // чтобы вернуться к «серверному» виду ленты без поиска.
-  window.addEventListener('popstate', function () {
-    location.reload();
-  });
-
-  // ---------- init: ?q= в адресе при загрузке страницы ----------
+  window.addEventListener('popstate', function () { location.reload(); });
 
   function init() {
     var q = new URL(location.href).searchParams.get('q');

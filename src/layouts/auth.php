@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= $view->e($view->locale()) ?>">
 <?php $view->include('head'); ?>
 <body class="page page--login">
 
@@ -21,8 +21,10 @@
     <?= $view->block('content') ?>
   </main>
 
-  <script src="/assets/js/messages.js"></script>
-  <script src="/assets/js/csrf.js"></script>
+  <!-- Переключатель языка: плавающая иконка в левом нижнем углу.
+       Компонент — src/partials/lang-switch.php, стили — login.css -->
+  <?php $view->include('lang-switch'); ?>
+
   <?= $view->block('scripts') ?>
 </body>
 </html>

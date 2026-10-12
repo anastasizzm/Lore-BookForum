@@ -1,5 +1,6 @@
 <?php
 $view->extends('main');
+$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
 // $items больше не нужен для рендера, но оставим на случай SSR-fallback
 $items = $items ?? [];
@@ -13,14 +14,17 @@ if ($type === null) {
     $isArticles  = str_starts_with($currentPath, '/articles');
 }
 
-$pageTitle  = $isArticles ? 'All articles' : 'All books';
-$tabKey     = $isArticles ? 'articles'      : 'library';
-$emptyText  = $isArticles ? 'No articles yet.' : 'No books yet.';
-$searchHint = $isArticles ? 'Search articles'  : 'Search books';
+$pageTitle  = $isArticles ? $view->t('common.library.all_articles') : $view->t('common.library.all_books');
+// Таб в сайдбаре — «Библиотека» и для книг, и для статей: отдельной
+// иконки «Статьи» в sidebar нет, поэтому active-плашка должна гореть
+// на обоих разделах.
+$tabKey     = 'library';
+$emptyText  = $isArticles ? $view->t('common.library.no_articles') : $view->t('common.library.no_books');
+$searchHint = $isArticles ? $view->t('common.library.search_articles') : $view->t('common.library.search_books');
 $apiBase    = $isArticles ? '/api/articles'  : '/api/books';
 
 $view->setBlock('selectedTab', $tabKey);
-$view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - Book App<?php $view->endBlock('title');
+$view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title');
 
 $view->startBlock('content');
 
@@ -36,14 +40,14 @@ $view->include('input', [
 <button type="button"
         class="btn-icon filter-toggle"
         data-filter-toggle
-        aria-label="Filters">
+        aria-label="<?= $tr('common.common.filters') ?>">
   <span>&#9776;</span>
 </button>
 <?php
 $pageActions = ob_get_clean();
 
 $view->include('page-header', [
-    'title'   => 'Library',
+    'title'   => $view->t('common.library.title'),
     'actions' => $pageActions,
 ]);
 
@@ -53,22 +57,32 @@ $view->include('library-filters', [
 ]);
 
 // ---- Сортировка ----
-// Дефолт синхронизирован с library-filters.js (DEFAULTS.sort = 'popularity').
 $sort_options = $sortOptions ?? [
-    'newest'     => 'Newest',
-    'popularity' => 'Popularity',
-    'alpha'      => 'A to Z',
+    'newest'     => $view->t('common.sort.newest'),
+    'popularity' => $view->t('common.sort.popularity'),
+    'alpha'      => $view->t('common.sort.alpha'),
 ];
 
 $current_sort  = $currentSort ?? 'newest';
 if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
 $current_label = $sort_options[$current_sort];
 
+// href — только страховка на случай, если JS не загрузился.
+// Сохраняем текущие параметры (включая lang), чтобы переход без JS
+// не терял язык.
+$preservedKeys = ['q', 'genre', 'status', 'isbn', 'doi', 'kind', 'f', 'lang'];
+$preserved = array_filter(
+    $_GET,
+    static fn($k) => in_array($k, $preservedKeys, true),
+    ARRAY_FILTER_USE_KEY
+);
+
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
+    $sortHref = '?' . http_build_query(array_merge($preserved, ['sort' => $key]));
     $dropdownOptions[] = [
         'label' => $text,
-        'href'  => '?sort=' . urlencode($key),
+        'href'  => $sortHref,
         'value' => $key,
     ];
 }
@@ -106,14 +120,14 @@ foreach ($sort_options as $key => $text) {
       <div>
         <h2 class="books-panel__title"><?= $view->e($pageTitle) ?></h2>
         <p class="books-panel__meta">
-          <span data-library-count>0</span> items
+          <span data-library-count>0</span> <?= $tr('common.common.items') ?>
         </p>
       </div>
     </div>
 
     <?php
     $view->include('dropdown', [
-        'label'   => 'Sort: ' . $current_label,
+        'label'   => $view->t('common.sort.label', ['value' => $current_label]),
         'key'     => 'sort',
         'options' => $dropdownOptions,
     ]);
@@ -128,7 +142,7 @@ foreach ($sort_options as $key => $text) {
   <div class="grid-books" data-library-grid></div>
 
   <div class="feed-panel__load-more" data-library-more hidden>
-    <button type="button" class="btn btn--secondary" data-load-more>Load more</button>
+    <button type="button" class="btn btn--secondary" data-load-more><?= $tr('common.common.load_more') ?></button>
   </div>
 
 </section>

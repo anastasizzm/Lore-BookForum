@@ -219,6 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
    Один обработчик на оба типа: карточки в библиотеке/сохранённых (data-save-book,
    data-save-article) и закладки на страницах деталей book-details / article-details. */
 (function () {
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
   var busy = new WeakSet();
 
   // cookie csrf_token — источник правды; запасной вариант — скрытое поле _token.
@@ -247,7 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function setState(btn, saved, type) {
     btn.classList.toggle('is-active', saved);
     btn.setAttribute('aria-pressed', String(saved));
-    btn.setAttribute('aria-label', saved ? 'Remove from saved' : 'Save ' + type);
+    // i18n: unsave / save_book / save_article
+    var key = saved ? 'unsave' : (type === 'article' ? 'save_article' : 'save_book');
+    btn.setAttribute('aria-label', t(key));
   }
 
   function bumpSavesCount(delta) {
@@ -266,7 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
     var id = Number(type === 'article' ? btn.dataset.articleId : btn.dataset.bookId);
     if (!id) {
       console.error('Save ' + type + ': publication id attribute is missing');
-      toast('Could not save the ' + type + '. Please reload the page.');
+      // i18n: save_failed_reload
+      toast(t('save_failed_reload'));
       return;
     }
 
@@ -317,14 +324,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
       } else {
         setState(btn, wasSaved, type);
-        var fallbackMsg = 'Failed to update saved ' + type + 's (HTTP ' + res.status + ')';
+        var fallbackMsg = t('request_failed', { status: res.status });
         toast(window.Messages
           ? window.Messages.describe(res.status, data, raw, fallbackMsg)
           : fallbackMsg);
       }
     } catch (err) {
       setState(btn, wasSaved, type);
-      toast('Network error. Try again.');
+      // i18n: network_error
+      toast(t('network_error'));
     } finally {
       busy.delete(btn);
       btn.disabled = false;

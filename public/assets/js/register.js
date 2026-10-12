@@ -1,6 +1,8 @@
 "use strict";
 
 function initRegisterPage() {
+  const t = (key, params) => window.LoreI18n ? LoreI18n.t(key, params) : key;
+
   const form = document.getElementById("registerForm");
   const email = document.getElementById("registerEmail");
   const username = document.getElementById("registerUsername");
@@ -10,17 +12,26 @@ function initRegisterPage() {
   const passwordConfirm = document.getElementById("registerPasswordConfirm");
 
   let submitAttempted = false;
+  const errors = {};
 
   function setError(input, messageId, text) {
     const invalid = text !== "";
     input.classList.toggle("form-field__input--invalid", invalid);
     input.setAttribute("aria-invalid", String(invalid));
-    document.getElementById(messageId).textContent = text;
+    errors[messageId] = text;
+    document.getElementById(messageId).textContent = window.Messages ? "" : text;
+  }
+
+  function showErrors() {
+    const list = Object.values(errors).filter(Boolean);
+    if (list.length && window.Messages) {
+      window.Messages.show(list.join("\n"), { type: "error" });
+    }
   }
 
   function validateEmail() {
     const ok = LoreValidators.isEmail(email.value);
-    setError(email, "registerEmailError", ok ? "" : "Invalid email");
+    setError(email, "registerEmailError", ok ? "" : t("common.js.invalid_email"));
     return ok;
   }
 
@@ -30,11 +41,11 @@ function initRegisterPage() {
     if (!ok) {
       const v = username.value.trim();
       if (v.length < LoreValidators.LOGIN_MIN_LENGTH) {
-        message = `Username must be at least ${LoreValidators.LOGIN_MIN_LENGTH} characters`;
+        message = t("common.js.username_min", { min: LoreValidators.LOGIN_MIN_LENGTH });
       } else if (!/^[A-Za-z0-9._-]+$/.test(v)) {
-        message = "Only letters, digits, dot, dash and underscore allowed";
+        message = t("common.js.username_chars");
       } else {
-        message = "Invalid username";
+        message = t("common.js.invalid_username");
       }
     }
     setError(username, "registerUsernameError", message);
@@ -43,13 +54,13 @@ function initRegisterPage() {
 
   function validateName() {
     const ok = name.value.trim().length > 0;
-    setError(name, "registerNameError", ok ? "" : "Name is required");
+    setError(name, "registerNameError", ok ? "" : t("common.js.name_required"));
     return ok;
   }
 
   function validateSurname() {
     const ok = surname.value.trim().length > 0;
-    setError(surname, "registerSurnameError", ok ? "" : "Surname is required");
+    setError(surname, "registerSurnameError", ok ? "" : t("common.js.surname_required"));
     return ok;
   }
 
@@ -57,10 +68,9 @@ function initRegisterPage() {
     const ok = LoreValidators.isPassword(password.value);
     let message = "";
     if (!ok) {
-      message =
-        password.value.length < LoreValidators.PASSWORD_MIN_LENGTH
-          ? `Password must be at least ${LoreValidators.PASSWORD_MIN_LENGTH} characters`
-          : "Invalid password";
+      message = password.value.length < LoreValidators.PASSWORD_MIN_LENGTH
+        ? t("common.js.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
+        : t("common.js.invalid_password");
     }
     setError(password, "registerPasswordError", message);
     return ok;
@@ -68,11 +78,7 @@ function initRegisterPage() {
 
   function validatePasswordConfirm() {
     const ok = passwordConfirm.value !== "" && passwordConfirm.value === password.value;
-    setError(
-      passwordConfirm,
-      "registerPasswordConfirmError",
-      ok ? "" : "Passwords are different"
-    );
+    setError(passwordConfirm, "registerPasswordConfirmError", ok ? "" : t("common.js.passwords_different"));
     return ok;
   }
 
@@ -86,9 +92,7 @@ function initRegisterPage() {
       if (passwordConfirm.value !== "") validatePasswordConfirm();
     }
   });
-  passwordConfirm.addEventListener("input", () => {
-    if (submitAttempted) validatePasswordConfirm();
-  });
+  passwordConfirm.addEventListener("input", () => { if (submitAttempted) validatePasswordConfirm(); });
 
   form.addEventListener("submit", (event) => {
     submitAttempted = true;
@@ -100,6 +104,7 @@ function initRegisterPage() {
     const confirmOk  = validatePasswordConfirm();
     if (!emailOk || !usernameOk || !nameOk || !surnameOk || !passwordOk || !confirmOk) {
       event.preventDefault();
+      showErrors();
     }
   });
 }
