@@ -93,9 +93,8 @@ if ($cuInitials === '') {
       </div>
 
       <?php if ($canEdit): ?>
-        <!-- Роут users.profile.edit: /users/{userId}/profile/edit (разработчик
-             локализации предложил /users/{id}/edit — тот 404, оставляем роут;
-             $url — их же обёртка, добавляющая ?lang= к ссылке) -->
+        <!-- Роут users.profile.edit (с develop: /users/{userId}/edit);
+             $url — обёртка, добавляющая ?lang= к ссылке -->
         <a class="btn-icon profile-header__edit"
            href="<?= $view->e($url('users.profile.edit', ['userId' => (int)$userData->id])) ?>"
            aria-label="<?= $tr('common.profile.edit') ?>"
