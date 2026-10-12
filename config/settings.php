@@ -86,6 +86,8 @@ return [
         'max_sizes' => [
             'cover'  => 5 * 1024 * 1024, // 5 МБ
             'book'   => 100 * 1024 * 1024, // 100 МБ
-        ]
+        ],
+        'internal_url_prefix' => '/files',
+        'use_x_accel' => true
     ]
 ];

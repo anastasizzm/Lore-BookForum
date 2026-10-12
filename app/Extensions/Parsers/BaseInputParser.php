@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Extensions\Parsers;
 
-use App\Support\EnumResolver;
+use App\Extensions\EnumExtensions;
 use UnitEnum;
+use InvalidArgumentException;
+use App\Models\Uuid;
 
 abstract class BaseInputParser
 {
@@ -95,7 +97,7 @@ abstract class BaseInputParser
             return null;
         }
 
-        $enum = EnumResolver::tryResolve($enumClass, $value);
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
 
         if ($enum === null) {
             static::fail($key, "'{$value}' is not a valid value for '{$key}'");
@@ -171,12 +173,38 @@ abstract class BaseInputParser
     ): UnitEnum {
         $value = self::string($input, $key);
 
-        $enum = EnumResolver::tryResolve($enumClass, $value);
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
 
         if ($enum === null) {
             static::fail($key, "'{$value}' is not a valid value for '{$key}'");
         }
 
         return $enum;
+    }
+
+    public static function optionalUuid(array $input, string $key): ?Uuid
+    {
+        $value = self::optionalString($input, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        try {
+            return Uuid::fromString($value);
+        } catch (InvalidArgumentException) {
+            static::fail($key, "'{$key}' must be a valid UUID");
+        }
+    }
+
+    public static function uuid(array $input, string $key): Uuid
+    {
+        $value = self::string($input, $key);
+
+        try {
+            return Uuid::fromString($value);
+        } catch (InvalidArgumentException) {
+            static::fail($key, "'{$key}' must be a valid UUID");
+        }
     }
 }

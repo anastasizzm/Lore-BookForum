@@ -30,7 +30,7 @@ final class BooksScriptDirector extends PublicationsScriptDirector
     public function addBookSelectTemp() : self
     {
         $this->addPublicationExtendedSelectTemp();
-        $this->tempBuilder->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn,\nbooks.content_id");
+        $this->tempBuilder->addSelect("books.category_id,\nbooks.publisher,\nbooks.pages,\nbooks.isbn");
         return $this;
     }
 

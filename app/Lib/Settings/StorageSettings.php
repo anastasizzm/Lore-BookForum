@@ -13,6 +13,8 @@ final readonly class StorageSettings
         public string $path,
         public array $allowed,
         public array $maxSizes,
+        public string $internalUrlPrefix,
+        public bool $useXAccel
     ){}
 
     public static function fromData(array $data) : self
@@ -21,7 +23,9 @@ final readonly class StorageSettings
         return new self(
             path: $storage['path'] ?? throw new RuntimeException('No uploads path provided'),
             allowed: $storage['allowed'] ?? [],
-            maxSizes: $storage['max_sizes'] ?? []
+            maxSizes: $storage['max_sizes'] ?? [],
+            internalUrlPrefix: $storage['internal_url_prefix'] ?? '/internal-files',
+            useXAccel: $storage['use_x_accel'] ?? false
         );
     }
 }

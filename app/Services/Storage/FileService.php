@@ -7,6 +7,7 @@ use App\Repositories\Storage\FilesRepository;
 use App\Exceptions\ValidationException;
 use App\Storage\FileStorage;
 use App\Lib\Settings\StorageSettings;
+use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Models\Files\File;
 use App\Models\Uuid;
@@ -21,6 +22,7 @@ final class FileService
         private readonly FileStorage $storage,
         private readonly FilesRepository $files,
         private readonly UnitOfWork $uow,
+        private readonly Translator $translator
     ) {}
 
     public function store(
@@ -103,22 +105,22 @@ final class FileService
         $errors = [];
 
         if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            $errors['file'][] = "Upload failed (error code {$upload['error']})";
+            $errors['file'][] = $this->translator->t('errors.files.upload_error', [':code' => $upload['error']]);
         }
 
         $size = (int) ($upload['size'] ?? 0);
         if ($size <= 0) {
-            $errors['file'][] = 'File is empty';
+            $errors['file'][] = $this->translator->t('errors.files.file_empty');
         }
 
         $categoryMaxSize = this->settings->maxSizes[$category];
         if ($size > $categoryMaxSize) {
             $maxMb = $categoryMaxSize / 1024 / 1024;
-            $errors['file'][] = "File is too large (max {$maxMb} MB)";
+            $errors['file'][] = $this->translator->t('errors.files.file_large', [":max" => $maxMb]);
         }
 
         if (!is_uploaded_file((string) $upload['tmp_name'])) {
-            $errors['file'][] = 'Invalid upload';
+            $errors['file'][] = $this->translator->t('errors.files.invalid_upload');
         }
 
         if ($errors != [])
@@ -131,7 +133,7 @@ final class FileService
 
         if ($mime === false || !isset($this->settings->allowed[$category][$mime])) {
             throw new ValidationException([
-                'file' => ["Unsupported file format: " . ($mime ?: 'unknown')],
+                'file' => [$this->translator->t('errors.files.file_format', [":format" => $mime ?: 'unknown'])]
             ]);
         }
 

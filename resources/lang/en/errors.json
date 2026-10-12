@@ -52,5 +52,12 @@
         "invalid_token": "Invalid token",
         "no_user_data": "No user data provided",
         "no_email_data": "No email data provided"
+    },
+    "files": {
+        "upload_error": "Upload failed (ERR_CODE :code)",
+        "file_empty": "File is empty",
+        "file_large": "File is too large (max :max MB)",
+        "invalid_upload": "Invalid upload",
+        "file_format": "Unsupported file format: :format"
     }
 }
