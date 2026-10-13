@@ -9,7 +9,10 @@
         "cancel": "Отмена",
         "filters": "Фильтры",
         "items": "шт.",
-        "load_more": "Показать ещё"
+        "load_more": "Показать ещё",
+        "prev": "Назад",
+        "next": "Вперёд",
+        "pagination": "Постраничная навигация"
     },
     "sidebar": {
         "profile": "Профиль",
@@ -113,6 +116,12 @@
         "newpass_repeat_label": "Подтвердите новый пароль",
         "newpass_repeat_placeholder": "Повторите новый пароль",
         "save_password": "Сохранить пароль",
+        "changepass_tab": "Смена пароля — Lore",
+        "changepass_title": "Смена пароля",
+        "changepass_text": "Установите новый пароль для аккаунта. Он должен содержать не меньше 8 символов.",
+        "changepass_submit": "Сменить пароль",
+        "changepass_back": "Назад к ленте",
+        "changepass_done": "Пароль успешно изменён.",
         "verify_title": "Подтверждение email",
         "resend": "Отправить письмо ещё раз"
     },
@@ -293,6 +302,8 @@
         "delete_comment_title": "Удалить комментарий?",
         "delete_comment_text": "Вы уверены, что хотите удалить свой комментарий?",
         "delete_comment_failed": "Не удалось удалить комментарий.",
+        "delete_post_title": "Удалить пост?",
+        "delete_post_text": "Вы уверены, что хотите удалить свой пост?",
         "show_more": "Показать ещё",
         "show_less": "Свернуть",
         "show_more_comments": "Показать ещё комментарии",

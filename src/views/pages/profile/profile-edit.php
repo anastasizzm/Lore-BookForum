@@ -85,7 +85,7 @@ if ($initials === '') {
        ============================================================ -->
   <section class="profile-edit card-base">
 
-    <form action="<?= $view->e($withLang('/users/' . (int)$userData->id . '/profile/edit')) ?>"
+    <form action="<?= $view->e($withLang($view->url('users.profile.edit', ['userId' => (int)$userData->id]))) ?>"
           method="POST"
           id="profileEditForm"
           data-profile-form

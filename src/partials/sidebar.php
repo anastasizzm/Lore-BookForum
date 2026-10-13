@@ -189,11 +189,13 @@
                 <span><?= $tr('common.sidebar.help') ?></span>
             </button>
 
-            <!-- Смена пароля без письма (страница auth/change-password.php)
-                 ПАРКОВАНА: роуты password.change нельзя добавить — routes.php
-                 и endpoints.php заморожены (правки запрещены). Ссылка временно
-                 ведёт на сброс по почте. Вид src/views/pages/auth/change-password.php
-                 сохранён — вернуть фичу можно, добавив роуты, когда разрешат. -->
+            <!-- Смена пароля (страница auth/change-password.php — копия
+                 password-reset.php, тексты и ссылка «назад» свои, ключи
+                 changepass_* в lang/en, lang/ru). ПАРКОВАНА: роуты password.change
+                 нельзя добавить — config/routes.php заморожен (правки запрещены).
+                 Ссылка временно ведёт на сброс по почте. Чтобы фича заработала,
+                 команде бэка нужно добавить два замыкания (контракт — в шапке
+                 вида) и затем переключить эту ссылку на url('password.change'). -->
             <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">
                     <!-- Замочек — SVG в стиле остальных иконок сайдбара (fill: currentColor) -->

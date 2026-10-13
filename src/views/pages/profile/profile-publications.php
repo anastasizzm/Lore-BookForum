@@ -42,6 +42,24 @@ $filter_open = ($filterState ?? 'closed') === 'open';
 parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
 $searchQuery = $q['q'] ?? '';
 
+$page    = max(1, (int) ($meta['page'] ?? 1));
+$hasNext = (bool) ($meta['hasNext'] ?? false);
+
+// Ссылка пагинации: сохраняет поиск/фильтр текущего query, подменяет page;
+// lang добавляет $withLang, поэтому из $q его убираем
+$link = static function (?int $pageN) use ($q, $userId, $isArticles, $withLang): string {
+    $params = $q;
+    unset($params['lang']);
+    if ($pageN === null) {
+        unset($params['page']);
+    } else {
+        $params['page'] = $pageN;
+    }
+    $base = '/users/' . $userId . ($isArticles ? '/articles' : '/books');
+    $qs = http_build_query($params);
+    return $withLang($base . ($qs !== '' ? '?' . $qs : ''));
+};
+
 $view->setBlock('selectedTab', 'profile');
 ?>
 
@@ -155,6 +173,19 @@ $view->include('library-filters', [
       <?php endforeach; ?>
     </div>
 
+  <?php endif; ?>
+
+  <?php if ($page > 1 || $hasNext): ?>
+    <nav class="books-panel__pager" aria-label="<?= $tr('common.common.pagination') ?>">
+      <?php if ($page > 1): ?>
+        <a class="btn btn--secondary"
+           href="<?= $view->e($link($page > 2 ? $page - 1 : null)) ?>"><?= $tr('common.common.prev') ?></a>
+      <?php endif; ?>
+      <?php if ($hasNext): ?>
+        <a class="btn btn--secondary"
+           href="<?= $view->e($link($page + 1)) ?>"><?= $tr('common.common.next') ?></a>
+      <?php endif; ?>
+    </nav>
   <?php endif; ?>
 
 </section>
