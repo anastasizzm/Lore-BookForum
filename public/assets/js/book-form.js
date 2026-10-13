@@ -51,6 +51,44 @@
   }
 
   /* ============================================================
+     ISBN: логика зеркалит isbnValidate из filters.js — цифры,
+     префикс 978/979, 13 знаков; неверная контрольная сумма —
+     предупреждение, но НЕ блокирует отправку (как в фильтре).
+     ============================================================ */
+  function isbnClean(raw) {
+    var out = '';
+    var src = String(raw === null || raw === undefined ? '' : raw);
+    for (var i = 0; i < src.length && out.length < 13; i++) {
+      if (src[i] >= '0' && src[i] <= '9') out += src[i];
+    }
+    return out;
+  }
+
+  function isbnChecksumOk(c) {
+    if (c.length !== 13) return true;
+    var sum = 0;
+    for (var i = 0; i < 12; i++) sum += Number(c[i]) * (i % 2 ? 3 : 1);
+    return (10 - (sum % 10)) % 10 === Number(c[12]);
+  }
+
+  /** { error, warning } — error блокирует отправку, warning нет. */
+  function checkIsbn(value) {
+    var raw = String(value === null || value === undefined ? '' : value).trim();
+    var c = isbnClean(raw);
+    if (c === '') {
+      // Поле необязательное: пусто — ок; не пусто, но без цифр — мусор.
+      return { error: raw === '' ? null : t('js.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
+    }
+    if (c.length !== 13 || !/^97[89]/.test(c)) {
+      return { error: t('js.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
+    }
+    if (!isbnChecksumOk(c)) {
+      return { error: null, warning: t('bookform.isbn_checksum') };
+    }
+    return { error: null, warning: null };
+  }
+
+  /* ============================================================
      СПИСКИ: жанры и категории (постранично, как в filters.js)
      ============================================================ */
   function fetchAll(url) {
@@ -212,7 +250,7 @@
      ФОРМА
      ============================================================ */
   function initForm(form) {
-    var FIELD_KEYS = ['title', 'author', 'annotation', 'genre', 'category', 'series', 'cover', 'file'];
+    var FIELD_KEYS = ['title', 'author', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'file'];
 
     var RULES = {
       title:      { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
@@ -221,6 +259,7 @@
       genre:      { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
       category:   { required: true,  select: true,    msgKey: 'js.rule_book_category' },
       series:     { required: false, maxLength: 120,  msgKey: 'js.rule_book_series' },
+      isbn:       { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'js.isbn_shape' },
       cover:      { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
       file:       { required: true,  file: 'file',    msgKey: 'js.rule_book_file_required' },
     };
@@ -247,7 +286,19 @@
       var field = getField(name);
       var errorEl = getErrorEl(name);
       if (field) field.classList.remove('form-field__input--invalid');
-      if (errorEl) errorEl.innerHTML = '';
+      if (errorEl) {
+        errorEl.classList.remove('form-field__error--warning');
+        errorEl.innerHTML = '';
+      }
+    }
+
+    /** Неблокирующее предупреждение (жёлтое, отправку не мешает). */
+    function setWarning(name, message) {
+      var errorEl = getErrorEl(name);
+      if (!errorEl) return;
+      errorEl.classList.add('form-field__error--warning');
+      errorEl.innerHTML = '<span class="field-error-icon field-error-icon--warning" title="' +
+        escapeHtml(message) + '">!</span>';
     }
 
     function clearAllErrors() { FIELD_KEYS.forEach(clearError); }
@@ -276,6 +327,16 @@
       if (value === '') { clearError(name); return true; }
       if (rule.maxLength && value.length > rule.maxLength) { setError(name, t(rule.msgKey)); return false; }
 
+      // ISBN: ошибка — блокирует, неверная контрольная сумма — только
+      // предупреждение (поле остаётся валидным для отправки).
+      if (rule.custom === 'isbn') {
+        var isbn = checkIsbn(value);
+        if (isbn.error) { setError(name, isbn.error); return false; }
+        clearError(name);
+        if (isbn.warning) setWarning(name, isbn.warning);
+        return true;
+      }
+
       clearError(name);
       return true;
     }
@@ -297,7 +358,8 @@
     function showFieldErrors() {
       var list = [];
       FIELD_KEYS.forEach(function (name) {
-        var icon = getErrorEl(name) && getErrorEl(name).querySelector('.field-error-icon');
+        var el = getErrorEl(name);
+        var icon = el && el.querySelector('.field-error-icon:not(.field-error-icon--warning)');
         var text = icon ? icon.getAttribute('title') : '';
         if (text) list.push(text);
       });

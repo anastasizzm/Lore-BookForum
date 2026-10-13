@@ -30,11 +30,17 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   POST /books/create  → роут books.create.submit, AuthPolicy::Verified
  *        enctype=multipart/form-data, поля:
  *          title (string, required, ≤200)
- *          author (string, required, ≤120)
+ *          author (string, required, ≤120; в GET-рендере автозаполнен
+ *                  именем владельца профиля — вьюхе нужен $user, как в
+ *                  UsersController::retrieve)
  *          annotation (string, optional, ≤5000)
  *          genre (int id, required)     — список: GET /api/additional/genres
  *          category (int id, required)  — список: GET /api/additional/categories
  *          series (string, optional, ≤120) — в БД поля пока нет (см. book-details)
+ *          isbn (string, optional, ≤20) — форма хранит до 20 символов, фронт
+ *                  проверяет ISBN-13 (13 цифр, префикс 978/979, дефисы и
+ *                  пробелы допустимы); бэк — та же проверка (см. фильтр
+ *                  библиотеки: filters.js isbnValidate)
  *          cover (file: jpeg/png/webp, ≤5MB, optional — иначе placeholder)
  *          file  (file: application/pdf, ≤50MB, required — без PDF книга не читается)
  *          _token (CSRF: поле csrfField() или заголовок X-CSRF-Token), lang
@@ -48,6 +54,12 @@ $langField = $langQuery !== null && $langQuery !== ''
  */
 $form   = $form   ?? [];
 $errors = $errors ?? [];
+
+// Автор по умолчанию — владелец профиля ($user передаёт контроллер, см.
+// контракт ниже). Пользователь может переписать: это автозаполнение,
+// а не замок. После ошибки валидации приоритет у $form (не затираем ввод).
+$profileAuthor = trim(trim((string) ($user->name ?? '')) . ' ' . trim((string) ($user->surname ?? '')));
+if ($profileAuthor === '') $profileAuthor = trim((string) ($user->username ?? ''));
 
 /** Значение поля: сначала то, что прислал пользователь, потом пусто. */
 $val = static function (string $key, string $default = '') use ($form): string {
@@ -65,16 +77,19 @@ $err = static function (string $key) use ($errors): string {
     return $first === null ? '' : (string) $first;
 };
 
+/** Все имена полей формы — для разбора $errors. */
+$fieldKeys = ['title', 'author', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'file'];
+
 /** Ошибки, не привязанные к полю (например, «файл не сохранён»). */
 $unboundErrors = [];
 foreach ($errors as $field => $list) {
-    if (in_array($field, ['title', 'author', 'annotation', 'genre', 'category', 'series', 'cover', 'file'], true)) continue;
+    if (in_array($field, $fieldKeys, true)) continue;
     foreach ((array) $list as $one) $unboundErrors[] = $one;
 }
 
 // Ошибки, которые JS ещё не разобрал (уведомление при загрузке, как в profile-edit).
 $dirtyFields = [];
-foreach (['title', 'author', 'annotation', 'genre', 'category', 'series', 'cover', 'file'] as $key) {
+foreach ($fieldKeys as $key) {
     if ($err($key) !== '') $dirtyFields[] = $key;
 }
 
@@ -148,7 +163,7 @@ $categoryValue = $val('category');
                type="text"
                id="bookAuthor"
                name="author"
-               value="<?= $view->e($val('author')) ?>"
+               value="<?= $view->e($val('author', $profileAuthor)) ?>"
                maxlength="120"
                autocomplete="off"
                required>
@@ -225,21 +240,48 @@ $categoryValue = $val('category');
 
       </div>
 
-      <div class="form-field">
-        <label for="bookSeries"><?= $tr('common.bookform.field_series') ?></label>
-        <input class="form-field__input"
-               type="text"
-               id="bookSeries"
-               name="series"
-               value="<?= $view->e($val('series')) ?>"
-               maxlength="120"
-               autocomplete="off"
-               placeholder="<?= $tr('common.bookform.field_series_ph') ?>">
-        <p class="form-field__error" data-error-for="series" aria-live="polite">
-          <?php if ($err('series') !== ''): ?>
-            <span class="field-error-icon" title="<?= $view->e($err('series')) ?>">!</span>
-          <?php endif; ?>
-        </p>
+      <div class="form-row--two-cols">
+
+        <div class="form-field">
+          <label for="bookSeries"><?= $tr('common.bookform.field_series') ?></label>
+          <input class="form-field__input"
+                 type="text"
+                 id="bookSeries"
+                 name="series"
+                 value="<?= $view->e($val('series')) ?>"
+                 maxlength="120"
+                 autocomplete="off"
+                 placeholder="<?= $tr('common.bookform.field_series_ph') ?>">
+          <p class="form-field__error" data-error-for="series" aria-live="polite">
+            <?php if ($err('series') !== ''): ?>
+              <span class="field-error-icon" title="<?= $view->e($err('series')) ?>">!</span>
+            <?php endif; ?>
+          </p>
+        </div>
+
+        <!-- ISBN необязательный; форма и JS проверяют ISBN-13 (13 цифр,
+             префикс 978/979, дефисы/пробелы допустимы) — логика зеркалит
+             isbnValidate из filters.js. Подсказка — js.isbn_hint. -->
+        <div class="form-field">
+          <label for="bookIsbn"><?= $tr('common.bookform.field_isbn') ?></label>
+          <input class="form-field__input"
+                 type="text"
+                 id="bookIsbn"
+                 name="isbn"
+                 value="<?= $view->e($val('isbn')) ?>"
+                 maxlength="20"
+                 inputmode="numeric"
+                 autocomplete="off"
+                 aria-describedby="bookIsbnHint"
+                 placeholder="<?= $tr('common.bookform.isbn_ph') ?>">
+          <p class="book-form__hint" id="bookIsbnHint"><?= $tr('common.js.isbn_hint') ?></p>
+          <p class="form-field__error" data-error-for="isbn" aria-live="polite">
+            <?php if ($err('isbn') !== ''): ?>
+              <span class="field-error-icon" title="<?= $view->e($err('isbn')) ?>">!</span>
+            <?php endif; ?>
+          </p>
+        </div>
+
       </div>
 
       <h2 class="book-form__section-title"><?= $tr('common.bookform.section_files') ?></h2>

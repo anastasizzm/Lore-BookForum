@@ -248,6 +248,17 @@
   line-height: 1;
 }
 
+/* Неблокирующее предупреждение (например, контрольная сумма ISBN) */
+.book-form .form-field__error--warning,
+.book-form .form-field__error--warning:empty {
+  visibility: visible;
+  color: var(--color-warning);
+}
+
+.book-form .field-error-icon--warning {
+  background: var(--color-warning);
+}
+
 /* ============================================
    КНОПКИ
    ============================================ */
