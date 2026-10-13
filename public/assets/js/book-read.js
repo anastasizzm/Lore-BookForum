@@ -41,14 +41,46 @@ async function init(root) {
 
   const bookId   = root.dataset.bookId || '0';
   const storeKey = 'reader:page:' + bookId;
-  // 100% на экране = страница в половину ширины контейнера (раньше так выглядели 50%).
-  // BASE_FACTOR — во сколько раз сжат «полный» размер (по ширине контейнера) при 100%.
-  const BASE_FACTOR = 0.5;
+  // 100% на компьютере = страница в половину ширины контейнера (раньше так выглядели 50%).
+  // На телефоне так нельзя: текст становится нечитаемым. Там 100% = страница ровно на
+  // всю ширину экрана (как в системных просмотрщиках PDF); дальше можно увеличивать
+  // до 400% — страница скроллится вбок.
+  const DESKTOP_FACTOR = 0.5;
+  const MOBILE_FACTOR  = 1;
+  const MOBILE_MAX     = 767;   // как @media (max-width: 767px) в book.css
+  const baseFactor = () => (stage.clientWidth <= MOBILE_MAX ? MOBILE_FACTOR : DESKTOP_FACTOR);
   const Z_MIN = 0.5, Z_MAX = 4, Z_STEP = 0.25;   // подпись на кнопке: 50% … 400%
-  const MAX_PIXELS = 16000000;   // потолок размера canvas (иначе мобильные браузеры его не рисуют)
+  const MAX_PIXELS = 12000000;   // потолок размера canvas (иначе мобильные браузеры его не рисуют; рисуем в два canvas, поэтому с запасом)
 
   // страница шире контейнера при zoom > 100% — CSS не должен её ужимать
   canvas.style.maxWidth = 'none';
+
+  // Браузерный зум (Ctrl + колесо, щипок на тачпаде и пальцами) над читалкой отключаем
+  // ВСЕГДА — ещё до загрузки PDF. Иначе, если файла нет или он не загрузился, скрипт
+  // завершается раньше, чем вешаются обработчики зума страницы, и Ctrl + колесо
+  // увеличивает весь сайт. Сам зум страницы подключается ниже, после загрузки PDF.
+  const blockBrowserZoom = (e) => { if (e.ctrlKey) e.preventDefault(); };
+  root.addEventListener('wheel', blockBrowserZoom, { passive: false });
+  root.addEventListener('gesturestart',  (e) => e.preventDefault(), { passive: false });
+  root.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  root.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+
+  // Панель страниц закреплена к низу окна (position: fixed), а центрировать её
+  // нужно по области контента, а не по окну: слева стоит сайдбар. Середину
+  // области читалки кладём в CSS-переменную --reader-dock-x.
+  // Дополнительно: правый край читалки → --reader-dock-right (для зума).
+  const syncDock = () => {
+    const r = stage.getBoundingClientRect();
+    const rootStyle = root.style;
+    rootStyle.setProperty('--reader-dock-x', Math.round(r.left + r.width / 2) + 'px');
+    rootStyle.setProperty(
+      '--reader-dock-right',
+      Math.max(16, window.innerWidth - r.right + 16) + 'px'
+    );
+  };
+  syncDock();
+  window.addEventListener('resize', syncDock);
+  if (window.ResizeObserver) new ResizeObserver(syncDock).observe(stage);
 
   const toast = (text) => window.Messages?.show(text, { type: 'error' });
   const setStatus = (text) => {
@@ -105,6 +137,7 @@ async function init(root) {
   let rendering = false;
   let queued = false;
   let renderTask = null;
+  let pendingCenter = true;          // после следующей отрисовки поставить страницу по центру
 
   totalEl.textContent = pdf.numPages;
   pageIn.max = pdf.numPages;
@@ -118,9 +151,11 @@ async function init(root) {
   render();
 
   // ---------- рендер ----------
-  // rendering блокирует параллельные вызовы: два render() на одном canvas
-  // PDF.js не допускает. Лишние вызовы только помечают queued и отменяют
-  // текущую отрисовку — цикл сам нарисует актуальную страницу.
+  // Страница рисуется во внеэкранный canvas и копируется на экран одним действием,
+  // поэтому при перерисовке нет «белой вспышки». Если пока шла отрисовка масштаб или
+  // страница поменялись (идёт жест зума), готовый результат выбрасывается и рисуется
+  // актуальный. Параллельно рисовать нельзя: лишние вызовы только отменяют текущую
+  // отрисовку (queued), цикл сам нарисует последнюю нужную страницу.
   async function render() {
     if (rendering) {
       queued = true;
@@ -130,42 +165,60 @@ async function init(root) {
     rendering = true;
 
     try {
-      do {
+      for (;;) {
         queued = false;
+        const z = zoom, n = pageNum;
+        const stale = () => queued || z !== zoom || n !== pageNum;
 
-        const page = await pdf.getPage(pageNum);
-        if (queued) continue;               // пока грузилась страница, запросили другую
+        const page = await pdf.getPage(n);
+        if (stale()) continue;              // пока грузилась страница, запросили другую
 
-        const baseWidth = Math.max(stage.clientWidth - 16, 200);
+        // clientWidth включает padding и рамку области — вычитаем их, иначе на телефоне
+        // страница на 100% не помещалась бы по ширине и появлялась бы горизонтальная прокрутка
+        const cs = getComputedStyle(stage);
+        const inner = stage.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+        const baseWidth = Math.max(inner - 2, 200);
         const base = baseWidth / page.getViewport({ scale: 1 }).width;
-        const viewport = page.getViewport({ scale: base * zoom * BASE_FACTOR });
+        const viewport = page.getViewport({ scale: base * z * baseFactor() });
 
         let outScale = window.devicePixelRatio || 1;
         const area = viewport.width * viewport.height;
         if (area * outScale * outScale > MAX_PIXELS) outScale = Math.sqrt(MAX_PIXELS / area);
 
-        canvas.width  = Math.floor(viewport.width * outScale);
-        canvas.height = Math.floor(viewport.height * outScale);
-        canvas.style.width  = Math.floor(viewport.width) + 'px';
-        canvas.style.height = Math.floor(viewport.height) + 'px';
+        const buf = document.createElement('canvas');
+        buf.width  = Math.floor(viewport.width * outScale);
+        buf.height = Math.floor(viewport.height * outScale);
 
         renderTask = page.render({
-          canvasContext: ctx,
+          canvasContext: buf.getContext('2d'),
           viewport,
           transform: outScale !== 1 ? [outScale, 0, 0, outScale, 0, 0] : null,
         });
 
+        let failed = false;
         try {
           await renderTask.promise;
         } catch (e) {
           if (!e || e.name !== 'RenderingCancelledException') {
+            failed = true;
             console.error('[reader] render failed', e);
             toast(t('js.page_render_failed'));
           }
         } finally {
           renderTask = null;
         }
-      } while (queued);
+
+        if (stale()) continue;
+        if (failed) break;
+
+        // показываем готовую страницу
+        canvas.width  = buf.width;
+        canvas.height = buf.height;
+        ctx.drawImage(buf, 0, 0);
+        canvas.style.width  = Math.floor(viewport.width) + 'px';
+        canvas.style.height = Math.floor(viewport.height) + 'px';
+        break;
+      }
     } catch (e) {
       console.error('[reader] getPage failed', e);
       toast(t('js.page_render_failed'));
@@ -173,6 +226,7 @@ async function init(root) {
       rendering = false;
     }
 
+    if (pendingCenter) { pendingCenter = false; centerX(); }
     syncUi();
   }
 
@@ -193,23 +247,71 @@ async function init(root) {
     n = clamp(Number(n) || 1, 1, pdf.numPages);
     if (n === pageNum) { syncUi(); return; }
     pageNum = n;
-    stage.scrollLeft = 0;
+    pendingCenter = true;
     // на телефоне новая страница должна начинаться сверху
     if (stage.getBoundingClientRect().top < 0) stage.scrollIntoView({ block: 'start' });
     render();
   }
 
+  // ---------- зум ----------
+  // Масштаб меняется мгновенно: страница растягивается через CSS (без перерисовки),
+  // а через ~140 мс после последнего изменения рисуется заново в чёткости нового
+  // масштаба. Точка (cx, cy) в координатах окна остаётся на месте — страница
+  // увеличивается вокруг курсора / пальцев, а не вокруг левого верхнего угла.
+  // anchor — фиксированная точка на странице (для щипка: она «едет» за пальцами).
+  let renderTimer = 0;
+  const scheduleRender = () => { clearTimeout(renderTimer); renderTimer = setTimeout(render, 140); };
+
+  function zoomAt(newZoom, cx, cy, anchor) {
+    newZoom = clamp(newZoom, Z_MIN, Z_MAX);
+    if (!anchor && Math.abs(newZoom - zoom) < 0.001) return;
+
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+
+    const fx = anchor ? anchor.fx : (cx - r.left) / r.width;
+    const fy = anchor ? anchor.fy : (cy - r.top) / r.height;
+
+    const k = newZoom / zoom;
+    const w = parseFloat(canvas.style.width)  || r.width;
+    const h = parseFloat(canvas.style.height) || r.height;
+    canvas.style.width  = (w * k) + 'px';
+    canvas.style.height = (h * k) + 'px';
+    zoom = newZoom;
+    zoomLbl.textContent = Math.round(zoom * 100) + '%';
+
+    // вернуть точку под курсор: по горизонтали прокручивается сама область страницы,
+    // по вертикали — окно
+    const n = canvas.getBoundingClientRect();
+    stage.scrollLeft += (n.left + fx * n.width) - cx;
+    window.scrollBy(0, (n.top + fy * n.height) - cy);
+
+    scheduleRender();
+  }
+
+  // Кнопки +/−/100% и клавиши: масштабируем вокруг центра видимой части страницы
   function setZoom(z) {
-    zoom = clamp(z, Z_MIN, Z_MAX);
-    render();
+    const r = canvas.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    const cx = clamp(s.left + s.width / 2, r.left, r.right);
+    const cy = clamp(window.innerHeight / 2, r.top, r.bottom);
+    zoomAt(z, cx, cy);
   }
 
   function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
 
   const isZoomedWide = () => stage.scrollWidth > stage.clientWidth + 2;
 
+  // Страница шире экрана: показываем её середину (текст обычно по центру, поля — по краям)
+  const centerX = () => { stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2); };
+
   // ---------- управление ----------
   root.addEventListener('click', (e) => {
+    // После клика мышью кнопка остаётся в фокусе, и Enter нажал бы её ещё раз
+    // вместо листания. Снимаем фокус (e.detail === 0 — это клавиатура, её не трогаем).
+    const btn = e.target.closest('button');
+    if (btn && e.detail > 0) btn.blur();
+
     if (e.target.closest('[data-reader-prev]'))            goTo(pageNum - 1);
     else if (e.target.closest('[data-reader-next]'))       goTo(pageNum + 1);
     else if (e.target.closest('[data-reader-zoom-in]'))    setZoom(zoom + Z_STEP);
@@ -220,26 +322,169 @@ async function init(root) {
   pageIn.addEventListener('change', () => goTo(pageIn.value));
 
   document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;            // не мешаем браузерному зуму и т.п.
-    if (e.target.closest?.('input, textarea')) return;
+    // Системный зум с клавиатуры (Ctrl/Cmd + «+», «−», «0»): пока курсор над страницей
+    // книги, масштабируется она сама вокруг курсора, а не весь сайт. Курсор вне страницы —
+    // обычный зум браузера.
+    if (e.ctrlKey || e.metaKey) {
+      if (e.altKey || !pointer.inside) return;
+      let z = null;
+      if (e.key === '+' || e.key === '=') z = zoom + Z_STEP;
+      else if (e.key === '-' || e.key === '_') z = zoom - Z_STEP;
+      else if (e.key === '0') z = 1;
+      if (z === null) return;
+      e.preventDefault();
+      zoomAt(z, pointer.x, pointer.y);
+      return;
+    }
+    if (e.altKey) return;
+
+    // В поле номера страницы Enter = «перейти на введённую страницу»
+    if (e.key === 'Enter' && e.target === pageIn) {
+      e.preventDefault();
+      goTo(pageIn.value);
+      pageIn.blur();                                           // дальше Enter листает вперёд
+      return;
+    }
+
+    if (e.target.closest?.('input, textarea, select')) return;
+
+    // Enter — следующая страница, Shift+Enter — предыдущая.
+    // Не перехватываем Enter на кнопках, ссылках и в диалогах: там он нажимает сам элемент.
+    if (e.key === 'Enter') {
+      if (e.repeat) return;                                    // зажатый Enter не должен пролистывать книгу
+      if (e.target.closest?.('button, a[href], [role="button"], [contenteditable], dialog, [aria-modal="true"]')) return;
+      e.preventDefault();
+      goTo(pageNum + (e.shiftKey ? -1 : 1));
+      return;
+    }
+
     if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   { if (!(e.key === 'ArrowLeft'  && isZoomedWide())) goTo(pageNum - 1); }
     if (e.key === 'ArrowRight' || e.key === 'PageDown') { if (!(e.key === 'ArrowRight' && isZoomedWide())) goTo(pageNum + 1); }
     if (e.key === '+' || e.key === '=') setZoom(zoom + Z_STEP);
     if (e.key === '-') setZoom(zoom - Z_STEP);
   });
 
-  // Свайп влево/вправо листает страницы (только когда страница не увеличена)
-  let tx = 0, ty = 0, tracking = false;
+  // ---------- Жесты ----------
+  // Системный зум браузера (Ctrl + колесо мыши, щипок на тачпаде, щипок двумя пальцами)
+  // перехвачен ТОЛЬКО над страницей книги: масштабируется сама страница вокруг курсора /
+  // пальцев, остальной сайт остаётся прежним. Над другими элементами зум браузера
+  // работает как обычно.
+  const WHEEL_SENS = 0.0025;
+  const pointer = { x: 0, y: 0, inside: false };
+  const trackPointer = (e) => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.inside = true; };
+  stage.addEventListener('mouseenter', trackPointer, { passive: true });
+  stage.addEventListener('mousemove',  trackPointer, { passive: true });
+  stage.addEventListener('mouseleave', () => { pointer.inside = false; }, { passive: true });
+
+  // Ctrl + колесо мыши и щипок на тачпаде (браузеры присылают его как wheel с ctrlKey).
+  // Обычная прокрутка колесом не затрагивается.
+  stage.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();                                       // не даём увеличиться всему сайту
+    const delta = clamp(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY, -120, 120);
+    zoomAt(zoom * Math.exp(-delta * WHEEL_SENS), e.clientX, e.clientY);
+  }, { passive: false });
+
+  // Safari на Mac: щипок на тачпаде приходит как gesture-события
+  let gestureStartZoom = 1;
+  stage.addEventListener('gesturestart', (e) => { e.preventDefault(); gestureStartZoom = zoom; }, { passive: false });
+  stage.addEventListener('gesturechange', (e) => {
+    e.preventDefault();
+    if (pinching) return;                                     // на iOS то же самое уже делают touch-события
+    zoomAt(gestureStartZoom * e.scale, e.clientX ?? pointer.x, e.clientY ?? pointer.y);
+  }, { passive: false });
+  stage.addEventListener('gestureend', (e) => e.preventDefault(), { passive: false });
+
+  // Телефон: свайп для листания + щипок двумя пальцами для зума
+  let tx = 0, ty = 0, sx = 0, tracking = false, atLeft = false, atRight = false;
+  let pinchStartDist = 0;
+  let pinchStartZoom = 1;
+  let pinchAnchor = null;           // точка страницы, которая была между пальцами в начале щипка
+  let pinching = false;
+
+  const edges = () => {
+    const max = stage.scrollWidth - stage.clientWidth;
+    return { left: stage.scrollLeft <= 1, right: stage.scrollLeft >= max - 1 };
+  };
+
+  const distance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const midpoint = (touches) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  });
+
   stage.addEventListener('touchstart', (e) => {
-    tracking = e.touches.length === 1 && !isZoomedWide();
-    if (tracking) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }
+    // Два пальца — начинаем щипок, свайп отменяем
+    if (e.touches.length === 2) {
+      pinching = true;
+      tracking = false;
+      pinchStartDist = distance(e.touches);
+      pinchStartZoom = zoom;
+      const m = midpoint(e.touches);
+      const r = canvas.getBoundingClientRect();
+      pinchAnchor = { fx: (m.x - r.left) / r.width, fy: (m.y - r.top) / r.height };
+      return;
+    }
+
+    // Один палец — свайп
+    if (e.touches.length === 1) {
+      pinching = false;
+      tracking = true;
+      tx = e.touches[0].clientX;
+      ty = e.touches[0].clientY;
+      sx = stage.scrollLeft;
+      ({ left: atLeft, right: atRight } = edges());
+    }
   }, { passive: true });
+
+  stage.addEventListener('touchmove', (e) => {
+    if (!pinching || e.touches.length !== 2 || !pinchStartDist) return;
+
+    // Масштаб = стартовый × (расстояние между пальцами / стартовое расстояние).
+    // Точка страницы, которая была между пальцами, остаётся между ними.
+    const m = midpoint(e.touches);
+    zoomAt(pinchStartZoom * (distance(e.touches) / pinchStartDist), m.x, m.y, pinchAnchor);
+
+    // preventDefault, чтобы браузер не увеличил весь сайт
+    e.preventDefault();
+  }, { passive: false });
+
   stage.addEventListener('touchend', (e) => {
+    // Щипок закончился, когда осталось меньше двух пальцев
+    if (pinching && e.touches.length < 2) {
+      pinching = false;
+      pinchStartDist = 0;
+      pinchAnchor = null;
+      scheduleRender();
+      syncUi();
+      return;
+    }
+
     if (!tracking) return;
     tracking = false;
+
     const dx = e.changedTouches[0].clientX - tx;
     const dy = e.changedTouches[0].clientY - ty;
-    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) goTo(pageNum + (dx < 0 ? 1 : -1));
+    if (!(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5)) return;
+    if (isZoomedWide()) {
+      if (Math.abs(stage.scrollLeft - sx) > 1) return;
+      if (dx < 0 && !atRight) return;
+      if (dx > 0 && !atLeft)  return;
+    }
+    goTo(pageNum + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+
+  // Отмена touch (например, системный жест) — сбрасываем щипок
+  stage.addEventListener('touchcancel', () => {
+    pinching = false;
+    tracking = false;
+    pinchStartDist = 0;
+    pinchAnchor = null;
   }, { passive: true });
 
   // Перерисовка при смене ширины. Высота на телефонах меняется при прокрутке

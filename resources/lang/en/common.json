@@ -216,7 +216,7 @@
         "reset_warning": "If you didn't request this, just ignore this email — your password will stay the same. The link works for a limited time.",
         "signature": "Best regards,"
     },
-        "reader": {
+    "reader": {
         "title": "Read",
         "prev": "Prev",
         "next": "Next",
@@ -230,7 +230,9 @@
         "loading": "Loading…",
         "back": "Back to the book",
         "canvas_label": "Book page",
-        "canvas_fallback": "Your browser does not support the canvas element."
+        "canvas_fallback": "Your browser does not support the canvas element.",
+        "zoom": "Zoom",
+        "pager": "Page navigation"
     },
     "js": {
         "network_error": "Network error. Try again.",

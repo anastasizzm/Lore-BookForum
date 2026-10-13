@@ -45,34 +45,41 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
          data-pdf-url="<?= $view->e($pdfUrl) ?>">
 
   <div class="reader__toolbar">
-    <button type="button" class="reader__btn" data-reader-prev aria-label="<?= $tr('common.reader.prev_aria') ?>" disabled>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span><?= $tr('common.reader.prev') ?></span>
-    </button>
 
-    <div class="reader__toolbar-group">
-      <button type="button" class="reader__btn" data-reader-zoom-out aria-label="<?= $tr('common.reader.zoom_out') ?>">−</button>
+    <!-- Страницы: назад / номер из всего / вперёд -->
+    <div class="reader__pager" role="group" aria-label="<?= $tr('common.reader.pager') ?>">
+      <button type="button" class="reader__btn" data-reader-prev aria-label="<?= $tr('common.reader.prev_aria') ?>" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span><?= $tr('common.reader.prev') ?></span>
+      </button>
+
       <span class="reader__page">
         <?= $tr('common.reader.page') ?>
         <input class="reader__page-num" type="number" min="1" value="1"
                data-reader-page aria-label="<?= $tr('common.reader.page_aria') ?>">
         / <span data-reader-total>–</span>
       </span>
-      <button type="button" class="reader__btn" data-reader-zoom-in aria-label="<?= $tr('common.reader.zoom_in') ?>">+</button>
-      <button type="button" class="reader__btn" data-reader-zoom-reset
-              aria-label="<?= $tr('common.reader.zoom_reset') ?>" data-reader-zoom-label>100%</button>
+
+      <button type="button" class="reader__btn" data-reader-next aria-label="<?= $tr('common.reader.next_aria') ?>" disabled>
+        <span><?= $tr('common.reader.next') ?></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
 
-    <button type="button" class="reader__btn" data-reader-next aria-label="<?= $tr('common.reader.next_aria') ?>" disabled>
-      <span><?= $tr('common.reader.next') ?></span>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+    <!-- Масштаб: отдельная группа -->
+    <div class="reader__zoom" role="group" aria-label="<?= $tr('common.reader.zoom') ?>">
+      <button type="button" class="reader__btn" data-reader-zoom-out aria-label="<?= $tr('common.reader.zoom_out') ?>">−</button>
+      <button type="button" class="reader__btn reader__zoom-value" data-reader-zoom-reset
+              aria-label="<?= $tr('common.reader.zoom_reset') ?>" data-reader-zoom-label>100%</button>
+      <button type="button" class="reader__btn" data-reader-zoom-in aria-label="<?= $tr('common.reader.zoom_in') ?>">+</button>
+    </div>
+
   </div>
 
   <p class="reader__status" data-reader-status><?= $tr('common.reader.loading') ?></p>
