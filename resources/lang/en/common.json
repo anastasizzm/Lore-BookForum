@@ -63,6 +63,31 @@
         "author_note": "Author's Note:",
         "no_toc": "Table of contents is not available yet."
     },
+    "bookform": {
+        "title": "Create book",
+        "subtitle": "Fill in the details, add a cover and the book file",
+        "section_main": "Book details",
+        "section_files": "Cover and file",
+        "field_title": "Title",
+        "field_author": "Author",
+        "field_annotation": "Annotation",
+        "field_annotation_ph": "Short description of the book…",
+        "field_genre": "Genre",
+        "field_category": "Category",
+        "field_series": "Series",
+        "field_series_ph": "e.g. The Saga, Book 1",
+        "field_cover": "Cover",
+        "field_file": "Book file (PDF)",
+        "cover_placeholder": "No cover",
+        "cover_hint": "JPG, PNG or WebP, up to 5 MB.",
+        "cover_preview_alt": "Cover preview",
+        "cover_remove": "Remove cover",
+        "file_hint": "PDF only, up to 50 MB.",
+        "file_remove": "Remove file",
+        "select_placeholder": "Choose…",
+        "cancel": "Back to books",
+        "submit": "Create book"
+    },
     "comments": {
         "title": "Comments:",
         "placeholder": "Input comments...",
@@ -319,6 +344,19 @@
         "book_file_load_failed": "Could not load the book file.",
         "pdf_invalid": "The file is not a valid PDF.",
         "book_open_failed": "Could not open the book. Try again.",
-        "page_render_failed": "Could not display the page."
+        "page_render_failed": "Could not display the page.",
+        "rule_book_title": "Enter the book title (200 characters max).",
+        "rule_book_author": "Enter the author's name (120 characters max).",
+        "rule_book_annotation": "The annotation is too long (5000 characters max).",
+        "rule_book_genre": "Pick a genre.",
+        "rule_book_category": "Pick a category.",
+        "rule_book_series": "The series name is too long (120 characters max).",
+        "rule_book_cover": "The cover must be a JPG, PNG or WebP image (5 MB max).",
+        "rule_book_cover_size": "The cover is too large (5 MB max).",
+        "rule_book_file": "Attach the book file in PDF format.",
+        "rule_book_file_size": "The file is too large (50 MB max).",
+        "rule_book_file_required": "Attach the book file (PDF, 50 MB max).",
+        "bookform_saving": "Creating…",
+        "bookform_saved": "The book has been created."
     }
 }

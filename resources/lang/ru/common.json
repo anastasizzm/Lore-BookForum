@@ -63,6 +63,31 @@
         "author_note": "Заметка автора:",
         "no_toc": "Содержания пока нет."
     },
+    "bookform": {
+        "title": "Новая книга",
+        "subtitle": "Заполните данные, добавьте обложку и файл книги",
+        "section_main": "Данные книги",
+        "section_files": "Обложка и файл",
+        "field_title": "Название",
+        "field_author": "Автор",
+        "field_annotation": "Аннотация",
+        "field_annotation_ph": "Краткое описание книги…",
+        "field_genre": "Жанр",
+        "field_category": "Категория",
+        "field_series": "Серия",
+        "field_series_ph": "напр. Сага, книга 1",
+        "field_cover": "Обложка",
+        "field_file": "Файл книги (PDF)",
+        "cover_placeholder": "Без обложки",
+        "cover_hint": "JPG, PNG или WebP, до 5 МБ.",
+        "cover_preview_alt": "Предпросмотр обложки",
+        "cover_remove": "Убрать обложку",
+        "file_hint": "Только PDF, до 50 МБ.",
+        "file_remove": "Убрать файл",
+        "select_placeholder": "Выберите…",
+        "cancel": "К списку книг",
+        "submit": "Создать книгу"
+    },
     "comments": {
         "title": "Комментарии:",
         "placeholder": "Введите комментарий...",
@@ -319,6 +344,19 @@
         "book_file_load_failed": "Не удалось загрузить файл книги.",
         "pdf_invalid": "Файл не является корректным PDF.",
         "book_open_failed": "Не удалось открыть книгу. Попробуйте ещё раз.",
-        "page_render_failed": "Не удалось отобразить страницу."
+        "page_render_failed": "Не удалось отобразить страницу.",
+        "rule_book_title": "Введите название книги (не более 200 символов).",
+        "rule_book_author": "Введите имя автора (не более 120 символов).",
+        "rule_book_annotation": "Аннотация слишком длинная (не более 5000 символов).",
+        "rule_book_genre": "Выберите жанр.",
+        "rule_book_category": "Выберите категорию.",
+        "rule_book_series": "Название серии слишком длинное (не более 120 символов).",
+        "rule_book_cover": "Обложка должна быть изображением JPG, PNG или WebP (до 5 МБ).",
+        "rule_book_cover_size": "Обложка слишком большая (до 5 МБ).",
+        "rule_book_file": "Прикрепите файл книги в формате PDF.",
+        "rule_book_file_size": "Файл слишком большой (до 50 МБ).",
+        "rule_book_file_required": "Прикрепите файл книги (PDF, до 50 МБ).",
+        "bookform_saving": "Создание…",
+        "bookform_saved": "Книга создана."
     }
 }
