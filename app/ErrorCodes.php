@@ -19,7 +19,7 @@ final class ErrorCodes
     public const NOT_FOUND = 'not_found';
     public const UNAUTHORIZED = 'unauthorized';
     public const FORBIDDEN = 'forbidden';
-    public const ACCOUNT_BLOCKED = 'accountBlocked';
+    public const ACCOUNT_BLOCKED = 'account_block';
     public const INSUFFICIENT_PERMS = 'insufficient_permissions';
 
     public const INVALID_ENCTYPTION = 'invalid_encryption';

@@ -5,12 +5,18 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\BooksRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
+use App\Services\Storage\FileService;
+
+use App\Forms\Publications\BookForm;
+use App\Validators\Publications\BookFormValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Forms\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
+use App\Models\Enums\FileCategory;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Criterias\Publications\BooksCriteria;
@@ -33,7 +39,9 @@ final class BooksService
         private readonly BooksRepository $booksRepo,
         private readonly BookExceptionTranslator $translator,
         private readonly PublicationContextEnricher $enricher,
-        private readonly UnitOfWork $uow
+        private readonly UnitOfWork $uow,
+        private readonly BookFormValidator $validator,
+        private readonly FileService $fileService
     ){}
 
     public function getList(BooksListQuery $query) : PaginatedList
@@ -135,6 +143,38 @@ final class BooksService
         }
         catch(\PDOException $e)
         {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function create(
+        BookForm $form, 
+        int $authorId,
+        ?array $iconFile = NULL
+    ) : int
+    {
+        $bag = $this->validator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+        
+        $model = BookModel::fromForm($form);
+
+        $file = NULL;
+        if ($iconFile !== NULL){
+            $file = $this->fileService->store($iconFile, FileCategory::cover->value, $authorId);
+        }
+
+        try{
+            return $this->booksRepo->create($model, $authorId, $file?->id);
+        }
+        catch(\PDOException $e){
+            if ($file !== null) {
+                try {
+                    $this->fileService->delete($coverFile->id);
+                } catch (\Throwable $cleanupError) {
+                    error_log("Cleanup failed for file {$coverFile->id}: {$cleanupError->getMessage()}");
+                }
+            }
+
             throw $this->translator->translate($e);
         }
     }

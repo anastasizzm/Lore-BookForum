@@ -1,5 +1,5 @@
 {
-    "commont": {
+    "common": {
         "required": "Поле обязательно",
         "not_found": "Не найдено",
         "not_exists": "Не существует",

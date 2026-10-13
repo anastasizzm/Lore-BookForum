@@ -1,5 +1,5 @@
 {
-    "commont": {
+    "common": {
         "required": "The field is required",
         "not_found": "Not found",
         "not_exists": "Does not exists",

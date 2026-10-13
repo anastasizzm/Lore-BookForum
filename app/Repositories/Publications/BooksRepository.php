@@ -11,12 +11,16 @@ use PDO;
 use App\Lib\Data\Database;
 use App\Lib\I18n\Translator;
 
+use App\Models\Uuid;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Forms\Publications\BookModel;
 use App\Models\Criterias\Publications\BooksCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\BooksFilters;
 use App\Models\Scripts\ScriptParam;
+
+use App\Services\Configuration\UnitOfWork;
 
 use InvalidArgumentException;
 
@@ -27,6 +31,7 @@ final class BooksRepository extends PublicationsRepository
 {
     public function __construct(
         Database $db,
+        UnitOfWork $uow,
         Translator $translator
     ){
         parent::__construct($db, $translator, new BooksScriptDirector());
@@ -131,5 +136,85 @@ final class BooksRepository extends PublicationsRepository
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : Book::fromRow($row);
+    }
+
+    public function create(
+        BookModel $model,
+        int $creatorId,
+        ?Uuid $iconId = NULL
+    ) : int 
+    {
+        return $this->uow->translactional(function (PDO $pdo) use ($model, $iconId) : int {
+            $pubId = $this->insertPublication(
+                $model->title,
+                $model->description,
+                $model->authorNotes,
+                $model->genreId,
+                $creatorId,
+                $iconId
+            );
+            $this->insertBook(
+                $pubId,
+                $model->categoryId,
+                $model->publisher,
+                $model->pages,
+                $model->isbn
+            );
+
+            return $pubId;
+        });
+    }
+
+    protected function insertBook(
+        int $publicationId,
+        int $categoryId,
+        string $publisher,
+        int $pagesCount,
+        ?string $isbn = NULL
+    ) : int
+    {
+        $values = [
+            ':pubId' => ScriptParam::asInt($publicationId),
+            ':catId' => ScriptParam::asInt($categoryId),
+            ':publ' => ScriptParam::asStr($publisher),
+            ':pages' => ScriptParam::asInt($pagesCount),
+            ':isbn' => ScriptParam::asStr($isbn?->toString())
+        ];
+
+        $sql = 'INSERT INTO books (publication_id, category_id, publisher, pages, isbn)
+                VALUES (:pubId, :catId, :publ, :pages, :isbn) RETURNING publication_id';
+        
+        $stmt = $this->execute($sql, $values);
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new \RuntimeException('No instance created');
+        }
+        
+        return (int)$id;
+    }
+
+    public function addContent(int $bookId, Uuid $contentId, string $contentType) : void
+    {
+        $values = [
+            ':bookId' => ScriptParam::asInt($bookId),
+            ':contentId' => ScriptParam::asStr($contentId->toString()),
+            ':contentType' => ScriptParam::asStr($contentType)
+        ];
+
+        $sql = 'INSERT INTO books_content (book_id, content_id, content_type)
+        VALUES (:bookId, :contentId, :contentType)';
+
+        $stmt = $this->execute($sql, $values);
+    }
+
+    public function removeContent(int $bookId, Uuid $contentId) : void
+    {
+        $values = [
+            ':bookId' => ScriptParam::asInt($bookId),
+            ':contentId' => ScriptParam::asStr($contentId->toString()),
+        ];
+
+        $sql = 'DELETE FROM books_content WHERE book_id = :bookId AND content_id = :contentId';
+        $stmt = $this->execute($sql, $values);
     }
 }
