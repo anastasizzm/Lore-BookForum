@@ -9,7 +9,10 @@
         "cancel": "Cancel",
         "filters": "Filters",
         "items": "items",
-        "load_more": "Load more"
+        "load_more": "Load more",
+        "prev": "Previous",
+        "next": "Next",
+        "pagination": "Pagination"
     },
     "sidebar": {
         "profile": "Profile",
@@ -138,6 +141,12 @@
         "newpass_repeat_label": "Confirm new password",
         "newpass_repeat_placeholder": "Repeat new password",
         "save_password": "Save new password",
+        "changepass_tab": "Change password — Lore",
+        "changepass_title": "Change password",
+        "changepass_text": "Set a new password for your account. It must be at least 8 characters long.",
+        "changepass_submit": "Change password",
+        "changepass_back": "Back to feed",
+        "changepass_done": "The password has been changed successfully.",
         "verify_title": "Email verification",
         "resend": "Resend verification"
     },
@@ -318,6 +327,8 @@
         "delete_comment_title": "Delete comment?",
         "delete_comment_text": "Are you sure to delete your comment?",
         "delete_comment_failed": "Could not delete the comment.",
+        "delete_post_title": "Delete post?",
+        "delete_post_text": "Are you sure you want to delete your post?",
         "show_more": "Show more",
         "show_less": "Show less",
         "show_more_comments": "Show more comments",

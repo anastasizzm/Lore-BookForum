@@ -152,6 +152,13 @@
   }
 
   function commentNode(data) {
+    // Общий движок comments.js (подключается до book.js): знает про
+    // «View N more replies» (label/hidden из data.replies) и «три точки»
+    // удаления для автора (syncOwnMenu). Локальная копия ниже — фолбэк на случай,
+    // если comments.js не подключён.
+    if (window.LoreComments && typeof LoreComments.commentNode === 'function') {
+      return LoreComments.commentNode(data);
+    }
     var tpl = document.getElementById('comment-card-template');
     if (!tpl) return null;
     var node = tpl.content.firstElementChild.cloneNode(true);
@@ -254,7 +261,8 @@
           text: item.content || '',
           date: formatDate(item.createdAt),
           likes: item.likesCount || 0,
-          liked: !!item.isLiked
+          liked: !!item.isLiked,
+          replies: Number(item.commentsCount) || 0
         }, false);
         if (node && Number(item.commentsCount) > 0) withReplies.push(node);
       });
@@ -437,6 +445,11 @@
   }
 
   function replyNode(data) {
+    // Общий движок comments.js: лайк + «три точки» удаления для автора
+    // (syncOwnMenu); локальная копия ниже — фолбэк
+    if (window.LoreComments && typeof LoreComments.replyNode === 'function') {
+      return LoreComments.replyNode(data);
+    }
     var tpl = document.getElementById('reply-template');
     if (!tpl) return null;
     var node = tpl.content.firstElementChild.cloneNode(true);
@@ -456,6 +469,12 @@
   }
 
   async function loadReplies(card) {
+    // Общий движок comments.js: раскрывает [data-replies], обновляет label
+    // тумблера и показывает «три точки» у своих ответов; локальная копия
+    // ниже — фолбэк
+    if (window.LoreComments && typeof LoreComments.loadReplies === 'function') {
+      return LoreComments.loadReplies(card);
+    }
     var commentId = Number((card && card.dataset.commentId) || 0);
     if (!commentId) return;
     var params = new URLSearchParams({

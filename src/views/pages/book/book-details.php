@@ -388,9 +388,9 @@ $meAvatar = (string) ($me->avatar ?? '');
 
                 <!-- Лайк уходит вниз (рядом с Reply); здесь — «три точки»:
                      меню удаления, раскрывается НАД кнопкой; только для автора -->
-                <div class="comment-card__actions" data-c-menu-wrap>
+                <div class="comment-card__actions" data-c-menu-wrap hidden>
                   <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                          aria-haspopup="true" aria-expanded="false" aria-label="Comment options">
+                          aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                       <circle cx="8" cy="3" r="1.5"/>
                       <circle cx="8" cy="8" r="1.5"/>
@@ -399,7 +399,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                   </button>
                   <div class="comment-card__menu" data-c-menu hidden>
                     <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                            data-c-delete>Delete</button>
+                            data-c-delete><?= $tr('common.js.delete') ?></button>
                   </div>
                 </div>
               </div>
@@ -412,7 +412,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                           data-like-btn
                           data-like-id="<?= $cId ?>"
                           data-liked="<?= $cLiked ? '1' : '0' ?>"
-                          aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="Like">
+                          aria-pressed="<?= $cLiked ? 'true' : 'false' ?>" aria-label="<?= $tr('common.comments.like') ?>">
                     <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                       <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -465,7 +465,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                  (comments.js скрывает врап, если authorId != мой id) -->
             <div class="comment-card__actions" data-c-menu-wrap hidden>
               <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                      aria-haspopup="true" aria-expanded="false" aria-label="Comment options">
+                      aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <circle cx="8" cy="3" r="1.5"/>
                   <circle cx="8" cy="8" r="1.5"/>
@@ -474,7 +474,7 @@ $meAvatar = (string) ($me->avatar ?? '');
               </button>
               <div class="comment-card__menu" data-c-menu hidden>
                 <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                        data-c-delete>Delete</button>
+                        data-c-delete><?= $tr('common.js.delete') ?></button>
               </div>
             </div>
           </div>
@@ -487,7 +487,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                       data-like-btn
                       data-like-id=""
                       data-liked="0"
-                      aria-pressed="false" aria-label="Like">
+                      aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
                 <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -539,7 +539,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                (comments.js скрывает врап, если authorId != мой id) -->
           <div class="comment-card__actions comment-reply__actions" data-c-menu-wrap hidden>
             <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                    aria-haspopup="true" aria-expanded="false" aria-label="Reply options">
+                    aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <circle cx="8" cy="3" r="1.5"/>
                 <circle cx="8" cy="8" r="1.5"/>
@@ -548,7 +548,7 @@ $meAvatar = (string) ($me->avatar ?? '');
             </button>
             <div class="comment-card__menu" data-c-menu hidden>
               <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                      data-c-delete>Delete</button>
+                      data-c-delete><?= $tr('common.js.delete') ?></button>
             </div>
           </div>
         </div>
@@ -560,7 +560,7 @@ $meAvatar = (string) ($me->avatar ?? '');
                     data-like-btn
                     data-like-id=""
                     data-liked="0"
-                    aria-pressed="false" aria-label="Like">
+                    aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
               <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
