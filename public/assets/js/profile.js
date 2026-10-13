@@ -201,6 +201,20 @@
       '<path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
 
+  // Три точки (меню удаления поста) — как в card-feed.php/comment-card-template
+  var DOTS_SVG =
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<circle cx="8" cy="3" r="1.5"/>' +
+      '<circle cx="8" cy="8" r="1.5"/>' +
+      '<circle cx="8" cy="13" r="1.5"/>' +
+    '</svg>';
+
+  // Галочка отправки комментария — как у reply-формы в шаблоне
+  var CHECK_SVG =
+    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
   /**
    * Карточка поста — по разметке card-feed.php (feed-list.php):
    * шапка книги, строка поста (аватар, ник->профиль, текст, сердечко +
@@ -266,18 +280,31 @@
                     '<div class="comment-card__author">' + authorHtml + '</div>' +
                     '<div class="comment-card__text">' + textHtml(text) + '</div>' +
                   '</div>' +
+                  // Меню поста: «три точки» для удаления своего поста
+                  // (comments.js syncPostMenu скрывает, если author != мой id)
+                  '<div class="comment-card__actions" data-c-menu-wrap hidden>' +
+                    '<button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle' +
+                            ' aria-haspopup="true" aria-expanded="false" aria-label="' + t('comments.options') + '">' +
+                      DOTS_SVG +
+                    '</button>' +
+                    '<div class="comment-card__menu" data-c-menu hidden>' +
+                      '<button type="button" class="comment-card__menu-item comment-card__menu-item--danger"' +
+                              ' data-c-delete>' + t('js.delete') + '</button>' +
+                    '</div>' +
+                  '</div>' +
                 '</div>' +
 
                 '<div class="comment-card__footer">' +
                   '<div class="comment-card__meta">' +
                     '<button type="button" class="btn-icon-small btn-like comment-card__like' + (liked ? ' is-liked' : '') + '"' +
                             ' data-like-btn data-liked="' + (liked ? '1' : '0') + '"' +
-                            ' aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="Like">' +
+                            ' aria-pressed="' + (liked ? 'true' : 'false') + '" aria-label="' + t('comments.like') + '">' +
                       LIKE_SVG +
                       '<span data-like-count>' + likes + '</span>' +
                     '</button>' +
                     '<button type="button" class="comment-card__reply"' +
-                            ' data-comment-toggle aria-expanded="false" aria-label="Reply">Reply</button>' +
+                            ' data-comment-toggle aria-expanded="false" aria-label="' + t('comments.reply') + '">' +
+                            t('comments.reply') + '</button>' +
                   '</div>' +
                   '<span class="comment-card__date">' + escapeHtml(date) + '</span>' +
                 '</div>' +
@@ -286,8 +313,9 @@
                       ' data-feed-comment-form data-post-id="' + postId + '" novalidate hidden>' +
                   '<input type="hidden" name="_token" value="">' +
                   '<input type="hidden" name="publicationId" value="' + pubId + '">' +
-                  '<input type="text" class="comment-form__input" name="content" placeholder="Add a comment…" maxlength="500" autocomplete="off">' +
-                  '<button type="submit" class="comment-form__submit" disabled>Post</button>' +
+                  '<input type="text" class="comment-form__input" name="content" placeholder="' + t('comments.add_comment') + '" maxlength="500" autocomplete="off">' +
+                  '<button type="submit" class="comment-form__submit" disabled' +
+                          ' aria-label="' + t('comments.post') + '">' + CHECK_SVG + '</button>' +
                   '<p data-comment-error role="alert" hidden' +
                      ' style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>' +
                   '<p data-comment-status role="status" hidden' +
@@ -295,7 +323,8 @@
                 '</form>' +
 
                 '<button type="button" class="comment-card__more" data-fc-expand' +
-                        ' aria-expanded="false">Show more</button>' +
+                        (comments > 0 ? '' : ' hidden') +
+                        ' aria-expanded="false">' + t('js.show_more') + '</button>' +
 
                 '<span class="visually-hidden" data-comment-count>' + comments + '</span>' +
 
@@ -376,6 +405,10 @@
         // CSRF-поле формы ответа — из data-posts-csrf (карточка отрендерена в JS)
         var tokenInput = node.querySelector('[data-feed-comment-form] [name="_token"]');
         if (tokenInput) tokenInput.value = csrf;
+        // Меню поста (три точки): показываем, если пост мой
+        if (window.LoreComments && typeof window.LoreComments.syncPostMenu === 'function') {
+          window.LoreComments.syncPostMenu(node);
+        }
       });
     }
 
