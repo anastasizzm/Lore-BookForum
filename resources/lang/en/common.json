@@ -24,7 +24,8 @@
         "logout_title": "Log out?",
         "logout_text": "You will need to sign in again to continue.",
         "help": "Help",
-        "privacy": "Privacy Policy"
+        "privacy": "Privacy Policy",
+        "changepass": "Change password"
     },
     "language": {
         "label": "Language",

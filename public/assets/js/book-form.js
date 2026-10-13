@@ -71,6 +71,49 @@
     return (10 - (sum % 10)) % 10 === Number(c[12]);
   }
 
+  // Группы дефисов канонического ISBN-13: 978-0-306-40615-2
+  var ISBN_GROUPS = [3, 1, 3, 5, 1];
+
+  /** Цифры -> формат с дефисами (зеркало isbnFormat из filters.js). */
+  function isbnFormat(c) {
+    var parts = [];
+    var i = 0;
+    for (var g = 0; g < ISBN_GROUPS.length && i < c.length; g++) {
+      parts.push(c.slice(i, i + ISBN_GROUPS[g]));
+      i += ISBN_GROUPS[g];
+    }
+    if (i < c.length) parts.push(c.slice(i));
+    return parts.join('-');
+  }
+
+  /** Авто-дефисы при вводе: держит каретку по позиции цифры. */
+  function formatIsbnField(field) {
+    var old = field.value;
+    var caret = field.selectionStart === null || field.selectionStart === undefined
+      ? old.length : field.selectionStart;
+
+    var digitsBefore = 0;
+    for (var i = 0; i < caret && i < old.length; i++) {
+      if (old[i] >= '0' && old[i] <= '9') digitsBefore++;
+    }
+
+    var formatted = isbnFormat(isbnClean(old));
+    if (formatted === old) return;
+    field.value = formatted;
+
+    if (digitsBefore === 0) {
+      try { field.setSelectionRange(0, 0); } catch (_) {}
+      return;
+    }
+    var seen = 0;
+    var pos = formatted.length;
+    for (var j = 0; j < formatted.length; j++) {
+      if (formatted[j] >= '0' && formatted[j] <= '9') seen++;
+      if (seen === digitsBefore) { pos = j + 1; break; }
+    }
+    try { field.setSelectionRange(pos, pos); } catch (_) {}
+  }
+
   /** { error, warning } — error блокирует отправку, warning нет. */
   function checkIsbn(value) {
     var raw = String(value === null || value === undefined ? '' : value).trim();
@@ -389,6 +432,18 @@
         field.addEventListener('change', function () { validateField(name); });
         return;
       }
+
+      // ISBN: авто-дефисы при вводе + проверка.
+      if (rule.custom === 'isbn') {
+        field.addEventListener('input', function () {
+          formatIsbnField(field);
+          if (field.classList.contains('form-field__input--invalid')) validateField(name);
+        });
+        field.addEventListener('blur',  function () { validateField(name); });
+        field.addEventListener('change', function () { validateField(name); });
+        return;
+      }
+
       field.addEventListener('blur',  function () { validateField(name); });
       field.addEventListener('input', function () {
         if (field.classList.contains('form-field__input--invalid')) validateField(name);

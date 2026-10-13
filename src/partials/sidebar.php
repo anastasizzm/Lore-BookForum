@@ -205,7 +205,7 @@
                         <circle cx="8" cy="10.5" r="1.1" fill="currentColor"/>
                     </svg>
                 </span>
-                <span>Change password</span>
+                <span><?= $tr('common.sidebar.changepass') ?></span>
             </a>
 
             <button type="button" class="settings-menu__item">

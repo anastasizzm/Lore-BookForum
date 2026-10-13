@@ -32,8 +32,8 @@ function initPasswordResetPage() {
     let message = "";
     if (!ok) {
       message = password.value.length < LoreValidators.PASSWORD_MIN_LENGTH
-        ? t("common.js.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
-        : t("common.js.invalid_password");
+        ? t("js.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
+        : t("js.invalid_password");
     }
     setError(password, "resetPasswordError", message);
     return ok;
@@ -41,7 +41,7 @@ function initPasswordResetPage() {
 
   function validatePasswordConfirm() {
     const ok = passwordConfirm.value !== "" && passwordConfirm.value === password.value;
-    setError(passwordConfirm, "resetPasswordConfirmError", ok ? "" : t("common.js.passwords_different"));
+    setError(passwordConfirm, "resetPasswordConfirmError", ok ? "" : t("js.passwords_different"));
     return ok;
   }
 

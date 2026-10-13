@@ -6,6 +6,7 @@ namespace App\Services\Additional;
 use App\Repositories\Additional\CategoriesRepository;
 use App\Models\Queries\Additional\BasicModelListQuery;
 
+use App\Extensions\EnumExtensions;
 use App\Models\PaginatedList;
 use App\Models\Enums\BasicModelSortBy;
 
