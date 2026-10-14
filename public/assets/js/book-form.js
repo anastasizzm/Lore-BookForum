@@ -230,9 +230,17 @@
     var preview  = form.querySelector('[data-cover-preview]');
     var placeholder = form.querySelector('[data-cover-placeholder]');
     var removeBtn = form.querySelector('[data-cover-remove]');
+    var stateEl  = form.querySelector('[data-cover-upload] [data-file-button-state]');
     if (!input || !preview) return null;
 
     var objectUrl = null;
+
+    /** Текст под кнопкой: имя файла либо «Файл не выбран». */
+    function syncState() {
+      if (!stateEl) return;
+      var file = input.files && input.files[0];
+      stateEl.textContent = file ? (file.name || '') : t('bookform.file_none');
+    }
 
     function clearPreview() {
       if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
@@ -240,6 +248,7 @@
       preview.hidden = true;
       if (placeholder) placeholder.hidden = false;
       if (removeBtn) removeBtn.hidden = true;
+      syncState();
     }
 
     /** Возвращает сообщение об ошибке или null, если файл валиден. */
@@ -265,6 +274,7 @@
       preview.hidden = false;
       if (placeholder) placeholder.hidden = true;
       if (removeBtn) removeBtn.hidden = false;
+      syncState();
       return null;
     };
   }
@@ -296,7 +306,20 @@
   function initFiles(form) {
     var input = form.querySelector('[data-files-input]');
     var list  = form.querySelector('[data-files-list]');
+    var stateEl = form.querySelector('[data-files-field] [data-file-button-state]');
     if (!input || !list) return null;
+
+    /** Текст под кнопкой: имя первого файла (+ещё N) либо «Файл не выбран». */
+    function syncState() {
+      if (!stateEl) return;
+      var files = currentFiles();
+      if (!files.length) { stateEl.textContent = t('bookform.file_none'); return; }
+      var text = files[0].name || '';
+      if (files.length > 1) {
+        text += ' ' + t('bookform.file_and_more', { count: files.length - 1 });
+      }
+      stateEl.textContent = text;
+    }
 
     /** Пересобирает input.files из массива (вырезали файл по минусу). */
     function setInputFiles(files) {
@@ -348,6 +371,7 @@
         li.appendChild(remove);
         list.appendChild(li);
       });
+      syncState();
     }
 
     /** Возвращает сообщение об ошибке или null, если файлы валидны. */

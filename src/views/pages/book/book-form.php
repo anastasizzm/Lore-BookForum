@@ -396,12 +396,19 @@ $categoryValue = $val('category');
             </div>
 
             <div class="cover-upload__controls">
-              <input class="form-field__input form-field__input--file"
+              <!-- Нативная строка браузера («Choose file») не переводится:
+                   input спрятан, клик ведёт локализованная кнопка-лейбл
+                   (Выбрать файл… / Файл не выбран). -->
+              <input class="file-input-hidden"
                      type="file"
                      id="bookCover"
                      name="cover"
                      accept="image/jpeg,image/png,image/webp"
                      data-cover-input>
+              <label class="btn btn--secondary file-upload__button" for="bookCover">
+                <span data-file-button-text><?= $tr('common.bookform.file_choose') ?></span>
+                <span class="file-upload__button-state" data-file-button-state><?= $tr('common.bookform.file_none') ?></span>
+              </label>
               <p class="book-form__hint"><?= $tr('common.bookform.cover_hint') ?></p>
               <button class="btn btn--secondary"
                       type="button"
@@ -424,7 +431,9 @@ $categoryValue = $val('category');
           <label for="bookFiles"><?= $tr('common.bookform.field_file') ?></label>
 
           <div class="file-upload" data-file-upload>
-            <input class="form-field__input form-field__input--file"
+            <!-- Нативная строка браузера не переводится: скрытый input +
+                 локализованная кнопка-лейбл и текст состояния. -->
+            <input class="file-input-hidden"
                    type="file"
                    id="bookFiles"
                    name="files[]"
@@ -432,6 +441,10 @@ $categoryValue = $val('category');
                    multiple
                    data-files-input
                    required>
+            <label class="btn btn--secondary file-upload__button" for="bookFiles">
+              <span data-file-button-text><?= $tr('common.bookform.file_choose') ?></span>
+              <span class="file-upload__button-state" data-file-button-state><?= $tr('common.bookform.file_none') ?></span>
+            </label>
 
             <ul class="file-upload__list" data-files-list></ul>
 

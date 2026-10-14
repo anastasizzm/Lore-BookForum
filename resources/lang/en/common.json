@@ -101,7 +101,10 @@
         "authors_hint": "Up to 30 people. Each author can be made an editor — they stay an author.",
         "editors_hint": "No limit on the number.",
         "people_not_found": "No users found.",
-        "people_unavailable": "People search is not available yet."
+        "people_unavailable": "People search is not available yet.",
+        "file_choose": "Choose file…",
+        "file_none": "No file chosen",
+        "file_and_more": "and {count} more"
     },
     "comments": {
         "title": "Comments:",
