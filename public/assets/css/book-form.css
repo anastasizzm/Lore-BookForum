@@ -1,0 +1,450 @@
+/* ============================================================
+   BOOK FORM — создание книги (src/views/pages/book/book-form.php)
+
+   Сетка: превью обложки слева, поля формы справа. На мобильных
+   превью уезжает наверх и сжимается. Использует токены из
+   variable.css и базовые .form-field/.btn из component.css.
+   ============================================================ */
+
+.book-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ============================================
+   КАРТОЧКА ФОРМЫ
+   ============================================ */
+.book-form form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.book-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.book-form .form-field label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.book-form .form-field__input--textarea {
+  min-height: 140px;
+  padding: var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--lh-normal);
+}
+
+/* ============================================
+   ЗАГОЛОВКИ СЕКЦИЙ
+   ============================================ */
+.book-form__section-title {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.book-form form > .book-form__section-title:first-child {
+  margin-top: 0;
+}
+
+/* Подсказка под файловым полем (лимиты, допустимые типы) */
+.book-form__hint {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   РЯДЫ ПОЛЕЙ
+   ============================================ */
+.form-row--two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* Обложка + PDF: узкая колонка под превью, широкая под файл */
+.form-row--files {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-4);
+  width: 100%;
+  align-items: start;
+}
+
+/* ============================================
+   СЕЛЕКТЫ (жанр, категория)
+   ============================================ */
+.book-form__select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--space-5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236F84A5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  cursor: pointer;
+}
+
+.book-form__select:invalid {
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   ЗАГРУЗКА ОБЛОЖКИ
+   ============================================ */
+.cover-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cover-upload__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: var(--color-field-bg);
+  border: 1px dashed var(--color-field-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.cover-upload__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.cover-upload__placeholder {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-2);
+}
+
+.cover-upload__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+/* Кнопка выбора файла: нативный input, прикрытый стилем */
+.form-field__input--file {
+  padding: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  background-color: var(--color-surface);
+}
+
+.form-field__input--file::file-selector-button {
+  margin-right: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.form-field__input--file::file-selector-button:hover {
+  background: var(--color-overlay);
+}
+
+/* ============================================
+   ЗАГРУЗКА КНИГИ: список файлов (pdf/epub/mobi/fb2)
+   ============================================ */
+.file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+/* Список выбранных файлов: имя, размер, минус */
+.file-upload__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-upload__list:empty {
+  display: none;
+}
+
+.file-upload__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-small);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.file-upload__name {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+.file-upload__size {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+/* Кнопка-минус в списках (файлы, люди) */
+.file-upload__remove,
+.people-list__remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.file-upload__remove:hover,
+.people-list__remove:hover {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+/* ============================================
+   ЛЮДИ: поиск по нику + списки авторов/редакторов
+   ============================================ */
+.people-search__results {
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.people-search__results:empty,
+.people-search__results[hidden] {
+  display: none;
+}
+
+.people-search__item,
+.people-search__empty {
+  margin: 0;
+}
+
+.people-search__empty {
+  padding: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.people-search__add {
+  display: block;
+  width: 100%;
+  padding: var(--space-2);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.people-search__add:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* Список добавленных людей под полем поиска */
+.people-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.people-list:empty {
+  display: none;
+}
+
+.people-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.people-list__name {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* «Сделать редактором» у автора */
+.people-list__action {
+  padding: 2px var(--space-2);
+  font: inherit;
+  font-size: 11px;
+  color: var(--color-link, #2f6feb);
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.people-list__action:hover {
+  opacity: 0.75;
+}
+
+.people-list__action:disabled {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: default;
+  opacity: 1;
+}
+
+/* ============================================
+   ОШИБКИ ПОЛЕЙ (дубликат из profile.css, т.к. та не подключена)
+   ============================================ */
+.book-form .form-field__input--invalid {
+  border-color: var(--color-error);
+}
+
+.book-form .form-field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-error);
+  line-height: 1.3;
+}
+
+.book-form .form-field__error:empty {
+  visibility: hidden;
+}
+
+.book-form .field-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-error);
+  color: var(--color-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Неблокирующее предупреждение (например, контрольная сумма ISBN) */
+.book-form .form-field__error--warning,
+.book-form .form-field__error--warning:empty {
+  visibility: visible;
+  color: var(--color-warning);
+}
+
+.book-form .field-error-icon--warning {
+  background: var(--color-warning);
+}
+
+/* ============================================
+   КНОПКИ
+   ============================================ */
+.book-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .form-row--files {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .cover-upload__frame {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-row--two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .book-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .book-form__actions .btn {
+    width: 100%;
+  }
+
+  .file-upload__name {
+    max-width: 180px;
+  }
+}
