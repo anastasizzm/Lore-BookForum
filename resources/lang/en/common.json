@@ -87,7 +87,7 @@
         "cover_hint": "JPG, PNG or WebP, up to 5 MB.",
         "cover_preview_alt": "Cover preview",
         "cover_remove": "Remove cover",
-        "file_hint": "PDF, EPUB, MOBI or FB2 — up to 50 MB per file, at least one file.",
+        "file_hint": "PDF, EPUB, MOBI or FB2 — at most one file per format, up to 50 MB per file, at least one file.",
         "file_remove": "Remove file",
         "select_placeholder": "Choose…",
         "cancel": "Back to books",
@@ -324,7 +324,6 @@
         "verify_sent": "A new verification link has been sent to your email. Check your inbox.",
         "verify_failed": "Could not send the email (HTTP :status).",
         "seconds_short": "s",
-
         "max_length": "Max length is :max characters",
         "comment_empty": "Comment cannot be empty",
         "comment_sent": "Comment sent",
@@ -380,6 +379,7 @@
         "rule_book_file_required": "Add at least one book file (PDF, EPUB, MOBI or FB2).",
         "bookform_saving": "Creating…",
         "bookform_saved": "The book has been created.",
-        "rule_book_authors_limit": "Maximum 30 authors."
+        "rule_book_authors_limit": "Maximum 30 authors.",
+        "rule_book_file_dup": "The {format} format is already added — only one file per format is allowed."
     }
 }

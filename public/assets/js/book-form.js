@@ -277,10 +277,20 @@
     return m ? m[1] : '';
   }
 
-  function isBookFile(file) {
+  /** MIME без расширения в имени → формат (epub/mobi/fb2/pdf) или ''. */
+  var MIME_TO_EXT = {
+    'application/pdf': 'pdf',
+    'application/epub+zip': 'epub',
+    'application/x-mobipocket-ebook': 'mobi',
+    'application/fb2': 'fb2',
+    'application/x-fictionbook+xml': 'fb2',
+  };
+
+  /** Канонический формат файла: по расширению, иначе по MIME, иначе ''. */
+  function bookFileFormat(file) {
     var ext = bookFileExt(file.name).toLowerCase();
-    if (BOOK_FILE_EXTS.indexOf(ext) !== -1) return true;
-    return BOOK_FILE_MIMES.indexOf(file.type) !== -1;
+    if (BOOK_FILE_EXTS.indexOf(ext) !== -1) return ext;
+    return MIME_TO_EXT[file.type] || '';
   }
 
   function initFiles(form) {
@@ -344,11 +354,14 @@
     return function () {
       var files = currentFiles();
 
-      // Невалидные файлы выкидываем из выбора, оставляем годные.
+      // Невалидные файлы и дубли форматов выкидываем из выбора, оставляем
+      // годные: один файл на формат (pdf/epub/mobi/fb2), минимум один файл.
       var kept = [];
+      var seen = {};
       var rejected = null;
       files.forEach(function (file) {
-        if (!isBookFile(file)) {
+        var format = bookFileFormat(file);
+        if (!format) {
           rejected = rejected || t('js.rule_book_file');
           return;
         }
@@ -356,6 +369,11 @@
           rejected = rejected || t('js.rule_book_file_size');
           return;
         }
+        if (seen[format]) {
+          rejected = rejected || t('js.rule_book_file_dup', { format: format.toUpperCase() });
+          return;
+        }
+        seen[format] = true;
         kept.push(file);
       });
 

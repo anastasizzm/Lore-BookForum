@@ -87,7 +87,7 @@
         "cover_hint": "JPG, PNG или WebP, до 5 МБ.",
         "cover_preview_alt": "Предпросмотр обложки",
         "cover_remove": "Убрать обложку",
-        "file_hint": "PDF, EPUB, MOBI или FB2 — до 50 МБ на файл, минимум один файл.",
+        "file_hint": "PDF, EPUB, MOBI или FB2 — не более одного файла каждого формата, до 50 МБ на файл, минимум один файл.",
         "file_remove": "Убрать файл",
         "select_placeholder": "Выберите…",
         "cancel": "К списку книг",
@@ -324,7 +324,6 @@
         "verify_sent": "Новая ссылка для подтверждения отправлена на ваш email. Проверьте почту.",
         "verify_failed": "Не удалось отправить письмо (HTTP :status).",
         "seconds_short": "с",
-
         "max_length": "Не больше :max символов",
         "comment_empty": "Комментарий не может быть пустым",
         "comment_sent": "Комментарий отправлен",
@@ -380,6 +379,7 @@
         "rule_book_file_required": "Добавьте хотя бы один файл книги (PDF, EPUB, MOBI или FB2).",
         "bookform_saving": "Создание…",
         "bookform_saved": "Книга создана.",
-        "rule_book_authors_limit": "Максимум 30 авторов."
+        "rule_book_authors_limit": "Максимум 30 авторов.",
+        "rule_book_file_dup": "Формат {format} уже добавлен — можно только по одному файлу каждого формата."
     }
 }

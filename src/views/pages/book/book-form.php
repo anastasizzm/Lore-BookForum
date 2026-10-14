@@ -50,7 +50,9 @@ $langField = $langQuery !== null && $langQuery !== ''
  *                  в `$form` — та же форма, что у authors[]
  *          cover (file: jpeg/png/webp, ≤5MB, optional — иначе placeholder)
  *          files[] (array<file>, required ≥1; форматы pdf/epub/mobi/fb2,
- *                  ≤50MB на файл) — книга в одном или нескольких форматах
+ *                  не более одного файла каждого формата, ≤50MB на файл) —
+ *                  книга в одном или нескольких форматах; дубли форматов
+ *                  бэк тоже должен отсекать (фронт уже отсекает)
  *          _token (CSRF: поле csrfField() или заголовок X-CSRF-Token), lang
  *        успех: Accept: application/json → 201 { data: { id, redirect } }
  *               redirect — редирект бэка; если его нет, фронт уводит
