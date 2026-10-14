@@ -175,21 +175,34 @@
 }
 
 /* ============================================
-   ЗАГРУЗКА PDF: имя и размер файла
+   ЗАГРУЗКА КНИГИ: список файлов (pdf/epub/mobi/fb2)
    ============================================ */
 .file-upload {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  align-items: flex-start;
+  align-items: stretch;
 }
 
-.file-upload__meta {
+/* Список выбранных файлов: имя, размер, минус */
+.file-upload__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-upload__list:empty {
+  display: none;
+}
+
+.file-upload__item {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   max-width: 100%;
-  margin: 0;
   padding: var(--space-1) var(--space-3);
   font-size: var(--fs-small);
   background: var(--color-bg-secondary);
@@ -209,6 +222,136 @@
 .file-upload__size {
   color: var(--color-text-muted);
   flex-shrink: 0;
+}
+
+/* Кнопка-минус в списках (файлы, люди) */
+.file-upload__remove,
+.people-list__remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.file-upload__remove:hover,
+.people-list__remove:hover {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+/* ============================================
+   ЛЮДИ: поиск по нику + списки авторов/редакторов
+   ============================================ */
+.people-search__results {
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.people-search__results:empty,
+.people-search__results[hidden] {
+  display: none;
+}
+
+.people-search__item,
+.people-search__empty {
+  margin: 0;
+}
+
+.people-search__empty {
+  padding: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.people-search__add {
+  display: block;
+  width: 100%;
+  padding: var(--space-2);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.people-search__add:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* Список добавленных людей под полем поиска */
+.people-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.people-list:empty {
+  display: none;
+}
+
+.people-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.people-list__name {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* «Сделать редактором» у автора */
+.people-list__action {
+  padding: 2px var(--space-2);
+  font: inherit;
+  font-size: 11px;
+  color: var(--color-link, #2f6feb);
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.people-list__action:hover {
+  opacity: 0.75;
+}
+
+.people-list__action:disabled {
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  cursor: default;
+  opacity: 1;
 }
 
 /* ============================================

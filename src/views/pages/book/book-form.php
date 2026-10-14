@@ -20,19 +20,17 @@ $langField = $langQuery !== null && $langQuery !== ''
 
 /*
  * КОНТРАКТ С БЭКОМ (P0, фронт готов — роуты добавляет команда бэка;
- * config/routes.php ЗАМОРОЖЕН, правки запрещены, поэтому роутов ещё нет):
+ * config/routes.php и app/ ЗАМОРОЖЕНЫ, правки запрещены):
  *
  *   GET  /books/create  → роут books.create,        AuthPolicy::Verified
  *        рендерит эту вьюху, передавая $user (для сайдбара);
  *        при повторном рендере после ошибок — $form (значения полей) и
- *        $errors (['title' => ['msg'], ...], файловые ключи 'cover' и 'file').
+ *        $errors (['title' => ['msg'], ...], ключи 'cover', 'files',
+ *        'authors', 'editors').
  *
  *   POST /books/create  → роут books.create.submit, AuthPolicy::Verified
  *        enctype=multipart/form-data, поля:
  *          title (string, required, ≤200)
- *          author (string, required, ≤120; в GET-рендере автозаполнен
- *                  именем владельца профиля — вьюхе нужен $user, как в
- *                  UsersController::retrieve)
  *          annotation (string, optional, ≤5000)
  *          genre (int id, required)     — список: GET /api/additional/genres
  *          category (int id, required)  — список: GET /api/additional/categories
@@ -41,25 +39,34 @@ $langField = $langQuery !== null && $langQuery !== ''
  *                  проверяет ISBN-13 (13 цифр, префикс 978/979, дефисы и
  *                  пробелы допустимы); бэк — та же проверка (см. фильтр
  *                  библиотеки: filters.js isbnValidate)
+ *          authors[]  (array<int id>, optional, ≤30) — авторы книги;
+ *                  ПОЛЕ СОЗДАТЕЛЯ НЕТ: создатель всегда один, не изменяем
+ *                  и автоматически редактор (берётся из сессии бэком).
+ *                  Гидрация после 422: $form['authors'] = [['id'=>..,
+ *                  'username'=>..], ...]
+ *          editors[]  (array<int id>, optional, без лимита) — редакторы;
+ *                  в `$form` — та же форма, что у authors[]
  *          cover (file: jpeg/png/webp, ≤5MB, optional — иначе placeholder)
- *          file  (file: application/pdf, ≤50MB, required — без PDF книга не читается)
+ *          files[] (array<file>, required ≥1; форматы pdf/epub/mobi/fb2,
+ *                  ≤50MB на файл) — книга в одном или нескольких форматах
  *          _token (CSRF: поле csrfField() или заголовок X-CSRF-Token), lang
  *        успех: Accept: application/json → 201 { data: { id, redirect: '/books/{id}' } }
  *               без JSON (прогрессивный POST без JS) → 302 на /books/{id}
  *        ошибки валидации → 422 { errors: { field: [msg, ...] } }
  *
+ *   GET  /api/users/search?q=… → роут api.users.search, AuthPolicy::Auth
+ *        ЗАГЛУШКА (роут добавит бэк; в endpoints.php его пока нет):
+ *        автокомплит людей по нику для списков авторов/редакторов.
+ *        Ответ: { items: [ { id: int, username: string }, ... ] }
+ *        (формат ResponseTemplates::list). Фронт при ошибке/404 молча
+ *        показывает «поиск недоступен», форма не ломается.
+ *
  *   Сохранение файлов — по образцу App\Lib\Uploader::saveImage (cover) и
- *   отдельный приём PDF (тот же is_uploaded_file + finfo, MIME строго
- *   application/pdf, имя генерируется, путь кладётся в publications.content).
+ *   отдельный приём книги (is_uploaded_file + finfo, формат — по
+ *   расширению/MIME из списка pdf/epub/mobi/fb2, имя генерируется).
  */
 $form   = $form   ?? [];
 $errors = $errors ?? [];
-
-// Автор по умолчанию — владелец профиля ($user передаёт контроллер, см.
-// контракт ниже). Пользователь может переписать: это автозаполнение,
-// а не замок. После ошибки валидации приоритет у $form (не затираем ввод).
-$profileAuthor = trim(trim((string) ($user->name ?? '')) . ' ' . trim((string) ($user->surname ?? '')));
-if ($profileAuthor === '') $profileAuthor = trim((string) ($user->username ?? ''));
 
 /** Значение поля: сначала то, что прислал пользователь, потом пусто. */
 $val = static function (string $key, string $default = '') use ($form): string {
@@ -68,6 +75,31 @@ $val = static function (string $key, string $default = '') use ($form): string {
     }
     return $default;
 };
+
+/**
+ * Гидрация списков людей после 422: $form['authors'/'editors'] — список
+ * ['id' => int|string, 'username' => string]. Пусто, если поле не пришло.
+ */
+$people = static function (string $key) use ($form): array {
+    $raw = $form[$key] ?? null;
+    if (!is_array($raw)) return [];
+    $out = [];
+    foreach ($raw as $one) {
+        if (is_array($one)) {
+            $id = $one['id'] ?? null;
+            $username = (string) ($one['username'] ?? '');
+        } else {
+            $id = $one;
+            $username = (string) $one;
+        }
+        if ($id === null || $id === '') continue;
+        $out[] = ['id' => (string) $id, 'username' => $username !== '' ? $username : (string) $id];
+    }
+    return $out;
+};
+
+$authors = $people('authors');
+$editors = $people('editors');
 
 /** Первая ошибка поля (сервер может прислать список). */
 $err = static function (string $key) use ($errors): string {
@@ -78,7 +110,7 @@ $err = static function (string $key) use ($errors): string {
 };
 
 /** Все имена полей формы — для разбора $errors. */
-$fieldKeys = ['title', 'author', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'file'];
+$fieldKeys = ['title', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'files', 'authors', 'editors'];
 
 /** Ошибки, не привязанные к полю (например, «файл не сохранён»). */
 $unboundErrors = [];
@@ -124,7 +156,7 @@ $categoryValue = $val('category');
 <div class="book-form-grid">
 
   <!-- ============================================================
-       FORM: Create book (метаданные + обложка + PDF)
+       FORM: Create book (метаданные + обложка + файлы в разных форматах)
        ============================================================ -->
   <section class="book-form card-base">
 
@@ -157,19 +189,70 @@ $categoryValue = $val('category');
         </p>
       </div>
 
-      <div class="form-field">
-        <label for="bookAuthor"><?= $tr('common.bookform.field_author') ?></label>
+      <!-- АВТОРЫ: поиск людей по нику (заглушка /api/users/search),
+           список до 30 человек под поиском, у каждого кнопка
+           «сделать редактором» (переносит его же в список редакторов,
+           остаётся автором) и минус для удаления. -->
+      <div class="form-field" data-people-field="authors">
+        <label for="bookAuthorsSearch"><?= $tr('common.bookform.field_authors') ?></label>
         <input class="form-field__input"
                type="text"
-               id="bookAuthor"
-               name="author"
-               value="<?= $view->e($val('author', $profileAuthor)) ?>"
-               maxlength="120"
+               id="bookAuthorsSearch"
+               data-people-search
+               maxlength="100"
                autocomplete="off"
-               required>
-        <p class="form-field__error" data-error-for="author" aria-live="polite">
-          <?php if ($err('author') !== ''): ?>
-            <span class="field-error-icon" title="<?= $view->e($err('author')) ?>">!</span>
+               placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
+               aria-describedby="bookAuthorsHint">
+        <ul class="people-search__results" data-people-results hidden></ul>
+        <ul class="people-list" data-people-list>
+          <?php foreach ($authors as $person): ?>
+            <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
+              <span class="people-list__name"><?= $view->e($person['username']) ?></span>
+              <button class="people-list__action" type="button" data-make-editor><?= $tr('common.bookform.make_editor') ?></button>
+              <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <!-- по одному hidden на человека: без JS POST унесёт authors[]=id,… -->
+        <?php foreach ($authors as $person): ?>
+          <input type="hidden" name="authors[]" data-people-value value="<?= $view->e($person['id']) ?>">
+        <?php endforeach; ?>
+        <p class="book-form__hint" id="bookAuthorsHint"><?= $tr('common.bookform.authors_hint') ?></p>
+        <p class="form-field__error" data-error-for="authors" aria-live="polite">
+          <?php if ($err('authors') !== ''): ?>
+            <span class="field-error-icon" title="<?= $view->e($err('authors')) ?>">!</span>
+          <?php endif; ?>
+        </p>
+      </div>
+
+      <!-- РЕДАКТОРЫ: тот же поиск, лимита нет; минус убирает из списка.
+           Создатель книги сюда не попадает — он редактор по умолчанию. -->
+      <div class="form-field" data-people-field="editors">
+        <label for="bookEditorsSearch"><?= $tr('common.bookform.field_editors') ?></label>
+        <input class="form-field__input"
+               type="text"
+               id="bookEditorsSearch"
+               data-people-search
+               maxlength="100"
+               autocomplete="off"
+               placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
+               aria-describedby="bookEditorsHint">
+        <ul class="people-search__results" data-people-results hidden></ul>
+        <ul class="people-list" data-people-list>
+          <?php foreach ($editors as $person): ?>
+            <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
+              <span class="people-list__name"><?= $view->e($person['username']) ?></span>
+              <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
+            </li>
+          <?php endforeach; ?>
+        </ul>
+        <?php foreach ($editors as $person): ?>
+          <input type="hidden" name="editors[]" data-people-value value="<?= $view->e($person['id']) ?>">
+        <?php endforeach; ?>
+        <p class="book-form__hint" id="bookEditorsHint"><?= $tr('common.bookform.editors_hint') ?></p>
+        <p class="form-field__error" data-error-for="editors" aria-live="polite">
+          <?php if ($err('editors') !== ''): ?>
+            <span class="field-error-icon" title="<?= $view->e($err('editors')) ?>">!</span>
           <?php endif; ?>
         </p>
       </div>
@@ -324,35 +407,30 @@ $categoryValue = $val('category');
           </p>
         </div>
 
-        <!-- PDF: имя и размер файла показывает book-form.js -->
-        <div class="form-field">
-          <label for="bookFile"><?= $tr('common.bookform.field_file') ?></label>
+        <!-- ФАЙЛЫ: один input multiple на pdf/epub/mobi/fb2, минимум один
+             файл. Список выбранных (имя, размер, минус) рисует book-form.js.
+             Без JS уходит обычным POST — several files[] в multipart. -->
+        <div class="form-field" data-files-field>
+          <label for="bookFiles"><?= $tr('common.bookform.field_file') ?></label>
 
           <div class="file-upload" data-file-upload>
             <input class="form-field__input form-field__input--file"
                    type="file"
-                   id="bookFile"
-                   name="file"
-                   accept="application/pdf,.pdf"
-                   data-file-input
+                   id="bookFiles"
+                   name="files[]"
+                   accept=".pdf,.epub,.mobi,.fb2,application/pdf,application/epub+zip,application/x-mobipocket-ebook,application/fb2"
+                   multiple
+                   data-files-input
                    required>
 
-            <p class="file-upload__meta" data-file-meta hidden>
-              <span class="file-upload__name" data-file-name></span>
-              <span class="file-upload__size" data-file-size></span>
-            </p>
+            <ul class="file-upload__list" data-files-list></ul>
 
             <p class="book-form__hint"><?= $tr('common.bookform.file_hint') ?></p>
-
-            <button class="btn btn--secondary"
-                    type="button"
-                    data-file-remove
-                    hidden><?= $tr('common.bookform.file_remove') ?></button>
           </div>
 
-          <p class="form-field__error" data-error-for="file" aria-live="polite">
-            <?php if ($err('file') !== ''): ?>
-              <span class="field-error-icon" title="<?= $view->e($err('file')) ?>">!</span>
+          <p class="form-field__error" data-error-for="files" aria-live="polite">
+            <?php if ($err('files') !== ''): ?>
+              <span class="field-error-icon" title="<?= $view->e($err('files')) ?>">!</span>
             <?php endif; ?>
           </p>
         </div>

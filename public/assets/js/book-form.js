@@ -3,11 +3,19 @@
  *
  * Что делает:
  *   1. превью обложки (object URL) + кнопка «убрать»;
- *   2. имя и размер выбранного PDF + кнопка «убрать»;
- *   3. наполнение <select> жанров и категорий из /api/additional/*;
- *   4. клиентскую валидацию (RULES ниже) до отправки;
- *   5. отправку через fetch + FormData (multipart, файлы летят без чтения
+ *   2. списки авторов (до 30) и редакторов (без лимита): поиск людей
+ *      по нику через заглушку /api/users/search, добавление в список
+ *      под поиском, удаление минусом, кнопка «сделать редактором»
+ *      у автора (дублирует его в редакторы, автором он остаётся);
+ *   3. список выбранных файлов книги (pdf/epub/mobi/fb2, ≥1 файл)
+ *      с удалением по минусу;
+ *   4. наполнение <select> жанров и категорий из /api/additional/*;
+ *   5. клиентскую валидацию (RULES ниже) до отправки;
+ *   6. отправку через fetch + FormData (multipart, файлы летят без чтения
  *      в JS). Без JS форма уходит обычным POST — прогрессивное улучшение.
+ *
+ * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
+ * редактор (определяет бэк по сессии).
  *
  * Контракт с бэком — в шапке book-form.php: POST /books/create,
  * Accept: application/json → 201 { data: { id, redirect } } либо
@@ -17,14 +25,29 @@
   'use strict';
 
   var COVER_MAX_BYTES = 5 * 1024 * 1024;   // 5 MB  (как Uploader::MAX_BYTES)
-  var PDF_MAX_BYTES   = 50 * 1024 * 1024;  // 50 MB
-  var COVER_MIMES     = ['image/jpeg', 'image/png', 'image/webp'];
+  var BOOK_FILE_MAX_BYTES = 50 * 1024 * 1024; // 50 MB на файл книги
+  var COVER_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // Поддерживаемые форматы книги (как минимум pdf; эпаб/моби/фб2 — тоже).
+  var BOOK_FILE_EXTS  = ['pdf', 'epub', 'mobi', 'fb2'];
+  var BOOK_FILE_MIMES = [
+    'application/pdf',
+    'application/epub+zip',
+    'application/x-mobipocket-ebook',
+    'application/fb2',
+    'application/x-fictionbook+xml',
+  ];
+
+  var AUTHORS_MAX = 30; // редакторы — без лимита
 
   // Источники для <select data-dynamic-select="...">.
   var SOURCES = {
     genres:     '/api/additional/genres',
     categories: '/api/additional/categories'
   };
+
+  // Заглушка поиска людей (роут добавит бэк, см. контракт в view).
+  var PEOPLE_SEARCH_URL = '/api/users/search';
 
   var listCache = {};
 
@@ -246,73 +269,371 @@
   }
 
   /* ============================================================
-     PDF: имя + размер файла
+     ФАЙЛЫ КНИГИ: список выбранных (pdf/epub/mobi/fb2) + удаление
      ============================================================ */
-  function initFile(form) {
-    var input   = form.querySelector('[data-file-input]');
-    var meta    = form.querySelector('[data-file-meta]');
-    var nameEl  = form.querySelector('[data-file-name]');
-    var sizeEl  = form.querySelector('[data-file-size]');
-    var removeBtn = form.querySelector('[data-file-remove]');
-    if (!input || !meta) return null;
+  function bookFileExt(name) {
+    var m = /\.([a-z0-9]+)$/i.exec(String(name || ''));
+    return m ? m[1] : '';
+  }
 
-    function clearMeta() {
-      meta.hidden = true;
-      if (nameEl) nameEl.textContent = '';
-      if (sizeEl) sizeEl.textContent = '';
-      if (removeBtn) removeBtn.hidden = true;
+  function isBookFile(file) {
+    var ext = bookFileExt(file.name).toLowerCase();
+    if (BOOK_FILE_EXTS.indexOf(ext) !== -1) return true;
+    return BOOK_FILE_MIMES.indexOf(file.type) !== -1;
+  }
+
+  function initFiles(form) {
+    var input = form.querySelector('[data-files-input]');
+    var list  = form.querySelector('[data-files-list]');
+    if (!input || !list) return null;
+
+    /** Пересобирает input.files из массива (вырезали файл по минусу). */
+    function setInputFiles(files) {
+      if (typeof DataTransfer === 'undefined') {
+        // Очень старые браузеры — придётся сбросить выбор целиком.
+        input.value = '';
+        return;
+      }
+      var dt = new DataTransfer();
+      for (var i = 0; i < files.length; i++) dt.items.add(files[i]);
+      input.files = dt.files;
     }
 
-    /** Возвращает сообщение об ошибке или null, если файл валиден. */
+    function currentFiles() {
+      return input.files ? Array.prototype.slice.call(input.files) : [];
+    }
+
+    /** Рисует список: имя + размер + минус у каждого файла. */
+    function render() {
+      var files = currentFiles();
+      list.innerHTML = '';
+      files.forEach(function (file, index) {
+        var li = document.createElement('li');
+        li.className = 'file-upload__item';
+
+        var name = document.createElement('span');
+        name.className = 'file-upload__name';
+        name.textContent = file.name || '';
+
+        var size = document.createElement('span');
+        size.className = 'file-upload__size';
+        size.textContent = formatSize(file.size);
+
+        var remove = document.createElement('button');
+        remove.className = 'file-upload__remove';
+        remove.type = 'button';
+        remove.textContent = '−';
+        remove.setAttribute('aria-label', t('bookform.file_remove'));
+        remove.addEventListener('click', function () {
+          var next = currentFiles();
+          next.splice(index, 1);
+          setInputFiles(next);
+          render();
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+
+        li.appendChild(name);
+        li.appendChild(size);
+        li.appendChild(remove);
+        list.appendChild(li);
+      });
+    }
+
+    /** Возвращает сообщение об ошибке или null, если файлы валидны. */
     return function () {
-      var file = input.files && input.files[0];
+      var files = currentFiles();
 
-      if (!file) { clearMeta(); return null; }
+      // Невалидные файлы выкидываем из выбора, оставляем годные.
+      var kept = [];
+      var rejected = null;
+      files.forEach(function (file) {
+        if (!isBookFile(file)) {
+          rejected = rejected || t('js.rule_book_file');
+          return;
+        }
+        if (file.size > BOOK_FILE_MAX_BYTES) {
+          rejected = rejected || t('js.rule_book_file_size');
+          return;
+        }
+        kept.push(file);
+      });
 
-      var isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
-      if (!isPdf) {
-        clearMeta();
-        input.value = '';
-        return t('js.rule_book_file');
-      }
-      if (file.size > PDF_MAX_BYTES) {
-        clearMeta();
-        input.value = '';
-        return t('js.rule_book_file_size');
-      }
-
-      if (nameEl) nameEl.textContent = file.name || '';
-      if (sizeEl) sizeEl.textContent = formatSize(file.size);
-      meta.hidden = false;
-      if (removeBtn) removeBtn.hidden = false;
-      return null;
+      if (kept.length !== files.length) setInputFiles(kept);
+      render();
+      return rejected;
     };
+  }
+
+  /* ============================================================
+     ЛЮДИ: авторы и редакторы.
+     Поиск по нику → GET /api/users/search?q= (заглушка), результаты
+     кликом добавляются в список под поиском; минус убирает. У автора
+     есть кнопка «сделать редактором» — она дублирует человека в
+     список редакторов (автором он остаётся).
+     ============================================================ */
+  function initPeople(form) {
+    var boxes = form.querySelectorAll('[data-people-field]');
+    if (!boxes.length) return null;
+
+    /** Контейнеры списка и значений: authors/editors живут рядом. */
+    var state = {};
+
+    boxes.forEach(function (box) {
+      var kind = box.getAttribute('data-people-field'); // authors | editors
+      var search  = box.querySelector('[data-people-search]');
+      var results = box.querySelector('[data-people-results]');
+      var list    = box.querySelector('[data-people-list]');
+      if (!search || !list) return;
+
+      var limit = kind === 'authors' ? AUTHORS_MAX : Infinity;
+      var timer = null;
+      var seq = 0;
+
+      /** id уже добавленных (в этом списке). */
+      function addedIds() {
+        return Array.prototype.map.call(
+          list.querySelectorAll('[data-person-id]'),
+          function (li) { return String(li.getAttribute('data-person-id')); }
+        );
+      }
+
+      /** Синхронизирует hidden inputs authors[]/editors[] со списком. */
+      function syncValues() {
+        box.querySelectorAll('[data-people-value]').forEach(function (el) { el.remove(); });
+        addedIds().forEach(function (id) {
+          var input = document.createElement('input');
+          input.type = 'hidden';
+          input.setAttribute('data-people-value', '');
+          input.name = kind + '[]';
+          input.value = id;
+          box.appendChild(input);
+        });
+      }
+
+      function showError(text) {
+        var errorEl = form.querySelector('[data-error-for="' + kind + '"]');
+        if (!errorEl) return;
+        errorEl.innerHTML = '<span class="field-error-icon" title="' +
+          escapeHtml(text) + '">!</span>';
+      }
+
+      function clearErrorEl() {
+        var errorEl = form.querySelector('[data-error-for="' + kind + '"]');
+        if (errorEl) errorEl.innerHTML = '';
+      }
+
+      function addPerson(id, username) {
+        id = String(id);
+        if (addedIds().indexOf(id) !== -1) return;              // уже в списке
+        if (list.querySelectorAll('[data-person-id]').length >= limit) {
+          showError(t('js.rule_book_authors_limit'));
+          return;
+        }
+        var li = document.createElement('li');
+        li.className = 'people-list__item';
+        li.setAttribute('data-person-id', id);
+        li.setAttribute('data-person-name', username);
+
+        var name = document.createElement('span');
+        name.className = 'people-list__name';
+        name.textContent = username;
+        li.appendChild(name);
+
+        // Кнопка «сделать редактором» — только у авторов; обработчики
+        // вешает делегирование ниже (работает и для серверного рендера).
+        if (kind === 'authors') {
+          var promote = document.createElement('button');
+          promote.className = 'people-list__action';
+          promote.type = 'button';
+          promote.setAttribute('data-make-editor', '');
+          promote.textContent = t('bookform.make_editor');
+          li.appendChild(promote);
+        }
+
+        var remove = document.createElement('button');
+        remove.className = 'people-list__remove';
+        remove.type = 'button';
+        remove.setAttribute('data-remove-person', '');
+        remove.textContent = '−';
+        remove.setAttribute('aria-label', t('bookform.remove_person'));
+        li.appendChild(remove);
+
+        list.appendChild(li);
+        syncValues();
+        clearErrorEl();
+        changed();
+      }
+
+      /** Человек уже редактор? (для состояния кнопки у автора) */
+      function contains(id) {
+        return addedIds().indexOf(String(id)) !== -1;
+      }
+
+      /** Синхронизирует состояние кнопок «сделать редактором» у авторов. */
+      function refreshPromotes() {
+        if (kind !== 'authors' || !state.editors) return;
+        Array.prototype.forEach.call(list.querySelectorAll('[data-person-id]'), function (item) {
+          var btn = item.querySelector('[data-make-editor]');
+          if (!btn) return;
+          var isEditor = state.editors.contains(item.getAttribute('data-person-id'));
+          btn.disabled = isEditor;
+          btn.textContent = isEditor
+            ? t('bookform.make_editor_done')
+            : t('bookform.make_editor');
+        });
+      }
+
+      /** Любое изменение любого списка → обновить кнопки у авторов. */
+      function changed() { if (state.onchange) state.onchange(); }
+
+      state[kind] = {
+        addPerson: addPerson,
+        contains: contains,
+        refreshPromotes: refreshPromotes,
+        limit: limit,
+      };
+
+      // Делегирование: минус и «сделать редактором» работают и у li,
+      // отрендеренных сервером после 422 (обработчиков на них нет).
+      list.addEventListener('click', function (e) {
+        var removeBtn = e.target.closest('[data-remove-person]');
+        if (removeBtn) {
+          var item = removeBtn.closest('[data-person-id]');
+          if (item) { item.remove(); syncValues(); changed(); }
+          return;
+        }
+        var promoteBtn = e.target.closest('[data-make-editor]');
+        if (promoteBtn && !promoteBtn.disabled && state.editors) {
+          var src = promoteBtn.closest('[data-person-id]');
+          if (!src) return;
+          state.editors.addPerson(
+            src.getAttribute('data-person-id'),
+            src.getAttribute('data-person-name')
+          );
+          refreshPromotes(); // сразу покажем «Уже редактор»
+        }
+      });
+
+      function renderResults(items, query) {
+        results.innerHTML = '';
+        if (!query) { results.hidden = true; return; }
+
+        if (!items.length) {
+          var empty = document.createElement('li');
+          empty.className = 'people-search__empty';
+          empty.textContent = t('bookform.people_not_found');
+          results.appendChild(empty);
+          results.hidden = false;
+          return;
+        }
+
+        var taken = addedIds();
+        items.forEach(function (user) {
+          var id = String(user.id !== undefined ? user.id : '');
+          if (!id || taken.indexOf(id) !== -1) return;
+
+          var li = document.createElement('li');
+          li.className = 'people-search__item';
+          var btn = document.createElement('button');
+          btn.className = 'people-search__add';
+          btn.type = 'button';
+          btn.textContent = String(user.username !== undefined ? user.username : id);
+          btn.addEventListener('click', function () {
+            addPerson(id, btn.textContent);
+            search.value = '';
+            results.innerHTML = '';
+            results.hidden = true;
+          });
+          li.appendChild(btn);
+          results.appendChild(li);
+        });
+        results.hidden = !results.children.length;
+      }
+
+      function doSearch(query) {
+        var mySeq = ++seq;
+        fetch(PEOPLE_SEARCH_URL + '?q=' + encodeURIComponent(query), {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        })
+          .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            if (mySeq !== seq) return; // устарел ответ
+            var items = Array.isArray(data)
+              ? data
+              : (Array.isArray(data.items) ? data.items : []);
+            renderResults(items, query);
+          })
+          .catch(function (err) {
+            if (mySeq !== seq) return;
+            console.error('[book-form] people search failed', err);
+            renderResults([], query);
+            var first = results.querySelector('.people-search__empty');
+            if (first) first.textContent = t('bookform.people_unavailable');
+          });
+      }
+
+      search.addEventListener('input', function () {
+        var query = search.value.trim();
+        clearTimeout(timer);
+        if (!query) {
+          seq++;
+          results.innerHTML = '';
+          results.hidden = true;
+          return;
+        }
+        timer = setTimeout(function () { doSearch(query); }, 250);
+      });
+    });
+
+    // Оба списка готовы: изменение любого из них обновляет кнопки
+    // «сделать редактором» у авторов (автор мог уже быть редактором).
+    if (state.authors) {
+      state.onchange = state.authors.refreshPromotes;
+      state.authors.refreshPromotes(); // гидрация после 422: сверить сразу
+    }
+
+    return state;
   }
 
   /* ============================================================
      ФОРМА
      ============================================================ */
   function initForm(form) {
-    var FIELD_KEYS = ['title', 'author', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'file'];
+    var FIELD_KEYS = ['title', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'files', 'authors', 'editors'];
 
     var RULES = {
       title:      { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
-      author:     { required: true,  maxLength: 120,  msgKey: 'js.rule_book_author' },
       annotation: { required: false, maxLength: 5000, msgKey: 'js.rule_book_annotation' },
       genre:      { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
       category:   { required: true,  select: true,    msgKey: 'js.rule_book_category' },
       series:     { required: false, maxLength: 120,  msgKey: 'js.rule_book_series' },
       isbn:       { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'js.isbn_shape' },
       cover:      { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
-      file:       { required: true,  file: 'file',    msgKey: 'js.rule_book_file_required' },
+      // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles
+      files:      { required: true,  file: 'files',   msgKey: 'js.rule_book_file_required' },
+      // списки людей: лимит авторов (30) держит addPerson, тут только
+      // рендер серверных ошибок (422 от бэка)
+      authors:    { required: false, custom: 'people' },
+      editors:    { required: false, custom: 'people' },
     };
 
     var fileValidators = {
       cover: initCover(form),
-      file:  initFile(form),
+      files: initFiles(form),
     };
 
-    function getField(name)   { return form.querySelector('[name="' + name + '"]'); }
+    // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
+    initPeople(form);
+
+    function getField(name)   {
+      var el = form.querySelector('[name="' + name + '"]');
+      if (!el && name === 'files') el = form.querySelector('[data-files-input]');
+      return el;
+    }
     function getErrorEl(name) { return form.querySelector('[data-error-for="' + name + '"]'); }
 
     function setError(name, message) {
@@ -451,21 +772,13 @@
       field.addEventListener('change', function () { validateField(name); });
     });
 
-    // Кнопки «убрать обложку / убрать файл»
+    // Кнопка «убрать обложку» (у файлов минусы внутри списка, см. initFiles)
     var coverRemove = form.querySelector('[data-cover-remove]');
     if (coverRemove) {
       coverRemove.addEventListener('click', function () {
         var coverInput = getField('cover');
         if (coverInput) coverInput.value = '';
         validateField('cover');
-      });
-    }
-    var fileRemove = form.querySelector('[data-file-remove]');
-    if (fileRemove) {
-      fileRemove.addEventListener('click', function () {
-        var fileInput = getField('file');
-        if (fileInput) fileInput.value = '';
-        validateField('file');
       });
     }
 
