@@ -9,10 +9,12 @@ use App\Services\Storage\FileService;
 
 use App\Forms\Publications\BookForm;
 use App\Validators\Publications\BookFormValidator;
+use App\Validators\Publications\BookFilesValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Publications\BookFiles;
 use App\Forms\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
@@ -41,6 +43,7 @@ final class BooksService
         private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
+        private readonly BookFilesValidator $filesValidator,
         private readonly FileService $fileService
     ){}
 
@@ -149,33 +152,50 @@ final class BooksService
 
     public function create(
         BookForm $form, 
-        int $authorId,
-        ?array $iconFile = NULL
+        BookFiles $files,
+        int $creatorId
     ) : int
     {
         $bag = $this->validator->validateOne($form);
+        $this->filesValidator->validate($files, $bag); 
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
         
         $model = BookModel::fromForm($form);
 
-        $file = NULL;
-        if ($iconFile !== NULL){
-            $file = $this->fileService->store($iconFile, FileCategory::cover->value, $authorId);
+        $iconId = NULL;
+        if ($files->icon !== NULL){
+            $iconId = $this->fileService->store($files->icon, FileCategory::Cover->value, $creatorId)->id;
+        }
+
+        $contentFiles = [];
+        foreach($files->contents as $content){
+            $contentFiles[] = $this->fileService->store($content, FileCategory::Book->value, $creatorId);
         }
 
         try{
-            return $this->booksRepo->create($model, $authorId, $file?->id);
+            $bookId = $this->booksRepo->create($model, $authorId, $iconId);
+
+            foreach($contentFiles as $contentFile){
+                $this->booksRepo->addContent($bookId, $contentFile->id, $contentFiles->format);
+            }
+
+            return $bookId;
         }
         catch(\PDOException $e){
-            if ($file !== null) {
+            $deleteFileFunc = function($fileId) {
                 try {
-                    $this->fileService->delete($coverFile->id);
+                    $this->fileService->delete($fileId);
                 } catch (\Throwable $cleanupError) {
-                    error_log("Cleanup failed for file {$coverFile->id}: {$cleanupError->getMessage()}");
+                    error_log("Cleanup failed for file {$fileId}: {$cleanupError->getMessage()}");
                 }
+            };
+
+            if ($iconId !== NULL) $deleteFileFunc($iconId);
+            for($i = 0; $i < count($contentFiles); $i++){
+                $deleteFileFunc($contentFiles[$i]->id);
             }
 
             throw $this->translator->translate($e);
         }
-    }
+    }   
 }

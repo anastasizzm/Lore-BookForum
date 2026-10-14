@@ -10,15 +10,15 @@ use App\Models\Errors\ErrorBag;
 /**
  * @extends Validator<PublicationForm>
  */
-final class PublicationFormValidator extends Validator 
+class PublicationFormValidator extends Validator 
 {
     public const int TITLE_MAX_LEN = 255;
     public const int DESCR_MAX_LEN = 4000;
     public const int NOTES_MAX_LEN = 2000;
 
-    public function __construct(Translator $translator)
+    public function __construct(Settings $settings, Translator $translator)
     {
-        parent::__construct($translator);
+        parent::__construct($settings, $translator);
     }
 
     public function validate(mixed $item, ErrorBag $bag) : bool 

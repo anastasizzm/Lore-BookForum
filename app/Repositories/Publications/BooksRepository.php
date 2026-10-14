@@ -193,16 +193,16 @@ final class BooksRepository extends PublicationsRepository
         return (int)$id;
     }
 
-    public function addContent(int $bookId, Uuid $contentId, string $contentType) : void
+    public function addContent(int $bookId, Uuid $contentId, string $format) : void
     {
         $values = [
             ':bookId' => ScriptParam::asInt($bookId),
             ':contentId' => ScriptParam::asStr($contentId->toString()),
-            ':contentType' => ScriptParam::asStr($contentType)
+            ':format' => ScriptParam::asStr($format)
         ];
 
-        $sql = 'INSERT INTO books_content (book_id, content_id, content_type)
-        VALUES (:bookId, :contentId, :contentType)';
+        $sql = 'INSERT INTO books_content (book_id, content_id, format)
+        VALUES (:bookId, :contentId, :format)';
 
         $stmt = $this->execute($sql, $values);
     }

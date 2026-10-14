@@ -12,6 +12,7 @@ use App\Lib\I18n\Translator;
 abstract class Validator 
 {
     public function __construct(
+        protected Settings $settings,
         protected Translator $translator
     ){}
 

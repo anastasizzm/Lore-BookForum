@@ -12,9 +12,9 @@ use App\Models\Errors\ErrorBag;
  */
 final class ProfileFormValidator extends Validator 
 {
-    public function __construct(Translator $translator)
+    public function __construct(Settings $settings, Translator $translator)
     {
-        parent::__construct($translator);
+        parent::__construct($settings, $translator);
     }
 
     public function validate(mixed $item, ErrorBag $bag) : bool 
