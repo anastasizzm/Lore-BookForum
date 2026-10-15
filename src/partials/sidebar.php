@@ -59,6 +59,15 @@
   $avatarPresets = require __DIR__ . '/avatar-presets.php';
   $meAvatar      = is_object($me ?? null) ? (string) ($me->avatar ?? '') : '';
   $mePreset      = $avatarPresets[$meAvatar] ?? null;   // ['icon' => ..., 'bg' => ...] | null
+
+  // Кнопка «Админ-панель» в меню «More». Права читаем из UserContext ($me):
+  // users_rules.is_admin -> $me->isAdmin (UserContext::fromRow). Если бэк ещё не
+  // отдаёт поле, ссылка просто не показывается. Это ТОЛЬКО видимость кнопки:
+  // доступ на сам /admin обязан проверять бэк (политика роута), а не эта вьюха.
+  // Редакторам тоже открыть панель — добавить `|| !empty($me->isRedactor)`.
+  $canOpenAdmin = is_object($me ?? null) && !empty($me->isAdmin);
+  $adminUrl     = '/admin'
+      . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
 ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
@@ -139,6 +148,19 @@
 
         <!-- Меню с настройками -->
         <div class="settings-menu" data-settings-menu hidden>
+            <?php if ($canOpenAdmin): ?>
+                <!-- Админ-панель: только для пользователей с правом is_admin -->
+                <a href="<?= $view->e($adminUrl) ?>" class="settings-menu__item settings-menu__item--admin">
+                    <span class="settings-menu__icon">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M8 1.5l5 1.8v4.2c0 3-2.1 5.4-5 6.5-2.9-1.1-5-3.5-5-6.5V3.3l5-1.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M5.8 8l1.6 1.6L10.4 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span><?= $tr('common.sidebar.admin') ?></span>
+                </a>
+            <?php endif; ?>
+
             <!-- Выбор языка: раскрывающийся список (<details>, без JS); язык запоминает бэк -->
             <details class="settings-menu__lang">
                 <summary class="settings-menu__item settings-menu__lang-summary"

@@ -7,9 +7,6 @@ const fcUsers = window.LoreUsers || {
   withMention: (text) => String(text == null ? '' : text).trim(),
 };
 
-// Общий движок комментариев (comments.js): карточка #comment-card-template,
-// ответы, пагинация списка. comments.js подключается до card-feed.js
-// (defer) на страницах с комментариями — feed-list.php и profile.php.
 const fcComments = window.LoreComments || {};
 
 function csrfToken() {
@@ -82,14 +79,14 @@ async function sendLike(id, liked) {
     if (res.status === 204) return '';
     if (!res.ok) {
       return window.Messages
-        ? await window.Messages.readError(res, t('js.like_update_failed'))
-        : t('js.like_update_failed') + ` (HTTP ${res.status}).`;
+        ? await window.Messages.readError(res, t('errors.likes.update_failed'))
+        : t('errors.likes.update_failed') + ' (HTTP ' + res.status + ').';
     }
     const raw = await res.text();
-    if (/^\s*</.test(raw)) return t('js.like_not_saved');
+    if (/^\s*</.test(raw)) return t('errors.likes.not_saved');
     return '';
   } catch (_) {
-    return t('js.network_error');
+    return t('errors.common.network_error');
   }
 }
 
@@ -125,7 +122,6 @@ document.addEventListener('click', (e) => {
     form.hidden = !open;
     toggleBtn.setAttribute('aria-expanded', String(open));
     if (open) {
-      // Открываем чистую форму — без прошлых ошибок/статусов
       setFeedMsg(form.querySelector('[data-comment-error]'), '');
       setFeedMsg(form.querySelector('[data-comment-status]'), '');
       const input = form.querySelector('.comment-form__input');
@@ -205,10 +201,10 @@ document.addEventListener('submit', async (e) => {
     input.value = text;
   }
 
-  if (text.length > MAX) return setFeedMsg(errEl, t('js.max_length', { max: MAX }));
-  if (!Number(form.dataset.postId)) return setFeedMsg(errEl, t('js.post_id_missing'));
-  if (!Number(form.elements.publicationId.value)) return setFeedMsg(errEl, t('js.publication_id_missing'));
-  if (form.dataset.lastSent === text) return setFeedMsg(errEl, t('js.comment_duplicate'));
+  if (text.length > MAX) return setFeedMsg(errEl, t('errors.common.max_length', { max: MAX }));
+  if (!Number(form.dataset.postId)) return setFeedMsg(errEl, t('errors.comments.post_id_missing'));
+  if (!Number(form.elements.publicationId.value)) return setFeedMsg(errEl, t('errors.comments.publication_id_missing_comment'));
+  if (form.dataset.lastSent === text) return setFeedMsg(errEl, t('errors.comments.duplicate'));
 
   const body = new URLSearchParams(new FormData(form));
   body.set('content', text);
@@ -234,8 +230,6 @@ document.addEventListener('submit', async (e) => {
       form.dataset.lastSent = text;
       setFeedMsg(statusEl, t('js.comment_sent'));
       input.value = '';
-      // Успех — поле ввода закрываем (как у reply-формы); сам комментарий
-      // появится в списке через comment:created → fcAppendOwn
       form.hidden = true;
       const toggle = card ? card.querySelector('[data-comment-toggle]') : null;
       if (toggle) toggle.setAttribute('aria-expanded', 'false');
@@ -252,11 +246,11 @@ document.addEventListener('submit', async (e) => {
         },
       }));
     } else {
-      setFeedMsg(errEl, sendStatus(data, res, (s) => t('js.send_comment_failed', { status: s })));
+      setFeedMsg(errEl, sendStatus(data, res, (s) => t('errors.comments.send_comment_failed', { status: s })));
     }
   } catch (err) {
     console.error('[feed] comment request failed:', err);
-    setFeedMsg(errEl, t('js.network_error'));
+    setFeedMsg(errEl, t('errors.common.network_error'));
   } finally {
     form.dataset.sending = '0';
     input.disabled = false;
@@ -284,17 +278,17 @@ document.addEventListener('submit', async (e) => {
 
   let text = input.value.trim();
   if (text === '') return;
-  if (!commentId) return setFeedMsg(errEl, t('js.comment_id_missing'));
+  if (!commentId) return setFeedMsg(errEl, t('errors.comments.id_missing'));
 
   text = fcUsers.withMention(text, node ? node.dataset.authorUsername : '');
   input.value = text;
 
-  if (form.dataset.lastSent === text) return setFeedMsg(errEl, t('js.comment_duplicate'));
+  if (form.dataset.lastSent === text) return setFeedMsg(errEl, t('errors.comments.duplicate'));
 
   const mainForm = card ? card.querySelector('[data-feed-comment-form]') : null;
   const publicationId = mainForm && mainForm.elements.publicationId
       ? mainForm.elements.publicationId.value : '';
-  if (!Number(publicationId)) return setFeedMsg(errEl, t('js.publication_id_missing'));
+  if (!Number(publicationId)) return setFeedMsg(errEl, t('errors.comments.publication_id_missing'));
 
   const body = new URLSearchParams();
   const token = csrfToken();
@@ -326,11 +320,11 @@ document.addEventListener('submit', async (e) => {
         fcAppendOwn(card, data.createdId, text);
       }
     } else {
-      setFeedMsg(errEl, sendStatus(data, res, (s) => t('js.send_reply_failed', { status: s })));
+      setFeedMsg(errEl, sendStatus(data, res, (s) => t('errors.comments.send_reply_failed', { status: s })));
     }
   } catch (err) {
     console.error('[feed] comment request failed:', err);
-    setFeedMsg(errEl, t('js.network_error'));
+    setFeedMsg(errEl, t('errors.common.network_error'));
   } finally {
     form.dataset.sending = '0';
     input.disabled = false;
@@ -355,8 +349,6 @@ function fcParts(card) {
 function fcState(card) {
   let st = feedCommentsState.get(card);
   if (!st) {
-    // hasMore[N] — есть ли страница N+1; loaded — сколько страниц показано.
-    // Форма состояния нужна comments.js syncPager/insertPage.
     st = { loaded: 0, hasMore: [], loading: false, gen: 0, started: false };
     feedCommentsState.set(card, st);
   }
@@ -391,10 +383,6 @@ function fcBoundToPost(items, postId, feedIds) {
   });
 }
 
-// Узел комментария из ответа API. Строится общим движком comments.js
-// из #comment-card-template — шаблон есть и в ленте (feed-list.php),
-// и на профиле (profile.php). Шаблон feed-comment-template удалён из
-// разметки (575e7b0), поэтому старый путь fcBuildItem не используется.
 function fcCommentNode(item) {
   return fcComments.commentNode({
     id: item.id,
@@ -407,18 +395,10 @@ function fcCommentNode(item) {
     date: fcFormatDate(item.createdAt),
     likes: item.likesCount || 0,
     liked: !!item.isLiked,
-    // В ленте/профиле один уровень: тумблер «View N more replies» не
-    // показываем — ответы кладутся плоско в конец списка (fcLoadChildren)
     replies: 0,
   });
 }
 
-/**
- * Фида/профиль — один уровень комментариев: ответы НЕ вкладываются внутрь
- * родителя (тумблеров «View N more replies» в плоском списке нет), а
- * добавляются плоско В КОНЕЦ списка. Рекурсивно — для 3+ уровней тоже.
- * GET ?parent={commentId}&page=1 (хронология: старые сверху, новые снизу).
- */
 async function fcLoadChildren(card, node, page) {
   const parts = fcParts(card);
   if (!parts || !parts.list) return;
@@ -452,26 +432,18 @@ async function fcLoadChildren(card, node, page) {
     if (id) existing.add(id);
   });
 
-  // API отдаёт created_at DESC, а читается в хронологии — разворачиваем
   for (const item of data.items.slice().reverse()) {
     if (existing.has(Number(item.id))) continue;
     const child = fcCommentNode(item);
     if (!child) continue;
-    child.dataset.page = String(page); // «Show less comments» убирает страницу вместе с ответами
+    child.dataset.page = String(page);
     parts.list.appendChild(child);
     if (Number(item.commentsCount) > 0) {
-      await fcLoadChildren(card, child, page); // ответы на ответы — тоже плоско в конец
+      await fcLoadChildren(card, child, page);
     }
   }
 }
 
-/**
- * GET /api/posts?parent={postId}&page=N — корневые комментария поста.
- * Узлы строит fcCommentNode (comments.js, #comment-card-template).
- * Страницы подгружает «Show more comments» из comments.js syncPager
- * (более старая страница встаёт ВЫШЕ показанной — хронология),
- * «Show less comments» подгруженное убирает.
- */
 async function fcLoad(card) {
   const parts = fcParts(card);
   const postId = Number(card && card.dataset.postId);
@@ -504,11 +476,10 @@ async function fcLoad(card) {
     } else {
       setFeedMsg(parts.status, msg);
     }
-    // Кнопка пагинации остаётся — повторит неудачную загрузку
     fcComments.syncPager(parts.list, st, pagerOpts);
   };
 
-  let received = false; // true, когда ответ сервера получен: дальше ошибка уже не сетевая
+  let received = false;
   try {
     const res = await fetch(url, {
       credentials: 'same-origin',
@@ -517,17 +488,16 @@ async function fcLoad(card) {
     received = true;
 
     let data = null;
-    try { data = await res.json(); } catch (_) { /* не JSON */ }
+    try { data = await res.json(); } catch (_) { }
 
-    if (gen !== st.gen) return; // пришёл устаревший ответ
+    if (gen !== st.gen) return;
 
     if (!res.ok || !data || !Array.isArray(data.items)) {
-      return fail(sendStatus(data, res, (s) => t('js.comments_load_failed_http', { status: s })));
+      return fail(sendStatus(data, res, (s) => t('errors.comments.load_failed_http', { status: s })));
     }
 
     const bound = fcBoundToPost(data.items, postId, fcFeedPostIds());
 
-    // Не дублируем: своё сообщение уже вставлено оптимистично
     const existing = new Set();
     parts.list.querySelectorAll('[data-comment-id]').forEach((n) => {
       const id = Number(n.dataset.commentId);
@@ -536,20 +506,16 @@ async function fcLoad(card) {
 
     const frag = document.createDocumentFragment();
     const withReplies = [];
-    // API отдаёт created_at DESC, а читается в хронологии — разворачиваем
     bound.slice().reverse().forEach((item) => {
       if (existing.has(Number(item.id))) return;
       const node = fcCommentNode(item);
       if (!node) return;
-      node.dataset.page = String(page); // «Show less comments» снимает страницы
+      node.dataset.page = String(page);
       frag.appendChild(node);
       if (Number(item.commentsCount) > 0) withReplies.push(node);
     });
     fcComments.insertPage(parts.list, frag, page);
 
-    // Ответы комментариев подтягиваем сразу (GET ?parent={commentId}),
-    // иначе после F5 они пропадут. Вложенности в ленте/профиле нет —
-    // ответы ложатся плоско В КОНЕЦ списка (fcLoadChildren)
     (async () => {
       for (const node of withReplies) {
         await fcLoadChildren(card, node, page);
@@ -562,17 +528,16 @@ async function fcLoad(card) {
     fcComments.syncPager(parts.list, st, pagerOpts);
 
     if (page === 1 && parts.list.children.length === 0) {
-      // Либо сервер ничего не отдал, либо отдал посты ленты вместо комментариев
       setFeedMsg(parts.status, data.items.length === 0
         ? t('js.no_comments_yet')
-        : t('js.comments_unavailable'));
+        : t('errors.comments.unavailable'));
     } else {
       setFeedMsg(parts.status, '');
     }
   } catch (err) {
     if (gen !== st.gen) return;
     console.error('[feed] failed to load comments:', err);
-    fail(received ? t('js.comments_render_failed') : t('js.network_error'));
+    fail(received ? t('errors.comments.render_failed') : t('errors.common.network_error'));
   } finally {
     if (gen === st.gen) st.loading = false;
   }
@@ -581,7 +546,7 @@ async function fcLoad(card) {
 function fcSyncExpandBtn(card, open) {
   const btn = card.querySelector('[data-fc-expand]');
   if (!btn) return;
-  btn.hidden = false; // синк вызывается только когда комментарии есть
+  btn.hidden = false;
   btn.textContent = open ? t('js.show_less') : t('js.show_more');
   btn.setAttribute('aria-expanded', String(open));
 }
@@ -602,8 +567,6 @@ function fcSetOpen(card, open) {
   fcLoad(card);
 }
 
-// Свой комментарий отправлен — вставляем в КОНЕЦ списка этого поста
-// (хронология: старые сверху, новые снизу)
 function fcAppendOwn(card, id, text) {
   const parts = fcParts(card);
   if (!parts) return;
@@ -627,13 +590,11 @@ function fcAppendOwn(card, id, text) {
 
   fcState(card).started = true;
   parts.root.hidden = false;
-  fcSyncExpandBtn(card, true); // ссылка под постом: «Show less»
+  fcSyncExpandBtn(card, true);
   if (parts.status && parts.status.textContent === t('js.no_comments_yet')) {
     setFeedMsg(parts.status, '');
   }
 
-  // Первой загрузки ещё не было — подтягиваем список из БД; дубликат
-  // со своим id отсекут existing/insertPage в fcLoad
   if (fcState(card).loaded === 0) fcLoad(card);
 }
 
@@ -686,15 +647,6 @@ document.addEventListener('click', async (e) => {
   location.href = pubDetailsUrl(id, kind);
 });
 
-/* ---------- Локализация статических кнопок при загрузке страницы ----------
-   PHP-шаблон уже рендерит строки на текущем языке, но:
-     * <template> содержит разметку, отрендеренную один раз, и при клонировании
-       строки могут быть на старом языке, если что-то подгрузилось раньше;
-     * «Show more» до первого клика приходит из PHP — но если по какой-то
-       причине локализация не сработала (старый кеш страницы, hot-reload),
-       JS перепишет его на актуальный.
-   Проходим по всем [data-fc-expand], [data-comment-toggle], [data-reply-toggle]
-   и ставим текст + aria-label из LoreI18n. Это идемпотентно. */
 function fcLocalizeStaticButtons() {
   document.querySelectorAll('[data-fc-expand]').forEach((btn) => {
     const open = btn.getAttribute('aria-expanded') === 'true';
@@ -719,7 +671,6 @@ function fcLocalizeStaticButtons() {
 document.addEventListener('DOMContentLoaded', () => {
   applyLikedState(document);
   fcLocalizeStaticButtons();
-  // Меню удаления строк постов (фид): показываем, если пост мой
   document.querySelectorAll('.card-feed[data-post-id]').forEach((card) => {
     if (typeof fcComments.syncPostMenu === 'function') fcComments.syncPostMenu(card);
   });

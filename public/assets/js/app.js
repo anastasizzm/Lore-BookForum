@@ -7,32 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!panel) return;
 
     const url = new URL(window.location.href);
-    const f   = url.searchParams.get('f');   // 'open' | 'closed' | null
+    const f   = url.searchParams.get('f');
 
-    // Server already renders panel as hidden/open via $filter_open.
-    // But we also sync the button visual state + URL.
     const isOpen = !panel.hidden;
 
     if (btn) btn.classList.toggle('is-active', isOpen);
 
-    // Ensure the URL reflects current state
     if (isOpen && f !== 'open') {
       url.searchParams.set('f', 'open');
       window.history.replaceState({}, '', url.toString());
     } else if (!isOpen && f === 'open') {
-      // Server rendered as closed but URL says open — trust server, fix URL
       url.searchParams.set('f', 'closed');
       window.history.replaceState({}, '', url.toString());
     }
 
-    // Recalculate segmented indicators if panel is open on load
     if (isOpen && typeof updateSegmentIndicator === 'function') {
       panel.querySelectorAll('.tabs--segmented').forEach(t => updateSegmentIndicator(t, true));
     }
   })();
 
 
-  // ===== 2. Dropdowns: open, auto-close siblings, close on outside / Escape =====
+  // ===== 2. Dropdowns =====
   document.querySelectorAll('[data-dropdown]').forEach(dd => {
     const trigger = dd.querySelector('[data-dropdown-trigger]');
     if (!trigger) return;
@@ -68,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // ===== 3. Filters panel toggle (with ?f= flag in URL) =====
+  // ===== 3. Filters panel toggle =====
   document.querySelectorAll('[data-filter-toggle]').forEach(btn => {
     btn.addEventListener('click', () => {
       const panel = document.querySelector('[data-filter-panel]');
@@ -91,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // ===== 4. Filters panel: preserve ?f=open on link clicks inside panel =====
+  // ===== 4. Preserve ?f=open on link clicks inside panel =====
   document.addEventListener('click', function (e) {
     const panel = document.querySelector('[data-filter-panel]');
     if (!panel || panel.hidden) return;
@@ -105,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = new URL(link.href, window.location.origin);
     url.searchParams.set('f', 'open');
     link.href = url.toString();
-  }, true);   // capture — intercept before navigation
+  }, true);
 
 
   // ===== 5. Burger menu =====
@@ -121,8 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (burgerTarget) {
       e.preventDefault();
       e.stopPropagation();
-      // Toggle: пока бургер поднят выше открытого меню (layout.css, z-index 45),
-      // он остаётся нажимаемым и закрывает меню (раньше его «съедал» sidebar).
       if (body.classList.contains('is-menu-open')) closeMenu();
       else openMenu();
     }
@@ -206,8 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.key === 'Escape' && !menu.hidden) closeSettings();
     });
 
-    // Элемент с data-confirm открывает плашку подтверждения — меню закрываем,
-    // чтобы оно не оставалось открытым под затемнённым фоном
     menu.querySelectorAll('[data-confirm]').forEach(function (el) {
       el.addEventListener('click', closeSettings);
     });
@@ -215,9 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-/* ===== Save book / article: POST/DELETE /api/{books|articles}/{id}/save =====
-   Один обработчик на оба типа: карточки в библиотеке/сохранённых (data-save-book,
-   data-save-article) и закладки на страницах деталей book-details / article-details. */
+/* ===== Save book / article ===== */
 (function () {
   var t = function (key, params) {
     return window.LoreI18n ? LoreI18n.t(key, params) : key;
@@ -225,8 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   var busy = new WeakSet();
 
-  // cookie csrf_token — источник правды; запасной вариант — скрытое поле _token.
-  // Раньше брался ЛЮБОЙ hidden-input с «token» в имени (мог попасться чужой).
   function csrfValue() {
     var fromCookie = window.LoreCsrf ? window.LoreCsrf.token() : '';
     if (fromCookie) return fromCookie;
@@ -235,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function toast(text) {
-    // Единые плашки (messages.js); ниже — запасной вариант, если скрипт не загрузился
     if (window.Messages) { window.Messages.show(text, { type: 'error' }); return; }
     var el = document.createElement('div');
     el.setAttribute('role', 'alert');
@@ -251,8 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function setState(btn, saved, type) {
     btn.classList.toggle('is-active', saved);
     btn.setAttribute('aria-pressed', String(saved));
-    // i18n: unsave / save_book / save_article
-    var key = saved ? 'unsave' : (type === 'article' ? 'save_article' : 'save_book');
+    var key = saved ? 'js.unsave' : (type === 'article' ? 'js.save_article' : 'js.save_book');
     btn.setAttribute('aria-label', t(key));
   }
 
@@ -267,13 +252,11 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     if (busy.has(btn)) return;
 
-    // Книга или статья — от этого зависит эндпоинт /api/{books|articles}/{id}/save
     var type = btn.hasAttribute('data-save-article') ? 'article' : 'book';
     var id = Number(type === 'article' ? btn.dataset.articleId : btn.dataset.bookId);
     if (!id) {
       console.error('Save ' + type + ': publication id attribute is missing');
-      // i18n: save_failed_reload
-      toast(t('save_failed_reload'));
+      toast(t('errors.common.save_failed_reload'));
       return;
     }
 
@@ -292,8 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
       body.set('_token', token);
     }
 
-    // data-save-url задаётся снаружи (library-filters.js), иначе эндпоинт
-    // выводится из типа публикации: /api/books|articles/{id}/save
     var url = btn.dataset.saveUrl || ('/api/' + type + 's/' + id + '/save');
     var method = willSave ? 'POST' : 'DELETE';
 
@@ -308,7 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
       var raw = '';
       var data = null;
       try { raw = await res.text(); data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
-      // 2xx, но вместо JSON пришёл HTML (PHP-ошибка) — это не успех
       var htmlBody = /^\s*</.test(raw);
 
       if (res.ok && !htmlBody) {
@@ -317,22 +297,20 @@ document.addEventListener('DOMContentLoaded', () => {
           bubbles: true,
           detail: { id: id, saved: willSave, type: type }
         }));
-        // Старое типизированное событие — чтобы не сломать внешних слушателей
         btn.dispatchEvent(new CustomEvent(type + ':save-changed', {
           bubbles: true,
           detail: { id: id, saved: willSave }
         }));
       } else {
         setState(btn, wasSaved, type);
-        var fallbackMsg = t('request_failed', { status: res.status });
+        var fallbackMsg = t('errors.common.request_failed', { status: res.status });
         toast(window.Messages
           ? window.Messages.describe(res.status, data, raw, fallbackMsg)
           : fallbackMsg);
       }
     } catch (err) {
       setState(btn, wasSaved, type);
-      // i18n: network_error
-      toast(t('network_error'));
+      toast(t('errors.common.network_error'));
     } finally {
       busy.delete(btn);
       btn.disabled = false;
@@ -340,14 +318,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 })();
 
-/* ===== Обложка не загрузилась (404 / нет файла) -> CSS-заглушка .cover--empty =====
-   Событие error не всплывает, поэтому слушаем в capture-фазе: так покрываются и
-   карточки, которые library-filters.js дорисовывает уже после загрузки страницы. */
+/* ===== Cover image fallback ===== */
 (function () {
   var BOX = '.card-book__cover, .book-details__cover, .profile-publications__cover';
 
   function mark(img) {
-    // Миниатюра в шапке карточки ленты — сам <img>: заменяем его на <span>-заглушку
     if (img.classList.contains('card-feed__book-thumb')) {
       var stub = document.createElement('span');
       stub.className = img.className + ' cover--empty';
@@ -363,7 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target && e.target.tagName === 'IMG') mark(e.target);
   }, true);
 
-  // картинки, которые успели упасть до загрузки скрипта
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll(
       '.card-book__cover img, .book-details__cover img, .profile-publications__cover img, img.card-feed__book-thumb'

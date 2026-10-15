@@ -115,15 +115,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     const all = [];
     for (let p = 1; p <= 20; p++) {
-      // URL для /api/additional/* — патч fetch добавит ?lang=
       const res = await fetch(url + '?page=' + p, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
       if (!res.ok) {
         const msg = window.Messages
-          ? await window.Messages.readError(res, tFilter('js.list_load_failed'))
-          : tFilter('js.list_load_failed') + ' (HTTP ' + res.status + ').';
+          ? await window.Messages.readError(res, tFilter('errors.common.list_load_failed'))
+          : tFilter('errors.common.list_load_failed') + ' (HTTP ' + res.status + ').';
         const err = new Error(msg);
         err.fromServer = true;
         throw err;
@@ -133,7 +132,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       try {
         data = await res.json();
       } catch (_) {
-        const err = new Error(tFilter('js.server_error'));
+        const err = new Error(tFilter('errors.common.server_error'));
         err.fromServer = true;
         throw err;
       }
@@ -195,7 +194,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       dropdown.dispatchEvent(new CustomEvent('dropdown:populated', { bubbles: true }));
     } catch (e) {
       console.error('[filters] dynamic load failed:', kind, e);
-      notify(e && e.fromServer ? e.message : tFilter('js.network_error'));
+      notify(e && e.fromServer ? e.message : tFilter('errors.common.network_error'));
       menu.innerHTML = '<li class="dropdown__error">' + escapeHtml(tFilter('js.load_failed')) + '</li>';
     }
   }
@@ -252,18 +251,18 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const c = isbnClean(value);
     if (c === '') return { msg: '', blocking: false };
     if (!isbnShapeOk(c)) {
-      return { msg: tFilter('js.isbn_shape', { hint: ISBN_HINT }), blocking: true };
+      return { msg: tFilter('errors.validation.isbn_shape', { hint: ISBN_HINT }), blocking: true };
     }
     if (c.length < 13) return { msg: '', blocking: false };
     if (!isbnChecksumOk(c)) {
-      return { msg: tFilter('js.isbn_checksum'), blocking: STRICT_ISBN_CHECKSUM };
+      return { msg: tFilter('errors.validation.isbn_checksum'), blocking: STRICT_ISBN_CHECKSUM };
     }
     return { msg: '', blocking: false };
   }
 
   function doiNormalize(raw) {
     let v = String(raw).trim();
-    v = v.replace(/^["'«»“”‘’]+|["'«»“”‘’]+$/g, '');
+    v = v.replace(/^["'«»""'']+|["'«»""'']+$/g, '');
     v = v.replace(/^doi:\s*/i, '');
     v = v.replace(/^(?:https?:\/\/)?(?:dx\.)?doi\.org\//i, '');
     v = v.replace(/\s+/g, '');
@@ -283,16 +282,16 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     if (value === '1' || value === '10' || value === '10.') return { msg: '', blocking: false };
     if (/^10\.\d{1,7}$/.test(value)) return { msg: '', blocking: false };
     if (/^10\.\d{8,}$/.test(value)) {
-      return { msg: tFilter('js.doi_missing_slash', { hint: DOI_HINT }), blocking: true };
+      return { msg: tFilter('errors.validation.doi_missing_slash', { hint: DOI_HINT }), blocking: true };
     }
     if (/^10\.\d+\/\d*$/.test(value)) return { msg: '', blocking: false };
     if (/^10\.\d+\//.test(value)) {
-      return { msg: tFilter('js.doi_suffix_digits', { hint: DOI_HINT }), blocking: true };
+      return { msg: tFilter('errors.validation.doi_suffix_digits', { hint: DOI_HINT }), blocking: true };
     }
     if (/^10\./.test(value)) {
-      return { msg: tFilter('js.doi_prefix_digits', { hint: DOI_HINT }), blocking: true };
+      return { msg: tFilter('errors.validation.doi_prefix_digits', { hint: DOI_HINT }), blocking: true };
     }
-    return { msg: tFilter('js.doi_start', { hint: DOI_HINT }), blocking: true };
+    return { msg: tFilter('errors.validation.doi_start', { hint: DOI_HINT }), blocking: true };
   }
 
   function caretFromSig(formatted, sig) {
@@ -416,10 +415,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   }
 
   function setupSearch(inp) {
-    // На страницах с [data-library] (library-list, saved-list) поиск
-    // обрабатывает library-filters.js — через fetch, без перезагрузки,
-    // с сохранением ?lang=. Здесь не навешиваем свой обработчик, чтобы
-    // Enter не приводил к полному переходу и не сбрасывал язык.
     if (document.querySelector('[data-library]')) return;
 
     function go() {

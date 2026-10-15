@@ -31,7 +31,7 @@ function initRegisterPage() {
 
   function validateEmail() {
     const ok = LoreValidators.isEmail(email.value);
-    setError(email, "registerEmailError", ok ? "" : t("common.js.invalid_email"));
+    setError(email, "registerEmailError", ok ? "" : t("errors.validation.invalid_email"));
     return ok;
   }
 
@@ -41,11 +41,11 @@ function initRegisterPage() {
     if (!ok) {
       const v = username.value.trim();
       if (v.length < LoreValidators.LOGIN_MIN_LENGTH) {
-        message = t("common.js.username_min", { min: LoreValidators.LOGIN_MIN_LENGTH });
+        message = t("errors.validation.username_min", { min: LoreValidators.LOGIN_MIN_LENGTH });
       } else if (!/^[A-Za-z0-9._-]+$/.test(v)) {
-        message = t("common.js.username_chars");
+        message = t("errors.validation.username_chars");
       } else {
-        message = t("common.js.invalid_username");
+        message = t("errors.validation.invalid_username");
       }
     }
     setError(username, "registerUsernameError", message);
@@ -54,13 +54,13 @@ function initRegisterPage() {
 
   function validateName() {
     const ok = name.value.trim().length > 0;
-    setError(name, "registerNameError", ok ? "" : t("common.js.name_required"));
+    setError(name, "registerNameError", ok ? "" : t("errors.validation.name_required"));
     return ok;
   }
 
   function validateSurname() {
     const ok = surname.value.trim().length > 0;
-    setError(surname, "registerSurnameError", ok ? "" : t("common.js.surname_required"));
+    setError(surname, "registerSurnameError", ok ? "" : t("errors.validation.surname_required"));
     return ok;
   }
 
@@ -69,8 +69,8 @@ function initRegisterPage() {
     let message = "";
     if (!ok) {
       message = password.value.length < LoreValidators.PASSWORD_MIN_LENGTH
-        ? t("common.js.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
-        : t("common.js.invalid_password");
+        ? t("errors.validation.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
+        : t("errors.validation.invalid_password");
     }
     setError(password, "registerPasswordError", message);
     return ok;
@@ -78,7 +78,7 @@ function initRegisterPage() {
 
   function validatePasswordConfirm() {
     const ok = passwordConfirm.value !== "" && passwordConfirm.value === password.value;
-    setError(passwordConfirm, "registerPasswordConfirmError", ok ? "" : t("common.js.passwords_different"));
+    setError(passwordConfirm, "registerPasswordConfirmError", ok ? "" : t("errors.validation.passwords_different"));
     return ok;
   }
 

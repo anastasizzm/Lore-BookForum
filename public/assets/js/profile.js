@@ -31,20 +31,20 @@
         headers: { 'Accept': 'application/json' }, credentials: 'same-origin',
       }).then(function (r) {
         if (r.ok) return r.json();
-        if (window.Messages) window.Messages.fail(r, t('js.publications_load_failed'));
+        if (window.Messages) window.Messages.fail(r, t('errors.common.publications_load_failed'));
         return null;
       }).catch(function () {
-        if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+        if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
         return null;
       }),
       fetch('/api/articles?creator=' + encodeURIComponent(userId) + '&include=' + include, {
         headers: { 'Accept': 'application/json' }, credentials: 'same-origin',
       }).then(function (r) {
         if (r.ok) return r.json();
-        if (window.Messages) window.Messages.fail(r, t('js.publications_load_failed'));
+        if (window.Messages) window.Messages.fail(r, t('errors.common.publications_load_failed'));
         return null;
       }).catch(function () {
-        if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+        if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
         return null;
       }),
     ]);
@@ -88,7 +88,7 @@
 
     if (!userId || userId === '0') {
       el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
-        + escapeHtml(t('js.no_publications')) + '</p>';
+        + escapeHtml(t('errors.common.publications_failed_short')) + '</p>';
       return;
     }
 
@@ -97,13 +97,13 @@
     catch (e) {
       console.error('[profile] publications load failed:', e);
       el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
-        + escapeHtml(t('js.publications_failed_short')) + '</p>';
+        + escapeHtml(t('errors.common.publications_failed_short')) + '</p>';
       return;
     }
 
     if (all.length === 0) {
       el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
-        + escapeHtml(t('js.no_publications')) + '</p>';
+        + escapeHtml(t('errors.common.publications_failed_short')) + '</p>';
       return;
     }
 
@@ -116,7 +116,7 @@
       var more = document.createElement('a');
       more.className = 'profile-publications__more';
       more.href = moreUrl;
-      more.textContent = t('js.see_all_publications');
+      more.textContent = t('profile.publications');
       el.appendChild(more);
     }
   }
@@ -129,15 +129,13 @@
 
 /* ============================================
    PROFILE - posts
-   Карточки постов ТАКИЕ ЖЕ, как в ленте (разметка card-feed.php):
-   пост = корневой комментарий, под ним плоский список комментариев
-   (без вложенности — один уровень, как на book/article details).
-   Лайки, Reply и комментарии обслуживает card-feed.js + comments.js:
-   нужны те же data-* атрибуты, что отдаёт card-feed.php.
    ============================================ */
-
 (function () {
   'use strict';
+
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
 
   function escapeHtml(str) {
     return String(str ?? '')
@@ -148,7 +146,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  // createdAt = { date: "2026-10-10 07:57:35...", ... } -> "10.10.2026"
   function formatDate(value) {
     var raw = (value && typeof value === 'object') ? (value.date || '') : String(value || '');
     var m = /(\d{4})-(\d{2})-(\d{2})/.exec(raw);
@@ -160,17 +157,14 @@
       escapeHtml(text) + '</p>';
   }
 
-  // Текст поста с переносами строк — как nl2br в card-feed.php
   function textHtml(text) {
     return escapeHtml(text).replace(/\r\n|\r|\n/g, '<br>');
   }
 
-  /** Аватар строки поста — как в avatar.php/comments.js: пресет-эмодзи
-      или инициалы (файловые аватары в API не приходят). */
   function paintAvatar(el, initials, raw) {
     if (!el) return;
     el.replaceChildren();
-    if (window.LoreAvatar) window.LoreAvatar.paint(el, null);   // сброс фона
+    if (window.LoreAvatar) window.LoreAvatar.paint(el, null);
 
     var span = document.createElement('span');
     span.textContent = initials || '?';
@@ -201,7 +195,6 @@
       '<path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
 
-  // Три точки (меню удаления поста) — как в card-feed.php/comment-card-template
   var DOTS_SVG =
     '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
       '<circle cx="8" cy="3" r="1.5"/>' +
@@ -209,18 +202,11 @@
       '<circle cx="8" cy="13" r="1.5"/>' +
     '</svg>';
 
-  // Галочка отправки комментария — как у reply-формы в шаблоне
   var CHECK_SVG =
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
       '<path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
 
-  /**
-   * Карточка поста — по разметке card-feed.php (feed-list.php):
-   * шапка книги, строка поста (аватар, ник->профиль, текст, сердечко +
-   * Reply слева, дата справа), форма ответа, «Show more» и скрытый
-   * список комментариев (data-feed-comments -> card-feed.js).
-   */
   function renderPost(post, cu, authorFallback) {
     var creator   = post.creator || {};
     var pub       = post.publication || {};
@@ -229,15 +215,12 @@
     var userId    = Number(creator.id || 0);
     var userName  = String(creator.username || authorFallback || '');
     var initials  = initialsOf(creator);
-    var avatarKey = String(creator.avatar || '');
     var liked     = !!post.isLiked;
     var likes     = Number(post.likesCount || 0);
     var comments  = Number(post.commentsCount || 0);
     var date      = formatDate(post.createdAt);
     var text      = String(post.content || '');
 
-    // Обложка книги: iconId -> /uploads/covers/{iconId} (как в feed-list.php);
-    // нет обложки — CSS-заглушка cover--empty
     var iconId = (pub.iconId == null ? '' : String(pub.iconId));
     var coverHtml = iconId
       ? '<img src="' + escapeHtml('/uploads/covers/' + iconId) + '" alt="" class="card-feed__book-thumb">'
@@ -280,8 +263,6 @@
                     '<div class="comment-card__author">' + authorHtml + '</div>' +
                     '<div class="comment-card__text">' + textHtml(text) + '</div>' +
                   '</div>' +
-                  // Меню поста: «три точки» для удаления своего поста
-                  // (comments.js syncPostMenu скрывает, если author != мой id)
                   '<div class="comment-card__actions" data-c-menu-wrap hidden>' +
                     '<button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle' +
                             ' aria-haspopup="true" aria-expanded="false" aria-label="' + t('comments.options') + '">' +
@@ -340,8 +321,6 @@
   }
 
   function postsUrl(userId, page) {
-    // URLSearchParams кодирует '+' -> '%2B': сервер обязан получить
-    // include=creator+publication (пробел в этом параметре роняет бэкенд)
     var params = new URLSearchParams({
       creator: String(userId),
       include: 'creator+publication',
@@ -356,7 +335,7 @@
       credentials: 'same-origin',
     });
     if (!res.ok) {
-      if (window.Messages) window.Messages.fail(res, 'Could not load posts.');
+      if (window.Messages) window.Messages.fail(res, t('errors.common.publications_load_failed'));
       return null;
     }
     return res.json();
@@ -368,11 +347,10 @@
 
     var userId = parseInt(el.getAttribute('data-posts-user-id'), 10) || 0;
     if (!userId) {
-      el.innerHTML = emptyText('No posts yet.');
+      el.innerHTML = emptyText(t('profile.no_posts'));
       return;
     }
 
-    // Текущий юзер — те же data-cu-*, что в card-feed.php (для своих комментариев)
     var cu = {
       id: parseInt(el.getAttribute('data-posts-cu-id'), 10) || 0,
       name: el.getAttribute('data-posts-cu-name') || '',
@@ -393,7 +371,6 @@
       if (page === 1) el.innerHTML = html;
       else el.insertAdjacentHTML('beforeend', html);
 
-      // Аватары — через LoreAvatar (пресет-эмодзи или инициалы), без innerHTML
       items.forEach(function (post, i) {
         var node = el.children[el.children.length - items.length + i];
         if (!node) return;
@@ -402,10 +379,8 @@
           initialsOf(post.creator),
           String((post.creator && post.creator.avatar) || '')
         );
-        // CSRF-поле формы ответа — из data-posts-csrf (карточка отрендерена в JS)
         var tokenInput = node.querySelector('[data-feed-comment-form] [name="_token"]');
         if (tokenInput) tokenInput.value = csrf;
-        // Меню поста (три точки): показываем, если пост мой
         if (window.LoreComments && typeof window.LoreComments.syncPostMenu === 'function') {
           window.LoreComments.syncPostMenu(node);
         }
@@ -418,11 +393,11 @@
       moreBtn = document.createElement('button');
       moreBtn.type = 'button';
       moreBtn.className = 'pagination__btn profile-posts__more';
-      moreBtn.textContent = 'Show more';
+      moreBtn.textContent = t('js.show_more');
       moreBtn.addEventListener('click', async function () {
         if (loading) return;
         loading = true;
-        moreBtn.textContent = 'Loading...';
+        moreBtn.textContent = t('js.loading');
         try {
           var data = await fetchPage(userId, page + 1);
           if (data) {
@@ -431,7 +406,7 @@
             appendPosts(data.items || []);
             renderMore();
           } else {
-            moreBtn.textContent = 'Show more';
+            moreBtn.textContent = t('js.show_more');
           }
         } finally {
           loading = false;
@@ -446,18 +421,18 @@
         data = await fetchPage(userId, page);
       } catch (e) {
         console.error('[profile] posts load failed:', e);
-        el.innerHTML = emptyText('Failed to load posts.');
+        el.innerHTML = emptyText(t('errors.common.publications_load_failed'));
         return;
       }
 
       if (!data) {
-        el.innerHTML = emptyText('Failed to load posts.');
+        el.innerHTML = emptyText(t('errors.common.publications_load_failed'));
         return;
       }
 
       var items = data.items || [];
       if (items.length === 0) {
-        el.innerHTML = emptyText('No posts yet.');
+        el.innerHTML = emptyText(t('profile.no_posts'));
         return;
       }
 
