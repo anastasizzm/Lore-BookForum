@@ -1,0 +1,1206 @@
+/* ============================================================
+   ARTICLE FORM — создание/редактирование статьи
+   (src/views/pages/article/article-form.php)
+
+   Самодостаточный файл: обложка, ошибки и сетка продублированы
+   (book-form.css на этой странице не подключён). Токены — из
+   variable.css; базовые .btn/.form-field__input/.card-base — из
+   component.css.
+
+   Блоки:
+     1. карточка и общие элементы формы
+     2. переключатель «своя статья / отрывок из книги»
+     3. выбор книги и сводка фрагмента
+     4. обложка и основная сетка
+     5. редакторы с форматированием (.rich-editor)
+     6. ошибки полей
+     7. восстановление черновика и панель кнопок
+     8. окно выбора фрагмента (.fragment-picker) и текстовый слой PDF
+     9. адаптив
+   ============================================================ */
+
+.article-form [hidden],
+.fragment-picker[hidden] {
+  display: none !important;
+}
+
+.article-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+/* ============================================
+   1. КАРТОЧКА И ОБЩИЕ ЭЛЕМЕНТЫ
+   ============================================ */
+.article-form form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.article-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+
+.article-form .form-field > label,
+.article-form .form-field__label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.article-form__section-title {
+  margin: var(--space-2) 0 0;
+  padding-bottom: var(--space-2);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.article-form form > .article-form__section-title:first-of-type,
+.article-form form > .article-form__restore + .article-form__section-title {
+  margin-top: 0;
+}
+
+.article-form__hint {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.form-row--two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.article-form__select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: var(--space-5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236F84A5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  cursor: pointer;
+}
+
+.article-form__select:invalid {
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   2. ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА
+   ============================================ */
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.mode-switch__option {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+}
+
+.mode-switch__radio {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.mode-switch__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.mode-switch__option:hover .mode-switch__body {
+  border-color: var(--color-primary, var(--color-text));
+}
+
+.mode-switch__radio:checked + .mode-switch__body {
+  border-color: var(--color-primary, var(--color-text));
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-primary, var(--color-text));
+}
+
+.mode-switch__radio:focus-visible + .mode-switch__body {
+  outline: 2px solid var(--color-primary, var(--color-text));
+  outline-offset: 2px;
+}
+
+.mode-switch__title {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.mode-switch__hint {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
+/* ============================================
+   3. ИСТОЧНИК: КНИГА И ФРАГМЕНТ
+   ============================================ */
+.article-source {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.article-source > .article-form__section-title {
+  margin-top: var(--space-2);
+}
+
+.book-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.book-picker__results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
+  margin: 4px 0 0;
+  padding: var(--space-1);
+  list-style: none;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.12));
+}
+
+.book-picker__results li {
+  list-style: none;
+}
+
+.book-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  text-align: left;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.book-picker__item:hover,
+.book-picker__item:focus-visible {
+  background: var(--color-bg-secondary);
+  outline: none;
+}
+
+.book-picker__title {
+  font-weight: var(--fw-medium);
+  line-height: 1.3;
+}
+
+.book-picker__author {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.book-picker__empty {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.book-picker__chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.book-picker__chip-title {
+  min-width: 0;
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fragment-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-field-bg);
+  border: 1px dashed var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+.fragment-box__summary {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.fragment-box__summary.is-filled,
+.fragment-box.is-filled .fragment-box__summary {
+  color: var(--color-text);
+}
+
+.fragment-box:has(.form-field__input--invalid),
+.fragment-box__summary.form-field__input--invalid {
+  border-color: var(--color-error);
+}
+
+.fragment-box .btn {
+  flex-shrink: 0;
+}
+
+/* ============================================
+   4. ОБЛОЖКА И ОСНОВНАЯ СЕТКА
+   ============================================ */
+.article-main {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.article-main__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.cover-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cover-upload__frame {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  padding: var(--space-2);
+  overflow: hidden;
+  background: var(--color-field-bg);
+  border: 1px dashed var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+.cover-upload__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.cover-upload__placeholder {
+  padding: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.cover-upload__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.article-form .form-field__input--file {
+  padding: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  background-color: var(--color-surface);
+}
+
+.article-form .form-field__input--file::file-selector-button {
+  margin-right: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.article-form .form-field__input--file::file-selector-button:hover {
+  background: var(--color-overlay);
+}
+
+/* ============================================
+   5. РЕДАКТОРЫ С ФОРМАТИРОВАНИЕМ
+   Без JS виден обычный textarea; с JS (.is-enhanced у формы)
+   textarea прячется, а вместо него — contenteditable-область.
+   ============================================ */
+.rich-editor__toolbar,
+.rich-editor__area {
+  display: none;
+}
+
+.is-enhanced .rich-editor__toolbar {
+  display: flex;
+}
+
+.is-enhanced .rich-editor__area {
+  display: block;
+}
+
+.is-enhanced .rich-editor .rich-editor__field {
+  display: none;
+}
+
+.rich-editor__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--space-1);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-field-border);
+  border-bottom: 0;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.rich-editor__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--fs-small);
+  line-height: 1;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.rich-editor__btn:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.rich-editor__btn:focus-visible {
+  outline: 2px solid var(--color-primary, var(--color-text));
+  outline-offset: 1px;
+}
+
+.rich-editor__btn.is-active {
+  background: var(--color-surface);
+  border-color: var(--color-primary, var(--color-text));
+  color: var(--color-primary, var(--color-text));
+}
+
+.rich-editor__btn sub {
+  font-size: 0.7em;
+}
+
+.rich-editor__area {
+  overflow-y: auto;
+  padding: var(--space-3);
+  line-height: 1.6;
+  color: var(--color-text);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.rich-editor--sm .rich-editor__area {
+  min-height: 120px;
+  max-height: 320px;
+}
+
+.rich-editor--lg .rich-editor__area {
+  min-height: 360px;
+  max-height: 70vh;
+  font-size: 1.02rem;
+}
+
+.rich-editor__area:focus {
+  border-color: var(--color-primary, var(--color-text));
+}
+
+/* плейсхолдер: пустая область (JS оставляет её без детей или с <p><br></p>) */
+.rich-editor__area[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.rich-editor__area > :first-child {
+  margin-top: 0;
+}
+
+.rich-editor__area > :last-child {
+  margin-bottom: 0;
+}
+
+.rich-editor__area p {
+  margin: 0 0 0.8em;
+}
+
+.rich-editor__area h2,
+.rich-editor__area h3 {
+  margin: 1.2em 0 0.5em;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+.rich-editor__area h2 { font-size: 1.35em; }
+.rich-editor__area h3 { font-size: 1.15em; }
+
+.rich-editor__area blockquote {
+  margin: 0.8em 0;
+  padding: 0.2em 0 0.2em var(--space-3);
+  color: var(--color-text-muted);
+  border-left: 3px solid var(--color-border);
+}
+
+.rich-editor__area ul,
+.rich-editor__area ol {
+  margin: 0 0 0.8em;
+  padding-left: 1.6em;
+}
+
+.rich-editor__area a {
+  color: var(--color-primary, inherit);
+  text-decoration: underline;
+}
+
+/* картинки в тексте: не шире колонки, по центру; клик — выделение рамкой */
+.rich-editor__area img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-3) auto;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.rich-editor__area img:hover,
+.rich-editor__area img.is-selected {
+  outline: 2px solid var(--color-primary, var(--color-text));
+  outline-offset: 2px;
+}
+
+/* заглушка «картинка загружается» */
+.rich-editor__upload {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.rich-editor__counter {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.rich-editor__counter:empty {
+  display: none;
+}
+
+.rich-editor__counter.is-over {
+  color: var(--color-error);
+}
+
+.article-form__select:focus,
+.article-form .rich-editor__field:focus {
+  border-color: var(--color-primary, var(--color-text));
+}
+
+.article-form .rich-editor__field {
+  min-height: 140px;
+  padding: var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--lh-normal);
+}
+
+/* ============================================
+   6. ОШИБКИ ПОЛЕЙ
+   ============================================ */
+.article-form .form-field__input--invalid {
+  border-color: var(--color-error);
+}
+
+.article-form .form-field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--color-error);
+}
+
+.article-form .form-field__error:empty {
+  visibility: hidden;
+}
+
+.article-form .field-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-error);
+  color: var(--color-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.article-form .form-field__error--warning,
+.article-form .form-field__error--warning:empty {
+  visibility: visible;
+  color: var(--color-warning);
+}
+
+.article-form .field-error-icon--warning {
+  background: var(--color-warning);
+}
+
+/* ============================================
+   7. ВОССТАНОВЛЕНИЕ ЧЕРНОВИКА И КНОПКИ
+   ============================================ */
+.article-form__restore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--radius-md);
+}
+
+.article-form__restore-text {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.article-form__restore-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.article-form__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3) 0;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.article-form__draft-status {
+  flex: 1 1 160px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.article-form__draft-status:empty {
+  display: none;
+}
+
+.article-form__buttons .btn {
+  box-sizing: border-box;
+}
+
+.article-form__buttons {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* ============================================
+   8. ОКНО ВЫБОРА ФРАГМЕНТА
+   ============================================ */
+body.is-modal-open {
+  overflow: hidden;
+}
+
+.fragment-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.fragment-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 16, 28, 0.6);
+}
+
+.fragment-picker__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(900px, 100%);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, var(--radius-md));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.fragment-picker__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fragment-picker__head-text {
+  min-width: 0;
+}
+
+.fragment-picker__title {
+  margin: 0;
+  font-size: var(--fs-h3, 1.1rem);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.fragment-picker__book {
+  margin: 2px 0 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fragment-picker__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.fragment-picker__close:hover {
+  background: var(--color-bg-secondary);
+}
+
+.fragment-picker__bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fragment-picker__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fragment-picker__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.fragment-picker__btn:hover:not(:disabled) {
+  background: var(--color-overlay);
+}
+
+.fragment-picker__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fragment-picker__pages,
+.fragment-picker__zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 3.2em;
+  justify-content: center;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fragment-picker__pagenum {
+  width: 3.6em;
+  padding: 4px 6px;
+  font: inherit;
+  text-align: center;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  -moz-appearance: textfield;
+}
+
+.fragment-picker__pagenum::-webkit-outer-spin-button,
+.fragment-picker__pagenum::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.fragment-picker__busy {
+  margin: 0 0 0 auto;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.fragment-picker__hint {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fragment-picker__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  background: var(--color-bg-secondary);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fragment-picker__page {
+  display: flex;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.fragment-picker__sheet {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  --total-scale-factor: var(--scale-factor, 1);
+}
+
+.fragment-picker__sheet canvas {
+  display: block;
+}
+
+.fragment-picker__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.fragment-picker__points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+}
+
+.fragment-picker__point {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fragment-picker__state {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.fragment-picker__apply {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.fragment-picker__insert {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* --- текстовый слой PDF.js (по мотивам pdf_viewer.css) --- */
+.fragment-picker .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  forced-color-adjust: none;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 1;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor, 1) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.fragment-picker .textLayer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+}
+
+.fragment-picker .textLayer > :not(.markedContent),
+.fragment-picker .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.fragment-picker .textLayer .markedContent {
+  display: contents;
+}
+
+.fragment-picker .textLayer br::selection {
+  background: transparent;
+}
+
+.fragment-picker .textLayer ::selection {
+  background: rgba(0, 100, 255, 0.3);
+}
+
+/* уже выбранный фрагмент */
+.fragment-picker .textLayer span.is-picked {
+  background: rgba(255, 213, 0, 0.45);
+  border-radius: 2px;
+}
+
+/* ============================================
+   9. АДАПТИВ
+   ============================================ */
+@media (max-width: 768px) {
+  .article-main {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .cover-upload__frame {
+    max-width: 200px;
+  }
+
+  .mode-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .fragment-picker {
+    padding: 0;
+  }
+
+  .fragment-picker__panel {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .fragment-picker__stage {
+    padding: var(--space-1);
+  }
+
+  .fragment-picker__bar {
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2) var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-row--two-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .fragment-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rich-editor--lg .rich-editor__area {
+    min-height: 280px;
+    max-height: 60vh;
+  }
+
+  .rich-editor__btn {
+    min-width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 480px) {
+  .article-form__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .article-form__buttons {
+    flex-direction: column-reverse;
+    margin-left: 0;
+  }
+
+  .article-form__buttons .btn {
+    width: 100%;
+  }
+
+  .fragment-picker__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fragment-picker__apply {
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  .fragment-picker__apply .btn {
+    flex: 1 1 auto;
+  }
+
+  .fragment-picker__point {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .book-picker__chip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ============================================================
+   10. МНОГОШАГОВАЯ ФОРМА (шаги 1/2/3)
+   ============================================================ */
+.article-step[hidden] {
+  display: none !important;
+}
+
+.article-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.article-step__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.article-step__num {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.article-step__title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text);
+}
+
+.article-step__nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.article-step__nav .btn--secondary:first-child:not(:only-child) {
+  margin-right: auto;
+}
+
+/* ============================================================
+   11. СПИСОК СОАВТОРОВ (шаг 3)
+   ============================================================ */
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  margin-top: var(--space-1);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+.user-list__empty {
+  margin: 0;
+  padding: var(--space-3);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.user-item:hover {
+  background: var(--color-overlay);
+}
+
+.user-item input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.user-item__name {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.user-item__email {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* ============================================================
+   12. АДАПТИВ ДЛЯ ШАГОВ
+   ============================================================ */
+@media (max-width: 640px) {
+  .article-step__nav {
+    flex-direction: column-reverse;
+  }
+
+  .article-step__nav .btn {
+    width: 100%;
+  }
+
+  .article-step__nav .btn--secondary:first-child:not(:only-child) {
+    margin-right: 0;
+  }
+
+  .user-item__email {
+    display: none;
+  }
+}
