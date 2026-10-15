@@ -20,8 +20,21 @@ async function init(root) {
   const nextBtn = $('[data-reader-next]');
 
   const bookId   = root.dataset.bookId || '0';
-  const storeKey = 'reader:page:' + bookId;
+  const storeKey = 'book-' + bookId + '-page';   // ключ прогресса (см. saveProgress)
+  const legacyKey = 'reader:page:' + bookId;     // старый ключ — читаем для миграции
   const Z_MIN = 0.5, Z_MAX = 3, Z_STEP = 0.25;
+
+  /**
+   * saveProgress — сохранение прогресса чтения (JS-хук на смену страницы).
+   *
+   * Пока храним в localStorage (ключ book-{id}-page). Когда бэк даст
+   * API прогресса — заменить тело на fetch PATCH /api/books/{id}/progress
+   * с body { page: num } и заголовком X-CSRF-Token (LoreCsrf.token()).
+   */
+  function saveProgress(num) {
+    try { localStorage.setItem(storeKey, String(num)); } catch (_) {}
+    // TODO(api): fetch('/api/books/' + bookId + '/progress', { method: 'PATCH', ... })
+  }
 
   const toast = (text) => window.Messages?.show(text, { type: 'error' });
   const setStatus = (text) => {
@@ -77,7 +90,11 @@ async function init(root) {
 
   const fromUrl = parseInt(new URLSearchParams(location.search).get('page'), 10);
   let saved = 0;
-  try { saved = parseInt(localStorage.getItem(storeKey), 10) || 0; } catch (_) {}
+  try {
+    saved = parseInt(localStorage.getItem(storeKey), 10)
+         || parseInt(localStorage.getItem(legacyKey), 10)   // старый ключ reader:page:{id}
+         || 0;
+  } catch (_) {}
   pageNum = clamp(fromUrl || saved || 1, 1, pdf.numPages);
 
   setStatus('');
@@ -132,7 +149,9 @@ async function init(root) {
     prevBtn.disabled = pageNum <= 1;
     nextBtn.disabled = pageNum >= pdf.numPages;
 
-    try { localStorage.setItem(storeKey, String(pageNum)); } catch (_) {}
+    // Смена страницы -> saveProgress(currentPage): вызывается здесь,
+    // потому что render() завершается только после показа новой страницы.
+    saveProgress(pageNum);
 
     const u = new URL(location.href);
     u.searchParams.set('page', String(pageNum));

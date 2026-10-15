@@ -1,0 +1,230 @@
+/* ============================================
+   ARTICLE FORM — страница создания статьи
+   (src/views/pages/article/article-form.php).
+   Стили лежат отдельно: книжная форма (book-form.css) живёт в другой
+   ветке и сюда не тащим. Всё на токенах variable.css.
+   ============================================ */
+
+.article-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  max-width: 860px;
+}
+
+.article-form {
+  padding: var(--space-4);
+}
+
+.article-form form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.article-form__section-title {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.article-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.article-form .form-field label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.article-form .form-field__input--textarea {
+  min-height: 120px;
+  padding: var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--lh-normal);
+}
+
+.article-form__hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
+  color: var(--color-text-muted);
+}
+
+/* Ошибка поля: рисуется JS (как в book-form/profile-edit) */
+.form-field__error:empty {
+  visibility: hidden;
+}
+
+.field-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-error);
+  color: var(--color-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Две-три колонки: DOI рядом с жанром, страницы — в ряд */
+.article-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* Тип статьи: две радиокнопки подряд */
+.article-form__type {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.article-form__type legend {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.article-form__radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.article-form__radio input {
+  accent-color: var(--color-primary);
+}
+
+/* ============================================
+   COVER — превью обложки
+   ============================================ */
+.cover-upload {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cover-upload__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 190px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--color-field-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.cover-upload__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-upload__placeholder {
+  padding: 0 var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.cover-upload__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Нативная строка браузера («Choose file») не переводится:
+   input спрятан, клик ведёт локализованная кнопка-лейбл. */
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload__button {
+  cursor: pointer;
+  white-space: normal;
+  text-align: center;
+}
+
+.file-upload__button-state {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+/* ============================================
+   ACTIONS
+   ============================================ */
+.article-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ============================================
+   RESPONSIVE — 480px покрывает целевой 375px-экран
+   ============================================ */
+@media (max-width: 480px) {
+  .article-form {
+    padding: var(--space-3);
+  }
+
+  .article-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .article-form__actions {
+    flex-direction: column-reverse;
+  }
+
+  .article-form__actions .btn {
+    width: 100%;
+  }
+
+  .cover-upload {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cover-upload__frame {
+    width: 100%;
+    height: 220px;
+  }
+
+  .cover-upload__controls {
+    align-items: stretch;
+  }
+
+  .file-upload__button {
+    width: 100%;
+  }
+}
