@@ -93,9 +93,8 @@ if ($cuInitials === '') {
       </div>
 
       <?php if ($canEdit): ?>
-        <!-- Роут users.profile.edit: /users/{userId}/profile/edit (разработчик
-             локализации предложил /users/{id}/edit — тот 404, оставляем роут;
-             $url — их же обёртка, добавляющая ?lang= к ссылке) -->
+        <!-- Роут users.profile.edit (с develop: /users/{userId}/edit);
+             $url — обёртка, добавляющая ?lang= к ссылке -->
         <a class="btn-icon profile-header__edit"
            href="<?= $view->e($url('users.profile.edit', ['userId' => (int)$userData->id])) ?>"
            aria-label="<?= $tr('common.profile.edit') ?>"
@@ -149,7 +148,7 @@ if ($cuInitials === '') {
                (comments.js скрывает врап, если authorId != мой id) -->
           <div class="comment-card__actions" data-c-menu-wrap hidden>
             <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                    aria-haspopup="true" aria-expanded="false" aria-label="Comment options">
+                    aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <circle cx="8" cy="3" r="1.5"/>
                 <circle cx="8" cy="8" r="1.5"/>
@@ -158,7 +157,7 @@ if ($cuInitials === '') {
             </button>
             <div class="comment-card__menu" data-c-menu hidden>
               <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                      data-c-delete>Delete</button>
+                      data-c-delete><?= $tr('common.js.delete') ?></button>
             </div>
           </div>
         </div>
@@ -172,14 +171,14 @@ if ($cuInitials === '') {
                     data-like-btn
                     data-like-id=""
                     data-liked="0"
-                    aria-pressed="false" aria-label="Like">
+                    aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
               <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span data-like-count>0</span>
             </button>
             <button type="button" class="comment-card__reply" data-reply-toggle
-                    aria-expanded="false" aria-label="Reply">Reply</button>
+                    aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
           </div>
           <span class="comment-card__date" data-c-date></span>
         </div>
@@ -188,8 +187,8 @@ if ($cuInitials === '') {
         <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
         <form class="comment-reply-form" data-reply-form hidden>
-          <input type="text" class="comment-reply-form__input" placeholder="Write a reply…" maxlength="500" autocomplete="off">
-          <button type="submit" class="comment-reply-form__submit" disabled aria-label="Send reply">
+          <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+          <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -219,7 +218,7 @@ if ($cuInitials === '') {
              (comments.js скрывает врап, если authorId != мой id) -->
         <div class="comment-card__actions comment-reply__actions" data-c-menu-wrap hidden>
           <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                  aria-haspopup="true" aria-expanded="false" aria-label="Reply options">
+                  aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="8" cy="3" r="1.5"/>
               <circle cx="8" cy="8" r="1.5"/>
@@ -228,7 +227,7 @@ if ($cuInitials === '') {
           </button>
           <div class="comment-card__menu" data-c-menu hidden>
             <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                    data-c-delete>Delete</button>
+                    data-c-delete><?= $tr('common.js.delete') ?></button>
           </div>
         </div>
       </div>
@@ -240,7 +239,7 @@ if ($cuInitials === '') {
                   data-like-btn
                   data-like-id=""
                   data-liked="0"
-                  aria-pressed="false" aria-label="Like">
+                  aria-pressed="false" aria-label="<?= $tr('common.comments.like') ?>">
             <svg width="16" height="15" viewBox="0 0 22 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M11 18.5C11 18.5 1 12.5 1 6.2C1 3.3 3.3 1 6.1 1C8.2 1 10 2.2 11 4C12.2 2.2 13.8 1 15.9 1C18.7 1 21 3.3 21 6.2C21 12.5 11 18.5 11 18.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -248,7 +247,7 @@ if ($cuInitials === '') {
           </button>
           <!-- Ответ на ответ идёт в тот же плоский список (без вложенности) -->
           <button type="button" class="comment-card__reply" data-reply-toggle
-                  aria-expanded="false" aria-label="Reply">Reply</button>
+                  aria-expanded="false" aria-label="<?= $tr('common.comments.reply') ?>"><?= $tr('common.comments.reply') ?></button>
         </div>
         <span class="comment-card__date" data-reply-date></span>
       </div>

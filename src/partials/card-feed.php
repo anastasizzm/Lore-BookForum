@@ -92,6 +92,24 @@ $liked = (bool) ($liked ?? false);
               </div>
               <div class="comment-card__text"><?= nl2br($view->e($text)) ?></div>
             </div>
+
+            <!-- Меню поста: «три точки» для удаления своего поста;
+                 comments.js (syncPostMenu) скрывает врап, если author != мой id -->
+            <div class="comment-card__actions" data-c-menu-wrap hidden>
+              <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
+                      aria-haspopup="true" aria-expanded="false"
+                      aria-label="<?= $tr('common.comments.options') ?>">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <circle cx="8" cy="3" r="1.5"/>
+                  <circle cx="8" cy="8" r="1.5"/>
+                  <circle cx="8" cy="13" r="1.5"/>
+                </svg>
+              </button>
+              <div class="comment-card__menu" data-c-menu hidden>
+                <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
+                        data-c-delete><?= $tr('common.js.delete') ?></button>
+              </div>
+            </div>
           </div>
 
           <div class="comment-card__footer">
@@ -121,16 +139,23 @@ $liked = (bool) ($liked ?? false);
             <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
             <input type="text" class="comment-form__input" name="content"
                    placeholder="<?= $tr('common.comments.add_comment') ?>" maxlength="500" autocomplete="off">
-            <button type="submit" class="comment-form__submit" disabled><?= $tr('common.comments.post') ?></button>
+            <!-- Отправка — галочка (как у reply-формы); смысл кнопки в aria-label -->
+            <button type="submit" class="comment-form__submit" disabled
+                    aria-label="<?= $tr('common.comments.post') ?>">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
             <p data-comment-error role="alert" hidden
                style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
             <p data-comment-status role="status" hidden
                style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>
           </form>
 
-          <!-- Ссылка «Show more» / «Show less» -->
+          <!-- Ссылка «Show more» / «Show less» — только если у поста есть
+               комментарии (fcSyncExpandBtn покажет её после первого своего) -->
           <button type="button" class="comment-card__more" data-fc-expand
-                  aria-expanded="false"><?= $tr('common.js.show_more') ?></button>
+                  <?= $comments > 0 ? '' : 'hidden' ?> aria-expanded="false"><?= $tr('common.js.show_more') ?></button>
 
           <span class="visually-hidden" data-comment-count><?= (int)$comments ?></span>
 

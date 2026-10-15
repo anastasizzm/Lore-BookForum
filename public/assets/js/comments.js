@@ -245,6 +245,21 @@
     if (wrap) wrap.hidden = !(Number(authorId) && Number(authorId) === myId());
   }
 
+  // Меню удаления строки поста («пост = корневой комментарий» по дизайну):
+  // показываем, если пост мой. Ищем врап ВНЕ [data-feed-comments], чтобы не
+  // зацепить меню уже загруженных комментариев — у них свой syncOwnMenu.
+  function syncPostMenu(card) {
+    if (!card || !card.querySelectorAll) return;
+    var wraps = card.querySelectorAll('[data-c-menu-wrap]');
+    var wrap = null;
+    for (var i = 0; i < wraps.length; i++) {
+      if (!wraps[i].closest('[data-feed-comments]')) { wrap = wraps[i]; break; }
+    }
+    if (!wrap) return;
+    var authorId = Number((card.dataset && card.dataset.authorId) || 0);
+    wrap.hidden = !(authorId && authorId === myId());
+  }
+
   function repliesCountOf(card, list) {
     if (card && card.dataset && card.dataset.repliesCount !== ''
         && card.dataset.repliesCount != null) {
@@ -507,18 +522,26 @@
     var id = replyEl
       ? Number(node && node.dataset.replyId || 0)
       : Number(node && node.dataset.commentId || 0);
+
+    // Меню строки поста (у поста нет data-comment-id): удаляем сам пост —
+    // после успеха карточка поста уходит из списка целиком
+    var isPost = !node;
+    if (isPost) {
+      node = delBtn.closest('.card-feed[data-post-id]');
+      id = Number(node && node.dataset.postId || 0);
+    }
     if (!node || !id || node.dataset.deleting === '1') return;
 
     closeMenus();
 
     var ask = (window.ConfirmModal && typeof window.ConfirmModal.confirm === 'function')
       ? window.ConfirmModal.confirm({
-          title: t('js.delete_comment_title'),
-          message: t('js.delete_comment_text'),
+          title: t(isPost ? 'js.delete_post_title' : 'js.delete_comment_title'),
+          message: t(isPost ? 'js.delete_post_text' : 'js.delete_comment_text'),
           confirmText: t('js.delete'),
           danger: true
         })
-      : Promise.resolve(window.confirm(t('js.delete_comment_text')));
+      : Promise.resolve(window.confirm(t(isPost ? 'js.delete_post_text' : 'js.delete_comment_text')));
 
     var confirmed = await ask;
     if (!confirmed) return;
@@ -535,7 +558,10 @@
         headers: headers
       });
 
-      if (res.status === 204) { markDeleted(node); return; }
+      if (res.status === 204) {
+        if (isPost) node.remove(); else markDeleted(node);
+        return;
+      }
 
       var msg = window.Messages
         ? await window.Messages.readError(res, t('js.delete_comment_failed'))
@@ -696,7 +722,7 @@
 
       if (res.ok && !serverError && !htmlErrorPage) {
         var me = meInfo(scope);
-        appendReply(card, {
+        var payload = {
           id: data ? (data.createdId != null ? data.createdId : data.id) : null,
           author: me.author,
           authorId: me.id,
@@ -704,13 +730,27 @@
           initials: me.initials,
           avatar: me.avatar,
           text: text,
-          date: formatDate(new Date().toISOString()),
           likes: 0,
           liked: false
-        });
+        };
+
+        // Фид/профиль — плоский список [data-fc-list] (без вложенности):
+        // ответ на ответ добавляется в КОНЕЦ списка, не внутрь родителя
+        var flatList = card.closest('[data-fc-list]');
+        if (flatList) {
+          payload.date = (window.LoreI18n && typeof LoreI18n.formatDate === 'function')
+            ? LoreI18n.formatDate(new Date().toISOString())
+            : formatDate(new Date().toISOString());
+          payload.replies = 0;
+          var flatNode = commentNode(payload);
+          if (flatNode) flatList.appendChild(flatNode);
+        } else {
+          payload.date = formatDate(new Date().toISOString());
+          appendReply(card, payload);
+          setRepliesExpanded(card, true);
+        }
 
         bumpCommentCount(scope);
-        setRepliesExpanded(card, true);
 
         input.value = '';
         form.hidden = true;
@@ -749,6 +789,7 @@
     meInfo: meInfo,
     myId: myId,
     syncOwnMenu: syncOwnMenu,
+    syncPostMenu: syncPostMenu,
     markDeleted: markDeleted,
     bumpCommentCount: bumpCommentCount,
     pagerState: pagerState,
