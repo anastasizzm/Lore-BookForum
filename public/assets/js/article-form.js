@@ -1229,8 +1229,16 @@
 
       case 'content':
         if (!editor) break;
-        if (!isDraft && editor.isEmpty()) { setError(name, t('errors.article.rule_article_content')); return false; }
-        if (editor.getHtml().length > LIMITS.contentHtml) { setError(name, t('errors.article.rule_article_content_long')); return false; }
+        // В режиме «отрывок из книги» редактор скрыт; текст статьи необязателен —
+        // содержимое (при галочке «Вставить текст») приходит из фрагмента PDF.
+        if (!isDraft && state.mode !== 'excerpt' && editor.isEmpty()) {
+          setError(name, t('errors.article.rule_article_content'));
+          return false;
+        }
+        if (editor.getHtml().length > LIMITS.contentHtml) {
+          setError(name, t('errors.article.rule_article_content_long'));
+          return false;
+        }
         break;
 
       case 'cover':
@@ -1325,8 +1333,15 @@
     if (!silent) {
       clearAllErrors();
       if (!validateAll(isDraft)) { showFieldErrors(); focusFirstInvalid(); return Promise.resolve(false); }
-    } else if (valueOf('title') === '' || valueOf('title').length > LIMITS.title) {
-      return Promise.resolve(false);
+    } else {
+      // Автосохранение: минимальные требования, чтобы не слать заведомо
+      // неполный черновик и не получать ошибки сервера.
+      if (valueOf('title') === '' || valueOf('title').length > LIMITS.title) {
+        return Promise.resolve(false);
+      }
+      if (state.mode === 'excerpt' && !state.book) {
+        return Promise.resolve(false);
+      }
     }
 
     state.saving = true;
@@ -1369,6 +1384,8 @@
           clearBackup();
           state.dirty = false;
           state.coverDirty = false;
+          var removeFlagReset = fieldByName('remove_cover');
+          if (removeFlagReset) removeFlagReset.value = '';
 
           if (isDraft) {
             setDraftStatus(t('articleform.draft_saved_at', { time: formatTime(new Date()) }));
@@ -1418,7 +1435,10 @@
     var excerpt = state.mode === 'excerpt';
     $$('[data-excerpt-only]').forEach(function (el) { el.hidden = !excerpt; });
     $$('[data-excerpt-field]').forEach(function (el) { el.disabled = !excerpt; });
+    // Блок «Текст статьи» виден только в режиме «свой текст» (см. article-form.php).
+    $$('[data-standalone-only]').forEach(function (el) { el.hidden = excerpt; });
     if (!excerpt) { clearErrorFor('book'); clearErrorFor('fragment'); }
+    else { clearErrorFor('content'); }
   }
 
   function applyBackup(b) {
@@ -1518,6 +1538,7 @@
       }
 
       if (n === 2) {
+        // Текст обязателен только в режиме «свой текст» (см. validateField).
         if (state.mode === 'standalone' && editor && editor.isEmpty()) {
           setError('content', t('errors.article.rule_article_content'));
           return false;
@@ -1666,8 +1687,11 @@
     });
 
     var coverInput = $('[data-cover-input]');
+    var removeCoverFlag = fieldByName('remove_cover');
     if (coverInput) {
       coverInput.addEventListener('change', function () {
+        // Новый файл — значит пользователь передумал удалять обложку.
+        if (removeCoverFlag) removeCoverFlag.value = '';
         state.coverDirty = true;
         validateField('cover', true);
         markDirty();
@@ -1677,6 +1701,8 @@
     if (coverRemove) {
       coverRemove.addEventListener('click', function () {
         if (coverInput) coverInput.value = '';
+        // Сообщаем серверу, что обложку нужно снять (в БД старая обложка).
+        if (removeCoverFlag) removeCoverFlag.value = '1';
         state.coverDirty = true;
         validateField('cover', true);
         markDirty();

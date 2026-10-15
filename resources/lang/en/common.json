@@ -24,7 +24,8 @@
         "logout_title": "Log out?",
         "logout_text": "You will need to sign in again to continue.",
         "help": "Help",
-        "privacy": "Privacy Policy"
+        "privacy": "Privacy Policy",
+        "admin": "Admin panel"
     },
     "language": {
         "label": "Language",
@@ -256,6 +257,7 @@
         "tb_ul": "Bulleted list",
         "tb_ol": "Numbered list",
         "tb_link": "Link",
+        "tb_image": "Image",
         "tb_clear": "Clear formatting",
         "restore_text": "Unsaved text from your last session was found on this device.",
         "restore_apply": "Restore",
