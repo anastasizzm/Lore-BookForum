@@ -14,7 +14,7 @@ use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
 use App\Models\Publications\BookFiles;
-use App\Forms\Publications\BookModel;
+use App\Models\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
 use App\Models\Enums\FileCategory;
@@ -155,12 +155,15 @@ final class BooksService
         $bag = $this->validator->validateOne($form);
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
         
-        $model = BookModel::fromForm($form);
         try{
-            $bookId = $this->booksRepo->create($model, $creatorId);
-            $this->booksRepo->addPendingContents($bookId, $form->contentIds);
-    
-            return $bookId;
+            return $this->uow->transactional(function (PDO $pdo) use ($form, $creatorId) :int {
+                $model = BookModel::fromForm($form);
+                
+                $bookId = $this->booksRepo->create($model, $creatorId);
+                $this->booksRepo->addPendingContents($bookId, $form->contentIds);
+
+                return $bookId;
+            });
         }
         catch(\PDOException $e){
             throw $this->translator->translate($e);

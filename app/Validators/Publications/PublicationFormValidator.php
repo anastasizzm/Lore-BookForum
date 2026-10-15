@@ -35,7 +35,7 @@ class PublicationFormValidator extends Validator
             $ok = false;
         }
         
-        return $ok;
+        return (bool)$ok;
     }
 
     protected function checkStrings(ErrorBag $bag, string $value, int $minLen, int $maxLen, string $label) : bool 

@@ -9,6 +9,7 @@ use App\Services\Users\UsersService;
 use App\Services\Publications\BooksService;
 
 use App\Models\Publications\PublicationShort;
+use App\Forms\Publications\BookForm;
 
 use App\Http\HttpContext;
 use App\Http\Response;
@@ -160,7 +161,7 @@ final class BooksController extends Controller
         if (empty($userId))
             return Response::redirect('login');
 
-        $formData = $this->request->body();
+        $formData = $context->request->body();
         try{
             $bookId = $this->booksService->create(
                 BookForm::fromInput($formData),
@@ -174,7 +175,7 @@ final class BooksController extends Controller
                 'form' => $formData, 
                 'errors' => $e->errors(),
                 'user' => $userContext
-            ]);
+            ], 422);
         }
     }
 }

@@ -43,6 +43,6 @@ final class BookFormValidator extends PublicationFormValidator
             $ok = false;
         }
 
-        return $ok;
+        return (bool)$ok;
     }
 }

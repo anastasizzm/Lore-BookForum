@@ -62,12 +62,13 @@ abstract class PublicationsRepository extends Repository
             ':n' => ScriptParam::asStr($authorNotes),
             ':g' => ScriptParam::asInt($genreId),
             ':c' => ScriptParam::asInt($creatorId),
+            ':o' => ScriptParam::asInt($creatorId),
             ':i' => ScriptParam::asStr($iconId?->toString()),
             ':st' => ScriptParam::asStr($status->value)
         ];
 
-        $sql = 'INSERT INTO publications (title, description, author_notes, genre_id, creator_id, icon_id, status)
-                VALUES (:t, :d, :n, :g, :c, :i, :st) RETURNING id';
+        $sql = 'INSERT INTO publications (title, description, author_notes, genre_id, creator_id, owner_id, icon_id, status)
+                VALUES (:t, :d, :n, :g, :c, :o, :i, :st) RETURNING id';
         
         $stmt = $this->execute($sql, $values);
         $id = $stmt->fetchColumn();

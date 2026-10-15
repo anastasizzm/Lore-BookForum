@@ -15,7 +15,7 @@ use App\Models\Uuid;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
 use App\Models\Enums\FileCategory;
-use App\Forms\Publications\BookModel;
+use App\Models\Publications\BookModel;
 use App\Models\Criterias\Publications\BooksCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\BooksFilters;
@@ -31,8 +31,8 @@ use InvalidArgumentException;
 final class BooksRepository extends PublicationsRepository
 {
     public function __construct(
+        private readonly UnitOfWork $uow,
         Database $db,
-        UnitOfWork $uow,
         Translator $translator
     ){
         parent::__construct($db, $translator, new BooksScriptDirector());
@@ -144,7 +144,7 @@ final class BooksRepository extends PublicationsRepository
         int $creatorId,
     ) : int 
     {
-        return $this->uow->translactional(function (PDO $pdo) use ($model, $iconId) : int {
+        return $this->uow->transactional(function (PDO $pdo) use ($model, $creatorId) : int {
             $pubId = $this->insertPublication(
                 $model->title,
                 $model->description,
@@ -209,18 +209,18 @@ final class BooksRepository extends PublicationsRepository
 
     public function addPendingContents(int $bookId, array $contentIds) : void 
     {
-        if ($contentsIds === []) return;
+        if ($contentIds === []) return;
 
         $builder = ScriptBuilder::withTable("files");
         $builder->addSelect(":bookId, id, format", [':bookId' => ScriptParam::asInt($bookId)]);
 
-        $contentIdsParsed = array_map(function($id) : string {
+        $contentIdsArray = '{' . implode(',',  array_map(function($id) : string {
             if ($id instanceof Uuid) return $id->toString();
             else return (string)$id;
-        }, $contentIds);
+        }, $contentIds)) . '}';
 
-        $builder->addWith("contents", "SELECT content_id FROM unnest(:contentIds::uuid[]) AS t(content_id)", true, [":contentIds" => $contentIdsParsed]);
-        $builder->addWhere("id IN (SELECT content_id FROM contents)")->addWhere("is_active")->addWhere("category = :category", [":category" => FileCategory::Book->value]);
+        $builder->addWith("contents", "SELECT content_id FROM unnest(:contentIds::uuid[]) AS t(content_id)", true, [":contentIds" => $contentIdsArray]);
+        $builder->addWhere("id IN (SELECT content_id FROM contents)")->addWhere("category = :category", [":category" => FileCategory::Book->value]);
     
         $sql = "INSERT INTO books_content (book_id, content_id, format)\n" . $builder->build() . "\nRETURNING content_id";
         $stmt = $this->execute($sql, $builder->getParams());
@@ -231,8 +231,9 @@ final class BooksRepository extends PublicationsRepository
 
     private function activateFiles(array $fileIds) : void 
     {
-        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id IN (SELECT id FROM unnest(:fileIds::uuid[]) AS t(id)");
-        $stmt->execute([':fileIds' => $fileIds]);
+        $fileIdsArray = '{' . implode(',', $fileIds) . '}';
+        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id IN (SELECT file_id FROM unnest(:fileIds::uuid[]) AS t(file_id))");
+        $stmt->execute([':fileIds' => $fileIdsArray]);
     }
 
     public function removeContent(int $bookId, Uuid $contentId) : void

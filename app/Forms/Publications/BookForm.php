@@ -7,41 +7,6 @@ use App\Forms\Publications\PublicationForm;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Uuid;
 
-final readonly class BookModel extends PublicationModel
-{
-    public function __construct(
-        string $title,
-        string $description,
-        string $authorNotes,
-        int $genreId,
-        ?Uuid $iconId,
-        public int $categoryId,
-        public string $publisher,
-        public int $pages,
-        public ?string $isbn,
-        public array $contentIds
-    ){
-        parent::__construct($title, $description, $authorNotes, $genreId, $iconId);
-    }
-
-    public static function fromForm(BookForm $form) : self 
-    {
-        $parent = parent::fromForm($form);
-        return new self(
-            title: $parent->title,
-            description: $parent->description,
-            authorNotes: $parent->authorNotes,
-            genreId: $parent->genreId,
-            iconId: $parent->iconId,
-            categoryId: $form->categoryId,
-            publisher: $form->publisher,
-            pages: $form->pages,
-            isbn: $form->isbn,
-            contentIds: $form->contentIds
-        );
-    }
-}
-
 final readonly class BookForm extends PublicationForm
 {
     public function __construct(
@@ -70,7 +35,7 @@ final readonly class BookForm extends PublicationForm
             iconId: $parent->iconId,
             categoryId: QueryParser::positiveInt($input, 'categoryId'),
             publisher: QueryParser::string($input, 'publisher'),
-            pages: QueryParser::posiviteInt($input, 'pages'),
+            pages: QueryParser::positiveInt($input, 'pages'),
             isbn: QueryParser::optionalString($input, 'isbn'),
             contentIds: self::parseContentIds($input)
         );
@@ -78,7 +43,7 @@ final readonly class BookForm extends PublicationForm
 
     private static function parseContentIds(array $body): array
     {
-        $raw = $body['content_ids'] ?? [];
+        $raw = $body['contentIds'] ?? [];
 
         if (!is_array($raw)){
             $raw = [$raw];
