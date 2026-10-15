@@ -6,6 +6,7 @@ namespace App\Validators\Auth;
 use App\Validators\Validator;
 use App\Lib\I18n\Translator;
 use App\Models\Errors\ErrorBag;
+use App\Lib\Settings\Settings;
 
 /**
  * @extends Validator<LoginForm>

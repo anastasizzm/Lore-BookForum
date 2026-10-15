@@ -5,6 +5,7 @@ namespace App\Validators;
 
 use App\Models\Errors\ErrorBag;
 use App\Lib\I18n\Translator;
+use App\Lib\Settings\Settings;
 
 /**
  * @template T

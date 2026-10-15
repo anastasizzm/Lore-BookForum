@@ -46,7 +46,7 @@ return function(Router $router)
     
 
     // Files
-    $router->post('/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);
-    $router->get('/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
-    $router->get('/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
+    $router->post('/api/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);
+    $router->get('/api/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
+    $router->get('/api/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
 };

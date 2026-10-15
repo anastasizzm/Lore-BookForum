@@ -41,6 +41,9 @@ use App\Services\Configuration\DatabaseUnitOfWork;
 use App\Services\Mail\Mailer;
 use App\Services\Mail\SmtpMailer;
 
+use App\Storage\FileStorage;
+use App\Storage\LocalFileStorage;
+
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\Users\ProfilesRepository;
 
@@ -60,9 +63,9 @@ $container->instance(Settings::class, $settings);
 
 //Basics
 $container->instance(PolicyRegistry::class, $registry);
-$container->instance(Jwt::class, new Jwt($settings));
+$container->instance(Jwt::class, new Jwt($settings->jwt));
 $container->instance(Database::class, new Database($settings));
-$container->instance(RedisClient::class, new RedisClient($settings));
+$container->instance(RedisClient::class, new RedisClient($settings->redis));
 $container->instance(RouteRegistry::class, new RouteRegistry());
 $container->singleton(UrlGenerator::class, fn(Container $c) => new RouteUrlGenerator(
     $c->get(RouteRegistry::class),
@@ -76,6 +79,7 @@ $container->instance(Translator::class, new Translator(
 
 //Services
 $container->instance(CookieService::class, new CookieService(secureByDefault: false));
+$container->instance(FileStorage::class, new LocalFileStorage($settings->storage));
 $container->singleton(AuthorizationService::class, fn(Container $c) => new AuthorizationService($c->get(PolicyRegistry::class), $c));
 $container->singleton(UnitOfWork::class, fn(Container $c) => new DatabaseUnitOfWork($c->get(Database::class)));
 $container->singleton(Mailer::class, fn(Container $c) => new SmtpMailer($settings));

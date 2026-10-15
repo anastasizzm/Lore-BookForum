@@ -9,7 +9,6 @@ use App\Services\Storage\FileService;
 
 use App\Forms\Publications\BookForm;
 use App\Validators\Publications\BookFormValidator;
-use App\Validators\Publications\BookFilesValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
@@ -42,7 +41,6 @@ final class BooksService
         private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
-        private readonly BookFilesValidator $filesValidator,
         private readonly FileService $fileService
     ){}
 

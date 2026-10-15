@@ -11,9 +11,10 @@ use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\FilesValidator;
 use App\Models\Files\File;
-use App\Models\Files\Enums\FileCategory;
-use App\Models\Files\Enums\FileStatus;
+use App\Models\Enums\FileCategory;
+use App\Models\Enums\FileStatus;
 use App\Models\Files\UploadedFile;
+use App\Models\Errors\ErrorBag;
 use App\Models\Uuid;
 
 use PDO;
@@ -56,7 +57,6 @@ final class FileService
 
         $stored = $this->storage->store(
             localPath: $tmpPath,
-            category:  $category,
             uuid:      $uuid->toString(),
             extension: $ext,
             mimeType:  $mime,
@@ -64,18 +64,18 @@ final class FileService
 
         try {
             return $this->uow->transactional(function (PDO $pdo) use (
-                $uuid, $stored, $category, $upload, $uploadedBy
+                $uuid, $stored, $category, $upload, $creatorId, $status, $ext
             ): File {
                 $this->files->create(
                     id: $uuid,
                     path: $stored->path,
                     category: $category,
+                    status: $status,
                     originalName: $upload->originalName,
                     format: $ext,
                     mimeType: $stored->mimeType,
                     size: $stored->size,
-                    uploadedBy: $uploadedBy,
-                    status: $status
+                    uploadedBy: $creatorId,
                 );
 
                 return new File(
@@ -83,18 +83,23 @@ final class FileService
                     path: $stored->path,
                     category: $category,
                     originalName: $upload->originalName,
+                    status: $status,
                     format: $ext,
                     mimeType: $stored->mimeType,
                     size: $stored->size,
-                    uploadedBy: $uploadedBy,
+                    uploadedBy: $creatorId,
                     createdAt: new \DateTimeImmutable(),
-                    status: $status
                 );
             });
         } catch (\Throwable $e) {
             $this->storage->delete($stored->path);
             throw $e;
         }
+    }
+
+    public function retrieve(Uuid $fileId) : ?File 
+    {
+        return $this->files->findById($fileId);
     }
 
     public function delete(Uuid $id): void

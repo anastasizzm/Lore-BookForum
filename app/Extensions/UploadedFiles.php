@@ -26,7 +26,7 @@ final class UploadedFiles
             return null;
         }
 
-        return UploadedFile::fromArray($first);
+        return UploadedFile::fromInput($first);
     }
 
     public static function many(array $files, string $field): array
@@ -48,7 +48,7 @@ final class UploadedFiles
                 continue;
             }
 
-            $result[] = UploadedFile::fromArray($upload);
+            $result[] = UploadedFile::fromInput($upload);
         }
 
         return $result;

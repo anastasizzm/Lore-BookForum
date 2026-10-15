@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use App\Models\Uuid;
 use App\Models\Enums\FileCategory;
 use App\Models\Enums\FileStatus;
+use App\Models\Dto;
 
 final readonly class File extends Dto
 {

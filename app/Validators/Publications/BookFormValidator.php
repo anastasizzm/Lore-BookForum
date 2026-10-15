@@ -6,6 +6,7 @@ namespace App\Validators\Publications;
 use App\Validators\Publications\PublicationFormValidator;
 use App\Lib\I18n\Translator;
 use App\Models\Errors\ErrorBag;
+use App\Lib\Settings\Settings;
 
 /**
  * @extends Validator<BookForm>
@@ -34,6 +35,11 @@ final class BookFormValidator extends PublicationFormValidator
         $isbn = $item->isbn;
         if ($isbn !== NULL && !preg_match(self::ISBN_REG_EX, $isbn, $m)){
             $bag->add('isbn', [$this->translator->t('errors.books.isbn_format')]);
+            $ok = false;
+        }
+
+        if (count($item->contentIds) < 1){
+            $bag->add('contentIds', [$this->translator->t('errors.common.min_len', [":value" => 1])]);
             $ok = false;
         }
 

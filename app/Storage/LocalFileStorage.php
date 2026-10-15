@@ -6,6 +6,7 @@ namespace App\Storage;
 use RuntimeException;
 use App\Models\Files\StoredFile;
 use App\Lib\Settings\StorageSettings;
+use App\Models\Enums\FileCategory;
 
 final class LocalFileStorage implements FileStorage
 {
@@ -24,13 +25,16 @@ final class LocalFileStorage implements FileStorage
 
     public function store(
         string $localPath,
-        string $category,
         string $uuid,
         string $extension,
         string $mimeType,
     ): StoredFile {
         $relative = $this->buildPath($uuid, $extension);
         $absolute = $this->absolutePath($relative);
+        $dir = dirname($absolute); 
+
+        if(!is_dir($dir) && !mkdir($dir, self::PERMISSIONS, true) && !is_dir($dir))
+            throw new RuntimeException("Cannot create dir: $absolute");
 
         if (!move_uploaded_file($localPath, $absolute)) {
             throw new RuntimeException("Cannot move file to: $absolute");

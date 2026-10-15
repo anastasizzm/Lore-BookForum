@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Storage\Repositories;
+namespace App\Repositories\Storage;
 
 use App\Repositories\Repository;
 
 use App\Models\Enums\FileCategory;
 use App\Models\Enums\FileStatus;
-use App\Lib\Database;
+use App\Lib\Data\Database;
 use App\Models\Uuid;
 use App\Models\Files\File;
 
@@ -26,12 +26,12 @@ final class FilesRepository extends Repository
         Uuid $id,
         string $path,
         FileCategory $category,
+        FileStatus $status,
         string $originalName,
         string $format,
         string $mimeType,
         int $size,
         int $uploadedBy,
-        FileStatus $status
     ): void {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO files (id, path, category, status, original_name, format, mime_type, size_bytes, uploaded_by)
@@ -41,8 +41,8 @@ final class FilesRepository extends Repository
         $stmt->execute([
             ':id' => $id->toString(),
             ':path' => $path,
-            ':status' => $status,
-            ':category' => $category,
+            ':status' => $status->value,
+            ':category' => $category->value,
             ':name' => $originalName,
             ':format' => $format,
             ':mimeType' => $mimeType,

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Files;
 
+use App\Controllers\Controller;
+
 use App\Http\HttpContext;
 use App\Http\HttpException;
 use App\Http\Response;
@@ -18,7 +20,7 @@ use App\Models\Enums\FileCategory;
 
 use App\Extensions\Parsers\RouteParamParser;
 
-use App\Repositories\Storage\FilesRepository;
+use App\Services\Storage\FileService;
 use App\Storage\FileStorage;
 
 use App\Lib\Settings\StorageSettings;
@@ -26,7 +28,7 @@ use App\Lib\I18n\Translator;
 use App\Constants;
 use App\ErrorCodes;
 
-final class FileController
+final class FileController extends Controller
 {
     public function __construct(
         private readonly FileService $service,
@@ -45,21 +47,21 @@ final class FileController
         if ($category === null)
             return $this->jsonError(new ValidationError(['category' => [$this->translator->t('errors.common.required')]]), 422);
 
-        $upload = UploadedFiles::one($ctx->request->files, 'file');
+        $upload = UploadedFiles::one($context->request->files, 'file');
         $file = $this->service->storePending($upload, $category, $userId);
 
         return $this->jsonCreatedId($file->id);
     }
 
-    public function download(HttpContext $ctx): Response
+    public function download(HttpContext $ctx, string $fileId): Response
     {
-        $file = $this->resolveFile($ctx);
+        $file = $this->resolveFile($ctx, $fileId);
         return $this->fileResponse($file, disposition: 'attachment');
     }
 
-    public function preview(HttpContext $ctx): Response
+    public function preview(HttpContext $ctx, string $fileId): Response
     {
-        $file = $this->resolveFile($ctx);
+        $file = $this->resolveFile($ctx, $fileId);
         return $this->fileResponse($file, disposition: 'inline');
     }
 
@@ -68,7 +70,7 @@ final class FileController
     private function resolveFile(HttpContext $ctx, string $fileId): File
     {
         $fileId = RouteParamParser::uuid(['u' => $fileId], 'u');
-        $file = $this->files->findById($fileId);
+        $file = $this->service->retrieve($fileId);
 
         if ($file === null) {
             throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
@@ -122,7 +124,7 @@ final class FileController
 
     private function buildCacheControl(File $file): string
     {
-        if (in_array($file->category, self::PUBLIC_CATEGORIES, true)) {
+        if ($this->settings->fileIsPublic($file->category)) {
             return 'public, max-age=31536000, immutable';
         }
 
