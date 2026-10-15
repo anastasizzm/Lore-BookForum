@@ -197,5 +197,5 @@ final class BooksService
 
             throw $this->translator->translate($e);
         }
-    }   
+    }
 }
