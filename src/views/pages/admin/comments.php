@@ -72,7 +72,7 @@ $comments = [
               <!-- TODO(api): удаление/скрытие комментария — API админки ещё нет,
                    проверок прав не добавляем (имена разрешений ждём от бэка). -->
               <button type="button"
-                      class="btn btn--secondary"
+                      class="btn btn--danger"
                       data-admin-delete
                       data-comment-id="<?= $commentRow['id'] ?>">
                 <?= $tr('common.admin.action_delete') ?>

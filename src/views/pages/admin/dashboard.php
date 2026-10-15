@@ -25,8 +25,9 @@ $cards = [
     ['href' => '/pages/test?page=admin/books',     'title' => $tr('common.admin.card_books'),     'hint' => $tr('common.admin.card_books_hint'),     'count' => '—'],
     ['href' => '/pages/test?page=admin/articles',  'title' => $tr('common.admin.card_articles'),  'hint' => $tr('common.admin.card_articles_hint'),  'count' => '—'],
     ['href' => '/pages/test?page=admin/comments',  'title' => $tr('common.admin.card_comments'),  'hint' => $tr('common.admin.card_comments_hint'),  'count' => '—'],
-    // Раздела «Reports» сегодня нет (роута и вида) — карточка-заглушка.
-    ['href' => '#', 'title' => $tr('common.admin.card_reports'), 'hint' => $tr('common.admin.card_reports_hint'), 'count' => '—', 'soon' => true],
+    // Раздела «Reports» сегодня нет (роута и вида) — карточка-заглушка:
+    // рисуем div, а не ссылку с «#»: клик не должен ничего делать.
+    ['href' => null, 'title' => $tr('common.admin.card_reports'), 'hint' => $tr('common.admin.card_reports_hint'), 'count' => '—', 'soon' => true],
 ];
 ?>
 
@@ -48,19 +49,25 @@ $cards = [
 <p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
 
 <div class="admin-grid">
-  <?php foreach ($cards as $card): ?>
-    <a class="admin-card<?= !empty($card['soon']) ? ' admin-card--soon' : '' ?>"
-       href="<?= $view->e($card['href']) ?>"
-       <?= !empty($card['soon']) ? 'aria-disabled="true"' : '' ?>>
+  <?php foreach ($cards as $card): $soon = !empty($card['soon']); ?>
+    <?php if ($soon): ?>
+      <div class="admin-card admin-card--soon">
+    <?php else: ?>
+      <a class="admin-card" href="<?= $view->e((string) $card['href']) ?>">
+    <?php endif; ?>
+
       <div class="admin-card__head">
         <h2 class="admin-card__title"><?= $card['title'] ?></h2>
         <span class="admin-card__count"><?= $view->e($card['count']) ?></span>
       </div>
       <p class="admin-card__hint"><?= $card['hint'] ?></p>
-      <?php if (!empty($card['soon'])): ?>
+
+      <?php if ($soon): ?>
         <span class="admin-badge admin-badge--muted"><?= $tr('common.admin.coming_soon') ?></span>
-      <?php endif; ?>
-    </a>
+      </div>
+    <?php else: ?>
+      </a>
+    <?php endif; ?>
   <?php endforeach; ?>
 </div>
 

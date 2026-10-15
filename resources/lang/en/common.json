@@ -424,10 +424,12 @@
         "cover_preview_alt": "Cover preview",
         "cover_placeholder": "No cover selected",
         "cover_hint": "JPEG/PNG/WebP, up to 5 MB",
+        "cover_invalid": "Cover must be a JPEG, PNG or WebP file up to 5 MB.",
         "cover_remove": "Remove cover",
         "file_choose": "Choose file…",
         "file_none": "No file chosen",
         "cancel": "Cancel",
-        "submit": "Publish"
+        "submit": "Publish",
+        "route_missing": "Saving is not available yet — the server route is being prepared."
     }
 }

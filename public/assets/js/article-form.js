@@ -90,7 +90,7 @@
       if (!file) { reset(); return; }
 
       if (COVER_MIMES.indexOf(file.type) === -1 || file.size > COVER_MAX_BYTES) {
-        notify(t('common.articleform.cover_hint'));
+        notify(t('common.articleform.cover_invalid'));
         reset();
         return;
       }
@@ -260,6 +260,7 @@
       if (action === '' || action === '#') {
         e.preventDefault();
         console.warn('[article-form] POST skipped: articles.store route is not added yet');
+        notify(t('common.articleform.route_missing'), 'warning');
         return;
       }
 

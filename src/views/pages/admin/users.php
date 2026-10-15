@@ -78,7 +78,7 @@ $users = [
               <?= $userRow['role'] === 'admin' ? $tr('common.admin.role_admin') : $tr('common.admin.role_user') ?>
             </span>
           </td>
-          <td>
+          <td data-status-cell>
             <?php if ($userRow['status'] === 'blocked'): ?>
               <span class="admin-badge admin-badge--danger"><?= $tr('common.admin.status_blocked') ?></span>
             <?php else: ?>
@@ -87,8 +87,9 @@ $users = [
           </td>
           <td>
             <div class="admin-actions">
-              <!-- TODO(роуты): url('users.profile', ['userId' => $userRow['id']]) -->
-              <a class="btn btn--secondary" href="/pages/test?page=admin/users"><?= $tr('common.admin.action_view') ?></a>
+              <!-- Профиль пользователя: роут users.profile уже есть в
+                   config/routes.php (?lang= не сохраняем — как в card-feed). -->
+              <a class="btn btn--secondary" href="/users/<?= $userRow['id'] ?>"><?= $tr('common.admin.action_view') ?></a>
 
               <!-- ConfirmModal.confirm() — см. public/assets/js/admin.js.
                    TODO(api): fetch PATCH /api/admin/users/{id} (роута ещё нет). -->

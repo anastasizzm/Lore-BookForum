@@ -50,7 +50,9 @@
       console.log('Block user', id, name);
 
       var row = btn.closest('tr');
-      var statusCell = row && row.children[4];
+      // Ячейка статуса помечена в разметке (users.php), а не по индексу:
+      // лишняя колонка в таблице не должна ломать обновление.
+      var statusCell = row && row.querySelector('[data-status-cell]');
       if (statusCell) {
         statusCell.innerHTML =
           '<span class="admin-badge admin-badge--danger">' +

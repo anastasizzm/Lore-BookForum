@@ -38,6 +38,14 @@
   width: 100%;
 }
 
+/* Переключение типа статьи прячет раздел через hidden (см. article-form.js),
+   а display:flex/grid выше по специфичности, чем UA-стиль [hidden].
+   Глобальное [hidden]{display:none!important} в base.css действует только
+   с 1024px — поэтому для <1024px нужен свой рул. */
+.article-form [hidden] {
+  display: none !important;
+}
+
 .article-form .form-field label {
   font-size: var(--fs-small);
   font-weight: var(--fw-medium);

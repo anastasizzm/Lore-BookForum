@@ -424,10 +424,12 @@
         "cover_preview_alt": "Предпросмотр обложки",
         "cover_placeholder": "Обложка не выбрана",
         "cover_hint": "JPEG/PNG/WebP, до 5 МБ",
+        "cover_invalid": "Обложка должна быть файлом JPEG, PNG или WebP не больше 5 МБ.",
         "cover_remove": "Убрать обложку",
         "file_choose": "Выбрать файл…",
         "file_none": "Файл не выбран",
         "cancel": "Отмена",
-        "submit": "Опубликовать"
+        "submit": "Опубликовать",
+        "route_missing": "Сохранение пока недоступно — серверный роут готовится."
     }
 }
