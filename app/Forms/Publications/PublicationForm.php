@@ -5,6 +5,7 @@ namespace App\Forms\Publications;
 
 use App\Forms\Form;
 use App\Extensions\Parsers\QueryParser;
+use App\Models\Uuid;
 
 final readonly class PublicationModel
 {
@@ -13,6 +14,7 @@ final readonly class PublicationModel
         public string $description,
         public string $authorNotes,
         public int $genreId,
+        public ?Uuid $iconId
     ){}
 
     public static function fromForm(PublicationForm $form) : self 
@@ -21,7 +23,8 @@ final readonly class PublicationModel
             title: $form->title,
             description: $form->description,
             authorNotes: $form->authorNotes,
-            genreId: $form->genreId
+            genreId: $form->genreId,
+            iconId: $form->iconId
         );
     }
 }
@@ -33,6 +36,7 @@ final readonly class PublicationForm implements Form
         public string $description,
         public string $authorNotes,
         public int $genreId,
+        public ?Uuid $iconId
     ){}
 
     public static function fromInput(array $input) : self
@@ -42,6 +46,7 @@ final readonly class PublicationForm implements Form
             description: QueryParser::string($input, 'description'),
             authorNotes: QueryParser::string($input, 'authorNotes'),
             genreId: QueryParser::positiveInt($input, 'genreId'),
+            iconId: QueryParser::optionalUuid($input, 'iconId')
         );
     }
 }

@@ -5,6 +5,7 @@ namespace App\Forms\Publications;
 
 use App\Forms\Publications\PublicationForm;
 use App\Extensions\Parsers\QueryParser;
+use App\Models\Uuid;
 
 final readonly class BookModel extends PublicationModel
 {
@@ -13,12 +14,14 @@ final readonly class BookModel extends PublicationModel
         string $description,
         string $authorNotes,
         int $genreId,
+        ?Uuid $iconId,
         public int $categoryId,
         public string $publisher,
         public int $pages,
-        public ?string $isbn
+        public ?string $isbn,
+        public array $contentIds
     ){
-        parent::__construct($title, $description, $authorNotes, $genreId);
+        parent::__construct($title, $description, $authorNotes, $genreId, $iconId);
     }
 
     public static function fromForm(BookForm $form) : self 
@@ -29,10 +32,12 @@ final readonly class BookModel extends PublicationModel
             description: $parent->description,
             authorNotes: $parent->authorNotes,
             genreId: $parent->genreId,
+            iconId: $parent->iconId,
             categoryId: $form->categoryId,
             publisher: $form->publisher,
             pages: $form->pages,
             isbn: $form->isbn,
+            contentIds: $form->contentIds
         );
     }
 }
@@ -44,12 +49,14 @@ final readonly class BookForm extends PublicationForm
         string $description,
         string $authorNotes,
         int $genreId,
+        ?Uuid $iconId,
         public int $categoryId,
         public string $publisher,
         public int $pages,
-        public ?string $isbn
+        public ?string $isbn,
+        public array $contentIds
     ){
-        parent::__construct($title, $description, $authorNotes, $genreId);
+        parent::__construct($title, $description, $authorNotes, $genreId, $iconId);
     }
 
     public static function fromInput(array $input) : self
@@ -60,10 +67,45 @@ final readonly class BookForm extends PublicationForm
             description: $parent->description,
             authorNotes: $parent->authorNotes,
             genreId: $parent->genreId,
+            iconId: $parent->iconId,
             categoryId: QueryParser::positiveInt($input, 'categoryId'),
             publisher: QueryParser::string($input, 'publisher'),
             pages: QueryParser::posiviteInt($input, 'pages'),
-            isbn: QueryParser::optionalString($input, 'isbn')
+            isbn: QueryParser::optionalString($input, 'isbn'),
+            contentIds: self::parseContentIds($input)
         );
+    }
+
+    private static function parseContentIds(array $body): array
+    {
+        $raw = $body['content_ids'] ?? [];
+
+        if (!is_array($raw)){
+            $raw = [$raw];
+        }
+
+        $result = [];
+        $seen   = [];
+
+        foreach ($raw as $value) {
+            if (!is_string($value) || $value === '') {
+                continue;
+            }
+
+            try {
+                $uuid = Uuid::fromString($value);
+            } catch (InvalidArgumentException) {
+                continue;
+            }
+
+            $key = $uuid->toString();
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $result[] = $uuid;
+        }
+
+        return $result;
     }
 }

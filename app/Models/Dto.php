@@ -5,7 +5,9 @@ namespace App\Models;
 
 use DateTimeImmutable;
 use RuntimeException;
+use UnitEnum;
 use App\Models\Uuid;
+use App\Extensions\EnumExtensions;
 
 abstract readonly class Dto
 {
@@ -80,6 +82,58 @@ abstract readonly class Dto
         $v = self::strN($row, $key);
 
         return $v === null ? null : Uuid::fromString($v);
+    }
+
+    /**
+     * @template T of UnitEnum
+     * @param  array<string, mixed> $row
+     * @param  class-string<T>      $enumClass
+     * @return T
+     */
+    protected static function enum(
+        array $row,
+        string $key,
+        string $enumClass,
+    ): UnitEnum {
+        $value = self::str($row, $key);
+
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
+
+        if ($enum === null) {
+            throw new RuntimeException(
+                "Cannot resolve enum '{$enumClass}' from value '{$value}'"
+            );
+        }
+
+        return $enum;
+    }
+
+    /**
+     * @template T of UnitEnum
+     * @param  array<string, mixed> $row
+     * @param  class-string<T>      $enumClass
+     * @return T|null
+     */
+    protected static function enumN(
+        array $row,
+        string $key,
+        string $enumClass,
+    ): ?UnitEnum {
+        $value = self::strN($row, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
+
+        if ($enum === null) {
+            throw new RuntimeException(
+                "Cannot resolve enum '{$enumClass}' from value '{$value}'"
+            );
+        }
+
+        return $enum;
     }
 
     private static function toBool(mixed $value): bool

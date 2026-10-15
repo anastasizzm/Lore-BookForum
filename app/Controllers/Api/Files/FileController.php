@@ -6,8 +6,13 @@ namespace App\Controllers\Api\Files;
 use App\Http\HttpContext;
 use App\Http\HttpException;
 use App\Http\Response;
+use App\Extensions\UploadedFiles;
+use App\Extensions\EnumExtensions;
+use App\Exceptions\NotFoundException;
 
 use App\Models\Files\File;
+use App\Models\Errors\Error;
+use App\Models\Errors\ValidationError;
 use App\Models\Uuid;
 use App\Models\Enums\FileCategory;
 
@@ -23,16 +28,28 @@ use App\ErrorCodes;
 
 final class FileController
 {
-    private const array PUBLIC_CATEGORIES = [
-        FileCategory::Cover
-    ];
-
     public function __construct(
-        private readonly FilesRepository $files,
-        private readonly FileStorage $storage,
+        private readonly FileService $service,
         private readonly StorageSettings $settings,
         private readonly Translator $translator
     ) {}
+
+    public function upload(HttpContext $context): Response
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $body = $context->request->body();
+        $category = EnumExtensions::tryResolve(FileCategory::class, $body['category']);
+        if ($category === null)
+            return $this->jsonError(new ValidationError(['category' => [$this->translator->t('errors.common.required')]]), 422);
+
+        $upload = UploadedFiles::one($ctx->request->files, 'file');
+        $file = $this->service->storePending($upload, $category, $userId);
+
+        return $this->jsonCreatedId($file->id);
+    }
 
     public function download(HttpContext $ctx): Response
     {
@@ -80,7 +97,7 @@ final class FileController
 
     private function authorize(HttpContext $ctx, File $file): void
     {
-        if (in_array($file->category, self::PUBLIC_CATEGORIES, true)) {
+        if ($this->settings->fileIsPublic($file->category)) {
             return;
         }
 
@@ -111,7 +128,6 @@ final class FileController
 
         return 'private, max-age=3600';
     }
-
 
     private function phpFallback(File $file, array $headers): Response
     {

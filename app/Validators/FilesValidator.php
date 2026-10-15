@@ -6,27 +6,37 @@ namespace App\Validators;
 use App\Models\Files\UploadedFile;
 use App\Validators\Validator;
 use App\Lib\I18n\Translator;
+use App\Lib\Settings\StorageSettings;
 use App\Models\Errors\ErrorBag;
+use App\Models\Enums\FileCategory;
 
 final class FilesValidator
 {
     public function __construct(
-        private readonly Settings $settings,
+        private readonly StorageSettings $settings,
         private readonly Translator $translator,
     ){}
 
-    public function validateOneFile(UploadedFile $file, string $category, string $label, ErrorBag $bag) : bool
+    public function validateOneFile(
+        UploadedFile $file, 
+        FileCategory $category, 
+        string $label, 
+        ErrorBag $bag) : bool
     {
-        $allowedMimes = array_keys($this->settings->allowed[$category] ?? []);
-        $maxSize = $this->settings->maxSizes[$category] ?? 0;
+        $allowedMimes = array_keys($this->settings->fileAllowedMimes($category));
+        $maxSize = $this->settings->fileMaxSize($category);
 
         return $this->validateFile($file, $allowedMimes, $maxSize, $label, $bag);
     }
 
-    public function validateManyFiles(array $files, string $category, string $label, ErrorBag $bag) : bool 
+    public function validateManyFiles(
+        array $files, 
+        FileCategory $category, 
+        string $label, 
+        ErrorBag $bag) : bool 
     {
-        $allowedMimes = array_keys($this->settings->allowed[$category] ?? []);
-        $maxSize = $this->settings->maxSizes[$category] ?? 0;
+        $allowedMimes = array_keys($this->settings->fileAllowedMimes($category));
+        $maxSize = $this->settings->fileMaxSize($category);
 
         $ok = true;
         for($i = 0; $i < count($files); $i++){

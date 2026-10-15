@@ -9,7 +9,10 @@ use App\Storage\FileStorage;
 use App\Lib\Settings\StorageSettings;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
+use App\Validators\FilesValidator;
 use App\Models\Files\File;
+use App\Models\Files\Enums\FileCategory;
+use App\Models\Files\Enums\FileStatus;
 use App\Models\Files\UploadedFile;
 use App\Models\Uuid;
 
@@ -22,18 +25,33 @@ final class FileService
         private readonly StorageSettings $settings,
         private readonly FileStorage $storage,
         private readonly FilesRepository $files,
+        private readonly FilesValidator $validator,
         private readonly UnitOfWork $uow,
         private readonly Translator $translator
     ) {}
 
+    public function storePending(
+        UploadedFile $upload,
+        FileCategory $category,
+        int $creatorId
+    ) : File 
+    {
+        return $this->store($upload, $category, $creatorId, FileStatus::Pending);
+    }
+
     public function store(
         UploadedFile $upload,
-        string $category,
-        int $uploadedBy
+        FileCategory $category,
+        int $creatorId,
+        FileStatus $status = FileStatus::Active
     ): File {
+        $bag = new ErrorBag();
+        $this->validator->validateOneFile($upload, $category, 'file', $bag);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
         $tmpPath = $upload->tmpPath;
         $mime = $upload->mime ?? $this->detectMime($tmpPath, $category);
-        $ext = $this->settings->allowed[$category][$mime];
+        $ext = $this->settings->fileAllowedMimes($category)[$mime];
         $uuid = Uuid::generate();
 
         $stored = $this->storage->store(
@@ -57,6 +75,7 @@ final class FileService
                     mimeType: $stored->mimeType,
                     size: $stored->size,
                     uploadedBy: $uploadedBy,
+                    status: $status
                 );
 
                 return new File(
@@ -69,6 +88,7 @@ final class FileService
                     size: $stored->size,
                     uploadedBy: $uploadedBy,
                     createdAt: new \DateTimeImmutable(),
+                    status: $status
                 );
             });
         } catch (\Throwable $e) {
@@ -99,8 +119,9 @@ final class FileService
     private function detectMime(string $path, string $category): string
     {
         $mime = mime_content_type($path);
+        $allowed = $this->settings->fileAllowedMimes($category);
 
-        if ($mime === false || !isset($this->settings->allowed[$category][$mime])) {
+        if ($mime === false || !isset($allowed[$mime])) {
             throw new ValidationException([
                 'file' => [$this->translator->t('errors.files.file_format', [":format" => $mime ?: 'unknown'])]
             ]);

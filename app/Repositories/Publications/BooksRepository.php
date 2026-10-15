@@ -14,6 +14,7 @@ use App\Lib\I18n\Translator;
 use App\Models\Uuid;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Enums\FileCategory;
 use App\Forms\Publications\BookModel;
 use App\Models\Criterias\Publications\BooksCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
@@ -141,7 +142,6 @@ final class BooksRepository extends PublicationsRepository
     public function create(
         BookModel $model,
         int $creatorId,
-        ?Uuid $iconId = NULL
     ) : int 
     {
         return $this->uow->translactional(function (PDO $pdo) use ($model, $iconId) : int {
@@ -151,7 +151,7 @@ final class BooksRepository extends PublicationsRepository
                 $model->authorNotes,
                 $model->genreId,
                 $creatorId,
-                $iconId
+                $model->iconId
             );
             $this->insertBook(
                 $pubId,
@@ -204,7 +204,35 @@ final class BooksRepository extends PublicationsRepository
         $sql = 'INSERT INTO books_content (book_id, content_id, format)
         VALUES (:bookId, :contentId, :format)';
 
-        $stmt = $this->execute($sql, $values);
+        $this->execute($sql, $values);
+    }
+
+    public function addPendingContents(int $bookId, array $contentIds) : void 
+    {
+        if ($contentsIds === []) return;
+
+        $builder = ScriptBuilder::withTable("files");
+        $builder->addSelect(":bookId, id, format", [':bookId' => ScriptParam::asInt($bookId)]);
+
+        $contentIdsParsed = array_map(function($id) : string {
+            if ($id instanceof Uuid) return $id->toString();
+            else return (string)$id;
+        }, $contentIds);
+
+        $builder->addWith("contents", "SELECT content_id FROM unnest(:contentIds::uuid[]) AS t(content_id)", true, [":contentIds" => $contentIdsParsed]);
+        $builder->addWhere("id IN (SELECT content_id FROM contents)")->addWhere("is_active")->addWhere("category = :category", [":category" => FileCategory::Book->value]);
+    
+        $sql = "INSERT INTO books_content (book_id, content_id, format)\n" . $builder->build() . "\nRETURNING content_id";
+        $stmt = $this->execute($sql, $builder->getParams());
+
+        $pendingFilesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $this->activateFiles($pendingFilesIds);
+    }
+
+    private function activateFiles(array $fileIds) : void 
+    {
+        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id IN (SELECT id FROM unnest(:fileIds::uuid[]) AS t(id)");
+        $stmt->execute([':fileIds' => $fileIds]);
     }
 
     public function removeContent(int $bookId, Uuid $contentId) : void

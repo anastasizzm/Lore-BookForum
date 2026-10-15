@@ -32,7 +32,6 @@ use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
 
-
 use PDO;
 
 final class BooksService
@@ -152,49 +151,20 @@ final class BooksService
 
     public function create(
         BookForm $form, 
-        BookFiles $files,
         int $creatorId
     ) : int
     {
         $bag = $this->validator->validateOne($form);
-        $this->filesValidator->validate($files, $bag); 
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
         
         $model = BookModel::fromForm($form);
-
-        $iconId = NULL;
-        if ($files->icon !== NULL){
-            $iconId = $this->fileService->store($files->icon, FileCategory::Cover->value, $creatorId)->id;
-        }
-
-        $contentFiles = [];
-        foreach($files->contents as $content){
-            $contentFiles[] = $this->fileService->store($content, FileCategory::Book->value, $creatorId);
-        }
-
         try{
-            $bookId = $this->booksRepo->create($model, $authorId, $iconId);
-
-            foreach($contentFiles as $contentFile){
-                $this->booksRepo->addContent($bookId, $contentFile->id, $contentFiles->format);
-            }
-
+            $bookId = $this->booksRepo->create($model, $creatorId);
+            $this->booksRepo->addPendingContents($bookId, $form->contentIds);
+    
             return $bookId;
         }
         catch(\PDOException $e){
-            $deleteFileFunc = function($fileId) {
-                try {
-                    $this->fileService->delete($fileId);
-                } catch (\Throwable $cleanupError) {
-                    error_log("Cleanup failed for file {$fileId}: {$cleanupError->getMessage()}");
-                }
-            };
-
-            if ($iconId !== NULL) $deleteFileFunc($iconId);
-            for($i = 0; $i < count($contentFiles); $i++){
-                $deleteFileFunc($contentFiles[$i]->id);
-            }
-
             throw $this->translator->translate($e);
         }
     }

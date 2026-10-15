@@ -70,24 +70,52 @@ return [
 
     'storage' => [
         'path' => $baseDir . '/storage/uploads',
-        'allowed' => [
+        'categories' => [
+            'avatar' => [
+                'max_size' => 2 * 1024 * 1024,   // 2 МБ
+                'mimes'    => [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ],
+                'public' => true,
+            ],
+
             'cover' => [
-                'image/jpeg' => 'jpg',
-                'image/png'  => 'png',
-                'image/webp' => 'webp',
+                'max_size' => 5 * 1024 * 1024,   // 5 МБ
+                'mimes'    => [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ],
+                'public' => true,
             ],
+
             'book' => [
-                'application/pdf'      => 'pdf',
-                'application/epub+zip' => 'epub',
-                'application/x-mobipocket-ebook' => 'mobi',
-                'application/x-fictionbook+xml'  => 'fb2',
+                'max_size' => 100 * 1024 * 1024, // 100 МБ
+                'mimes'    => [
+                    'application/pdf'                => 'pdf',
+                    'application/epub+zip'           => 'epub',
+                    'application/x-mobipocket-ebook' => 'mobi',
+                    'application/x-fictionbook+xml'  => 'fb2',
+                    'application/vnd.amazon.ebook'   => 'azw',
+                ],
+                'public' => false,
+            ],
+
+            'attachment' => [
+                'max_size' => 20 * 1024 * 1024,  // 20 МБ
+                'mimes'    => [
+                    'application/pdf' => 'pdf',
+                    'application/zip' => 'zip',
+                    'text/plain'      => 'txt',
+                    'image/jpeg'      => 'jpg',
+                    'image/png'       => 'png',
+                ],
+                'public' => false,
             ],
         ],
-        'max_sizes' => [
-            'cover'  => 5 * 1024 * 1024, // 5 МБ
-            'book'   => 100 * 1024 * 1024, // 100 МБ
-        ],
-        'internal_url_prefix' => '/files',
+        'internal_url_prefix' => '/internal-files',
         'use_x_accel' => true
     ]
 ];
