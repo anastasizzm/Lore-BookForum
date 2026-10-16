@@ -62,4 +62,18 @@ final class BooksController extends Controller
         $this->booksService->deleteSave($userId, $bookId);
         return $this->jsonEmpty(204);
     }
+
+    public function create(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $formData = $context->request->body();
+        $bookId = $this->booksService->create(
+            BookForm::fromInput($formData),
+            $userId
+        );
+        return $this->jsonCreatedId($bookId);
+    }
 }
