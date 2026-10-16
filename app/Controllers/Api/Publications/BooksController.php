@@ -79,38 +79,38 @@ final class BooksController extends Controller
         return $this->jsonCreatedId($bookId);
     }
 
-    public function upsert(HttpContext $ctx, string $bookId): Response
+    public function upsert(HttpContext $context, string $bookId)
     {
         $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
             
-        $formData = $ctx->request->body();
+        $formData = $context->request->body();
         $this->booksService->saveProgress($userId, $bookId, BookProgressForm::fromInput($formData));
         return $this->jsonEmpty();
     }
 
-    public function finish(HttpContext $ctx): Response
+    public function finish(HttpContext $context, string $bookId)
     {
         $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $format = QueryParser::enum($ctx->request->body(), 'format', BookFormat::class);
+        $format = QueryParser::enum($context->request->body(), 'format', BookFormat::class);
         $this->booksService->finishReading($userId, $bookId, $format);
         return $this->jsonEmpty();
     }
 
-    public function reset(HttpContext $ctx): Response
+    public function reset(HttpContext $context, string $bookId)
     {
         $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $format = QueryParser::optionalEnum($ctx->request->body(), 'format', BookFormat::class);
+        $format = QueryParser::optionalEnum($context->request->body(), 'format', BookFormat::class);
         $this->booksService->resetProgress($userId, bookId, $format);
         return $this->jsonEmpty();
     }

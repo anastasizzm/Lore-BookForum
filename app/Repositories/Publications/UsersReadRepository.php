@@ -84,7 +84,7 @@ final class UsersReadRepository extends Repository
             ':publication_id' => $publicationId,
             ':format'         => $format->value,
             ':position'       => json_encode($position, JSON_THROW_ON_ERROR),
-            ':is_finished'    => $isFinished,
+            ':is_finished'    => $isFinished ? "1" : "0",
         ]);
     }
 

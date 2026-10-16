@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/books/{{bookId}}/progress/finish"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r\n    \"format\": \"pdf\"\r\n}"
+order: 13000

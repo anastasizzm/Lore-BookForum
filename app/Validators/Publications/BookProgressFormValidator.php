@@ -5,6 +5,7 @@ namespace App\Validators\Publications;
 
 use App\Validators\Validator;
 use App\Lib\I18n\Translator;
+use App\Models\Enums\BookFormat;
 use App\Models\Errors\ErrorBag;
 use App\Lib\Settings\Settings;
 
@@ -23,6 +24,7 @@ final class BookProgressFormValidator extends Validator
         $ok = true;
 
         $position = $item->position;
+        $format = $item->format;
         if ($format === BookFormat::Pdf) {
             $pageNumber = $position['pageNumber'] ?? null;
             

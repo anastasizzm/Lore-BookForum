@@ -12,15 +12,15 @@ use App\Forms\Form;
 final readonly class BookProgressForm implements Form
 {
     public function __construct(
-        BookFormat $format,
-        array $position,
-        bool $isFinished
+        public BookFormat $format,
+        public array $position,
+        public bool $isFinished
     ){}
 
     public static function fromInput(array $input) : self
     {
         return new self(
-            format: QueryParser::enum($input, 'format'),
+            format: QueryParser::enum($input, 'format', BookFormat::class),
             position: QueryParser::assocArray($input, 'position'),
             isFinished: QueryParser::bool($input, 'isFinished')
         );
