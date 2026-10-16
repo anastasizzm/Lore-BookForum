@@ -26,7 +26,7 @@
         credentials: 'same-origin',
       });
       if (!res.ok) {
-        if (window.Messages) await window.Messages.fail(res, t('.js.genres_load_failed'));
+        if (window.Messages) await window.Messages.fail(res, t('errors.common.genres_load_failed'));
         throw new Error('HTTP ' + res.status);
       }
       var data = await res.json();
@@ -34,7 +34,7 @@
     } catch (e) {
       console.error('[profile-publications] genres load failed:', e);
       if (window.Messages && !/^HTTP/.test(e.message)) {
-        window.Messages.show(t('js.network_error'), { type: 'error' });
+        window.Messages.show(t('errors.common.network_error'), { type: 'error' });
       }
       menu.innerHTML = '<li class="dropdown__error">' + escapeHtml(t('js.load_failed')) + '</li>';
       return;

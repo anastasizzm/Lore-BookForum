@@ -199,12 +199,12 @@
     if (msg) return msg;
 
     if (/^\s*</.test(raw || '')) {
-      return tr('js.server_error');
+      return tr('errors.common.server_error');
     }
 
     if (fallback) return fallback;
 
-    return tr('js.request_failed', { status: status });
+    return tr('errors.common.request_failed', { status: status });
   }
 
   async function readError(res, fallback) {

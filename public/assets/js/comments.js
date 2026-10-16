@@ -245,9 +245,6 @@
     if (wrap) wrap.hidden = !(Number(authorId) && Number(authorId) === myId());
   }
 
-  // Меню удаления строки поста («пост = корневой комментарий» по дизайну):
-  // показываем, если пост мой. Ищем врап ВНЕ [data-feed-comments], чтобы не
-  // зацепить меню уже загруженных комментариев — у них свой syncOwnMenu.
   function syncPostMenu(card) {
     if (!card || !card.querySelectorAll) return;
     var wraps = card.querySelectorAll('[data-c-menu-wrap]');
@@ -323,7 +320,7 @@
       if (!res.ok || !data) {
         if (window.Messages) {
           window.Messages.show(
-            window.Messages.describe(res.status, data, '', t('js.replies_load_failed')),
+            window.Messages.describe(res.status, data, '', t('errors.comments.replies_load_failed')),
             { type: 'error' });
         }
         syncRepliesToggle(card);
@@ -353,7 +350,7 @@
       syncRepliesToggle(card);
     } catch (err) {
       console.warn('GET ' + API_POSTS + '?parent= failed', err);
-      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+      if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
       syncRepliesToggle(card);
     } finally {
       delete card.dataset.repliesLoading;
@@ -459,12 +456,12 @@
 
     if (code) {
       var msg = text ? text[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
-      return (msg || t('js.request_rejected')) + ' (HTTP ' + code[1] + ')';
+      return (msg || t('errors.common.request_rejected')) + ' (HTTP ' + code[1] + ')';
     }
     if (/^\s*</.test(body)) {
-      return t('js.unexpected_page_reply', { status: res.status });
+      return t('errors.comments.unexpected_page_reply', { status: res.status });
     }
-    return t('js.send_reply_failed', { status: res.status });
+    return t('errors.comments.send_reply_failed', { status: res.status });
   }
 
   function closeMenus(except) {
@@ -523,8 +520,6 @@
       ? Number(node && node.dataset.replyId || 0)
       : Number(node && node.dataset.commentId || 0);
 
-    // Меню строки поста (у поста нет data-comment-id): удаляем сам пост —
-    // после успеха карточка поста уходит из списка целиком
     var isPost = !node;
     if (isPost) {
       node = delBtn.closest('.card-feed[data-post-id]');
@@ -564,13 +559,13 @@
       }
 
       var msg = window.Messages
-        ? await window.Messages.readError(res, t('js.delete_comment_failed'))
-        : t('js.delete_comment_failed') + ' (HTTP ' + res.status + ').';
+        ? await window.Messages.readError(res, t('errors.comments.delete_failed'))
+        : t('errors.comments.delete_failed') + ' (HTTP ' + res.status + ').';
       if (window.Messages) window.Messages.show(msg, { type: 'error' });
       else console.warn(msg);
     } catch (err) {
       console.error('DELETE ' + API_POSTS + '/' + id + ' failed', err);
-      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+      if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
     } finally {
       delete node.dataset.deleting;
     }
@@ -681,19 +676,19 @@
 
     if (!card) return;
     var commentId = Number(card.dataset.commentId || 0);
-    if (!commentId) return setMsg(errEl, t('js.comment_id_missing'));
+    if (!commentId) return setMsg(errEl, t('errors.comments.id_missing'));
     if (text === '') return;
 
     text = Users.withMention(text, (form.dataset.mentionTarget || card.dataset.authorUsername) || '');
     if (input) input.value = text;
 
     if (text.length > COMMENT_MAX) {
-      return setMsg(errEl, t('js.max_length', { max: COMMENT_MAX }));
+      return setMsg(errEl, t('errors.common.max_length', { max: COMMENT_MAX }));
     }
 
     var scope = scopeOf(card);
     var pubId = publicationIdOf(scope);
-    if (!pubId) return setMsg(errEl, t('js.publication_id_missing'));
+    if (!pubId) return setMsg(errEl, t('errors.comments.publication_id_missing'));
 
     var body = new URLSearchParams();
     body.set('content', text);
@@ -734,8 +729,6 @@
           liked: false
         };
 
-        // Фид/профиль — плоский список [data-fc-list] (без вложенности):
-        // ответ на ответ добавляется в КОНЕЦ списка, не внутрь родителя
         var flatList = card.closest('[data-fc-list]');
         if (flatList) {
           payload.date = (window.LoreI18n && typeof LoreI18n.formatDate === 'function')
@@ -764,7 +757,7 @@
       setMsg(errEl, serverError || failureText(res, raw));
     } catch (err2) {
       console.error('POST ' + API_POSTS + '/' + commentId + ' failed', err2);
-      setMsg(errEl, t('js.network_error'));
+      setMsg(errEl, t('errors.common.network_error'));
     } finally {
       delete form.dataset.sending;
       input.readOnly = false;

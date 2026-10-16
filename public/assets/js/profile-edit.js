@@ -25,12 +25,12 @@
   var USERNAME_RE = /^[A-Za-z0-9_.\-]{3,30}$/;
 
   var RULES = {
-    name:     { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'js.rule_name' },
-    surname:  { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'js.rule_name' },
-    username: { required: true,  pattern: USERNAME_RE,                 msgKey: 'js.rule_username' },
-    email:    { required: true,  email: true, maxLength: 255,          msgKey: 'js.rule_email' },
-    bio:      { required: false, maxLength: 500,                       msgKey: 'js.rule_bio' },
-    avatar:   { required: true,                                        msgKey: 'js.rule_avatar' },
+    name:     { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'errors.validation.rule_name' },
+    surname:  { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'errors.validation.rule_name' },
+    username: { required: true,  pattern: USERNAME_RE,                 msgKey: 'errors.validation.rule_username' },
+    email:    { required: true,  email: true, maxLength: 255,          msgKey: 'errors.validation.rule_email' },
+    bio:      { required: false, maxLength: 500,                       msgKey: 'errors.validation.rule_bio' },
+    avatar:   { required: true,                                        msgKey: 'errors.validation.rule_avatar' },
   };
 
   function escapeHtml(str) {
@@ -88,9 +88,6 @@
       if (!rule) return true;
 
       if (name === 'avatar') {
-        // Аватара в форме может не быть (credits-форма: username/email) —
-        // тогда правило не применяется, как и для любых других отсутствующих
-        // полей (см. «Поля нет в этой форме» ниже)
         if (!form.querySelector('input[name="avatar"]')) { clearError(name); return true; }
         var checked = form.querySelector('input[name="avatar"]:checked');
         if (rule.required && !checked) { setError(name, t(rule.msgKey)); return false; }
@@ -185,7 +182,7 @@
       }
 
       var userId = extractUserId();
-      if (!userId) { notify(t('js.user_id_missing')); return; }
+      if (!userId) { notify(t('errors.common.user_id_missing')); return; }
 
       var submitBtn = form.querySelector('button[type="submit"]');
       var originalText = submitBtn ? submitBtn.textContent : '';
@@ -220,9 +217,6 @@
             try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
             if (response.ok && !/^\s*</.test(raw)) {
-              // 202 — email изменён: бэк уже сохранил username/email, но новый
-              // адрес требует подтверждения письмом. Показываем сообщение бэка
-              // и уходим в профиль с задержкой, чтобы плашка успела прочитаться.
               if (response.status === 202) {
                 var notice = (data && data.data && data.data.message)
                   || 'Please verify your new email.';
@@ -240,7 +234,7 @@
               renderServerErrors(errors);
             }
 
-            var fallback = t('js.save_failed', { status: response.status });
+            var fallback = t('errors.common.save_failed', { status: response.status });
             notify(window.Messages
               ? window.Messages.describe(response.status, data, raw, fallback)
               : fallback);
@@ -250,7 +244,7 @@
         .catch(function (err) {
           console.error('[profile-edit] save failed for', endpoint, err);
           resetButton();
-          notify(t('js.network_error'));
+          notify(t('errors.common.network_error'));
         });
     });
   }

@@ -27,7 +27,7 @@ function initPasswordEmailPage() {
 
   function validateEmail() {
     const ok = LoreValidators.isEmail(email.value);
-    setError(email, "passwordEmailError", ok ? "" : t("common.js.invalid_email"));
+    setError(email, "passwordEmailError", ok ? "" : t("errors.validation.invalid_email"));
     return ok;
   }
 

@@ -49,8 +49,6 @@
     const f = new URLSearchParams(location.search).get('f');
     if (f) p.set('f', f);
 
-    // Локаль — всегда в URL: бэк читает язык из ?lang= (LocaleMiddleware),
-    // а replaceState перезаписывает адрес целиком.
     if (window.LoreI18n && LoreI18n.locale) p.set('lang', LoreI18n.locale);
 
     const qs = p.toString();
@@ -201,8 +199,8 @@
       try { json = raw ? JSON.parse(raw) : null; } catch (_) { }
       if (!res.ok || !json) {
         notify(window.Messages
-          ? window.Messages.describe(res.status, json, raw, t('js.list_load_failed'))
-          : t('js.list_load_failed') + ' (HTTP ' + res.status + ').');
+          ? window.Messages.describe(res.status, json, raw, t('errors.common.list_load_failed'))
+          : t('errors.common.list_load_failed') + ' (HTTP ' + res.status + ').');
         return;
       }
 
@@ -227,7 +225,7 @@
     } catch (e) {
       if (e.name === 'AbortError') return;
       console.error('Library load failed', e);
-      notify(received ? t('js.list_render_failed') : t('js.network_error'));
+      notify(received ? t('errors.common.list_render_failed') : t('errors.common.network_error'));
     } finally {
       root.classList.remove('is-loading');
     }
@@ -244,7 +242,6 @@
   }
 
   document.addEventListener('click', e => {
-    // Клик по пункту dropdown любого фильтра (sort, genre, kind, status).
     const el = e.target.closest('a[data-filter-value]');
     if (el) {
       const key = el.dataset.filterKey || el.closest('[data-filter-key]')?.dataset.filterKey;
@@ -254,7 +251,6 @@
       return;
     }
 
-    // Клик по табу-статусу (All/Reading/Finished) — a.tab[data-filter-key][data-filter-value]
     const tab = e.target.closest('.tab[data-filter-key][data-filter-value]');
     if (tab) {
       e.preventDefault();
@@ -281,16 +277,12 @@
 
   document.addEventListener('filter:input', e => e.preventDefault());
 
-  // ISBN / DOI — узкие поля: ввод означает применение фильтра (debounce).
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
     inp.addEventListener('input', debounce(() => {
       if (inp.classList.contains('is-invalid')) return;
       setFilter(inp.dataset.filterKey, inp.value.trim());
     }, 350)));
 
-  // Поиск по названию (?q=) — ТОЛЬКО по Enter, без перезагрузки.
-  // Раньше висел 'input' с debounce — поиск срабатывал на каждый ввод,
-  // а filters.js::setupSearch по Enter делал полный переход (и терял ?lang=).
   search?.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
