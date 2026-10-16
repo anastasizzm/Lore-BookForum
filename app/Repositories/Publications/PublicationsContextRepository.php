@@ -38,7 +38,7 @@ final class PublicationsContextRepository extends Repository
                 p.id AS publication_id,
                 COALESCE(bool_or(saved.publication_id IS NOT NULL), false) AS is_saved,
                 COALESCE(bool_or(read.publication_id IS NOT NULL), false) AS is_reading,
-                COALESCE(bool_or(read.publication_id IS NOT NULL AND read.is_closed), false) AS is_read_completed,
+                COALESCE(bool_or(read.publication_id IS NOT NULL AND read.is_finished), false) AS is_read_completed,
                 COALESCE(MAX(r.rating), 0) AS rating
             FROM publications p
             CROSS JOIN viewer v

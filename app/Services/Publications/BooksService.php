@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\BooksRepository;
+use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 use App\Services\Storage\FileService;
 
@@ -13,9 +14,11 @@ use App\Validators\Publications\BookFormValidator;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Publications\PublicationShort;
 use App\Models\Publications\BookFiles;
 use App\Models\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
+use App\Models\Enums\BookFormat;
 use App\Models\Enums\ReadingStatus;
 use App\Models\Enums\FileCategory;
 use App\Models\UserContext\WithContext;
@@ -37,6 +40,7 @@ final class BooksService
 {
     public function __construct(
         private readonly BooksRepository $booksRepo,
+        private readonly UsersReadRepository $usersReadRepo,
         private readonly BookExceptionTranslator $translator,
         private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow,
@@ -95,6 +99,21 @@ final class BooksService
             ),
             $query->properties->getProps()
         );
+    }
+
+    public function retrieveShort(int $bookId) : ?PublicationShort 
+    {
+        return $this->booksRepo->retrieveShort($bookId);
+    }
+
+    public function identifyReadContent(int $bookId, BookFormat $format = BookFormat::Pdf): ?Uuid
+    {
+        return $this->booksRepo->identifyContent($bookId, $format->value);
+    }
+
+    public function getProgress(int $userId, int $publicationId, BookFormat $format): ?UserRead
+    {
+        return $this->usersReadRepo->find($userId, $publicationId, $format);
     }
 
     public function retrieve(int $bookId, PropertiesQuery $props) : ?Book

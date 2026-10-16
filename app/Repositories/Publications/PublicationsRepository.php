@@ -8,6 +8,7 @@ use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\PublicationStatus;
 use App\Models\Scripts\ScriptParam;
+use App\Models\Publications\PublicationShort;
 use App\Models\Uuid;
 
 use App\Extensions\ScriptBuilders\Publications\PublicationsScriptDirector;
@@ -15,6 +16,7 @@ use App\Extensions\ScriptBuilders\ScriptBuilder;
 use App\Repositories\Repository;
 use App\Lib\Data\Database;
 use App\Lib\I18n\Translator;
+use PDO;
 
 abstract class PublicationsRepository extends Repository
 {
@@ -27,6 +29,23 @@ abstract class PublicationsRepository extends Repository
     }
 
     public abstract function checkType(int $publicationId) : bool;
+
+    public function retrieveShort(int $publicationId) : ?PublicationShort 
+    {
+        $this->director->startTempFilter()->addPublicationSelectTemp()
+            ->addConcreteTempFilter($publicationId)->setLimitTemp(1);
+
+        $filterBuilder = $this->director->getTempBuilder();
+        $filterCteName = "filtered_pub";
+
+        $builder = ScriptBuilder::withTable($filterCteName);
+        $builder->addSelect("$filterCteName.*")
+            ->addWithBuilder($filterCteName, $filterBuilder, true);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : PublicationShort::fromRow($row);
+    }
 
     public function save(int $userId, int $publicationId) : void
     {
