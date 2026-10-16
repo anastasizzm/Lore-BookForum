@@ -5,12 +5,19 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\BooksRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
+use App\Services\Storage\FileService;
+
+use App\Forms\Publications\BookForm;
+use App\Validators\Publications\BookFormValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Publications\BookFiles;
+use App\Models\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\ReadingStatus;
+use App\Models\Enums\FileCategory;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Criterias\Publications\BooksCriteria;
@@ -24,7 +31,6 @@ use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
 
-
 use PDO;
 
 final class BooksService
@@ -33,7 +39,9 @@ final class BooksService
         private readonly BooksRepository $booksRepo,
         private readonly BookExceptionTranslator $translator,
         private readonly PublicationContextEnricher $enricher,
-        private readonly UnitOfWork $uow
+        private readonly UnitOfWork $uow,
+        private readonly BookFormValidator $validator,
+        private readonly FileService $fileService
     ){}
 
     public function getList(BooksListQuery $query) : PaginatedList
@@ -135,6 +143,29 @@ final class BooksService
         }
         catch(\PDOException $e)
         {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function create(
+        BookForm $form, 
+        int $creatorId
+    ) : int
+    {
+        $bag = $this->validator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+        
+        try{
+            return $this->uow->transactional(function (PDO $pdo) use ($form, $creatorId) :int {
+                $model = BookModel::fromForm($form);
+                
+                $bookId = $this->booksRepo->create($model, $creatorId);
+                $this->booksRepo->addPendingContents($bookId, $form->contentIds);
+
+                return $bookId;
+            });
+        }
+        catch(\PDOException $e){
             throw $this->translator->translate($e);
         }
     }

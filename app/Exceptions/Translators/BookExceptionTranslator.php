@@ -23,17 +23,24 @@ final class BookExceptionTranslator extends ExceptionTranslator
         'books_publication_id_fkey'    => ['publication_id', 'errors.common.not_exists'],
         'books_category_id_fkey'       => ['category_id',    'errors.common.not_exists'],
         'books_content_id_fkey'        => ['content_id',     'errors.common.not_exists'],
+
+        // books_content
+        'books_content_book_id_fkey'    => ['book_id',    'errors.common.not_exists'],
+        'books_content_content_id_fkey' => ['content_id', 'errors.common.not_exists'],
     ];
 
-    /** UNIQUE violations */
+    /** UNIQUE violations (включая PRIMARY KEY) */
     private const UNIQUE = [
         'books_publication_id_key' => ['publication_id', 'errors.books.pub_exists'],
         'books_isbn_key'           => ['isbn',           'errors.books.isbn_exists'],
+
+        // PK в books_content: один файл на (book_id, content_type)
+        'books_content_pkey' => ['format', 'errors.books.format_exists'],
     ];
 
     /** CHECK violations */
     private const CHECK = [
-        'books_pages_check' => ['pages', 'errors.common.min', [":value" => 0]],
+        'books_pages_check' => ['pages', 'errors.common.min', [':value' => 0]],
         'books_isbn_check'  => ['isbn',  'errors.books.isbn_format'],
     ];
 
@@ -50,6 +57,11 @@ final class BookExceptionTranslator extends ExceptionTranslator
         'category_id'    => ['category_id',    'errors.common.required'],
         'pages'          => ['pages',          'errors.common.required'],
         'content_id'     => ['content_id',     'errors.common.required'],
+
+        // books_content
+        'book_id'      => ['book_id',      'errors.common.required'],
+        'content_id'   => ['content_id',   'errors.common.required'],
+        'format'       => ['format', 'errors.common.required'],
     ];
 
     public function __construct(

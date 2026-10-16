@@ -6,7 +6,9 @@ namespace App\Repositories\Publications;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Enums\PublicationsSortBy;
+use App\Models\Enums\PublicationStatus;
 use App\Models\Scripts\ScriptParam;
+use App\Models\Uuid;
 
 use App\Extensions\ScriptBuilders\Publications\PublicationsScriptDirector;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
@@ -42,7 +44,40 @@ abstract class PublicationsRepository extends Repository
             'DELETE FROM saved_publications WHERE user_id = :userId AND publication_id = :publicationId'
         );
         $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
-    }   
+    }  
+    
+    protected function insertPublication(
+        string $title, 
+        string $description, 
+        string $authorNotes,
+        int $genreId,
+        int $creatorId,
+        ?Uuid $iconId,
+        PublicationStatus $status = PublicationStatus::Draft,
+    ) : int
+    {
+        $values = [
+            ':t' => ScriptParam::asStr($title),
+            ':d' => ScriptParam::asStr($description),
+            ':n' => ScriptParam::asStr($authorNotes),
+            ':g' => ScriptParam::asInt($genreId),
+            ':c' => ScriptParam::asInt($creatorId),
+            ':o' => ScriptParam::asInt($creatorId),
+            ':i' => ScriptParam::asStr($iconId?->toString()),
+            ':st' => ScriptParam::asStr($status->value)
+        ];
+
+        $sql = 'INSERT INTO publications (title, description, author_notes, genre_id, creator_id, owner_id, icon_id, status)
+                VALUES (:t, :d, :n, :g, :c, :o, :i, :st) RETURNING id';
+        
+        $stmt = $this->execute($sql, $values);
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new \RuntimeException('No instance created');
+        }
+        
+        return (int)$id;
+    }
 
     protected function applyFilters(PublicationsFilters $filters) : void 
     {

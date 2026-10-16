@@ -46,35 +46,70 @@ final class Request
             $_GET,
             $headers,
             $_COOKIE,
-            $_FILES,
+            self::normalizeFiles($_FILES),
             $_SERVER,
         );
     }
 
     public function body(): array
     {
-        if ($this->bodyCache !== null) return $this->bodyCache;
+        if ($this->bodyCache !== null) {
+            return $this->bodyCache;
+        }
 
-        $raw  = file_get_contents('php://input') ?: '';
-        $type = $this->headers['content-type'] ?? '';
+        $contentType = $this->headers['content-type'] ?? '';
 
-        if ($raw !== '' && str_contains($type, 'application/json')) {
+        // 1. multipart/form-data
+        if (str_contains($contentType, 'multipart/form-data')) {
+            return $this->bodyCache = $_POST;
+        }
+
+        // 2. GET, HEAD, DELETE без body, пустой POST.
+        if (!$this->hasBody()) {
+            return $this->bodyCache = [];
+        }
+
+        $raw = file_get_contents('php://input');
+
+        if ($raw === false || $raw === '') {
+            return $this->bodyCache = [];
+        }
+
+        // 3. JSON
+        if (str_contains($contentType, 'application/json')) {
             try {
                 $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
-                $this->bodyCache = is_array($decoded) ? $decoded : [];
             } catch (JsonException) {
                 throw new HttpException('Malformed JSON body', 400, ErrorCodes::JSON_BAD_BODY);
             }
-        } elseif ($raw !== '' && str_contains($type, 'application/x-www-form-urlencoded')) {
-            parse_str($raw, $parsed);
-            $this->bodyCache = $parsed;
-        } elseif ($this->method === 'POST' && $_POST !== []) {
-            $this->bodyCache = $_POST;
-        } else {
-            $this->bodyCache = [];
+
+            if (!is_array($decoded)) {
+                throw new HttpException('JSON body must be an object or array', 400, ErrorCodes::JSON_BAD_BODY);
+            }
+
+            return $this->bodyCache = $decoded;
         }
 
-        return $this->bodyCache;
+        // 4. application/x-www-form-urlencoded
+        if (str_contains($contentType, 'application/x-www-form-urlencoded')) {
+            parse_str($raw, $parsed);
+            return $this->bodyCache = $parsed;
+        }
+
+        // 5. Неизвестный content-type с телом
+        return $this->bodyCache = [];
+    }
+
+    private function hasBody(): bool
+    {
+        $length = $this->server['CONTENT_LENGTH'] ?? null;
+
+        if ($length !== null && (int) $length > 0) {
+            return true;
+        }
+
+        $transferEncoding = $this->server['HTTP_TRANSFER_ENCODING'] ?? '';
+        return str_contains(strtolower((string) $transferEncoding), 'chunked');
     }
 
     public function input(string $key, mixed $default = null): mixed
@@ -120,5 +155,38 @@ final class Request
     public function getAttribute(string $key, mixed $default = null): mixed
     {
         return $this->attributes[$key] ?? $default;
+    }
+
+    private static function normalizeFiles(array $files): array
+    {
+        $result = [];
+
+        foreach ($files as $field => $file) {
+            $result[$field] = self::normalizeField($file);
+        }
+
+        return $result;
+    }  
+    
+    private static function normalizeField(array $file): array
+    {
+        if (!is_array($file['name'] ?? null)) {
+            return [$file];
+        }
+
+        $result = [];
+        $count  = count($file['name']);
+
+        for ($i = 0; $i < $count; $i++) {
+            $result[] = [
+                'name'     => $file['name'][$i],
+                'type'     => $file['type'][$i],
+                'tmp_name' => $file['tmp_name'][$i],
+                'error'    => $file['error'][$i],
+                'size'     => $file['size'][$i],
+            ];
+        }
+
+        return $result;
     }
 }

@@ -35,7 +35,7 @@ final class LanguagesController extends Controller
 
     public function fallback(HttpContext $context)
     {
-        $default = $this->settings->defaultLocale;
+        $default = $this->settings->i18n->default;
         $model = new Language($default, true);
         return $this->jsonObject($model);
     }

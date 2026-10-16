@@ -4,3 +4,7 @@ values:
     value: ''
   - key: base_url
     value: ''
+  - key: iconId
+    value: ''
+  - key: contentId
+    value: ''

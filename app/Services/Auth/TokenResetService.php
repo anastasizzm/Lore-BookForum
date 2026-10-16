@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Auth;
 
 use App\Cache\Auth\TokenResetTtlCache;
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 
 final class TokenResetService 
 {
@@ -29,6 +29,6 @@ final class TokenResetService
 
     private function resetTtl() : int
     {
-        return $this->settings->jwtAccessTtl * 3;
+        return $this->settings->jwt->accessTtl * 3;
     }
 }

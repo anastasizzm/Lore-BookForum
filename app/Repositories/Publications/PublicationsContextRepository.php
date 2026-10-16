@@ -39,11 +39,9 @@ final class PublicationsContextRepository extends Repository
                 COALESCE(bool_or(saved.publication_id IS NOT NULL), false) AS is_saved,
                 COALESCE(bool_or(read.publication_id IS NOT NULL), false) AS is_reading,
                 COALESCE(bool_or(read.publication_id IS NOT NULL AND read.is_closed), false) AS is_read_completed,
-                COALESCE(MAX(r.rating), 0) AS rating,
-                COALESCE(bool_or(v.is_admin OR (read.publication_id IS NOT NULL AND rules.is_redactor)), false) AS is_editor
+                COALESCE(MAX(r.rating), 0) AS rating
             FROM publications p
             CROSS JOIN viewer v
-            LEFT JOIN publications_users rules ON rules.publication_id = p.id AND rules.user_id = v.user_id
             LEFT JOIN saved_publications saved ON saved.publication_id = p.id AND saved.user_id = v.user_id
             LEFT JOIN users_read read ON read.publication_id = p.id AND read.user_id = v.user_id
             LEFT JOIN ratings r ON r.publication_id = p.id AND r.user_id = v.user_id

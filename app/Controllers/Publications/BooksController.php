@@ -9,9 +9,11 @@ use App\Services\Users\UsersService;
 use App\Services\Publications\BooksService;
 
 use App\Models\Publications\PublicationShort;
+use App\Forms\Publications\BookForm;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Http\UrlGenerator;
 
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\PaginationQuery;
@@ -31,7 +33,8 @@ final class BooksController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
-        private readonly BooksService $booksService
+        private readonly BooksService $booksService,
+        private readonly UrlGenerator $url
     ){}
 
     public function list(HttpContext $context){
@@ -140,9 +143,39 @@ final class BooksController extends Controller
         }
     }
 
-    public function read(HttpContext $context, string $bookId) 
+    public function getCreate(HttpContext $context)
     {
-        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect('login');
 
+        $userContext = $this->usersService->loadContext($userId);
+        return $this->render('book/book-form', [
+            'user' => $userContext
+        ]);
+    }
+
+    public function create(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect('login');
+
+        $formData = $context->request->body();
+        try{
+            $bookId = $this->booksService->create(
+                BookForm::fromInput($formData),
+                $userId
+            );
+            return Response::redirect($this->url->url('books.retrieve', ['bookId' => $bookId]));
+        }
+        catch(ValidationException $e){
+            $userContext = $this->usersService->loadContext($userId);
+            return $this->render('book/book-form', [
+                'form' => $formData, 
+                'errors' => $e->errors(),
+                'user' => $userContext
+            ], 422);
+        }
     }
 }

@@ -10,7 +10,7 @@ $dotenv->safeLoad();
 
 $config = require __DIR__ . '/../config/settings.php';
 
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use App\Lib\View;
 use App\Lib\Container;
 use App\Http\Router;

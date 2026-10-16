@@ -17,7 +17,7 @@ return [
         App\Middleware\ViewGlobalsMiddleware::class,
     ],
 
-    'views_dir' => [
+    'views' => [
         'pages' => $baseDir . '/src/views/pages',
         'layouts' => $baseDir . '/src/layouts',
         'partials' => $baseDir . '/src/partials'
@@ -29,7 +29,8 @@ return [
         'path' => $baseDir . '/resources/lang'
     ],
 
-    'appUrl' => $_ENV['APP_URL'] ?? throw new RuntimeException('APP_URL not set'),
+    'appUrl' => $_ENV['APP_URL'] ?? 
+        throw new RuntimeException('APP_URL not set'),
 
     'public_dir' => $baseDir . '/public',
 
@@ -66,4 +67,55 @@ return [
             'name'    => $_ENV['MAIL_FROM_NAME'] ?? 'Lore',
         ],
     ],
+
+    'storage' => [
+        'path' => $baseDir . '/storage/uploads',
+        'categories' => [
+            'avatar' => [
+                'max_size' => 2 * 1024 * 1024,   // 2 МБ
+                'mimes'    => [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ],
+                'public' => true,
+            ],
+
+            'cover' => [
+                'max_size' => 5 * 1024 * 1024,   // 5 МБ
+                'mimes'    => [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ],
+                'public' => true,
+            ],
+
+            'book' => [
+                'max_size' => 100 * 1024 * 1024, // 100 МБ
+                'mimes'    => [
+                    'application/pdf'                => 'pdf',
+                    'application/epub+zip'           => 'epub',
+                    'application/x-mobipocket-ebook' => 'mobi',
+                    'application/x-fictionbook+xml'  => 'fb2',
+                    'application/vnd.amazon.ebook'   => 'azw',
+                ],
+                'public' => false,
+            ],
+
+            'attachment' => [
+                'max_size' => 20 * 1024 * 1024,  // 20 МБ
+                'mimes'    => [
+                    'application/pdf' => 'pdf',
+                    'application/zip' => 'zip',
+                    'text/plain'      => 'txt',
+                    'image/jpeg'      => 'jpg',
+                    'image/png'       => 'png',
+                ],
+                'public' => false,
+            ],
+        ],
+        'internal_url_prefix' => '/internal-files',
+        'use_x_accel' => true
+    ]
 ];

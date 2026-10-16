@@ -5,6 +5,7 @@ namespace App\Validators;
 
 use App\Models\Errors\ErrorBag;
 use App\Lib\I18n\Translator;
+use App\Lib\Settings\Settings;
 
 /**
  * @template T
@@ -12,6 +13,7 @@ use App\Lib\I18n\Translator;
 abstract class Validator 
 {
     public function __construct(
+        protected Settings $settings,
         protected Translator $translator
     ){}
 
