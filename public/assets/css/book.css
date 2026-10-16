@@ -301,29 +301,71 @@
   }
 }
 
-/* ---------------- reader (book-read.php, без JS) ---------------- */
+/* ---------------- reader (book-read.php + book-read.js) ---------------- */
 
 .reader {
   display: flex;
   flex-direction: column;
   gap: var(--space-4, 24px);
+  padding-top: 0;                 /* PDF начинается с самого верха */
+  padding-bottom: 88px;           /* запас под закреплённые панели снизу */
+  touch-action: pan-x pan-y;      /* отключаем браузерный pinch-zoom */
 }
 
+/* Тулбар больше не создаёт бокс — зум fixed и позиционируется отдельно */
 .reader__toolbar {
+  display: contents;
+}
+
+/* ---------- Зум: закреплён в правом нижнем углу читалки ---------- */
+/* Позиционируется через CSS-переменную --reader-dock-right, которую
+   book-read.js пересчитывает на resize. Если переменной нет —
+   fallback 16px от правого края окна. */
+.reader__zoom {
+  position: fixed;
+  right: var(--reader-dock-right, max(16px, env(safe-area-inset-right)));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: auto;
+  transform: none;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: 0 8px 24px rgba(26, 55, 96, 0.14);
+}
+
+/* внутри таблетки кнопки без собственной рамки — лаконично */
+.reader__zoom .reader__btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-color: transparent;
+}
+
+.reader__zoom-value {
+  min-width: 56px;                /* подпись не «прыгает» при смене 50% / 100% / 400% */
+}
+
+/* ---------- Пагинация: закреплена снизу по центру читалки ---------- */
+.reader__pager {
+  position: fixed;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: var(--reader-dock-x, 50%);
+  transform: translateX(-50%);
+  z-index: 40;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: var(--space-3, 16px);
   padding: var(--space-2, 12px) var(--space-3, 16px);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: var(--radius-lg, 16px);
-}
-
-.reader__toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 16px);
+  box-shadow: 0 8px 24px rgba(26, 55, 96, 0.14);
 }
 
 .reader__btn {
@@ -346,46 +388,137 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.reader__btn:hover,
-.reader__btn:focus-visible {
+.reader__btn:not(:disabled):hover,
+.reader__btn:not(:disabled):focus-visible {
   background: var(--color-bg-subtle, #F3F6FB);
   border-color: var(--color-primary, #1A3760);
 }
 
+/* Prev / Next блокируются в начале и в конце книги (book-read.js) */
+.reader__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .reader__page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--fs-small, 14px);
   color: var(--color-text-muted, #6F84A5);
   white-space: nowrap;
 }
 
+/* Номер страницы теперь поле ввода (можно перейти на любую страницу) */
 .reader__page-num {
+  width: 5ch;
+  padding: 4px 6px;
+  font: inherit;
   font-weight: 600;
+  text-align: center;
   color: var(--color-text, #1A3760);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-sm, 8px);
+  -moz-appearance: textfield;
+}
+.reader__page-num::-webkit-outer-spin-button,
+.reader__page-num::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
+/* «Loading…» до загрузки PDF */
+.reader__status {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #6F84A5);
+}
+.reader__status[hidden] { display: none; }
+
+/* Область страницы. Без justify-content: center — при zoom больше 100%
+   такая страница обрезалась бы слева и до левого края было бы не доскроллить;
+   по центру её держит margin: 0 auto у canvas. */
 .reader__canvas-wrap {
   display: flex;
-  justify-content: center;
-  padding: var(--space-4, 24px) 0;
+  padding: var(--space-4, 24px);
+  padding-top: 0;                 /* PDF прижат к верху контейнера */
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: var(--radius-lg, 16px);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;      /* разрешаем прокрутку, но не браузерный zoom */
 }
 
+/* Размер canvas задаёт book-read.js (inline width/height), поэтому
+   max-width: 100%, height: auto и сжатие во flex-контейнере отключены */
 .reader__canvas {
   display: block;
-  max-width: 100%;
-  height: auto;
+  flex: none;
+  margin: 0 auto;
+  max-width: none;
   background: #fff;
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  touch-action: pan-x pan-y;
 }
 
 @media (max-width: 767px) {
-  .reader__toolbar {
-    flex-wrap: wrap;
-    justify-content: center;
+  .reader {
+    gap: var(--space-3, 16px);
+    padding-top: 0;
   }
+
+  /* Как в системных просмотрщиках PDF: страница на всю ширину экрана, без рамок,
+     скруглений, теней и боковых отступов (вырываемся из полей контента),
+     на нейтральном сером фоне. Масштаб 100% = ширина экрана (book-read.js). */
+  .reader__canvas-wrap {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: 0;
+    background: var(--color-bg-subtle, #F3F6FB);
+    border-width: 1px 0;          /* только тонкие линии сверху и снизу */
+    border-radius: 0;
+    touch-action: pan-x pan-y;
+  }
+
+  .reader__canvas {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* ---------- 480px и узкие экраны ---------- */
+@media (max-width: 480px) {
+  /* Зум скрыт — на мобиле он доступен жестом pinch */
+  .reader__zoom {
+    display: none;
+  }
+
+  /* панель страниц на всю ширину экрана с отступами по краям */
+  .reader__pager {
+    left: 50%;
+    right: auto;
+    width: calc(100% - 24px);
+    max-width: 420px;
+    gap: var(--space-2, 12px);
+    padding: var(--space-2, 12px);
+  }
+
+  /* удобная зона нажатия на телефоне */
+  .reader__btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+html:has(.reader),
+html:has(.reader) body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
 }

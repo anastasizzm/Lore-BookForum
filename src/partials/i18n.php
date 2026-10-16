@@ -1,16 +1,18 @@
 <?php
 /**
- * i18n — выводит словарь текущей локали в JS.
+ * i18n — выводит словари текущей локали в JS.
  *
  * Подключается в head.php ПЕРВЫМ (до i18n.js и остальных скриптов):
  *   <?php $view->include('i18n'); ?>
  *
  * Кладёт в window:
- *   LORE_I18N   — весь common.json текущей локали (+ фолбэк-мерж)
+ *   LORE_I18N   — common.json текущей локали (+ фолбэк-мерж),
+ *                 плюс errors.json под ключом `errors`
+ *                 (т.е. доступно как LoreI18n.t('errors.article.…'))
  *   LORE_LOCALE — код текущей локали (для ?lang= и formatDate)
  *
  * Локаль: сначала ?lang=, потом $view->locale() (сервер уже мог её вычислить),
- * потом фолбэк. Если ты используешь cookie — второй вариант сработает.
+ * потом фолбэк.
  */
 
 // --- определяем локаль ---
@@ -45,12 +47,7 @@ $readJson = static function (string $path): array {
     return is_array($data) ? $data : [];
 };
 
-$primary      = $readJson($langDir . '/' . $locale   . '/common.json');
-$fallbackDict = ($locale === $fallback)
-    ? []
-    : $readJson($langDir . '/' . $fallback . '/common.json');
-
-// Рекурсивный мерж: ключи, которых нет в текущей локали, берём из fallback.
+// Рекурсивный мерж: ключи, которых нет в $a, берём из $b.
 $merge = static function (array $a, array $b) use (&$merge): array {
     foreach ($b as $k => $v) {
         if (!array_key_exists($k, $a)) {
@@ -62,11 +59,27 @@ $merge = static function (array $a, array $b) use (&$merge): array {
     return $a;
 };
 
-$merged = $merge($primary, $fallbackDict);
+$localeIsFallback = ($locale === $fallback);
+
+// --- common.json ---
+$commonPrimary  = $readJson($langDir . '/' . $locale   . '/common.json');
+$commonFallback = $localeIsFallback ? [] : $readJson($langDir . '/' . $fallback . '/common.json');
+$common         = $merge($commonPrimary, $commonFallback);
+
+// --- errors.json ---
+$errorsPrimary  = $readJson($langDir . '/' . $locale   . '/errors.json');
+$errorsFallback = $localeIsFallback ? [] : $readJson($langDir . '/' . $fallback . '/errors.json');
+$errors         = $merge($errorsPrimary, $errorsFallback);
+
+// errors.json доступен в JS по пути `errors.<раздел>.<ключ>`:
+//   LoreI18n.t('errors.article.rule_article_content')
+//   LoreI18n.t('errors.validation.password_min', { min: 8 })
+$dict = $common;
+$dict['errors'] = $errors;
 ?>
 <script>
 window.LORE_I18N   = <?= json_encode(
-    $merged,
+    $dict,
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP
 ) ?>;
 window.LORE_LOCALE = <?= json_encode($locale, JSON_UNESCAPED_UNICODE) ?>;

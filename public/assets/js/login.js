@@ -27,7 +27,7 @@ function initLoginPage() {
 
   function validateLogin() {
     const ok = LoreValidators.isLogin(login.value);
-    setError(login, "loginLoginError", ok ? "" : t("common.js.invalid_login"));
+    setError(login, "loginLoginError", ok ? "" : t("errors.validation.invalid_login"));
     return ok;
   }
 
@@ -36,8 +36,8 @@ function initLoginPage() {
     let message = "";
     if (!ok) {
       message = password.value.length < LoreValidators.PASSWORD_MIN_LENGTH
-        ? t("common.js.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
-        : t("common.js.invalid_password");
+        ? t("errors.validation.password_min", { min: LoreValidators.PASSWORD_MIN_LENGTH })
+        : t("errors.validation.invalid_password");
     }
     setError(password, "loginPasswordError", message);
     return ok;

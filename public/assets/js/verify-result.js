@@ -80,9 +80,9 @@
   }
 
   function errorText(status, data, raw) {
-    var fallback = t('js.verify_failed', { status: status });
+    var fallback = t('errors.verify.failed', { status: status });
     if (window.Messages) return window.Messages.describe(status, data, raw, fallback);
-    if (/^\s*</.test(raw)) return t('js.server_error');
+    if (/^\s*</.test(raw)) return t('errors.common.server_error');
     return payloadText(data) || fallback;
   }
 
@@ -108,7 +108,10 @@
     var token = ensureToken();
     clearMessage();
 
-    if (!token) { showMessage(t('js.verify_token_missing'), 'error'); return; }
+    if (!token) {
+      showMessage(t('errors.verify.token_missing'), 'error');
+      return;
+    }
 
     sending = true;
     retryBtn.disabled = true;
@@ -149,7 +152,7 @@
         showMessage(errorText(response.status, data, raw), response.status === 409 ? 'info' : 'error');
       }
     } catch (e) {
-      showMessage(t('js.network_error'), 'error');
+      showMessage(t('errors.common.network_error'), 'error');
     } finally {
       sending = false;
       if (sent) startCooldown(COOLDOWN_SECONDS);

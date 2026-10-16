@@ -2,8 +2,6 @@
 
 /* ============================================
    Поиск в ленте по НАЗВАНИЮ КНИГИ.
-   Все URL, которые уходят на сервер, идут через withLang() —
-   бэк читает локаль из ?lang=, поэтому он должен быть всегда.
    ============================================ */
 
 window.LoreFeedSearch = (function () {
@@ -53,8 +51,6 @@ window.LoreFeedSearch = (function () {
     var p = new URLSearchParams();
     if (page > 1) p.set('page', String(page));
     var qs = p.toString();
-    // withLang добавит ?lang=<locale> — иначе бэк на этом fetch-запросе
-    // не поймёт, какую локаль отдать в карточках.
     return withLang(location.pathname + (qs ? '?' + qs : ''));
   }
 
@@ -68,8 +64,8 @@ window.LoreFeedSearch = (function () {
       .then(function (res) {
         if (res.ok) return res.text();
         var reading = window.Messages
-          ? window.Messages.readError(res, t('js.search_failed'))
-          : Promise.resolve(t('js.search_failed_http', { status: res.status }));
+          ? window.Messages.readError(res, t('errors.common.search_failed'))
+          : Promise.resolve(t('errors.common.search_failed_http', { status: res.status }));
         return reading.then(function (msg) {
           var err = new Error(msg);
           err.fromServer = true;
@@ -118,7 +114,7 @@ window.LoreFeedSearch = (function () {
       .catch(function (err) {
         failed = true;
         console.error('[feed-search] failed:', err);
-        notify(err && err.fromServer ? err.message : t('js.network_error'));
+        notify(err && err.fromServer ? err.message : t('errors.common.network_error'));
       })
       .finally(function () {
         state.busy = false;
@@ -134,8 +130,6 @@ window.LoreFeedSearch = (function () {
   function go(query) {
     var q = String(query || '').trim();
 
-    // Поле очистили — возвращаем обычную ленту. withLang — чтобы
-    // не потерять ?lang=, иначе бэк перейдёт на Accept-Language.
     if (!q) {
       location.href = withLang(location.pathname);
       return;
@@ -144,12 +138,9 @@ window.LoreFeedSearch = (function () {
     state.q = q.toLowerCase();
     state.original = q;
 
-    // Делимая ссылка: перезагрузка повторит поиск на том же языке.
-    // new URL(location.href) — все существующие параметры (включая lang) сохраняются.
     var url = new URL(location.href);
     url.searchParams.set('q', q);
     url.searchParams.delete('page');
-    // Явно гарантируем lang — на случай, если его не было в URL изначально.
     if (window.LoreI18n && LoreI18n.locale) url.searchParams.set('lang', LoreI18n.locale);
     history.pushState(null, '', url.pathname + url.search);
 

@@ -1,11 +1,6 @@
 "use strict";
 
 (function () {
-  var t = function (key, params) {
-    return window.LoreI18n ? LoreI18n.t(key, params) : key;
-  };
-
-  // Start / Resume / Read again — пока заглушка
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
     startReading.addEventListener('click', function () {
@@ -14,7 +9,6 @@
     });
   }
 
-  // Click to Rate
   var rate = document.querySelector('[data-rate]');
   if (rate) {
     var stars = rate.querySelectorAll('[data-rate-value]');
@@ -40,7 +34,6 @@
     paint(current);
   }
 
-  // Tabs: Annotation / Table of contents
   var tabs = document.querySelectorAll('.book-tabs-panel [data-row-target]');
   var panels = document.querySelectorAll('.book-tabs-panel__content[data-row]');
 
@@ -68,6 +61,10 @@
 
   function one(sel, root) { return (root || document).querySelector(sel); }
 
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
   function setMsg(el, text) {
     if (!el) return;
     var isError  = el.hasAttribute('data-comment-error') || el.hasAttribute('data-reply-error');
@@ -94,12 +91,12 @@
 
     if (code) {
       var msg = text ? text[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
-      return (msg || t('js.request_rejected')) + ' (HTTP ' + code[1] + ')';
+      return (msg || t('errors.common.request_rejected')) + ' (HTTP ' + code[1] + ')';
     }
     if (/^\s*</.test(body)) {
-      return t('js.unexpected_page_comment', { status: res.status });
+      return t('errors.comments.unexpected_page_comment', { status: res.status });
     }
-    return t('js.send_comment_failed', { status: res.status });
+    return t('errors.comments.send_comment_failed', { status: res.status });
   }
 
   function formatDate(value) {
@@ -152,10 +149,6 @@
   }
 
   function commentNode(data) {
-    // Общий движок comments.js (подключается до book.js): знает про
-    // «View N more replies» (label/hidden из data.replies) и «три точки»
-    // удаления для автора (syncOwnMenu). Локальная копия ниже — фолбэк на случай,
-    // если comments.js не подключён.
     if (window.LoreComments && typeof LoreComments.commentNode === 'function') {
       return LoreComments.commentNode(data);
     }
@@ -232,11 +225,11 @@
         console.warn('GET ' + API_POSTS, res.status, raw.slice(0, 200));
         if (window.Messages) {
           window.Messages.show(
-            window.Messages.describe(res.status, data, raw, t('js.comments_load_failed')),
+            window.Messages.describe(res.status, data, raw, t('errors.comments.load_failed')),
             { type: 'error' });
         }
         if (!append && listEl() && !listEl().children.length) {
-          setMsg(emptyEl(), t('js.comments_unavailable'));
+          setMsg(emptyEl(), t('errors.comments.unavailable'));
         }
         return;
       }
@@ -275,7 +268,7 @@
       if (data.meta && data.meta.hasNext) renderMore(page || 1);
     } catch (err) {
       console.warn('GET ' + API_POSTS + ' failed', err);
-      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+      if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
     }
   }
 
@@ -314,15 +307,15 @@
     setMsg(statusEl, '');
 
     var text = (input.value || '').trim();
-    if (text === '') { setMsg(errEl, t('js.comment_empty')); return; }
+    if (text === '') { setMsg(errEl, t('errors.comments.empty')); return; }
     if (text.length > COMMENT_MAX) {
-      setMsg(errEl, t('js.max_length', { max: COMMENT_MAX }));
+      setMsg(errEl, t('errors.common.max_length', { max: COMMENT_MAX }));
       return;
     }
 
     var pubInput = one('input[name="publicationId"]', form);
     if (!Number(pubInput && pubInput.value)) {
-      setMsg(errEl, t('js.publication_id_missing_comment'));
+      setMsg(errEl, t('errors.comments.publication_id_missing_comment'));
       return;
     }
 
@@ -352,7 +345,7 @@
       if (/^\s*</.test(raw)) htmlErrorPage = true;
 
       if (res.ok && !serverError && !htmlErrorPage) {
-        setMsg(statusEl, t('js.comment_sent'));
+        setMsg(statusEl, t('errors.comments.sent'));
         input.value = '';
 
         bumpCount();
@@ -389,7 +382,7 @@
       setMsg(errEl, serverError || failureText(res, raw));
     } catch (err) {
       console.warn('POST ' + API_POSTS + ' failed', err);
-      setMsg(errEl, t('js.network_error'));
+      setMsg(errEl, t('errors.common.network_error'));
     } finally {
       delete form.dataset.sending;
       input.readOnly = false;
@@ -445,8 +438,6 @@
   }
 
   function replyNode(data) {
-    // Общий движок comments.js: лайк + «три точки» удаления для автора
-    // (syncOwnMenu); локальная копия ниже — фолбэк
     if (window.LoreComments && typeof LoreComments.replyNode === 'function') {
       return LoreComments.replyNode(data);
     }
@@ -469,9 +460,6 @@
   }
 
   async function loadReplies(card) {
-    // Общий движок comments.js: раскрывает [data-replies], обновляет label
-    // тумблера и показывает «три точки» у своих ответов; локальная копия
-    // ниже — фолбэк
     if (window.LoreComments && typeof LoreComments.loadReplies === 'function') {
       return LoreComments.loadReplies(card);
     }
@@ -491,7 +479,7 @@
       if (!res.ok || !data) {
         if (window.Messages) {
           window.Messages.show(
-            window.Messages.describe(res.status, data, '', t('js.replies_load_failed')),
+            window.Messages.describe(res.status, data, '', t('errors.comments.replies_load_failed')),
             { type: 'error' });
         }
         return;
@@ -513,7 +501,7 @@
       });
     } catch (err) {
       console.warn('GET ' + API_POSTS + '?parent= failed', err);
-      if (window.Messages) window.Messages.show(t('js.network_error'), { type: 'error' });
+      if (window.Messages) window.Messages.show(t('errors.common.network_error'), { type: 'error' });
     }
   }
 
@@ -566,18 +554,18 @@
     setMsg(errEl, '');
     if (!card) return;
     var commentId = Number(card.dataset.commentId || 0);
-    if (!commentId) return setMsg(errEl, t('js.comment_id_missing'));
+    if (!commentId) return setMsg(errEl, t('errors.comments.id_missing'));
     if (text === '') return;
 
     text = Users.withMention(text, card.dataset.authorUsername || '');
     if (input) input.value = text;
     if (text.length > COMMENT_MAX) {
-      return setMsg(errEl, t('js.max_length', { max: COMMENT_MAX }));
+      return setMsg(errEl, t('errors.common.max_length', { max: COMMENT_MAX }));
     }
 
     var section = sectionEl();
     var pubId = Number((section && section.dataset.publicationId) || 0);
-    if (!pubId) return setMsg(errEl, t('js.publication_id_missing'));
+    if (!pubId) return setMsg(errEl, t('errors.comments.publication_id_missing'));
 
     var body = new URLSearchParams();
     body.set('content', text);
@@ -623,7 +611,7 @@
       setMsg(errEl, serverError || failureText(res, raw));
     } catch (err) {
       console.warn('POST ' + API_POSTS + '/' + commentId + ' failed', err);
-      setMsg(errEl, t('js.network_error'));
+      setMsg(errEl, t('errors.common.network_error'));
     } finally {
       delete form.dataset.sending;
       input.readOnly = false;
@@ -643,5 +631,3 @@
     initComments();
   }
 })();
-
-/* marker-test-12345 */
