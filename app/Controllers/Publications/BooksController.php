@@ -145,8 +145,6 @@ final class BooksController extends Controller
 
     public function getCreate(HttpContext $context)
     {
-        var_dump(1);
-
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
