@@ -30,7 +30,7 @@ final class CategoriesScriptDirector extends ScriptDirector
     public function startTempFilter() : self
     {
         $this->startTemp('categories');
-        $this->tempBuilder->addJoin("INNER JOIN categories_translations ON categories_translations.genre_id = categories.id")
+        $this->tempBuilder->addJoin("INNER JOIN categories_translations ON categories_translations.category_id = categories.id")
             ->addJoin("INNER JOIN languages ON languages.code = categories_translations.code AND languages.is_active");
         return $this;
     }
