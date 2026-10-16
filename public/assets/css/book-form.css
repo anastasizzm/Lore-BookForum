@@ -1,9 +1,11 @@
 /* ============================================================
    BOOK FORM — создание книги (src/views/pages/book/book-form.php)
 
-   Сетка: превью обложки слева, поля формы справа. На мобильных
-   превью уезжает наверх и сжимается. Использует токены из
-   variable.css и базовые .form-field/.btn из component.css.
+   Многошаговая форма (FORM-01): шаги .book-step (1 — данные,
+   2 — содержание и файлы), навигация .book-step__nav, плашка
+   восстановления .book-form__restore, список глав .chapters.
+   Использует токены из variable.css и базовые .form-field/.btn
+   из component.css.
    ============================================================ */
 
 .book-form-grid {
@@ -84,6 +86,12 @@
   gap: var(--space-4);
   width: 100%;
   align-items: start;
+}
+
+/* Обложка теперь отдельным полем на шаге 1: не растягиваем её
+   на всю ширину карточки (кадр 2/3 иначе становится огромным). */
+.book-form__cover .cover-upload {
+  max-width: 280px;
 }
 
 /* ============================================
@@ -427,6 +435,155 @@
 }
 
 /* ============================================
+   МНОГОШАГОВАЯ ФОРМА (шаги 1/2 — по образцу article-step)
+   ============================================ */
+.book-step[hidden] {
+  display: none !important;
+}
+
+.book-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.book-step__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.book-step__num {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.book-step__title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text);
+}
+
+/* Нижняя панель: «Назад» слева (первый secondary), остальное справа */
+.book-step__nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+.book-step__nav .btn--secondary:first-child:not(:only-child) {
+  margin-right: auto;
+}
+
+/* ============================================
+   ПЛАШКА ВОССТАНОВЛЕНИЯ (несохранённые изменения)
+   ============================================ */
+.book-form__restore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-warning);
+  border-radius: var(--radius-md);
+}
+
+.book-form__restore[hidden] {
+  display: none !important;
+}
+
+.book-form__restore-text {
+  flex: 1 1 260px;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.book-form__restore-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ============================================
+   СПИСОК ГЛАВ (UI, в POST не участвует)
+   ============================================ */
+.chapters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapters:empty {
+  display: none;
+}
+
+.chapters__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.chapters__num {
+  flex: 0 0 auto;
+  min-width: 24px;
+  text-align: center;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 2px;
+}
+
+.chapters__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chapters__remove {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.chapters__remove:hover {
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.chapters__actions {
+  margin-top: var(--space-2);
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {
@@ -447,12 +604,18 @@
 }
 
 @media (max-width: 480px) {
-  .book-form__actions {
+  .book-form__actions,
+  .book-step__nav {
     flex-direction: column-reverse;
   }
 
-  .book-form__actions .btn {
+  .book-form__actions .btn,
+  .book-step__nav .btn {
     width: 100%;
+  }
+
+  .book-step__nav .btn--secondary:first-child:not(:only-child) {
+    margin-right: 0;
   }
 
   .file-upload__name {

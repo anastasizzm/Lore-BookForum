@@ -12,7 +12,16 @@
  *   4. наполнение <select> жанров и категорий из /api/additional/*;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
  *   6. отправку через fetch + FormData (multipart, файлы летят без чтения
- *      в JS). Без JS форма уходит обычным POST — прогрессивное улучшение.
+ *      в JS). Без JS форма уходит обычным POST — прогрессивное улучшение;
+ *   7. многошаговость (FORM-01, как в article-form.js): шаги
+ *      [data-step], «Далее»/«Назад», валидация ОБЯЗАТЕЛЬНЫХ полей
+ *      своего шага перед переходом вперёд (STEP_FIELDS);
+ *   8. список глав книги — только UI (input'ы без name, в POST не
+ *      уходят: контракт с бэкендом уточняется);
+ *   9. локальную копию несохранённых изменений (localStorage,
+ *      ключ bookform:v1:new) + плашку «Восстановить / Отбросить»
+ *      на шаге 1 — если открыть создание новой книги, не сохранив
+ *      прошлые изменения. Копия стирается после успешной отправки.
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
@@ -50,6 +59,10 @@
   // Заглушка поиска людей (роут добавит бэк, см. контракт в view).
   var PEOPLE_SEARCH_URL = '/api/users/search';
 
+  // Локальная копия несохранённых изменений (плашка «Восстановить»).
+  // 'new' — страница создания; для редактирования понадобится свой id.
+  var BACKUP_KEY = 'bookform:v1:new';
+
   var listCache = {};
 
   function t(key, params) {
@@ -65,6 +78,16 @@
   function notify(text, type) {
     if (window.Messages) window.Messages.show(text, { type: type || 'error' });
     else console.warn(text);
+  }
+
+  /** Отложенный вызов (для автозаписи копии изменений). */
+  function debounce(fn, ms) {
+    var timer;
+    return function () {
+      var args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(null, args); }, ms);
+    };
   }
 
   function formatSize(bytes) {
@@ -144,10 +167,10 @@
     var c = isbnClean(raw);
     if (c === '') {
       // Поле необязательное: пусто — ок; не пусто, но без цифр — мусор.
-      return { error: raw === '' ? null : t('js.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
+      return { error: raw === '' ? null : t('errors.validation.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
     }
     if (c.length !== 13 || !/^97[89]/.test(c)) {
-      return { error: t('js.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
+      return { error: t('errors.validation.isbn_shape', { hint: t('js.isbn_hint') }), warning: null };
     }
     if (!isbnChecksumOk(c)) {
       return { error: null, warning: t('bookform.isbn_checksum') };
@@ -218,7 +241,7 @@
       select.innerHTML = options;
     }).catch(function (err) {
       console.error('[book-form] failed to load', url, err);
-      notify(t('js.list_load_failed'));
+      notify(t('errors.common.list_load_failed'));
     });
   }
 
@@ -646,22 +669,31 @@
      ФОРМА
      ============================================================ */
   function initForm(form) {
-    var FIELD_KEYS = ['title', 'annotation', 'genre', 'category', 'series', 'isbn', 'cover', 'files', 'authors', 'editors'];
+    var FIELD_KEYS = ['title', 'annotation', 'author_notes', 'genre', 'category', 'series', 'isbn', 'cover', 'files', 'authors', 'editors'];
 
     var RULES = {
-      title:      { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
-      annotation: { required: false, maxLength: 5000, msgKey: 'js.rule_book_annotation' },
-      genre:      { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
-      category:   { required: true,  select: true,    msgKey: 'js.rule_book_category' },
-      series:     { required: false, maxLength: 120,  msgKey: 'js.rule_book_series' },
-      isbn:       { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'js.isbn_shape' },
-      cover:      { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
+      title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
+      annotation:  { required: false, maxLength: 5000, msgKey: 'js.rule_book_annotation' },
+      author_notes:{ required: false, maxLength: 2000, msgKey: 'js.rule_book_author_note' },
+      genre:       { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
+      category:    { required: true,  select: true,    msgKey: 'js.rule_book_category' },
+      series:      { required: false, maxLength: 120,  msgKey: 'js.rule_book_series' },
+      isbn:        { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'errors.validation.isbn_shape' },
+      cover:       { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
       // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles
-      files:      { required: true,  file: 'files',   msgKey: 'js.rule_book_file_required' },
+      files:       { required: true,  file: 'files',   msgKey: 'js.rule_book_file_required' },
       // списки людей: лимит авторов (30) держит addPerson, тут только
       // рендер серверных ошибок (422 от бэка)
-      authors:    { required: false, custom: 'people' },
-      editors:    { required: false, custom: 'people' },
+      authors:     { required: false, custom: 'people' },
+      editors:     { required: false, custom: 'people' },
+    };
+
+    // Обязательные поля каждого шага: «Далее» не пускает дальше,
+    // пока они не прошли валидацию (см. initSteps).
+    // Шаг 3 «Роли» пропущен — когда он появится, добавить сюда его поля.
+    var STEP_FIELDS = {
+      1: ['title', 'genre', 'category', 'series', 'isbn', 'cover'],
+      2: ['annotation', 'author_notes', 'files', 'authors', 'editors'],
     };
 
     var fileValidators = {
@@ -671,6 +703,12 @@
 
     // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
     initPeople(form);
+
+    // API переключения шагов (нужен focusFirstInvalid, чтобы показать шаг,
+    // на котором лежит первое невалидное поле) и флаг несохранённых
+    // изменений (см. локальную копию ниже).
+    var stepsApi = null;
+    var dirty = false;
 
     function getField(name)   {
       var el = form.querySelector('[name="' + name + '"]');
@@ -757,6 +795,10 @@
     function focusFirstInvalid() {
       var firstInvalid = form.querySelector('.form-field__input--invalid');
       if (firstInvalid) {
+        // Ошибка может жить на скрытом шаге (например, пришёл 422 от бэка) —
+        // сначала раскрываем шаг, потом скроллим к полю.
+        var step = firstInvalid.closest ? firstInvalid.closest('.book-step') : null;
+        if (step && step.hidden && stepsApi) stepsApi.reveal(step);
         firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
         if (firstInvalid.focus) firstInvalid.focus();
       }
@@ -894,6 +936,8 @@
             // redirect, присланный бэком (payload.redirect / Location).
             if (response.ok && !/^\s*</.test(raw)) {
               notify(t('js.bookform_saved'), 'success');
+              clearBackup();
+              dirty = false;
               var payload = (data && data.data) || data || {};
               var redirect = payload.redirect
                 || response.headers.get('Location')
@@ -905,6 +949,8 @@
             // Успех без тела (302 с Location — бэк без JSON-режима).
             if (response.redirected || response.status === 302 || response.status === 201) {
               notify(t('js.bookform_saved'), 'success');
+              clearBackup();
+              dirty = false;
               window.location.href = response.url || '/books';
               return;
             }
@@ -915,7 +961,7 @@
               renderServerErrors(errors);
             }
 
-            var fallback = t('js.save_failed', { status: response.status });
+            var fallback = t('errors.common.save_failed', { status: response.status });
             notify(window.Messages
               ? window.Messages.describe(response.status, data, raw, fallback)
               : fallback);
@@ -925,7 +971,7 @@
         .catch(function (err) {
           console.error('[book-form] submit failed for', action, err);
           resetButton();
-          notify(t('js.network_error'));
+          notify(t('errors.common.network_error'));
         });
     });
 
@@ -933,6 +979,302 @@
     // Справочники
     // --------------------------------------------------------
     form.querySelectorAll('[data-dynamic-select]').forEach(populateSelect);
+
+    // --------------------------------------------------------
+    // ГЛАВЫ КНИГИ — только UI (input'ы без name, в POST не уходят;
+    // контракт с бэкендом уточняется, см. шапку book-form.php)
+    // --------------------------------------------------------
+    function renumberChapters() {
+      Array.prototype.forEach.call(
+        form.querySelectorAll('[data-chapters] [data-chapter]'),
+        function (row, i) {
+          var num = row.querySelector('[data-chapter-num]');
+          if (num) num.textContent = String(i + 1);
+        }
+      );
+    }
+
+    function addChapter(value) {
+      var list = form.querySelector('[data-chapters]');
+      if (!list) return null;
+
+      var row = document.createElement('li');
+      row.className = 'chapters__item';
+      row.setAttribute('data-chapter', '');
+      row.innerHTML =
+        '<span class="chapters__num" data-chapter-num aria-hidden="true"></span>' +
+        '<input class="form-field__input chapters__input" type="text" data-chapter-title' +
+        ' maxlength="200" autocomplete="off" placeholder="' +
+        escapeHtml(t('bookform.chapter_ph')) + '">' +
+        '<button class="chapters__remove" type="button" data-chapter-remove aria-label="' +
+        escapeHtml(t('bookform.chapter_remove')) + '">−</button>';
+
+      var input = row.querySelector('[data-chapter-title]');
+      if (input && value) input.value = String(value);
+
+      list.appendChild(row);
+      renumberChapters();
+      return row;
+    }
+
+    function chapterTitles() {
+      return Array.prototype.map.call(
+        form.querySelectorAll('[data-chapters] [data-chapter-title]'),
+        function (input) { return input.value; }
+      );
+    }
+
+    function setChapters(list) {
+      var box = form.querySelector('[data-chapters]');
+      if (!box) return;
+      box.innerHTML = '';
+      (list || []).forEach(function (title) { addChapter(title); });
+      renumberChapters();
+    }
+
+    function initChapters() {
+      if (!form.querySelector('[data-chapters]')) return;
+      renumberChapters();
+
+      var addBtn = form.querySelector('[data-chapter-add]');
+      if (addBtn) {
+        addBtn.addEventListener('click', function () {
+          var row = addChapter('');
+          var input = row && row.querySelector('[data-chapter-title]');
+          if (input && input.focus) input.focus();
+          markDirty();
+        });
+      }
+
+      // Удаление делегированием: строки пересоздаются при восстановлении
+      form.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('[data-chapter-remove]') : null;
+        if (!btn) return;
+        var row = btn.closest('[data-chapter]');
+        if (row && row.parentNode) row.parentNode.removeChild(row);
+        renumberChapters();
+        markDirty();
+      });
+    }
+
+    // --------------------------------------------------------
+    // МНОГОШАГОВОСТЬ (FORM-01): «Далее» не пускает дальше, пока
+    // обязательные поля шага не прошли валидацию
+    // --------------------------------------------------------
+    function initSteps() {
+      var steps = Array.prototype.slice.call(form.querySelectorAll('.book-step'));
+      if (!steps.length) {
+        return { current: function () { return 1; }, goTo: function () {}, reveal: function () {} };
+      }
+
+      var total = steps.length;
+      var current = 1;
+
+      function show(n) {
+        n = Math.min(Math.max(n, 1), total);
+        steps.forEach(function (step) {
+          step.hidden = parseInt(step.getAttribute('data-step'), 10) !== n;
+        });
+        current = n;
+        if (window.history && history.replaceState) {
+          history.replaceState(null, '', '#step-' + n);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function validateStep(n) {
+        var ok = true;
+        (STEP_FIELDS[n] || []).forEach(function (name) {
+          if (!validateField(name)) ok = false;
+        });
+        return ok;
+      }
+
+      Array.prototype.forEach.call(form.querySelectorAll('[data-step-next]'), function (btn) {
+        btn.addEventListener('click', function () {
+          if (!validateStep(current)) {
+            showFieldErrors();
+            focusFirstInvalid();
+            return;
+          }
+          show(current + 1);
+        });
+      });
+
+      Array.prototype.forEach.call(form.querySelectorAll('[data-step-prev]'), function (btn) {
+        btn.addEventListener('click', function () { show(current - 1); });
+      });
+
+      var match = location.hash.match(/^#step-(\d+)$/);
+      show(match ? parseInt(match[1], 10) : 1);
+
+      return {
+        current: function () { return current; },
+        goTo: function (n) { show(n); },
+        reveal: function (stepEl) {
+          var n = parseInt(stepEl.getAttribute('data-step'), 10);
+          if (n) show(n);
+        },
+      };
+    }
+
+    // --------------------------------------------------------
+    // ЛОКАЛЬНАЯ КОПИЯ НЕСОХРАНЁННЫХ ИЗМЕНЕНИЙ
+    // (плашка «Восстановить / Отбросить» на шаге 1: например, открыл
+    //  создание новой книги, не сохранив прошлые изменения)
+    // --------------------------------------------------------
+    var scheduleBackup = debounce(writeBackup, 800);
+
+    // Текстовые поля и селекты, участвующие в копии. Файлы (обложка,
+    // файлы книги) и списки людей в копию не попадают — их браузер
+    // восстановить не может.
+    var BACKUP_FIELDS = ['title', 'annotation', 'author_notes', 'series', 'isbn', 'genre', 'category'];
+
+    function markDirty() {
+      dirty = true;
+      scheduleBackup();
+    }
+
+    function snapshot() {
+      var snap = { savedAt: Date.now(), chapters: chapterTitles() };
+      BACKUP_FIELDS.forEach(function (name) {
+        var el = getField(name);
+        snap[name] = el ? (el.value || '') : '';
+      });
+      return snap;
+    }
+
+    /**
+     * Есть ли в копии осмысленное содержимое. Нужно, чтобы:
+     *  - не плодить пустые копии (dirty ставит и рендер ошибок через
+     *    MutationObserver — без реальных правок писать нечего);
+     *  - не спрашивать «выйти без сохранения?» на нетронутой форме.
+     */
+    function hasContent(snap) {
+      if (!snap) return false;
+      return BACKUP_FIELDS.some(function (name) {
+        return String(snap[name] || '').trim() !== '';
+      }) || (snap.chapters || []).some(function (title) { return String(title).trim() !== ''; });
+    }
+
+    function writeBackup() {
+      if (!dirty) return;
+      if (!hasContent(snapshot())) { clearBackup(); return; }
+      try { localStorage.setItem(BACKUP_KEY, JSON.stringify(snapshot())); } catch (_) {}
+    }
+
+    function clearBackup() {
+      try { localStorage.removeItem(BACKUP_KEY); } catch (_) {}
+    }
+
+    function readBackup() {
+      try {
+        var raw = localStorage.getItem(BACKUP_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) { return null; }
+    }
+
+    function applyBackup(b) {
+      if (!b) return;
+
+      BACKUP_FIELDS.forEach(function (name) {
+        if (b[name] === undefined || b[name] === null) return;
+        var el = getField(name);
+        if (!el) return;
+
+        if (el.tagName === 'SELECT') {
+          var value = String(b[name]);
+          if (value === '') return;
+          el.setAttribute('data-selected', value);
+          // Опции могли ещё не подгрузиться — гарантируем временную,
+          // populateSelect ниже перечитает список из кэша с data-selected.
+          var found = null;
+          Array.prototype.forEach.call(el.options, function (opt) {
+            if (opt.value === value) found = opt;
+          });
+          if (!found) {
+            found = document.createElement('option');
+            found.value = value;
+            found.textContent = value;
+            el.appendChild(found);
+          }
+          el.value = value;
+          populateSelect(el);
+          return;
+        }
+
+        el.value = String(b[name]);
+      });
+
+      if (Object.prototype.hasOwnProperty.call(b, 'chapters')) setChapters(b.chapters || []);
+
+      dirty = true;
+      scheduleBackup();
+    }
+
+    function initRestore() {
+      var box = form.querySelector('[data-restore]');
+      if (!box) return;
+
+      var b = readBackup();
+      if (!b) return;
+
+      var cur = snapshot();
+      var same = BACKUP_FIELDS.every(function (name) {
+        return String(b[name] || '') === String(cur[name] || '');
+      }) && JSON.stringify(b.chapters || []) === JSON.stringify(cur.chapters || []);
+
+      // Копия пустая или совпадает с тем, что уже в форме — плашка не нужна
+      if (same || !hasContent(b)) { clearBackup(); return; }
+
+      box.hidden = false;
+
+      var apply = box.querySelector('[data-restore-apply]');
+      var discard = box.querySelector('[data-restore-discard]');
+      if (apply) {
+        apply.addEventListener('click', function () {
+          applyBackup(b);
+          box.hidden = true;
+        });
+      }
+      if (discard) {
+        discard.addEventListener('click', function () {
+          clearBackup();
+          box.hidden = true;
+        });
+      }
+    }
+
+    /** Уход со страницы с несохранёнными изменениями: копия + подтверждение. */
+    function onBeforeUnload(e) {
+      // только если реально что-то введено (dirty бывает и без правок —
+      // например, отрендеренные ошибки валидации)
+      if (!dirty || !hasContent(snapshot())) return;
+      writeBackup();
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+
+    // --------------------------------------------------------
+    // ПОДКЛЮЧЕНИЕ: шаги, главы, отметки об изменениях
+    // --------------------------------------------------------
+    initChapters();
+    stepsApi = initSteps();
+
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', markDirty);
+
+    // Списки людей и глав меняются через DOM (без input/change) —
+    // ловим эти правки наблюдателем; лишние события отсекает
+    // сравнение копии с формой в initRestore.
+    if (window.MutationObserver) {
+      new MutationObserver(function () { markDirty(); })
+        .observe(form, { subtree: true, childList: true, characterData: true });
+    }
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    initRestore();
   }
 
   document.querySelectorAll('form[data-book-form]').forEach(initForm);
