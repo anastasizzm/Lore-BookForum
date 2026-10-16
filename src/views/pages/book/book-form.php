@@ -57,12 +57,52 @@ $langField = $langQuery !== null && $langQuery !== ''
  *                  не более одного файла каждого формата, ≤50MB на файл) —
  *                  книга в одном или нескольких форматах; дубли форматов
  *                  бэк тоже должен отсекать (фронт уже отсекает)
+ *          status ('draft' | 'published', required) — кнопка-сабмитер
+ *                  Нижней панели шага 2 (Create draft / Publish):
+ *                    draft     → книга-черновик: видит только создатель
+ *                                (политику держит бэк), успех → фронт
+ *                                уводит на book-details (бейдж «Черновик»,
+ *                                кнопка публикации внизу);
+ *                    published → после УСПЕХА проверки фронт открывает
+ *                                плашку выбора прав (см. ниже) и лишь
+ *                                потом ведёт на страницу книги.
  *          _token (CSRF: поле csrfField() или заголовок X-CSRF-Token), lang
  *        успех: Accept: application/json → 201 { data: { id, redirect } }
  *               redirect — редирект бэка; если его нет, фронт уводит
- *               пользователя на страницу библиотеки /books (P0).
+ *               пользователя на страницу книги /books/{id} (draft) или
+ *               на неё же после подтверждения прав (published).
  *               без JSON (прогрессивный POST без JS) → 302 на /books
  *        ошибки валидации → 422 { errors: { field: [msg, ...] } }
+ *               Фронт возвращает пользователя на шаг, где ошибка: при
+ *               ошибках сразу в двух шагах — сначала первый (порядок
+ *               полей в DOM), дальше пользователь идёт сам.
+ *
+ *   РЕЖИМ РЕДАКТИРОВАНИЯ (по образцу article-form):
+ *   GET  /books/{id}/edit → роут books.edit, AuthPolicy::Verified (бэк)
+ *        рендерит ЭТУ ЖЕ вьюху, передавая $book — гидрированную модель
+ *        Book: id, title, genre(id), category(id), series, isbn,
+ *        annotation (description), authorNotes, authors/editors, status.
+ *        Вьюша прелфиллит поля из $book; $form (после 422) перебивает.
+ *        Сохранение — тот же POST /books/store со скрытым полем id:
+ *          id пусто → создание (201), id > 0 → обновление
+ *          (200, redirect /books/{id}). В edit-режиме кнопка «Сохранить»
+ *          шлёт status = ТЕКУЩИЙ статус книги (не меняет его).
+ *        Нижняя панель edit-режима: ← Назад | Отмена | Сохранить |
+ *        Опубликовать (ВСЕГДА; data-rights-open — открывает плашку выбора
+ *        прав, rights-modal.js mode='publish': POST rights[] +
+ *        POST /books/{id}/publish → переход на страницу книги).
+ *        Локальная копия (localStorage «Восстановить») в edit-режиме
+ *        НЕ пишется — только для создания.
+ *
+ *   ПУБЛИКАЦИЯ И ПРАВА (плашка rights-modal.php, JS rights-modal.js):
+ *   GET  /api/additional/rights         — справочник прав, АСИНХРОННО при
+ *        открытии плашки: 200 { items: [ { id, title, description? } ] }
+ *        (по аналогии с /api/additional/genres, ResponseTemplates::list)
+ *   POST /api/publications/{id}/rights  — сохранение выбранных прав:
+ *        поля rights[] (array<int>), CSRF; 200/204 ок, 422 с errors
+ *   POST /books/{id}/publish            — черновик → published; используется
+ *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
+ *        перезагрузка страницы (бейдж и кнопка исчезают)
  *
  *   ГЛАВЫ КНИГИ: UI-список есть (шаг 2), но input'ы БЕЗ name — в POST не
  *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
@@ -106,7 +146,36 @@ $langField = $langQuery !== null && $langQuery !== ''
 $form   = $form   ?? [];
 $errors = $errors ?? [];
 
-/** Значение поля: сначала то, что прислал пользователь, потом пусто. */
+/**
+ * Режим редактирования: контроллер /books/{id}/edit передаёт $book.
+ * Тест-роут /pages/test отдаёт query-массивами — читаем поля и через
+ * объект, и через массив.
+ */
+$book = $book ?? null;
+$get  = static function ($src, string $key, $default = null) {
+    if (is_array($src)) return array_key_exists($key, $src) ? $src[$key] : $default;
+    if (is_object($src)) return $src->$key ?? $default;
+    return $default;
+};
+
+$bookId     = (int) $get($book, 'id', 0);
+$isEdit     = $book !== null && $bookId > 0;
+$bookStatus = strtolower(trim((string) ($get($book, 'status', '') ?: 'draft')));
+
+/** Дефолт поля из книги (edit-режим); $form (после 422) всегда перебивает. */
+$fromBook = static function (string $key, string $default = '') use ($get, $book): string {
+    if ($book === null) return $default;
+    $raw = $get($book, $key, null);
+    if (is_array($raw) || $raw === null || $raw === '') return $default;
+    if (is_object($raw)) $raw = (string) $raw;
+    return $raw === '' ? $default : (string) $raw;
+};
+
+// Жанр/категория в модели — объекты; для селекта нужен id.
+$bookGenreId    = (string) ($get($get($book, 'genre', null), 'id', '') ?: $get($book, 'genre_id', ''));
+$bookCategoryId = (string) ($get($get($book, 'category', null), 'id', '') ?: $get($book, 'category_id', ''));
+
+/** Значение поля: сначала то, что прислал пользователь, потом книга (edit). */
 $val = static function (string $key, string $default = '') use ($form): string {
     if (array_key_exists($key, $form) && $form[$key] !== null && $form[$key] !== '') {
         return (string) $form[$key];
@@ -138,6 +207,21 @@ $people = static function (string $key) use ($form): array {
 
 $authors = $people('authors');
 $editors = $people('editors');
+
+// edit-режим: списки людей из $book, если контроллер их прислал
+$bookPeople = static function (string $key) use ($get, $book): array {
+    $raw = $get($book, $key, null);
+    if (!is_array($raw)) return [];
+    $out = [];
+    foreach ($raw as $one) {
+        $id = $get($one, 'id', null);
+        if ($id === null || $id === '') continue;
+        $out[] = ['id' => (string) $id, 'username' => (string) ($get($one, 'username', '') ?: $id)];
+    }
+    return $out;
+};
+if ($authors === []) $authors = $bookPeople('authors');
+if ($editors === []) $editors = $bookPeople('editors');
 
 /** Первая ошибка поля (сервер может прислать список). */
 $err = static function (string $key) use ($errors): string {
@@ -187,21 +271,25 @@ foreach ($fieldKeys as $key) {
     if ($errOf($key) !== '') $dirtyFields[] = $key;
 }
 
-$genreValue    = $val('genre');
-$categoryValue = $val('category');
+$genreValue    = $val('genre', $bookGenreId);
+$categoryValue = $val('category', $bookCategoryId);
 ?>
 
-<?php $view->startBlock('title'); ?><?= $tr('common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
+  <!-- rights-modal.js — ДО book-form.js: после успешной публикации форма
+       вызывает window.RightsModal.open(...) -->
+  <script src="<?= $view->asset('js/rights-modal.js') ?>" defer></script>
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
 
 <?php $view->include('page-header', [
-    'title'    => $view->t('common.bookform.title'),
+    'title'    => $view->t($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title'),
     'subtitle' => $view->t('common.bookform.subtitle'),
 ]); ?>
 
@@ -231,10 +319,16 @@ $categoryValue = $val('category');
           id="bookForm"
           data-book-form
           data-initial-errors="<?= $view->e(implode(',', $dirtyFields)) ?>"
+          <?php if ($isEdit): ?>data-book-id="<?= $bookId ?>"
+                   data-book-status="<?= $view->e($bookStatus) ?>"<?php endif; ?>
           enctype="multipart/form-data"
           novalidate>
       <?= $view->csrfField() ?>
       <?= $langField ?>
+      <?php if ($isEdit): ?>
+        <!-- edit-режим: id > 0 → POST /books/store обновляет книгу (контракт в шапке) -->
+        <input type="hidden" name="id" value="<?= $bookId ?>">
+      <?php endif; ?>
 
       <!-- ============================================================
            ШАГ 1. ОСНОВНЫЕ ДАННЫЕ (формальности)
@@ -246,7 +340,10 @@ $categoryValue = $val('category');
           <h2 class="book-step__title"><?= $tr('common.bookform.step1_title') ?></h2>
         </header>
 
-        <!-- Найдена локальная копия несохранённых изменений (см. book-form.js) -->
+        <!-- Найдена локальная копия несохранённых изменений (см. book-form.js).
+             В edit-режиме не показывается — локальная копия пишется только
+             при создании (ключ bookform:v1:new). -->
+        <?php if (!$isEdit): ?>
         <div class="book-form__restore" data-restore role="status" hidden>
           <p class="book-form__restore-text"><?= $tr('common.bookform.restore_text') ?></p>
           <div class="book-form__restore-actions">
@@ -254,6 +351,7 @@ $categoryValue = $val('category');
             <button type="button" class="btn btn--secondary" data-restore-discard><?= $tr('common.bookform.restore_discard') ?></button>
           </div>
         </div>
+        <?php endif; ?>
 
         <div class="form-field">
           <label for="bookTitle"><?= $tr('common.bookform.field_title') ?></label>
@@ -261,7 +359,7 @@ $categoryValue = $val('category');
                  type="text"
                  id="bookTitle"
                  name="title"
-                 value="<?= $view->e($val('title')) ?>"
+                 value="<?= $view->e($val('title', $fromBook('title'))) ?>"
                  maxlength="200"
                  autocomplete="off"
                  required>
@@ -319,7 +417,7 @@ $categoryValue = $val('category');
                    type="text"
                    id="bookSeries"
                    name="series"
-                   value="<?= $view->e($val('series')) ?>"
+                   value="<?= $view->e($val('series', $fromBook('series'))) ?>"
                    maxlength="120"
                    autocomplete="off"
                    placeholder="<?= $tr('common.bookform.field_series_ph') ?>">
@@ -335,7 +433,7 @@ $categoryValue = $val('category');
                    type="text"
                    id="bookIsbn"
                    name="isbn"
-                   value="<?= $view->e($val('isbn')) ?>"
+                   value="<?= $view->e($val('isbn', $fromBook('isbn'))) ?>"
                    maxlength="20"
                    inputmode="numeric"
                    autocomplete="off"
@@ -412,7 +510,7 @@ $categoryValue = $val('category');
                     name="annotation"
                     rows="6"
                     maxlength="5000"
-                    placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
+                    placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('annotation', $fromBook('description'))) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>
 
@@ -425,7 +523,7 @@ $categoryValue = $val('category');
                     name="author_notes"
                     rows="4"
                     maxlength="2000"
-                    placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('author_notes')) ?></textarea>
+                    placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('author_notes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('author_notes') ?>
         </div>
 
@@ -563,24 +661,70 @@ $categoryValue = $val('category');
         </div>
 
         <!-- ============================================================
-             НАВИГАЦИЯ ПОСЛЕДНЕГО (пока) ШАГА.
-             «Далее/Назад» — по шаблону article-form; кнопки отправки
-             оставлены прежними. Когда появится шаг 3 «Роли», блок
-             действий переедет туда и станет: Отмена / Сохранить черновик
-             / Опубликовать (черновик → book-details → подтверждение).
+             НАВИГАЦИЯ ПОСЛЕДНЕГО (пока) ШАГА — как в article-form.
+             Два режима:
+
+             СОЗДАНИЕ («Назад/Отмена» + ДВА исхода отправки):
+               Create draft → POST status=draft  → успех: редирект на
+                            страницу книги (book-details) с бейджом
+                            «Черновик» и кнопкой публикации внизу;
+               Publish      → POST status=published → успех (проверка
+                            прошла): открывается плашка выбора прав
+                            (rights-modal.php, справочник грузится
+                            асинхронно), после подтверждения — переход
+                            на страницу книги.
+
+             РЕДАКТИРОВАНИЕ (отмена → /books/{id}):
+               Сохранить    → POST id>0, status = текущий статус книги
+                            → успех: редирект на страницу книги;
+               Опубликовать → ВСЕГДА видна; data-rights-open открывает
+                            плашку выбора прав (rights-modal.js
+                            mode='publish'): POST rights[] +
+                            POST /books/{id}/publish → переход на
+                            страницу книги (уже опубликованной).
+
+             Невалидные данные (клиентские или 422 от бэка) возвращают
+             пользователя на шаг с ошибкой: сначала первая страница
+             (порядок полей в DOM), затем он сам перейдёт на вторую —
+             см. focusFirstInvalid в book-form.js.
+             Когда появится шаг 3 «Роли», блок действий переедет туда.
              ============================================================ -->
         <div class="book-step__nav">
           <button type="button" class="btn btn--secondary" data-step-prev>
             ← <?= $tr('common.bookform.back') ?>
           </button>
-          <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-          <button class="btn btn--primary" type="submit"><?= $tr('common.bookform.submit') ?></button>
+          <?php if ($isEdit): ?>
+            <a class="btn btn--secondary"
+               href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
+            <button class="btn btn--secondary" type="submit" data-submit-save>
+              <?= $tr('common.bookform.save') ?>
+            </button>
+            <!-- Публикация существующей книги: открывает плашку выбора прав
+                 (rights-modal.js, mode='publish') — книга публикуется после
+                 подтверждения в плашке, не отправкой формы -->
+            <button class="btn btn--primary" type="button"
+                    data-rights-open data-book-id="<?= $bookId ?>">
+              <?= $tr('common.bookform.publish') ?>
+            </button>
+          <?php else: ?>
+            <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
+            <button class="btn btn--secondary" type="submit" name="status" value="draft" data-submit-draft>
+              <?= $tr('common.bookform.create_draft') ?>
+            </button>
+            <button class="btn btn--primary" type="submit" name="status" value="published" data-submit-publish>
+              <?= $tr('common.bookform.publish') ?>
+            </button>
+          <?php endif; ?>
         </div>
       </section>
 
     </form>
 
   </section>
+
+  <!-- Плашка выбора прав: book-form открывает её после успешной публикации
+       (rights-modal.js, контракт — в шапке partial) -->
+  <?php $view->include('rights-modal'); ?>
 
 </div>
 

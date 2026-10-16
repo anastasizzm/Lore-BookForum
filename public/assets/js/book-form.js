@@ -710,6 +710,12 @@
     var stepsApi = null;
     var dirty = false;
 
+    // edit-режим: скрытое поле id (контракт — в шапке book-form.php).
+    // id > 0 → POST /books/store обновляет книгу; локальная копия
+    // («Восстановить») в edit-режиме не пишется.
+    var idField = form.querySelector('input[name="id"]');
+    var editId = idField ? (parseInt(idField.value, 10) || 0) : 0;
+
     function getField(name)   {
       var el = form.querySelector('[name="' + name + '"]');
       if (!el && name === 'files') el = form.querySelector('[data-files-input]');
@@ -885,32 +891,67 @@
     if (loadErrors.length) notify(loadErrors.join('\n'));
 
     // --------------------------------------------------------
-    // Отправка: fetch + FormData (multipart), файлы не читаем в JS
+    // Отправка: fetch + FormData (multipart), файлы не читаем в JS.
+    // Намерение (draft/publish) берём у нажатой кнопки-сабмитера:
+    //   Create draft → успех: редирект на страницу книги;
+    //   Publish      → успех: плашка выбора прав (rights-modal.js),
+    //                  после подтверждения — переход на страницу книги.
     // --------------------------------------------------------
+    var lastSubmitStatus = 'draft';   // для сабмита по Enter (кнопка по умолчанию)
+    form.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest
+        ? e.target.closest('button[type="submit"][name="status"]')
+        : null;
+      if (btn) lastSubmitStatus = btn.value;
+    });
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearAllErrors();
 
+      // Сначала клиентская валидация ВСЕХ полей (порядок полей в DOM:
+      // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
+      // дальше пользователь перейдёт на второй сам).
       if (!validateAll()) {
         showFieldErrors();
         focusFirstInvalid();
         return;
       }
 
+      var statusValue = (e.submitter && e.submitter.value) || lastSubmitStatus;
+      if (statusValue !== 'published') statusValue = 'draft';
+      // edit-режим: кнопка «Сохранить» шлёт ТЕКУЩИЙ статус книги —
+      // сохранение не публикует; публикация идёт отдельной кнопкой
+      // через плашку прав (data-rights-open, rights-modal.js).
+      if (editId) {
+        statusValue = form.getAttribute('data-book-status') === 'published' ? 'published' : 'draft';
+      }
+      var isPublish = !editId && statusValue === 'published';
+
       var action = form.getAttribute('action') || window.location.href;
-      var submitBtn = form.querySelector('button[type="submit"]');
-      var originalText = submitBtn ? submitBtn.textContent : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = t('js.bookform_saving');
+      var submitBtns = Array.prototype.slice.call(
+        form.querySelectorAll('[data-submit-save], [data-submit-draft], [data-submit-publish]')
+      );
+      var labels = submitBtns.map(function (b) { return b.textContent; });
+      var activeBtn = form.querySelector('[data-submit-save]')
+        || (isPublish
+          ? form.querySelector('[data-submit-publish]')
+          : form.querySelector('[data-submit-draft]'));
+
+      submitBtns.forEach(function (b) { b.disabled = true; });
+      if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
+
+      function resetButtons() {
+        submitBtns.forEach(function (b, i) {
+          b.disabled = false;
+          if (labels[i] !== undefined) b.textContent = labels[i];
+        });
       }
 
-      function resetButton() {
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText; }
-      }
-
-      // FormData(form) сам проставляет boundary и уносит файлы.
+      // FormData(form) сам проставляет boundary и уносит файлы;
+      // значение кнопки-сабмитера в неё НЕ попадает — проставляем сами.
       var body = new FormData(form);
+      body.set('status', statusValue);
 
       // LoreCsrf.fetch сам добавляет заголовок X-CSRF-Token (токен из cookie).
       var csrfFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
@@ -932,29 +973,61 @@
             try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
             // Успех: JSON с id/redirect, либо редирект бэка (Location).
-            // P0: цель по умолчанию — библиотека /books; приоритет —
-            // redirect, присланный бэком (payload.redirect / Location).
             if (response.ok && !/^\s*</.test(raw)) {
-              notify(t('js.bookform_saved'), 'success');
               clearBackup();
               dirty = false;
               var payload = (data && data.data) || data || {};
+              var bookId = parseInt(payload.id, 10) || editId;
+              var locationHeader = response.headers.get('Location');
               var redirect = payload.redirect
-                || response.headers.get('Location')
-                || '/books';
-              window.location.href = redirect;
+                || (bookId ? '/books/' + bookId : (locationHeader || '/books'));
+
+              if (editId) {
+                // edit-режим: книга обновлена (статус не менялся) —
+                // уходим на её страницу.
+                notify(t('js.book_updated'), 'success');
+                window.location.href = redirect;
+                return;
+              }
+
+              if (!isPublish) {
+                // Черновик: сразу ведём на страницу книги — там бейдж
+                // «Черновик», кнопка «Редактировать» и публикация внизу.
+                notify(t('js.book_draft_created'), 'success');
+                window.location.href = redirect;
+                return;
+              }
+
+              // Публикация прошла проверку бэка — открываем плашку выбора
+              // прав (справочник грузится асинхронно); после подтверждения
+              // rights-modal.js уведёт на страницу книги (redirect).
+              notify(t('js.book_published'), 'success');
+              if (window.RightsModal && bookId) {
+                window.RightsModal.open({
+                  mode: 'after-publish',
+                  bookId: bookId,
+                  redirect: redirect,
+                });
+                resetButtons();
+              } else {
+                window.location.href = redirect;
+              }
               return;
             }
 
             // Успех без тела (302 с Location — бэк без JSON-режима).
             if (response.redirected || response.status === 302 || response.status === 201) {
-              notify(t('js.bookform_saved'), 'success');
               clearBackup();
               dirty = false;
-              window.location.href = response.url || '/books';
+              notify(editId
+                ? t('js.book_updated')
+                : (isPublish ? t('js.book_published') : t('js.book_draft_created')), 'success');
+              window.location.href = response.url || (editId ? '/books/' + editId : '/books');
               return;
             }
 
+            // 422/400: показываем ошибки на полях и возвращаем пользователя
+            // на шаг, где ошибка (сначала первый — порядок полей в DOM).
             if ((response.status === 400 || response.status === 422) && data) {
               var errors = data.errors
                 || (data.error && typeof data.error === 'object' ? data.error.details : null);
@@ -965,12 +1038,12 @@
             notify(window.Messages
               ? window.Messages.describe(response.status, data, raw, fallback)
               : fallback);
-            resetButton();
+            resetButtons();
           });
         })
         .catch(function (err) {
           console.error('[book-form] submit failed for', action, err);
-          resetButton();
+          resetButtons();
           notify(t('errors.common.network_error'));
         });
     });
@@ -1158,12 +1231,14 @@
     }
 
     function writeBackup() {
+      if (editId) return;              // локальная копия — только для создания
       if (!dirty) return;
       if (!hasContent(snapshot())) { clearBackup(); return; }
       try { localStorage.setItem(BACKUP_KEY, JSON.stringify(snapshot())); } catch (_) {}
     }
 
     function clearBackup() {
+      if (editId) return;              // не трогаем копию создания книги
       try { localStorage.removeItem(BACKUP_KEY); } catch (_) {}
     }
 
@@ -1272,6 +1347,11 @@
       new MutationObserver(function () { markDirty(); })
         .observe(form, { subtree: true, childList: true, characterData: true });
     }
+
+    // Плагины (rights-modal.js) могут уводить пользователя со страницы после
+    // успешного сохранения на сервере — тогда защита «несохранённых
+    // изменений» не нужна: событие снимает флаг dirty перед уходом.
+    window.addEventListener('bookform:leave', function () { dirty = false; });
 
     window.addEventListener('beforeunload', onBeforeUnload);
     initRestore();

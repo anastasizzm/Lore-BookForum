@@ -65,7 +65,12 @@
         "tab_toc": "Table of contents",
         "no_annotation": "Annotation is not available yet.",
         "author_note": "Author's Note:",
-        "no_toc": "Table of contents is not available yet."
+        "no_toc": "Table of contents is not available yet.",
+        "draft_badge": "Draft",
+        "draft_hint": "Only you can see this draft.",
+        "edit": "Edit",
+        "publish_bar_text": "The book has not been published yet — only you can see it.",
+        "publish_cta": "Publish book"
     },
     "bookform": {
         "title": "Create book",
@@ -121,7 +126,11 @@
         "chapters_hint": "Chapter titles are not sent to the server yet — the contract is pending.",
         "restore_text": "Unsaved changes from your last session were found on this device.",
         "restore_apply": "Restore",
-        "restore_discard": "Discard"
+        "restore_discard": "Discard",
+        "create_draft": "Create draft",
+        "publish": "Publish",
+        "title_edit": "Edit book",
+        "save": "Save"
     },
     "comments": {
         "title": "Comments:",
@@ -279,6 +288,19 @@
         "pagination": "Drafts pagination",
         "prev": "Previous",
         "next": "Next"
+    },
+    "rights": {
+        "title": "Publication rights",
+        "hint": "Choose the rights for this book. The list is loaded from the server.",
+        "loading": "Loading rights…",
+        "load_failed": "Could not load the rights list.",
+        "retry": "Retry",
+        "empty": "No rights available yet.",
+        "close": "Close",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "publish_confirm": "Publish",
+        "save_failed": "Could not save rights (HTTP :status)."
     },
     "message": {
         "title": "Message — Lore"
@@ -496,7 +518,10 @@
         "bookform_saved": "The book has been created.",
         "rule_book_authors_limit": "Maximum 30 authors.",
         "rule_book_file_dup": "The {format} format is already added — only one file per format is allowed.",
-        "rule_book_author_note": "The author's notes are too long (2000 characters max)."
+        "rule_book_author_note": "The author's notes are too long (2000 characters max).",
+        "book_draft_created": "Draft created.",
+        "book_published": "Book published.",
+        "book_updated": "The book has been updated."
     },
     "admin": {
         "dashboard_title": "Admin panel",
