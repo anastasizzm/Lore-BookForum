@@ -220,14 +220,12 @@ final class BooksController extends Controller
             $format,
         );
 
-        return Response::html(
-            View::render('books/book-read', [
-                'book'  => $publication,
-                'fileId' => $fileId->toString(),
-                'previewUrl' => $this->url->url('files.preview', ['fileId' => $filleId->toString()]),
-                'initial' => $progress?->position ?? $this->defaultPosition($format)
-            ]),
-        );
+        return $this->render('book/book-read', [
+            'book'  => $publication,
+            'fileId' => $fileId->toString(),
+            'previewUrl' => $this->url->url('files.preview', ['fileId' => $fileId->toString()]),
+            'initial' => $progress?->position ?? $this->defaultPosition($format)
+        ]);
     }
 
     private function defaultPosition(BookFormat $format): array

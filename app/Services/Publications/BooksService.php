@@ -21,6 +21,7 @@ use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\BookFormat;
 use App\Models\Enums\ReadingStatus;
 use App\Models\Enums\FileCategory;
+use App\Models\Uuid;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Criterias\Publications\BooksCriteria;
