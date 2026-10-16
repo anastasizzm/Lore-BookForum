@@ -9,7 +9,9 @@ use App\Services\Enrichers\PublicationContextEnricher;
 use App\Services\Storage\FileService;
 
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookProgressForm;
 use App\Validators\Publications\BookFormValidator;
+use App\Validators\Publications\BookProgressFormValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
@@ -46,6 +48,7 @@ final class BooksService
         private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
+        private readonly BookProgressFormValidator $progressValidator,
         private readonly FileService $fileService
     ){}
 
@@ -112,9 +115,66 @@ final class BooksService
         return $this->booksRepo->identifyContent($bookId, $format->value);
     }
 
-    public function getProgress(int $userId, int $publicationId, BookFormat $format): ?UserRead
+    public function getProgress(int $userId, int $bookId, BookFormat $format): ?UserRead
     {
-        return $this->usersReadRepo->find($userId, $publicationId, $format);
+        return $this->usersReadRepo->find($userId, $bookId, $format);
+    }
+
+    public function saveProgress(
+    int        $userId,
+    int        $bookId,
+    BookProgressForm $form
+    ): void {
+        $bag = $this->progressValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $form
+        ): void {
+            $this->usersReadRepo->upsert(
+                userId:        $userId,
+                publicationId: $bookId,
+                format:        $form->format,
+                position:      $form->position,
+                isFinished:    $form->isFinished,
+            );
+        });
+    }
+
+    public function finishReading(
+        int        $userId,
+        int        $bookId,
+        BookFormat $format,
+    ): void {
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $format
+        ): void {
+            $this->usersReadRepo->markFinished(
+                userId:        $userId,
+                publicationId: $bookId,
+                format:        $format,
+            );
+        });
+    }
+
+    public function resetProgress(
+        int         $userId,
+        int         $bookId,
+        ?BookFormat $format,
+    ): void {
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $format
+        ): void {
+            if ($format === null) {
+                $this->usersReadRepo->delete($userId, $bookId);
+            } else {
+                $this->usersReadRepo->deleteForFormat(
+                    $userId,
+                    $bookId,
+                    $format,
+                );
+            }
+        });
     }
 
     public function retrieve(int $bookId, PropertiesQuery $props) : ?Book
