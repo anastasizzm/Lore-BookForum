@@ -826,7 +826,8 @@
 
     var RULES = {
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
-      description: { required: true,  maxLength: 5000, msgKey: 'js.rule_book_annotation' },
+      // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
+      description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
       authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note' },
       genreId:     { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
       categoryId:  { required: true,  select: true,    msgKey: 'js.rule_book_category' },
@@ -990,10 +991,15 @@
       if (list.length) notify(list.join('\n'));
     }
 
+    // Имена полей контракта BookForm могут не совпадать с ключами
+    // локальной валидации: contentIds — файлы книги, file — обложка.
+    var SERVER_FIELD_MAP = { contentIds: 'files', file: 'cover' };
+
     function renderServerErrors(errors) {
       if (!errors || typeof errors !== 'object') return;
-      Object.keys(errors).forEach(function (field) {
-        var msgs = errors[field];
+      Object.keys(errors).forEach(function (key) {
+        var field = SERVER_FIELD_MAP[key] || key;
+        var msgs = errors[key];
         var first = Array.isArray(msgs) ? msgs[0] : msgs;
         var message = first && typeof first === 'object' ? (first.message || '') : String(first);
         if (RULES[field] && message) setError(field, message);
@@ -1089,6 +1095,16 @@
       }
 
       var action = form.getAttribute('action') || '/api/books/new';
+
+      // ISBN: бэк принимает ТОЛЬКО канонический вид с дефисами
+      // (#^\d{3}-\d{1}-\d{3}-\d{5}-\d{1}$#), а значение могло прийти
+      // из локальной копии или вставиться целиком — нормализуем.
+      var isbnField = form.querySelector('input[name="isbn"]');
+      if (isbnField && isbnField.value) {
+        var isbnDigits = isbnClean(isbnField.value);
+        if (isbnDigits.length === 13) isbnField.value = isbnFormat(isbnDigits);
+      }
+
       var submitBtns = Array.prototype.slice.call(
         form.querySelectorAll('[data-submit-save], [data-submit-draft], [data-submit-publish]')
       );
@@ -1542,9 +1558,9 @@
         .observe(form, { subtree: true, childList: true, characterData: true });
     }
 
-    // Плагины (rights-modal.js) могут уводить пользователя со страницы после
-    // успешного сохранения на сервере — тогда защита «несохранённых
-    // изменений» не нужна: событие снимает флаг dirty перед уходом.
+    // Редирект после успешного создания (redirect: url) уходит со
+    // страницы — тогда защита «несохранённых изменений» не нужна.
+    // Событие оставляем как расширяемый хук для плагинов страницы.
     window.addEventListener('bookform:leave', function () { dirty = false; });
 
     window.addEventListener('beforeunload', onBeforeUnload);

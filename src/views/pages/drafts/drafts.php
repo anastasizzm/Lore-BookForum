@@ -161,7 +161,7 @@ $shown = ($page - 1) * $pageSize + count($cards);
       <p class="empty-state__text drafts-empty__text"><?= $tr('common.drafts.empty') ?></p>
       <p class="empty-state__text drafts-empty__hint"><?= $tr('common.drafts.empty_hint') ?></p>
       <a class="btn btn--primary drafts-empty__cta"
-         href="<?= $view->e('/books/create' . (($currentLang !== null && $currentLang !== '') ? '?lang=' . urlencode((string) $currentLang) : '')) ?>">
+         href="<?= $view->e('/books/new' . (($currentLang !== null && $currentLang !== '') ? '?lang=' . urlencode((string) $currentLang) : '')) ?>">
         <?= $tr('common.drafts.empty_link') ?>
       </a>
     </div>

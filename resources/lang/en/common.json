@@ -505,7 +505,7 @@
         "book_open_failed": "Could not open the book. Try again.",
         "page_render_failed": "Could not display the page.",
         "rule_book_title": "Enter the book title (200 characters max).",
-        "rule_book_annotation": "The annotation is too long (5000 characters max).",
+        "rule_book_annotation": "The annotation is too long (4000 characters max).",
         "rule_book_genre": "Pick a genre.",
         "rule_book_category": "Pick a category.",
         "rule_book_publisher": "Enter the publisher (255 characters max).",

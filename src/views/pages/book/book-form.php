@@ -70,12 +70,9 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   POST /api/books/new только создаёт и дубликат не увидит.
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
- *   ПУБЛИКАЦИЯ И ПРАВА (плашка rights-modal.php, JS rights-modal.js):
- *   GET  /api/additional/rights         — справочник прав, АСИНХРОННО при
- *        открытии плашки: 200 { items: [ { id, title, description? } ] }
- *        (по аналогии с /api/additional/genres, ResponseTemplates::list)
- *   POST /api/publications/{id}/rights  — сохранение выбранных прав:
- *        поля rights[] (array<int>), CSRF; 200/204 ок, 422 с errors
+ *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
+ *        ТОЛЬКО на book-details — из формы она убрана (F2-08), публикация
+ *        из формы не поддерживается (см. ниже).
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают)
@@ -266,10 +263,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
-  <!-- rights-modal.js — ДО book-form.js: после успешной публикации форма
-       вызывает window.RightsModal.open(...) -->
-  <script src="<?= $view->asset('js/rights-modal.js') ?>" defer></script>
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -521,7 +514,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
                     id="bookAnnotation"
                     name="description"
                     rows="6"
-                    maxlength="5000"
+                    maxlength="4000"
                     placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('description', $fromBook('description'))) ?></textarea>
           <?= $errorBox('description') ?>
         </div>
@@ -712,10 +705,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
     </form>
 
   </section>
-
-  <!-- Плашка выбора прав: book-form открывает её после успешной публикации
-       (rights-modal.js, контракт — в шапке partial) -->
-  <?php $view->include('rights-modal'); ?>
 
 </div>
 
