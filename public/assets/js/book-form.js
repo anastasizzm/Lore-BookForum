@@ -11,25 +11,27 @@
  *      с удалением по минусу;
  *   4. наполнение <select> жанров и категорий из /api/additional/*;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
- *   6. отправку через fetch + FormData (multipart, файлы летят без чтения
- *      в JS). Без JS форма уходит обычным POST — прогрессивное улучшение;
+ *   6. отправку через fetch + FormData (multipart) на POST /api/books/new
+ *      с Accept: application/json;
  *   7. многошаговость (FORM-01, как в article-form.js): шаги
  *      [data-step], «Далее»/«Назад», валидация ОБЯЗАТЕЛЬНЫХ полей
  *      своего шага перед переходом вперёд (STEP_FIELDS);
  *   8. список глав книги — только UI (input'ы без name, в POST не
  *      уходят: контракт с бэкендом уточняется);
  *   9. локальную копию несохранённых изменений (localStorage,
- *      ключ bookform:v1:new) + плашку «Восстановить / Отбросить»
+ *      ключ bookform:v2:new) + плашку «Восстановить / Отбросить»
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
  *
- * Контракт с бэком — в шапке book-form.php: POST /books/store,
- * Accept: application/json → 201 { data: { id, redirect } } либо
- * 422 { errors: { field: [msg] } }. Успех: сначала redirect с бэка,
- * иначе — страница библиотеки /books (P0).
+ * Контракт с бэком (подробно — в шапке book-form.php):
+ *   POST /api/books/new, Accept: application/json →
+ *   201 { createdId } → уходим на /books/{createdId}, либо
+ *   422 { error: { details: { field: [msg] } } } — ошибки рисуем на
+ *   полях и возвращаем пользователя на шаг с первой из них;
+ *   401 — нет сессии, 419 — CSRF (см. обработку ниже).
  */
 (function () {
   'use strict';
@@ -61,7 +63,9 @@
 
   // Локальная копия несохранённых изменений (плашка «Восстановить»).
   // 'new' — страница создания; для редактирования понадобится свой id.
-  var BACKUP_KEY = 'bookform:v1:new';
+  // v2 — после переименования полей под контракт BookForm: в v1 лежали
+  // старые имена (annotation/author_notes/genre/…), восстановились бы молча.
+  var BACKUP_KEY = 'bookform:v2:new';
 
   var listCache = {};
 
@@ -669,15 +673,18 @@
      ФОРМА
      ============================================================ */
   function initForm(form) {
-    var FIELD_KEYS = ['title', 'annotation', 'author_notes', 'genre', 'category', 'series', 'isbn', 'cover', 'files', 'authors', 'editors'];
+    var FIELD_KEYS = ['title', 'description', 'authorNotes', 'genreId', 'categoryId', 'publisher',
+                      'pages', 'isbn', 'cover', 'files', 'authors', 'editors'];
 
     var RULES = {
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
-      annotation:  { required: false, maxLength: 5000, msgKey: 'js.rule_book_annotation' },
-      author_notes:{ required: false, maxLength: 2000, msgKey: 'js.rule_book_author_note' },
-      genre:       { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
-      category:    { required: true,  select: true,    msgKey: 'js.rule_book_category' },
-      series:      { required: false, maxLength: 120,  msgKey: 'js.rule_book_series' },
+      description: { required: true,  maxLength: 5000, msgKey: 'js.rule_book_annotation' },
+      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note' },
+      genreId:     { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
+      categoryId:  { required: true,  select: true,    msgKey: 'js.rule_book_category' },
+      publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
+      // pages: целое ≥ 1 — см. custom: 'pages' ниже
+      pages:       { required: true,  min: 1,          msgKey: 'js.rule_book_pages' },
       isbn:        { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'errors.validation.isbn_shape' },
       cover:       { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
       // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles
@@ -692,8 +699,8 @@
     // пока они не прошли валидацию (см. initSteps).
     // Шаг 3 «Роли» пропущен — когда он появится, добавить сюда его поля.
     var STEP_FIELDS = {
-      1: ['title', 'genre', 'category', 'series', 'isbn', 'cover'],
-      2: ['annotation', 'author_notes', 'files', 'authors', 'editors'],
+      1: ['title', 'genreId', 'categoryId', 'publisher', 'pages', 'isbn', 'cover'],
+      2: ['description', 'authorNotes', 'files', 'authors', 'editors'],
     };
 
     var fileValidators = {
@@ -777,6 +784,15 @@
       if (rule.required && value === '') { setError(name, t(rule.msgKey)); return false; }
       if (value === '') { clearError(name); return true; }
       if (rule.maxLength && value.length > rule.maxLength) { setError(name, t(rule.msgKey)); return false; }
+
+      // Целое ≥ min (pages): «3.5», «12abc» и «0» — ошибка.
+      if (rule.min !== undefined && rule.min !== null) {
+        var num = Number(value);
+        if (!isFinite(num) || Math.floor(num) !== num || num < rule.min) {
+          setError(name, t(rule.msgKey));
+          return false;
+        }
+      }
 
       // ISBN: ошибка — блокирует, неверная контрольная сумма — только
       // предупреждение (поле остаётся валидным для отправки).
@@ -891,23 +907,24 @@
     if (loadErrors.length) notify(loadErrors.join('\n'));
 
     // --------------------------------------------------------
-    // Отправка: fetch + FormData (multipart), файлы не читаем в JS.
-    // Намерение (draft/publish) берём у нажатой кнопки-сабмитера:
-    //   Create draft → успех: редирект на страницу книги;
-    //   Publish      → успех: плашка выбора прав (rights-modal.js),
-    //                  после подтверждения — переход на страницу книги.
+    // Отправка: fetch + FormData (multipart) → POST /api/books/new.
+    // Ответ (Accept: application/json):
+    //   201 { createdId } → уходим на /books/{createdId} — книга
+    //        создаётся черновиком, публикация идёт со страницы книги;
+    //   422/400 → error.details: { field: [msg] } — рисуем на полях и
+    //        возвращаем пользователя на шаг с первой ошибкой;
+    //   401 — нет сессии, 419 — CSRF; прочее — общий текст ошибки.
     // --------------------------------------------------------
-    var lastSubmitStatus = 'draft';   // для сабмита по Enter (кнопка по умолчанию)
-    form.addEventListener('click', function (e) {
-      var btn = e.target && e.target.closest
-        ? e.target.closest('button[type="submit"][name="status"]')
-        : null;
-      if (btn) lastSubmitStatus = btn.value;
-    });
-
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearAllErrors();
+
+      // edit-режим заблокирован: endpoint'а обновления нет, а
+      // POST /api/books/new только создаёт — не плодим дубликаты.
+      if (editId) {
+        notify(t('js.book_edit_unavailable'));
+        return;
+      }
 
       // Сначала клиентская валидация ВСЕХ полей (порядок полей в DOM:
       // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
@@ -918,25 +935,12 @@
         return;
       }
 
-      var statusValue = (e.submitter && e.submitter.value) || lastSubmitStatus;
-      if (statusValue !== 'published') statusValue = 'draft';
-      // edit-режим: кнопка «Сохранить» шлёт ТЕКУЩИЙ статус книги —
-      // сохранение не публикует; публикация идёт отдельной кнопкой
-      // через плашку прав (data-rights-open, rights-modal.js).
-      if (editId) {
-        statusValue = form.getAttribute('data-book-status') === 'published' ? 'published' : 'draft';
-      }
-      var isPublish = !editId && statusValue === 'published';
-
-      var action = form.getAttribute('action') || window.location.href;
+      var action = form.getAttribute('action') || '/api/books/new';
       var submitBtns = Array.prototype.slice.call(
         form.querySelectorAll('[data-submit-save], [data-submit-draft], [data-submit-publish]')
       );
       var labels = submitBtns.map(function (b) { return b.textContent; });
-      var activeBtn = form.querySelector('[data-submit-save]')
-        || (isPublish
-          ? form.querySelector('[data-submit-publish]')
-          : form.querySelector('[data-submit-draft]'));
+      var activeBtn = submitBtns[0] || null;
 
       submitBtns.forEach(function (b) { b.disabled = true; });
       if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
@@ -948,10 +952,10 @@
         });
       }
 
-      // FormData(form) сам проставляет boundary и уносит файлы;
-      // значение кнопки-сабмитера в неё НЕ попадает — проставляем сами.
+      // FormData(form) сам проставляет boundary и уносит поля; значение
+      // кнопки-сабмитера в неё НЕ попадает — статуса в контракте нет.
       var body = new FormData(form);
-      body.set('status', statusValue);
+      body.delete('id');   // edit-режим отсечён выше; id бэк не принимает
 
       // LoreCsrf.fetch сам добавляет заголовок X-CSRF-Token (токен из cookie).
       var csrfFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
@@ -972,67 +976,34 @@
             var data = null;
             try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
 
-            // Успех: JSON с id/redirect, либо редирект бэка (Location).
-            if (response.ok && !/^\s*</.test(raw)) {
+            if (response.ok) {
               clearBackup();
               dirty = false;
-              var payload = (data && data.data) || data || {};
-              var bookId = parseInt(payload.id, 10) || editId;
+
+              var createdId = data ? parseInt(data.createdId, 10) : NaN;
+              if (!createdId && data && data.data) createdId = parseInt(data.data.id, 10);
+
               var locationHeader = response.headers.get('Location');
-              var redirect = payload.redirect
-                || (bookId ? '/books/' + bookId : (locationHeader || '/books'));
+              var redirect = createdId
+                ? '/books/' + createdId
+                : (locationHeader || (response.redirected ? response.url : '/books'));
 
-              if (editId) {
-                // edit-режим: книга обновлена (статус не менялся) —
-                // уходим на её страницу.
-                notify(t('js.book_updated'), 'success');
-                window.location.href = redirect;
-                return;
-              }
-
-              if (!isPublish) {
-                // Черновик: сразу ведём на страницу книги — там бейдж
-                // «Черновик», кнопка «Редактировать» и публикация внизу.
-                notify(t('js.book_draft_created'), 'success');
-                window.location.href = redirect;
-                return;
-              }
-
-              // Публикация прошла проверку бэка — открываем плашку выбора
-              // прав (справочник грузится асинхронно); после подтверждения
-              // rights-modal.js уведёт на страницу книги (redirect).
-              notify(t('js.book_published'), 'success');
-              if (window.RightsModal && bookId) {
-                window.RightsModal.open({
-                  mode: 'after-publish',
-                  bookId: bookId,
-                  redirect: redirect,
-                });
-                resetButtons();
-              } else {
-                window.location.href = redirect;
-              }
+              notify(t('js.book_draft_created'), 'success');
+              window.location.href = redirect;
               return;
             }
 
-            // Успех без тела (302 с Location — бэк без JSON-режима).
-            if (response.redirected || response.status === 302 || response.status === 201) {
-              clearBackup();
-              dirty = false;
-              notify(editId
-                ? t('js.book_updated')
-                : (isPublish ? t('js.book_published') : t('js.book_draft_created')), 'success');
-              window.location.href = response.url || (editId ? '/books/' + editId : '/books');
-              return;
+            // 422/400: ошибки полей (ExceptionMiddleware отдаёт
+            // error.details) — на поля + возврат на шаг с первой.
+            if (response.status === 400 || response.status === 422) {
+              var details = data && data.error && data.error.details
+                ? data.error.details
+                : (data && data.errors ? data.errors : null);
+              renderServerErrors(details);
             }
 
-            // 422/400: показываем ошибки на полях и возвращаем пользователя
-            // на шаг, где ошибка (сначала первый — порядок полей в DOM).
-            if ((response.status === 400 || response.status === 422) && data) {
-              var errors = data.errors
-                || (data.error && typeof data.error === 'object' ? data.error.details : null);
-              renderServerErrors(errors);
-            }
+            if (response.status === 401) { notify(t('errors.common.unauthorized')); return; }
+            if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
 
             var fallback = t('errors.common.save_failed', { status: response.status });
             notify(window.Messages
@@ -1201,7 +1172,7 @@
     // Текстовые поля и селекты, участвующие в копии. Файлы (обложка,
     // файлы книги) и списки людей в копию не попадают — их браузер
     // восстановить не может.
-    var BACKUP_FIELDS = ['title', 'annotation', 'author_notes', 'series', 'isbn', 'genre', 'category'];
+    var BACKUP_FIELDS = ['title', 'description', 'authorNotes', 'publisher', 'pages', 'isbn', 'genreId', 'categoryId'];
 
     function markDirty() {
       dirty = true;
