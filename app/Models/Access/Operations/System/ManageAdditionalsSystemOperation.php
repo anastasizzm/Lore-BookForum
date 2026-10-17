@@ -3,4 +3,4 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Operations\System;
 
-class ManageAdditionalsOperation implements AdminOperation {}
+class ManageAdditionalsSystemOperation implements AdminAccessOperation {}

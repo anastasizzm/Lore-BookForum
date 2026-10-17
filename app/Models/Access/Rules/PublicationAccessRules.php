@@ -2,26 +2,64 @@
 declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
+use App\Models\Access\Operations\AccessOperation;
 
-readonly class PublicationAccessRules 
+use App\Models\Access\Operations\Publications\PublicationAccessOperation;
+use App\Models\Access\Operations\Publications\CreatePublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateMetaPublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
+use App\Models\Access\Operations\Publications\DeletePublicationOperation;
+use App\Models\Access\Operations\Publications\ReadPublicationOperation;
+use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
+use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+
+use App\Models\Dto;
+
+class PublicationAccessRules extends Dto implements OperationChecker
 {
     public function __construct(
-        public bool $manage,
+        public bool $create,
+        public bool $updateMeta,
+        public bool $updateContent,
+        public bool $delete,
         public bool $read,
-        public bool $managePeople
+        public bool $managePeople,
+        public bool $manageRoles
     ){}
 
     public function hasAny() : bool 
     {
-        return $this->manage || $this->read || $this->managePeople;
+        return $this->create || $this->updateMeta 
+            || $this->updateContent || $this->updateMeta
+            || $this->delete || $this->read
+            || $this->managePeople || $this->manageRoles;
+    }
+
+    public function allows(AccessOperation $operation) : bool
+    {
+        return match(true) {
+            !($operation instanceof PublicationAccessOperation) => false,
+            $operation instanceof CreatePublicationOperation => $this->create,
+            $operation instanceof UpdateMetaPublicationOperation => $this->updateMeta,
+            $operation instanceof UpdateContentPublicationOperation => $this->updateContent,
+            $operation instanceof DeletePublicationOperation => $this->delete,
+            $operation instanceof ReadPublicationOperation => $this->read,
+            $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
+            $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
+            default => false,
+        };
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(
-            manage: self::bool($row, $prefix . 'manage'),
+            create: self::bool($row, $prefix . 'create'),
+            updateMeta: self::bool($row, $prefix . 'update_meta'),
+            updateContent: self::bool($row, $prefix . 'update_content'),
+            delete: self::bool($row, $prefix . 'delete'),
             read: self::bool($row, $prefix . 'read'),
             managePeople: self::bool($row, $prefix . 'manage_ppl'),
+            manageRoles: self::bool($row, $prefix . 'manage_roles'),
         );
     }
 }
