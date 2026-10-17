@@ -265,16 +265,44 @@
   }
 
   /* ============================================================
-     СПИСКИ: жанры и категории (постранично, как в filters.js)
+     СПИСКИ: жанры и категории.
+
+     Контракт /api/additional/{genres,categories}:
+     - 200 {"items": [...], "meta": {"page","pageSize","hasNext"}}
+     - пагинация: ?page=N (с 1) и ?ps=N (<= 50);
+     - сортировку (sort) НЕ передаём: справочник API падает 500,
+       EnumExtensions::tryResolve не импортирован в сервисах;
+     - элемент: { id, name, ... }.
+
+     Пока справочники грузятся, кнопки «Далее» заблокированы: выбор
+     жанра и категории обязателен, а пустой <select> дал бы ложную
+     422. При сбое загрузки поле помечается data-catalog-failed и
+     повторяет попытку при следующем обращении к нему.
      ============================================================ */
+  var CATALOG_PS = 50;      // максимум строк на страницу в API
+  var CATALOG_MAX_PAGES = 20;
+
+  var catalogsPending = 0;  // сколько справочников ещё грузится
+
+  /** Блокирует/разблокирует переход дальше, пока идёт загрузка. */
+  function syncCatalogGate() {
+    var busy = catalogsPending > 0;
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-step-next]'),
+      function (btn) { btn.disabled = busy; }
+    );
+  }
+
   function fetchAll(url) {
     if (listCache[url]) return Promise.resolve(listCache[url]);
 
     var all = [];
+    var seen = {};          // id → true: защита от дублей между страницами
     var page = 1;
 
     function next() {
-      return fetch(url + '?page=' + page, {
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      return fetch(url + sep + 'page=' + page + '&ps=' + CATALOG_PS, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       }).then(function (res) {
@@ -284,10 +312,16 @@
         var list = Array.isArray(data)
           ? data
           : (Array.isArray(data.items) ? data.items : []);
-        for (var i = 0; i < list.length; i++) all.push(list[i]);
+        for (var i = 0; i < list.length; i++) {
+          var item = list[i] || {};
+          var id = String(item.id !== undefined ? item.id : (item.value !== undefined ? item.value : ''));
+          if (id === '' || seen[id]) continue;
+          seen[id] = true;
+          all.push(item);
+        }
 
         var hasNext = !Array.isArray(data) && data.meta && data.meta.hasNext;
-        if (hasNext && page < 20) { page += 1; return next(); }
+        if (hasNext && page < CATALOG_MAX_PAGES) { page += 1; return next(); }
         listCache[url] = all;
         return all;
       });
@@ -303,6 +337,14 @@
     var selected = select.getAttribute('data-selected') || '';
     var placeholder = select.getAttribute('data-placeholder') || '';
 
+    var willLoad = !listCache[url];   // из кэша — мгновенно, без блокировки
+    if (willLoad) {
+      catalogsPending += 1;
+      select.disabled = true;
+      select.setAttribute('data-catalog-loading', '');
+      syncCatalogGate();
+    }
+
     return fetchAll(url).then(function (list) {
       var options = '<option value=""' + (selected ? '' : ' selected disabled') + '>' +
         escapeHtml(placeholder) + '</option>';
@@ -312,7 +354,11 @@
         var item = list[i] || {};
         var id = String(item.id !== undefined ? item.id : (item.value !== undefined ? item.value : ''));
         if (id === '') continue;
-        var title = String(item.title !== undefined ? item.title : (item.label !== undefined ? item.label : id));
+        var title = String(
+          item.name  !== undefined ? item.name  :
+          (item.title !== undefined ? item.title :
+          (item.label !== undefined ? item.label : id))
+        );
         if (id === selected) found = true;
         options += '<option value="' + escapeHtml(id) + '"' + (id === selected ? ' selected' : '') + '>' +
           escapeHtml(title) + '</option>';
@@ -328,7 +374,27 @@
     }).catch(function (err) {
       console.error('[book-form] failed to load', url, err);
       notify(t('errors.common.list_load_failed'));
+      select.removeAttribute('data-catalog-loading');
+      select.disabled = false;
+      // Справочник не загрузился: при следующем обращении к полю
+      // (фокус/клик) пробуем подтянуть заново, без перезагрузки страницы.
+      select.setAttribute('data-catalog-failed', '');
+      select.addEventListener('focus', retryCatalog, { once: true });
+    }).then(function () {
+      if (willLoad) {
+        catalogsPending = Math.max(0, catalogsPending - 1);
+        select.removeAttribute('data-catalog-loading');
+        syncCatalogGate();
+      }
     });
+  }
+
+  /** Повторная загрузка справочника после сбоя (см. catch выше). */
+  function retryCatalog(ev) {
+    var select = ev.currentTarget;
+    select.removeEventListener('focus', retryCatalog);
+    select.removeAttribute('data-catalog-failed');
+    populateSelect(select);
   }
 
   /* ============================================================
