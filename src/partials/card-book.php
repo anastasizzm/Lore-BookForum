@@ -3,6 +3,8 @@
  * card-book - vertical book card.
  *
  * @param string $saveType - 'book' | 'article' — куда уходит Save (/api/books|articles/{id}/save)
+ * @param string $readingStatus - 'none' | 'reading' | 'ended' (ReadingStatus из контекста юзера);
+ *                   бейдж на обложке только у книг, 'none' — без бейджа
  */
 $id       = (int)($id       ?? 0);
 $cover    = (string)($cover    ?? '');
@@ -29,6 +31,13 @@ $bookUrl = $id > 0
     : '#';
 
 $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
+
+$readingStatus = $isArticle ? 'none' : (string) ($readingStatus ?? 'none');
+$statusLabel   = match ($readingStatus) {
+    'reading' => $view->t('common.filter.reading'),
+    'ended'   => $view->t('common.filter.finished'),
+    default   => '',
+};
 ?>
 <article class="card-base card-book">
 
@@ -38,6 +47,9 @@ $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
       <img src="<?= $view->e($cover) ?>"
            alt="<?= $view->e($title) ?>"
            loading="lazy">
+    <?php endif; ?>
+    <?php if ($statusLabel !== ''): ?>
+      <span class="card-book__status card-book__status--<?= $view->e($readingStatus) ?>"><?= $view->e($statusLabel) ?></span>
     <?php endif; ?>
   </div>
 

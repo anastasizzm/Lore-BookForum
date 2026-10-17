@@ -1,9 +1,8 @@
 (() => {
-  const t = (key, params) => window.LoreI18n ? LoreI18n.t(key, params) : key;
-
   const root = document.querySelector('[data-library]');
   if (!root) return;
 
+  // ============ CONFIG ============
   const PARAM = {
     page:   'page',
     q:      'q',
@@ -16,13 +15,20 @@
     props:  'include',
   };
 
+  // Значения совпадают с App\Models\Enums\*
+  // (если бэк починит опечатки в enum — синхронизируй здесь)
   const SORT_VALUES   = { newest: 'newest', popularity: 'popularity', alpha: 'alpha' };
+  // ReadingStatus: none|reading|ended. 'finished' оставлен для старых ссылок.
   const STATUS_VALUES = { reading: 'reading', finished: 'ended', ended: 'ended' };
 
+  // Типы статей больше не маппятся — приходят из /api/additional/article-types
+  // и уходят в ?type= как есть.
   const PROPS = 'creator';
+  // ================================================
 
   const API         = root.dataset.api;
   const IS_ARTICLES = API.endsWith('/articles');
+  // P1-6: страница публикации, куда ведёт клик по карточке
   const DETAIL_BASE = IS_ARTICLES ? '/articles' : '/books';
   const grid   = root.querySelector('[data-library-grid]');
   const empty  = root.querySelector('[data-library-empty]');
@@ -30,15 +36,21 @@
   const count  = root.querySelector('[data-library-count]');
   const search = document.querySelector('input[name="q"]');
 
+  // 'f' намеренно отсутствует: им управляет app.js
+  // 'doi' обязателен: без него значение из ?doi= не восстанавливается
+  // после перезагрузки, а поле стирается в syncUi()
   const KEYS = ['genre', 'status', 'isbn', 'doi', 'sort', 'kind', 'q'];
-  const DEFAULTS = { sort: 'newest' };
+  const DEFAULTS = { sort: 'newest' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
   let controller = null;
   let shown = grid ? grid.children.length : 0;
 
+  // ---------- state <-> URL ----------
   const initial = new URLSearchParams(location.search);
   KEYS.forEach(k => { if (initial.get(k)) state[k] = initial.get(k); });
+  // Старые/человеческие ссылки ?status=finished -> каноничное 'ended' (enum),
+  // иначе tab[data-filter-value="ended"] не подсветится.
   if (state.status === 'finished') state.status = 'ended';
 
   function pushUrl() {
@@ -48,9 +60,6 @@
     }
     const f = new URLSearchParams(location.search).get('f');
     if (f) p.set('f', f);
-
-    if (window.LoreI18n && LoreI18n.locale) p.set('lang', LoreI18n.locale);
-
     const qs = p.toString();
     history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
   }
@@ -65,7 +74,9 @@
     if (state.genre)  p.set(PARAM.genre, state.genre);
     if (state.status) p.set(PARAM.status, STATUS_VALUES[state.status] ?? state.status);
     if (IS_ARTICLES) {
+      // Вариант B: без маппинга, значение из state.kind уходит как есть
       if (state.kind) p.set(PARAM.type, state.kind);
+      // Фильтр по DOI — бэкенд читает ?doi= (ArticlesFilters::fromInput)
       if (state.doi) p.set(PARAM.doi, state.doi);
     } else if (state.isbn) {
       p.set(PARAM.isbn, state.isbn);
@@ -73,6 +84,7 @@
     return p;
   }
 
+  // ---------- UI sync ----------
   function refreshSegments() {
     if (typeof updateSegmentIndicator !== 'function') return;
     document.querySelectorAll('.tabs--segmented').forEach(t => updateSegmentIndicator(t, true));
@@ -93,15 +105,11 @@
       });
 
       if (key === 'sort') {
-        const valueText = active
-          ? active.textContent.trim()
-          : t('sort.newest');
-        label.textContent = t('sort.label', { value: valueText });
+        label.textContent = active ? `Sort: ${active.textContent.trim()}` : base;
       } else {
-        const baseText = /^[a-z][a-z0-9_.]*$/.test(base) ? t(base) : base;
         label.textContent = active && cur !== 'all'
-          ? baseText + ': ' + active.textContent.trim()
-          : baseText;
+          ? `${base}: ${active.textContent.trim()}`
+          : base;
       }
     });
 
@@ -118,16 +126,25 @@
     refreshSegments();
   }
 
+  // ---------- rendering ----------
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function resolveCover(b) {
     if (b.cover) return b.cover;
+    // Publication отдаёт iconId как объект Uuid или как строку
     const uuid = b.iconId && typeof b.iconId === 'object'
       ? (b.iconId.uuid ?? b.iconId.value ?? '')
       : (b.iconId || '');
+    // Нет обложки -> '' (cardHtml нарисует CSS-заглушку .cover--empty)
     return uuid ? '/uploads/' + uuid : '';
   }
+
+  // Перевод с английским запасным текстом (LoreI18n возвращает сам ключ, если его нет)
+  const tr = (key, fallback) => {
+    const v = window.LoreI18n ? window.LoreI18n.t(key) : key;
+    return v && v !== key ? v : fallback;
+  };
 
   function cardHtml(b) {
     const cover = resolveCover(b);
@@ -136,6 +153,8 @@
       ? ([c.name, c.surname].filter(Boolean).join(' ').trim() || c.username || '')
       : '';
     const authorId = Number(c?.id ?? 0);
+    // «логин -> id» для @упоминаний в комментариях (users.js): карточки
+    // библиотеки/подборок — один из немногих мест, где пара уже есть.
     if (authorId > 0 && c && c.username && window.LoreUsers) {
       window.LoreUsers.remember(authorId, c.username);
     }
@@ -144,27 +163,41 @@
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
       : '';
     const id = Number(b.id);
+    // P1-6: карточка ведёт на страницу книги/статьи (раньше href="#" — клик молчал)
     const href = id > 0 ? `${DETAIL_BASE}/${id}` : '#';
 
+    // На странице статей кнопка помечается как article — app.js по этому
+    // атрибуту выбирает тип и событие (data-save-url дублирует эндпоинт).
     const saveAttr = IS_ARTICLES ? 'data-save-article data-article-id' : 'data-save-book data-book-id';
     const saveKind = IS_ARTICLES ? 'article' : 'book';
 
+    // API отдаёт состояние закладки в контексте юзера как isSaved
+    // (WithContext<Publication, PublicationContext>), поле saved оставлено
+    // как запасной вариант для старых ответов — иначе в библиотеке
+    // сохранённая книга выглядела несохранённой.
     const isSaved = !!(b.isSaved ?? b.saved);
 
-    const saveLabel = isSaved
-      ? t('book.unsave')
-      : (saveKind === 'article' ? t('article.save') : t('book.save'));
+    // Статус чтения (контекст юзера, ReadingStatus: none | reading | ended).
+    // Только у книг; 'none' — без бейджа. Тексты — filter.reading / filter.finished.
+    const rsRaw = String(b.readingStatus?.value ?? b.readingStatus ?? 'none');
+    const rsKey = IS_ARTICLES ? 'none' : rsRaw;
+    const rsLabel = rsKey === 'reading' ? tr('filter.reading', 'Reading')
+                  : rsKey === 'ended'   ? tr('filter.finished', 'Finished')
+                  : '';
+    const statusBadge = rsLabel
+      ? `<span class="card-book__status card-book__status--${rsKey}">${esc(rsLabel)}</span>`
+      : '';
 
     return `
 <article class="card-base card-book">
   <div class="card-book__cover${cover ? '' : ' cover--empty'}">${cover
     ? `<img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy">`
-    : ''}</div>
+    : ''}${statusBadge}</div>
   <button type="button" class="btn-icon btn-icon--circle card-book__save${isSaved ? ' is-active' : ''}"
           ${saveAttr}="${id}"
           data-save-url="${esc(API + '/' + id + '/save')}"
           aria-pressed="${isSaved ? 'true' : 'false'}"
-          aria-label="${esc(saveLabel)}">
+          aria-label="${isSaved ? 'Remove from saved' : 'Save ' + saveKind}">
     <svg width="14" height="18" viewBox="0 0 14 18" fill="none" aria-hidden="true">
       <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
     </svg>
@@ -174,18 +207,21 @@
 </article>`;
   }
 
+  // ---------- loading ----------
+  // Ошибки — общими плашками (messages.js)
   const notify = (text) => {
     if (window.Messages) window.Messages.show(text, { type: 'error' });
     else console.warn(text);
   };
 
   async function load({ append = false } = {}) {
+    console.log('load called, sort =', state.sort);
     controller?.abort();
     controller = new AbortController();
     if (!append) page = 1;
 
     root.classList.add('is-loading');
-    let received = false;
+    let received = false; // true, когда ответ получен: дальше ошибка уже не сетевая
     try {
       const res = await fetch(`${API}?${apiQuery()}`, {
         headers: { Accept: 'application/json' },
@@ -196,11 +232,11 @@
 
       const raw = await res.text();
       let json = null;
-      try { json = raw ? JSON.parse(raw) : null; } catch (_) { }
+      try { json = raw ? JSON.parse(raw) : null; } catch (_) { /* не JSON */ }
       if (!res.ok || !json) {
         notify(window.Messages
-          ? window.Messages.describe(res.status, json, raw, t('errors.common.list_load_failed'))
-          : t('errors.common.list_load_failed') + ' (HTTP ' + res.status + ').');
+          ? window.Messages.describe(res.status, json, raw, 'Could not load the list.')
+          : 'Could not load the list (HTTP ' + res.status + ').');
         return;
       }
 
@@ -211,7 +247,7 @@
       if (append) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html;
 
-      shown = append ? shown + items.length : items.length;
+            shown = append ? shown + items.length : items.length;
       if (count) count.textContent = shown;
 
       if (empty) {
@@ -225,7 +261,7 @@
     } catch (e) {
       if (e.name === 'AbortError') return;
       console.error('Library load failed', e);
-      notify(received ? t('errors.common.list_render_failed') : t('errors.common.network_error'));
+      notify(received ? 'Could not display the list.' : 'Network error. Try again.');
     } finally {
       root.classList.remove('is-loading');
     }
@@ -235,12 +271,14 @@
     if (!value || value === 'all') delete state[key];
     else state[key] = value;
 
+    // Закрываем открытые dropdown (в т.ч. динамические — на них нет обработчиков из app.js)
     document.querySelectorAll('[data-dropdown].is-open')
       .forEach(dd => dd.classList.remove('is-open'));
 
     syncUi(); pushUrl(); load();
   }
 
+  // ---------- events ----------
   document.addEventListener('click', e => {
     const el = e.target.closest('a[data-filter-value]');
     if (el) {
@@ -248,13 +286,6 @@
       if (!key) return;
       e.preventDefault();
       setFilter(key, el.dataset.filterValue);
-      return;
-    }
-
-    const tab = e.target.closest('.tab[data-filter-key][data-filter-value]');
-    if (tab) {
-      e.preventDefault();
-      setFilter(tab.dataset.filterKey, tab.dataset.filterValue);
       return;
     }
 
@@ -275,23 +306,24 @@
     return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   };
 
+  // filters.js шлёт cancelable-событие filter:input, чтобы без обработчика
+  // применить фильтр переходом по URL (Saved, публикации профиля). Здесь
+  // фильтр идёт через API (см. ввод ниже) — страницу не перезагружаем.
   document.addEventListener('filter:input', e => e.preventDefault());
 
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
     inp.addEventListener('input', debounce(() => {
+      // filters.js помечает неверный ISBN/DOI классом is-invalid — бэкенд
+      // всё равно ничего не найдёт, поэтому не пишем его в URL и не дёргаем API
       if (inp.classList.contains('is-invalid')) return;
       setFilter(inp.dataset.filterKey, inp.value.trim());
     }, 350)));
 
-  search?.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    e.stopPropagation();
-    setFilter('q', search.value.trim());
-  });
+  search?.addEventListener('input', debounce(() => setFilter('q', search.value.trim()), 350));
 
   document.addEventListener('dropdown:populated', syncUi);
 
+  // ---------- init ----------
   syncUi();
   load();
 })();

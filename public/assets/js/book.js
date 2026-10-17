@@ -1,11 +1,39 @@
 "use strict";
 
 (function () {
+  // Start / Resume / Read again (RD-02, RD-03).
+  // new / in_progress — обычная ссылка на /books/{id}/read: страницу для Resume
+  // читалка берёт из data-start-page. finished («Read again») — сначала сбрасываем
+  // прогресс (DELETE /api/books/{id}/progress), затем открываем с 1-й страницы.
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
-    startReading.addEventListener('click', function () {
-      var status = startReading.dataset.readingStatus;
-      // TODO: new -> открыть с первой главы; in_progress -> с сохранённого места
+    startReading.addEventListener('click', function (e) {
+      if (startReading.dataset.readingStatus !== 'finished') return;
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var id = Number(startReading.dataset.bookId || 0);
+      if (!id) return;
+
+      e.preventDefault();
+      if (startReading.dataset.busy === '1') return;
+      startReading.dataset.busy = '1';
+
+      var href = startReading.getAttribute('href');
+      var go = function () { window.location.href = href; };
+      var req = window.LoreCsrf ? window.LoreCsrf.fetch : fetch;
+      req('/api/books/' + id + '/progress', {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      }).then(function (res) {
+        if (!res.ok) console.warn('DELETE progress', res.status);
+      }).catch(function (err) {
+        console.warn('DELETE progress failed', err);
+      }).then(go);   // открываем в любом случае: ?page=1 в ссылке уже есть
+    });
+
+    // Вернулись «назад» из читалки (bfcache): кнопка показывала бы старый статус
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) window.location.reload();
     });
   }
 
