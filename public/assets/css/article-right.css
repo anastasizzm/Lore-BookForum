@@ -1,0 +1,214 @@
+/* ============================================================
+   ARTICLE RIGHTS — окно выбора прав при публикации статьи
+   (src/partials/article-rights-dialog.php + article-publish.js)
+
+   Блоки:
+     1. каркас модалки
+     2. поиск
+     3. список пользователей
+     4. кнопки
+     5. адаптив
+   ============================================================ */
+
+.article-rights[hidden] {
+  display: none !important;
+}
+
+body.is-modal-open {
+  overflow: hidden;
+}
+
+/* ============================================
+   1. КАРКАС
+   ============================================ */
+.article-rights {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.article-rights__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 16, 28, 0.6);
+}
+
+.article-rights__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 100%);
+  max-height: min(720px, 100%);
+  overflow: hidden;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, var(--radius-md));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.article-rights__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.article-rights__title {
+  margin: 0;
+  font-size: var(--fs-h3, 1.1rem);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.article-rights__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.article-rights__close:hover {
+  background: var(--color-bg-secondary);
+}
+
+.article-rights__hint {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ============================================
+   2. ПОИСК
+   ============================================ */
+.article-rights__search {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+
+.article-rights__search .form-field__input {
+  width: 100%;
+}
+
+/* ============================================
+   3. СПИСОК ПОЛЬЗОВАТЕЛЕЙ
+   ============================================ */
+.article-rights__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overscroll-behavior: contain;
+}
+
+.article-rights__empty {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.article-rights__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.article-rights__item:hover {
+  background: var(--color-overlay);
+}
+
+.article-rights__item input[type="checkbox"] {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.article-rights__user-name {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-rights__user-email {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-rights__more {
+  margin: var(--space-2) auto;
+  align-self: center;
+}
+
+/* ============================================
+   4. КНОПКИ
+   ============================================ */
+.article-rights__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.article-rights__foot .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   5. АДАПТИВ
+   ============================================ */
+@media (max-width: 480px) {
+  .article-rights {
+    padding: 0;
+  }
+
+  .article-rights__panel {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .article-rights__user-email {
+    display: none;
+  }
+
+  .article-rights__foot {
+    flex-direction: column-reverse;
+  }
+
+  .article-rights__foot .btn {
+    width: 100%;
+  }
+}

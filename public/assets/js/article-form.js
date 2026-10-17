@@ -89,6 +89,7 @@
 
   var editor = null;
   var coverValidator = null;
+  var stepsApi = null;           // заполняется в init(): { current, goTo }
 
   /* ============================================================
      ЯКОРИ <-> СКРЫТЫЕ ПОЛЯ ФОРМЫ
@@ -1282,6 +1283,26 @@
     if (el.focus) { try { el.focus({ preventScroll: true }); } catch (_) { el.focus(); } }
   }
 
+  /** Есть ли на шаге n поля с ошибками (ошибки лежат в [data-error-for]). */
+  function stepHasError(n) {
+    var step = $('.article-step[data-step="' + n + '"]');
+    return !!(step && step.querySelector('[data-error-for] .field-error-icon'));
+  }
+
+  /**
+   * Возвращаем пользователя на шаг, где что-то не так. Если ошибки и на первом, и на
+   * втором — сначала первый; на второй пользователь перейдёт сам.
+   */
+  function revealInvalidStep() {
+    if (!stepsApi) return;
+    for (var n = 1; n <= 2; n++) {
+      if (stepHasError(n)) {
+        if (stepsApi.current() !== n) stepsApi.goTo(n);
+        return;
+      }
+    }
+  }
+
   function showFieldErrors() {
     var list = [];
     FIELD_KEYS.forEach(function (name) {
@@ -1311,6 +1332,7 @@
       var name = SERVER_KEY[key] || key;
       if (FIELD_KEYS.indexOf(name) !== -1 && message) setError(name, message);
     });
+    revealInvalidStep();
     focusFirstInvalid();
   }
 
@@ -1324,15 +1346,40 @@
     if (el) el.textContent = text || '';
   }
 
-  function save(status, silent) {
+  /**
+   * kind:
+   *   'draft'   — «Create draft»: сохраняем черновик и открываем страницу статьи;
+   *   'publish' — «Publish»: сохраняем черновик и просим бэк проверить статью как для
+   *               публикации (check_publish=1). Не готова — возвращаем пользователя на
+   *               шаг с ошибками; готова — открывается окно выбора прав, а публикует
+   *               уже кнопка в окне (POST /api/articles/{id}/publish).
+   * silent — автосохранение: без плашек, без перехода и без подсветки ошибок.
+   */
+  function openRights() {
+    if (!window.LoreArticlePublish || !state.articleId) {
+      notify(t('errors.common.save_failed', { status: 0 }));
+      return;
+    }
+    window.LoreArticlePublish.open(state.articleId, {
+      // бэк при самой публикации нашёл ошибки в статье — показываем их на форме
+      onInvalid: function (errors) { renderServerErrors(errors); },
+    });
+  }
+
+  function save(kind, silent) {
     if (state.saving) return Promise.resolve(false);
 
     if (editor) editor.sync();
-    var isDraft = status === 'draft';
+    var forPublish = kind === 'publish';
 
     if (!silent) {
       clearAllErrors();
-      if (!validateAll(isDraft)) { showFieldErrors(); focusFirstInvalid(); return Promise.resolve(false); }
+      if (!validateAll(!forPublish)) {
+        showFieldErrors();
+        revealInvalidStep();
+        focusFirstInvalid();
+        return Promise.resolve(false);
+      }
     } else {
       // Автосохранение: минимальные требования, чтобы не слать заведомо
       // неполный черновик и не получать ошибки сервера.
@@ -1351,7 +1398,7 @@
       setDraftStatus(t('articleform.draft_saving'));
     } else {
       buttons.forEach(function (b) { b.disabled = true; });
-      var activeBtn = isDraft ? $('[data-submit-draft]') : $('[data-submit-publish]');
+      var activeBtn = forPublish ? $('[data-submit-publish]') : $('[data-submit-draft]');
       if (activeBtn) activeBtn.textContent = t('js.article_saving');
     }
 
@@ -1361,7 +1408,9 @@
     }
 
     var body = new FormData(form);
-    body.set('status', status);
+    body.set('status', 'draft');                       // публикует только окно прав
+    if (forPublish) body.set('check_publish', '1');
+    else body.delete('check_publish');
     if (!state.coverDirty) body.delete('cover');
 
     return csrfFetch(form.getAttribute('action') || location.href, {
@@ -1387,18 +1436,28 @@
           var removeFlagReset = fieldByName('remove_cover');
           if (removeFlagReset) removeFlagReset.value = '';
 
-          if (isDraft) {
-            setDraftStatus(t('articleform.draft_saved_at', { time: formatTime(new Date()) }));
-            if (!silent) notify(t('js.article_draft_saved'), 'success');
-            if (payload.edit_url && window.history && history.replaceState) {
-              history.replaceState(null, '', payload.edit_url);
-            }
-          } else {
-            notify(t('js.article_published'), 'success');
-            window.location.href = payload.redirect
-              || (state.articleId ? '/articles/' + state.articleId : (response.headers.get('Location') || '/articles'));
+          // адрес страницы редактирования: если окно прав закроют, перезагрузка вернёт в форму
+          if (payload.edit_url && window.history && history.replaceState) {
+            history.replaceState(null, '', payload.edit_url);
           }
-          release();
+
+          if (silent) {
+            setDraftStatus(t('articleform.draft_saved_at', { time: formatTime(new Date()) }));
+            release();
+            return true;
+          }
+
+          if (forPublish) {
+            // статья прошла проверку бэка — выбираем права и публикуем
+            release();
+            openRights();
+            return true;
+          }
+
+          // «Create draft»: открываем страницу статьи (там пометка «Черновик» и кнопка «Publish»)
+          notify(t('js.article_draft_saved'), 'success');
+          window.location.href = payload.redirect
+            || (state.articleId ? '/articles/' + state.articleId : (response.headers.get('Location') || '/articles'));
           return true;
         }
 
@@ -1577,84 +1636,13 @@
   }
 
   /* ============================================================
-     СПИСОК СОАВТОРОВ (шаг 3)
-     ============================================================ */
-  function initCoAuthors(steps) {
-    var search = $('[data-user-search]');
-    var list   = $('[data-user-list]');
-    if (!list) return;
-
-    var loaded = false;
-
-    function render(items) {
-      if (!items.length) {
-        list.innerHTML = '<p class="user-list__empty">' + escapeHtml(t('articleform.editors_empty')) + '</p>';
-        return;
-      }
-      list.innerHTML = items.map(function (u) {
-        var name  = u.username || u.name || ('#' + (u.id || ''));
-        var email = u.email || '';
-        return '<label class="user-item">' +
-          '<input type="checkbox" name="editor_ids[]" value="' + escapeHtml(String(u.id || '')) + '">' +
-          '<span class="user-item__name">' + escapeHtml(name) + '</span>' +
-          (email ? '<span class="user-item__email">' + escapeHtml(email) + '</span>' : '') +
-          '</label>';
-      }).join('');
-    }
-
-    function load() {
-      if (loaded) return;
-      loaded = true;
-      list.innerHTML = '<p class="user-list__empty">' + escapeHtml(t('articleform.editors_loading')) + '</p>';
-
-      fetch('/api/users?page=1', {
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-      })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then(function (data) {
-          var items = Array.isArray(data) ? data : (data.items || []);
-          render(items);
-        })
-        .catch(function (err) {
-          console.error('[article-form] users load failed', err);
-          list.innerHTML = '<p class="user-list__empty">' + escapeHtml(t('errors.common.users_load_failed')) + '</p>';
-          loaded = false;
-        });
-    }
-
-    var step3 = $('.article-step[data-step="3"]');
-    if (step3) {
-      var observer = new MutationObserver(function () {
-        if (!step3.hidden) load();
-      });
-      observer.observe(step3, { attributes: true, attributeFilter: ['hidden'] });
-      if (!step3.hidden) load();
-    }
-
-    if (search) {
-      search.addEventListener('input', function () {
-        var q = search.value.toLowerCase().trim();
-        $$('.user-item', list).forEach(function (item) {
-          var text = item.textContent.toLowerCase();
-          item.hidden = q !== '' && text.indexOf(q) === -1;
-        });
-      });
-    }
-  }
-
-  /* ============================================================
      ИНИЦИАЛИЗАЦИЯ
      ============================================================ */
   function init() {
     form.classList.add('is-enhanced');
     if (!Text) return;
 
-    var steps = initSteps();
-    initCoAuthors(steps);
+    stepsApi = initSteps();
 
     $$('[data-dynamic-select]').forEach(populateSelect);
 
@@ -1727,8 +1715,7 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var sub = e.submitter;
-      var status = sub && sub.value === 'draft' ? 'draft' : 'published';
-      save(status, false);
+      save(sub && sub.value === 'draft' ? 'draft' : 'publish', false);
     });
 
     setInterval(function () {

@@ -32,15 +32,32 @@ $langField = $langQuery !== null && $langQuery !== ''
  *
  *   POST /articles/save        → articles.save,       AuthPolicy::Verified
  *        ОДИН адрес на создание, редактирование, черновик и автосохранение.
- *        multipart/form-data. Поля: id, status ('draft'|'published'),
- *        mode ('standalone'|'excerpt'), title, genre, type, doi, annotation,
- *        author_note, content, cover, remove_cover, book, page_start, …, anchor_version,
- *        editor_ids[] (ID пользователей-соавторов, опционально).
+ *        multipart/form-data. Поля: id, status, mode ('standalone'|'excerpt'), title,
+ *        genre, type, doi, annotation, author_note, content, cover, remove_cover, book,
+ *        page_start, …, anchor_version, check_publish.
+ *        status ВСЕГДА 'draft': статья сохраняется как черновик, публикует её только
+ *        POST /api/articles/{id}/publish (окно выбора прав, article-publish.js).
+ *          • «Create draft»  → status=draft, обязательно только название (title);
+ *          • «Publish»       → status=draft + check_publish=1: бэк сохраняет черновик И
+ *            проверяет статью как для публикации (жанр, тип, текст/фрагмент…). Не готова →
+ *            422 { errors: { field: [msg] } } и фронт возвращает пользователя на шаг с
+ *            ошибками; готова → 200, затем открывается окно прав.
+ *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
+ *        «Create draft» после успеха ведёт на страницу статьи (redirect): там пометка
+ *        «Черновик» и кнопка «Publish» внизу.
  *
+ *   POST /api/articles/{id}/publish  → api.articles.publish, AuthPolicy::Verified
+ *        multipart: editor_ids[] (ID соавторов-редакторов, можно пусто). Повторно проверяет
+ *        статью; успех → { data: { id, redirect } } и статья опубликована.
+ *   GET  /api/articles/{id}/rights   → текущие права (для окна): { data: { editor_ids: [..] } },
+ *        необязательно (404 фронт игнорирует).
+ *   GET  /api/users?page=&q=         → список для окна прав: { items: [{ id, username, name,
+ *        surname, email? }], meta: { hasNext } }.
  *   POST /api/articles/images → api.articles.images,  AuthPolicy::Verified
  *        multipart, поле `image` (jpeg/png/webp ≤5MB) → 201 { data: { url } }.
  *
- *   GET  /api/users           → список пользователей для шага «Соавторы».
+ *   Вьюха страницы статьи (article-details) получает $isDraft и $canManage — см. комментарий
+ *   в article-details-draft.snippet.php.
  */
 $form   = $form   ?? [];
 $errors = $errors ?? [];
@@ -173,6 +190,8 @@ $richEditor = static function (
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/article-rights.css') ?>">
+  <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
@@ -216,7 +235,7 @@ $richEditor = static function (
            ============================================================ -->
       <section class="article-step" data-step="1">
         <header class="article-step__header">
-          <span class="article-step__num">1 / 3</span>
+          <span class="article-step__num">1 / 2</span>
           <h2 class="article-step__title"><?= $tr('common.articleform.step1_title') ?></h2>
         </header>
 
@@ -420,7 +439,7 @@ $richEditor = static function (
            ============================================================ -->
       <section class="article-step" data-step="2" hidden>
         <header class="article-step__header">
-          <span class="article-step__num">2 / 3</span>
+          <span class="article-step__num">2 / 2</span>
           <h2 class="article-step__title"><?= $tr('common.articleform.step2_title') ?></h2>
         </header>
 
@@ -453,42 +472,9 @@ $richEditor = static function (
                             'common.articleform.content_ph', 'lg', $toolbarFull); ?>
         </div>
 
-        <div class="article-step__nav">
-          <button type="button" class="btn btn--secondary" data-step-prev>
-            ← <?= $tr('common.articleform.back') ?>
-          </button>
-          <button type="button" class="btn btn--primary" data-step-next>
-            <?= $tr('common.articleform.next') ?> →
-          </button>
-        </div>
-      </section>
-
-      <!-- ============================================================
-           ШАГ 3. СОАВТОРЫ + КНОПКИ ДЕЙСТВИЙ
-           ============================================================ -->
-      <section class="article-step" data-step="3" hidden>
-        <header class="article-step__header">
-          <span class="article-step__num">3 / 3</span>
-          <h2 class="article-step__title"><?= $tr('common.articleform.step3_title') ?></h2>
-        </header>
-
-        <p class="article-form__hint"><?= $tr('common.articleform.step3_hint') ?></p>
-
-        <div class="form-field">
-          <label for="articleUsersSearch"><?= $tr('common.articleform.field_editors') ?></label>
-
-          <input class="form-field__input"
-                 type="search"
-                 id="articleUsersSearch"
-                 placeholder="<?= $tr('common.articleform.editors_search_ph') ?>"
-                 autocomplete="off"
-                 data-user-search>
-
-          <div class="user-list" data-user-list>
-            <p class="user-list__empty"><?= $tr('common.articleform.editors_loading') ?></p>
-          </div>
-        </div>
-
+        <!-- Действия. «Create draft» сохраняет черновик и открывает страницу статьи;
+             «Publish» сначала проверяет статью на бэке, затем открывает окно выбора прав
+             (partial article-rights-dialog + article-publish.js). -->
         <div class="article-form__actions">
           <p class="article-form__draft-status" data-draft-status aria-live="polite"></p>
           <div class="article-form__buttons">
@@ -496,7 +482,7 @@ $richEditor = static function (
               ← <?= $tr('common.articleform.back') ?>
             </button>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('articles'))) ?>"><?= $tr('common.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" name="status" value="draft" data-submit-draft><?= $tr('common.articleform.save_draft') ?></button>
+            <button class="btn btn--secondary" type="submit" name="status" value="draft" data-submit-draft><?= $tr('common.articleform.create_draft') ?></button>
             <button class="btn btn--primary" type="submit" name="status" value="published" data-submit-publish><?= $tr('common.articleform.publish') ?></button>
           </div>
         </div>
@@ -577,5 +563,8 @@ $richEditor = static function (
   </section>
 
 </div>
+
+<?php // Окно выбора прав при публикации (права подгружаются асинхронно) ?>
+<?php $view->include('article-rights-dialog'); ?>
 
 <?php $view->endBlock('content'); ?>
