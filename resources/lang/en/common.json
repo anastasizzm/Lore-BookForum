@@ -25,7 +25,8 @@
         "logout_text": "You will need to sign in again to continue.",
         "help": "Help",
         "privacy": "Privacy Policy",
-        "admin": "Admin panel"
+        "admin": "Admin panel",
+        "drafts": "Drafts"
     },
     "language": {
         "label": "Language",
@@ -334,7 +335,14 @@
         "editors_loading": "Loading users…",
         "editors_empty": "No users found.",
         "next": "Next",
-        "back": "Back"
+        "back": "Back",
+        "publish_title": "Who can edit this article?",
+        "publish_subtitle": "Pick the co-authors. They will be able to edit the article after publication.",
+        "publish_search_ph": "Search by name or email",
+        "publish_loading": "Loading users…",
+        "publish_no_users": "No users found.",
+        "publish_submit": "Publish",
+        "create_draft": "Create draft"
     },
     "js": {
         "toast_error": "Error",
