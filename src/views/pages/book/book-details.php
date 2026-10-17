@@ -13,6 +13,33 @@
  * Поля, которых может не быть в модели, читаются через ?? — чтобы страница не падала.
  * Объекты (genre, category, series) приводятся к строке через хелпер $str — чтобы
  * не ловить "Object of class BasicModel could not be converted to string".
+ *
+ * ЧЕРНОВИК / ПУБЛИКАЦИЯ / ПРАВА (алгоритм работы):
+ *   $status   — контроллер может передать напрямую ('draft' | 'published');
+ *               иначе вьюха читает $book->status (поле появится в модели,
+ *               когда бэк введёт статусы публикации).
+ *   КНОПКА «РЕДАКТИРОВАТЬ» (data-edit-btn) — рендерится ВСЕГДА; цвет
+ *               состояния подгружается АСИНХРОННО (book-rights.js):
+ *                 красная  — есть права на публикацию книги (canPublish),
+ *                 синяя    — есть права на редактирование (canEdit),
+ *                 серая    — прав нет.
+ *               КОНТРАКТ (роут добавит бэк; config/ и app/ заморожены):
+ *                 GET /api/publications/{id}/rights
+ *                 200 { data: { canEdit: bool, canPublish: bool } }
+ *                 401/403/404/5xx → кнопка остаётся серой.
+ *   Статус draft: у книги внизу страницы ВСЕГДА есть кнопка «Опубликовать
+ *               книгу» (бейдж «Черновик» в шапке), она открывает плашку
+ *               выбора прав (rights-modal.php; справочник грузится
+ *               асинхронно, контракт — в шапке partial):
+ *                 GET  /api/additional/rights
+ *                 POST /api/publications/{id}/rights  (rights[])
+ *                 POST /books/{id}/publish            (черновик → published)
+ *   ДОСТУП К ЧЕРНОВИКУ: видит только создатель — политику держит бэк
+ *               (BooksController::retrieve: черновой публикации для
+ *               посторонних отдаёт 404); вьюха в этом участвует только
+ *               через $status.
+ *   После публикации (успех rights-modal.js) страница уходит на
+ *   /books/{id} — бейдж и кнопка исчезают, статус уже published.
  */
 
 /**
@@ -51,8 +78,11 @@ $str = static function ($v): string {
 
 /* ---------- Скалярные значения ---------- */
 
-$publicationId = (int)    ($book->id ?? 0);
-$bookId        = (int)    ($book->id ?? 0);
+// id книги: и из объекта, и из массива (тест-роут отдаёт query-массивы —
+// от этого зависит data-book-id у кнопки «Редактировать»)
+$bookRawId    = is_array($book) ? ($book['id'] ?? null) : ($book->id ?? null);
+$publicationId = (int) $bookRawId;
+$bookId        = (int) $bookRawId;
 // isSaved / readingStatus живут в контексте юзера (PublicationContext), а не в модели
 $readingMap  = ['none' => 'new', 'reading' => 'in_progress', 'ended' => 'finished'];
 $statusRaw   = $readerCtx?->readingStatus?->value ?? $book->readingStatus ?? 'new';
@@ -158,6 +188,24 @@ if ($meInitials === '') {
 }
 // Ключ аватара ('cat', 'fox', 'default'...). Как его показать — решает partial avatar.php.
 $meAvatar = (string) ($me->avatar ?? '');
+
+/* ---------- Черновик / публикация / права редактирования ---------- */
+
+// Чтение поля и из объекта, и из массива (тест-роут /pages/test передаёт
+// данные вьюхи query-массивами, объектов там нет).
+$get = static function ($src, string $key, $default = null) {
+    if (is_array($src)) return array_key_exists($key, $src) ? $src[$key] : $default;
+    if (is_object($src)) return $src->$key ?? $default;
+    return $default;
+};
+
+// Статус публикации: приоритет — явный $status от контроллера.
+$statusRaw = $status ?? $get($book, 'status', '');
+$status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
+$isDraft   = $status === 'draft';
+
+// Кнопка «Редактировать» рендерится всегда; цвет (красная/синяя/серая
+// по правам) подгружает асинхронно book-rights.js — см. шапку файла.
 ?>
 <?php $view->extends('main'); ?>
 
@@ -167,12 +215,19 @@ $meAvatar = (string) ($me->avatar ?? '');
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
+  <!-- плашка выбора прав (кнопка публикации у черновика) -->
+  <link rel="stylesheet" href="/assets/css/rights-modal.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.book.page_title') ?></h1>
+    <?php if ($isDraft): ?>
+      <!-- Метка черновика: книга ещё не опубликована -->
+      <span class="book-page-header__badge"
+            title="<?= $tr('common.book.draft_hint') ?>"><?= $tr('common.book.draft_badge') ?></span>
+    <?php endif; ?>
   </div>
 
   <div class="book-details">
@@ -199,6 +254,15 @@ $meAvatar = (string) ($me->avatar ?? '');
            class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
            data-start-reading
            data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></a>
+          <!-- Кнопка «Редактировать» — видна ВСЕГДА; цвет по правам
+               (красная/синяя/серая) подгружается асинхронно:
+               book-rights.js → GET /api/publications/{id}/rights.
+               Роут /books/{id}/edit добавит бэк (config/ заморожен). -->
+          <a href="<?= $view->e('/books/' . $bookId . '/edit') ?>"
+             class="btn btn--secondary btn--pill book-actions__edit"
+             data-edit-btn
+             data-book-id="<?= (int) $bookId ?>"
+             data-rights-state="none"><?= $tr('common.book.edit') ?></a>
       </div>
 
       <div class="book-rating">
@@ -576,9 +640,41 @@ $meAvatar = (string) ($me->avatar ?? '');
     </div>
   </template>
 
+  <?php if ($isDraft): ?>
+    <!-- ============================================================
+         КНОПКА ПУБЛИКАЦИИ — внизу страницы, видна ВСЕГДА, пока у книги
+         статус draft (черновик открывает только создатель — политика
+         бэка, см. шапку файла). Кликом открывается плашка выбора прав
+         (rights-modal.php): справочник грузится асинхронно, затем
+         POST rights[] и POST /books/{id}/publish → перезагрузка.
+         ============================================================ -->
+    <section class="publish-bar" data-publish-bar>
+      <div class="publish-bar__text">
+        <strong class="publish-bar__label"><?= $tr('common.book.draft_badge') ?></strong>
+        <span class="publish-bar__hint"><?= $tr('common.book.publish_bar_text') ?></span>
+      </div>
+      <button type="button"
+              class="btn btn--primary publish-bar__cta"
+              data-rights-open
+              data-book-id="<?= (int) $bookId ?>">
+        <?= $tr('common.book.publish_cta') ?>
+      </button>
+    </section>
+  <?php endif; ?>
+
+  <!-- Плашка выбора прав (кнопка публикации выше) -->
+  <?php $view->include('rights-modal'); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав пользователя на книгу:
+       цвет кнопки «Редактировать» (красная/синяя/серая) -->
+  <script src="/assets/js/book-rights.js"></script>
+  <!-- rights-modal.js — плашка выбора прав (кнопка «Опубликовать книгу»
+       у черновика); подключается до book.js, но порядок не важен —
+       обработчики вешаются делегированием на document -->
+  <script src="/assets/js/rights-modal.js"></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>

@@ -1,0 +1,184 @@
+/* ============================================================
+   drafts.css — страница черновиков (src/views/pages/drafts/drafts.php)
+
+   Карточка .card-draft (src/partials/card-draft.php) живёт в общей
+   сетке .grid-books (component.css) и повторяет геометрию .card-book:
+   обложка 3:4, заголовок, мета, действия. Бейдж «Черновик» — поверх
+   обложки. Панель и пустое состояние переиспользуют общие классы
+   .books-panel / .empty-state (component.css).
+   ============================================================ */
+
+.drafts-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ------------------------------------------------------------
+   КАРТОЧКА ЧЕРНОВИКА
+   ------------------------------------------------------------ */
+.card-draft {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.card-draft:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Обложка: та же геометрия, что у .card-book__cover */
+.card-draft__cover {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-overlay);
+}
+
+.card-draft__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Бейдж статуса — левый верхний угол обложки */
+.card-draft__badge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+
+  padding: 2px var(--space-2, 8px);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(15, 23, 42, 0.06));
+
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium, 500);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Заголовок: ссылка «Открыть» растянута на обложку+заголовок */
+.card-draft__title {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  color: var(--color-text);
+}
+
+.card-draft__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-draft__link:hover {
+  text-decoration: underline;
+}
+
+/* Мета: тип публикации · дата изменения */
+.card-draft__meta {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.card-draft__sep {
+  margin: 0 4px;
+}
+
+.card-draft__date {
+  white-space: nowrap;
+}
+
+/* Действия: основное — кнопка «Продолжить», рядом текстовая «Открыть» */
+.card-draft__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;              /* прижимает кнопки к низу карточки */
+  padding-top: var(--space-1);
+}
+
+.card-draft__edit {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.card-draft__open {
+  flex: 0 0 auto;
+  font-size: var(--fs-small);
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.card-draft__open:hover {
+  text-decoration: underline;
+}
+
+.card-draft__edit:focus-visible,
+.card-draft__open:focus-visible,
+.card-draft__link:focus-visible {
+  outline: 2px solid var(--main-text-color, var(--color-text));
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+   ПУСТОЕ СОСТОЯНИЕ (DR-08)
+   ------------------------------------------------------------ */
+.drafts-empty {
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6, 24px) var(--space-4);
+}
+
+.drafts-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: var(--color-overlay);
+  color: var(--color-text-muted);
+}
+
+.drafts-empty__text {
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text);
+}
+
+.drafts-empty__hint {
+  font-size: var(--fs-small);
+}
+
+.drafts-empty__cta {
+  margin-top: var(--space-2);
+}
+
+/* ------------------------------------------------------------
+   АДАПТИВ
+   ------------------------------------------------------------ */
+@media (max-width: 640px) {
+  /* На узком экране карточка черновика идёт в 2 колонки (как .grid-books):
+     кнопки складываем в колонку, чтобы не резали заголовок */
+  .card-draft__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-draft__open {
+    text-align: center;
+  }
+}

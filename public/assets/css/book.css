@@ -522,3 +522,125 @@ html:has(.reader) body {
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
 }
+/* ---------------- черновик: бейдж в шапке + панель публикации ---------------- */
+
+/* Заголовок страницы + метка «Черновик» рядом с ним */
+.book-page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  flex-wrap: wrap;
+}
+
+.book-page-header__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  color: #92400e;
+  font-size: var(--fs-small, 13px);
+  font-weight: var(--fw-medium, 500);
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* Кнопка «Редактировать» живёт в .book-actions под обложкой:
+   там уже иконка сохранения + тянущаяся кнопка чтения — даём перенос.
+   СОСТОЯНИЯ ПО ПРАВАМ (цвет подгружает book-rights.js, GET
+   /api/publications/{id}/rights):
+     серая (--none, состояние по умолчанию) — прав нет;
+     синяя (--edit)   — есть права на редактирование;
+     красная (--publish) — есть права на публикацию книги. */
+.book-actions {
+  flex-wrap: wrap;
+}
+
+.book-actions__edit {
+  flex: 1 1 100%;
+  text-align: center;
+  justify-content: center;
+  background: #94a3b8;
+  border-color: transparent;
+  color: #fff;
+}
+
+.book-actions__edit:hover,
+.book-actions__edit:focus-visible {
+  background: #64748b;
+  border-color: transparent;
+}
+
+.book-actions__edit--edit {
+  background: var(--color-primary);
+  border-color: transparent;
+}
+
+.book-actions__edit--edit:hover,
+.book-actions__edit--edit:focus-visible {
+  background: var(--color-hover, #0f2440);
+  border-color: transparent;
+}
+
+.book-actions__edit--publish {
+  background: var(--color-error);
+  border-color: transparent;
+}
+
+.book-actions__edit--publish:hover,
+.book-actions__edit--publish:focus-visible {
+  background: #c93a3f;
+  border-color: transparent;
+}
+
+/* Панель публикации внизу страницы — видна, пока статус draft */
+.publish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-5, 32px);
+  padding: var(--space-4, 16px);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-left: 4px solid var(--color-warning, #f59e0b);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.06));
+}
+
+.publish-bar__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.publish-bar__label {
+  font-size: var(--fs-body, 15px);
+  font-weight: var(--fw-medium, 500);
+  color: var(--color-text, #0f172a);
+}
+
+.publish-bar__hint {
+  font-size: var(--fs-small, 13px);
+  line-height: 1.4;
+  color: var(--color-text-muted, #64748b);
+}
+
+.publish-bar__cta {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .publish-bar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .publish-bar__cta {
+    width: 100%;
+  }
+}
