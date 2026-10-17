@@ -1,0 +1,54 @@
+$kind: http-request
+url: "{{base_url}}/books/new"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: formdata
+  content:
+    - type: text
+      key: title
+      value: Test book
+      description: ""
+      disabled: false
+    - type: text
+      key: description
+      value: Test book description
+      description: ""
+      disabled: false
+    - type: text
+      key: authorNotes
+      value: Test author notes
+      description: ""
+      disabled: false
+    - type: text
+      key: genreId
+      value: "1"
+      description: ""
+      disabled: false
+    - type: text
+      key: categoryId
+      value: "1"
+      description: ""
+      disabled: false
+    - type: text
+      key: iconId
+      value: 96529c85-b438-460b-b03d-7e1b7d062dfe
+      description: ""
+      disabled: false
+    - type: text
+      key: publisher
+      value: Test publisher
+      description: ""
+      disabled: false
+    - type: text
+      key: pages
+      value: "3"
+      description: ""
+      disabled: false
+    - type: text
+      key: contentIds[]
+      value: c2b5b887-de0f-4bac-b281-dcf23a8c19ab
+      description: ""
+      disabled: false
+order: 3000

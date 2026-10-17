@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace App\Extensions\Parsers;
 
-use App\Support\EnumResolver;
+use App\Extensions\EnumExtensions;
 use UnitEnum;
+use InvalidArgumentException;
+use App\Models\Uuid;
 
 abstract class BaseInputParser
 {
@@ -95,7 +97,7 @@ abstract class BaseInputParser
             return null;
         }
 
-        $enum = EnumResolver::tryResolve($enumClass, $value);
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
 
         if ($enum === null) {
             static::fail($key, "'{$value}' is not a valid value for '{$key}'");
@@ -171,12 +173,113 @@ abstract class BaseInputParser
     ): UnitEnum {
         $value = self::string($input, $key);
 
-        $enum = EnumResolver::tryResolve($enumClass, $value);
+        $enum = EnumExtensions::tryResolve($enumClass, $value);
 
         if ($enum === null) {
             static::fail($key, "'{$value}' is not a valid value for '{$key}'");
         }
 
         return $enum;
+    }
+
+    public static function optionalUuid(array $input, string $key): ?Uuid
+    {
+        $value = self::optionalString($input, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        try {
+            return Uuid::fromString($value);
+        } catch (InvalidArgumentException) {
+            static::fail($key, "'{$key}' must be a valid UUID");
+        }
+    }
+
+    public static function uuid(array $input, string $key): Uuid
+    {
+        $value = self::string($input, $key);
+
+        try {
+            return Uuid::fromString($value);
+        } catch (InvalidArgumentException) {
+            static::fail($key, "'{$key}' must be a valid UUID");
+        }
+    }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<mixed>|null
+     */
+    public static function optionalArray(array $input, string $key): ?array
+    {
+        $value = $input[$key] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_array($value)) {
+            static::fail($key, "'{$key}' must be an array");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<string, mixed>|null
+     */
+    public static function optionalAssocArray(array $input, string $key): ?array
+    {
+        $value = self::optionalArray($input, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!array_is_list($value) === false && $value !== []) {
+            // array_is_list возвращает true для списка — нам нужен ассоциативный
+            static::fail($key, "'{$key}' must be an associative array");
+        }
+
+        return $value;
+    }
+
+    // ==================== Required ====================
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<mixed>
+     */
+    public static function array(array $input, string $key): array
+    {
+        if (!array_key_exists($key, $input)) {
+            static::fail($key, "'{$key}' is required");
+        }
+
+        $value = $input[$key];
+
+        if (!is_array($value)) {
+            static::fail($key, "'{$key}' must be an array");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public static function assocArray(array $input, string $key): array
+    {
+        $value = self::array($input, $key);
+
+        if ($value === [] || array_is_list($value)) {
+            static::fail($key, "'{$key}' must be a non-empty associative array");
+        }
+
+        return $value;
     }
 }

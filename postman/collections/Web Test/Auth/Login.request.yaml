@@ -3,15 +3,17 @@ method: POST
 url: "{{base_url}}/auth/login"
 order: 2000
 headers:
-  - key: Content-Type
-    value: application/x-www-form-urlencoded
-    disabled: false
-  - key: x-csrf-token
-    value: "{{csrf_token}}"
-    disabled: true
+  Content-Type: application/x-www-form-urlencoded
+  x-csrf-token: "{{csrf_token}}"
 body:
   type: urlencoded
   content:
-    login: lore_user
-    password: "123456789"
-    _token: 64a238e4dfca07233545fe52279ae53d62d563698bd472968acd5877af261d79
+    - key: login
+      value: lore_user
+      disabled: false
+    - key: password
+      value: "1234567890"
+      disabled: false
+    - key: _token
+      value: 64a238e4dfca07233545fe52279ae53d62d563698bd472968acd5877af261d79
+      disabled: true

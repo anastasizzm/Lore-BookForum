@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/api/files/upload"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: formdata
+  content:
+    - type: file
+      key: file
+      src:
+        - /C:/Users/alex2/Downloads/Потоки в Шарпе - 1-01.pdf
+      description: ""
+      disabled: false
+    - type: text
+      key: category
+      value: book
+      description: ""
+      disabled: false
+order: 2000

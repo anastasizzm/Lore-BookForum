@@ -4,13 +4,26 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\BooksRepository;
+use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
+use App\Services\Storage\FileService;
+
+use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookProgressForm;
+use App\Validators\Publications\BookFormValidator;
+use App\Validators\Publications\BookProgressFormValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Publications\PublicationShort;
+use App\Models\Publications\BookFiles;
+use App\Models\Publications\BookModel;
 use App\Models\Enums\PublicationsSortBy;
+use App\Models\Enums\BookFormat;
 use App\Models\Enums\ReadingStatus;
+use App\Models\Enums\FileCategory;
+use App\Models\Uuid;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Criterias\Publications\BooksCriteria;
@@ -24,16 +37,19 @@ use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
 
-
 use PDO;
 
 final class BooksService
 {
     public function __construct(
         private readonly BooksRepository $booksRepo,
+        private readonly UsersReadRepository $usersReadRepo,
         private readonly BookExceptionTranslator $translator,
         private readonly PublicationContextEnricher $enricher,
-        private readonly UnitOfWork $uow
+        private readonly UnitOfWork $uow,
+        private readonly BookFormValidator $validator,
+        private readonly BookProgressFormValidator $progressValidator,
+        private readonly FileService $fileService
     ){}
 
     public function getList(BooksListQuery $query) : PaginatedList
@@ -89,6 +105,78 @@ final class BooksService
         );
     }
 
+    public function retrieveShort(int $bookId) : ?PublicationShort 
+    {
+        return $this->booksRepo->retrieveShort($bookId);
+    }
+
+    public function identifyReadContent(int $bookId, BookFormat $format = BookFormat::Pdf): ?Uuid
+    {
+        return $this->booksRepo->identifyContent($bookId, $format->value);
+    }
+
+    public function getProgress(int $userId, int $bookId, BookFormat $format): ?UserRead
+    {
+        return $this->usersReadRepo->find($userId, $bookId, $format);
+    }
+
+    public function saveProgress(
+    int        $userId,
+    int        $bookId,
+    BookProgressForm $form
+    ): void {
+        $bag = $this->progressValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $form
+        ): void {
+            $this->usersReadRepo->upsert(
+                userId:        $userId,
+                publicationId: $bookId,
+                format:        $form->format,
+                position:      $form->position,
+                isFinished:    $form->isFinished,
+            );
+        });
+    }
+
+    public function finishReading(
+        int        $userId,
+        int        $bookId,
+        BookFormat $format,
+    ): void {
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $format
+        ): void {
+            $this->usersReadRepo->markFinished(
+                userId:        $userId,
+                publicationId: $bookId,
+                format:        $format,
+            );
+        });
+    }
+
+    public function resetProgress(
+        int         $userId,
+        int         $bookId,
+        ?BookFormat $format,
+    ): void {
+        $this->uow->transactional(function (PDO $pdo) use (
+            $userId, $bookId, $format
+        ): void {
+            if ($format === null) {
+                $this->usersReadRepo->delete($userId, $bookId);
+            } else {
+                $this->usersReadRepo->deleteForFormat(
+                    $userId,
+                    $bookId,
+                    $format,
+                );
+            }
+        });
+    }
+
     public function retrieve(int $bookId, PropertiesQuery $props) : ?Book
     {
         $errors = [];
@@ -135,6 +223,29 @@ final class BooksService
         }
         catch(\PDOException $e)
         {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function create(
+        BookForm $form, 
+        int $creatorId
+    ) : int
+    {
+        $bag = $this->validator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+        
+        try{
+            return $this->uow->transactional(function (PDO $pdo) use ($form, $creatorId) :int {
+                $model = BookModel::fromForm($form);
+                
+                $bookId = $this->booksRepo->create($model, $creatorId);
+                $this->booksRepo->addPendingContents($bookId, $form->contentIds);
+
+                return $bookId;
+            });
+        }
+        catch(\PDOException $e){
             throw $this->translator->translate($e);
         }
     }

@@ -81,8 +81,8 @@ abstract class PublicationsScriptDirector extends ScriptDirector
 
         $statusWhere = match($status){
             ReadingStatus::None => '',
-            ReadingStatus::Reading => 'users_read.publication_id IS NOT NULL AND NOT users_read.is_closed',
-            ReadingStatus::Ended => 'users_read.publication_id IS NOT NULL AND users_read.is_closed'
+            ReadingStatus::Reading => 'users_read.publication_id IS NOT NULL AND NOT users_read.is_finished',
+            ReadingStatus::Ended => 'users_read.publication_id IS NOT NULL AND users_read.is_finished'
         };
         if (empty($statusWhere)) return $this;
 

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 use App\Lib\I18n\Translator;
 
 final class RouteUrlGenerator implements UrlGenerator

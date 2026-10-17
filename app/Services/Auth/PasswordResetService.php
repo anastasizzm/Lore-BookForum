@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Services\Auth;
 
 use App\Lib\Jwt;
-use App\Lib\Settings;
 use App\Lib\View;
 use App\Lib\I18n\Translator;
 
@@ -42,7 +41,6 @@ final class PasswordResetService
         private readonly UsersRepository $usersRepo,
         private readonly PassResetCache $cache,
         private readonly TokenResetService $tokenResetService,
-        private readonly Settings       $settings,
         private readonly Translator $translator,
         private readonly MailOnlyFormValidator $mailFormValidator,
         private readonly PassResetFormValidator $passResetFormValidator
@@ -51,7 +49,7 @@ final class PasswordResetService
     public function startReset(MailOnlyForm $form) : void 
     {
         $errorBag = $this->mailFormValidator->validateOne($form);
-        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         $userId = $this->getId($form->email);
         
@@ -70,7 +68,7 @@ final class PasswordResetService
     public function completeReset(PassResetForm $form): void
     {
         $errorBag = $this->passResetFormValidator->validateOne($form);
-        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         $userId = $this->consumeToken($form->token);
         $this->cache->forget($userId);

@@ -25,7 +25,8 @@
         "logout_text": "You will need to sign in again to continue.",
         "help": "Help",
         "privacy": "Privacy Policy",
-        "admin": "Admin panel"
+        "admin": "Admin panel",
+        "drafts": "Drafts"
     },
     "language": {
         "label": "Language",
@@ -431,7 +432,14 @@
         "editors_loading": "Loading users…",
         "editors_empty": "No users found.",
         "next": "Next",
-        "back": "Back"
+        "back": "Back",
+        "publish_title": "Who can edit this article?",
+        "publish_subtitle": "Pick the co-authors. They will be able to edit the article after publication.",
+        "publish_search_ph": "Search by name or email",
+        "publish_loading": "Loading users…",
+        "publish_no_users": "No users found.",
+        "publish_submit": "Publish",
+        "create_draft": "Create draft"
     },
     "js": {
         "toast_error": "Error",
@@ -456,16 +464,6 @@
         "verify_sending": "Sending...",
         "verify_sent": "A new verification link has been sent to your email. Check your inbox.",
         "seconds_short": "s",
-        "max_length": "Max length is :max characters",
-        "comment_empty": "Comment cannot be empty",
-        "comment_sent": "Comment sent",
-        "comment_duplicate": "You have already sent this comment.",
-        "comment_id_missing": "Cannot send the reply: the comment id is missing.",
-        "publication_id_missing": "Cannot send the reply: the publication id is missing on this page.",
-        "publication_id_missing_comment": "Cannot send the comment: the publication id is missing on this page.",
-        "post_id_missing": "postId is missing",
-        "reply_sent": "Reply sent",
-        "comment_deleted": "Comment deleted",
         "delete": "Delete",
         "delete_comment_title": "Delete comment?",
         "delete_comment_text": "Are you sure to delete your comment?",
@@ -521,7 +519,10 @@
         "rule_book_author_note": "The author's notes are too long (2000 characters max).",
         "book_draft_created": "Draft created.",
         "book_published": "Book published.",
-        "book_updated": "The book has been updated."
+        "book_updated": "The book has been updated.",
+        "comment_sent": "Comment sent.",
+        "reply_sent": "Reply sent.",
+        "comment_deleted": "Comment deleted."
     },
     "admin": {
         "dashboard_title": "Admin panel",
