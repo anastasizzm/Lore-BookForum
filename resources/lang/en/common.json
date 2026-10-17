@@ -71,7 +71,8 @@
         "draft_hint": "Only you can see this draft.",
         "edit": "Edit",
         "publish_bar_text": "The book has not been published yet — only you can see it.",
-        "publish_cta": "Publish book"
+        "publish_cta": "Publish book",
+        "options": "Book options"
     },
     "bookform": {
         "title": "Create book",
@@ -211,7 +212,8 @@
         "excerpt_pages": ", pages :from–:to",
         "untitled": "Untitled",
         "go_to_book": "Go to the book",
-        "no_text": "The article text is not available yet."
+        "no_text": "The article text is not available yet.",
+        "options": "Article options"
     },
     "feed": {
         "title": "Feed",
@@ -527,7 +529,11 @@
         "book_updated": "The book has been updated.",
         "comment_sent": "Comment sent.",
         "reply_sent": "Reply sent.",
-        "comment_deleted": "Comment deleted."
+        "comment_deleted": "Comment deleted.",
+        "delete_book_title": "Delete book?",
+        "delete_book_text": "Are you sure you want to delete this book? This cannot be undone.",
+        "delete_article_title": "Delete article?",
+        "delete_article_text": "Are you sure you want to delete this article? This cannot be undone."
     },
     "admin": {
         "dashboard_title": "Admin panel",

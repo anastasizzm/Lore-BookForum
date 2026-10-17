@@ -32,7 +32,8 @@
         "publications_failed_short": "Failed to load.",
         "search_failed": "Search failed. Try again.",
         "search_failed_http": "Search failed (HTTP :status).",
-        "users_load_failed": "Could not load the list of users."
+        "users_load_failed": "Could not load the list of users.",
+        "delete_failed": "Could not delete (HTTP :status)."
     },
     "validation": {
         "invalid_login": "Invalid login or email",
