@@ -65,8 +65,7 @@
     "books": {
         "pub_exists": "A book for this publication already exists",
         "isbn_exists": "A book with this ISBN already exists",
-        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X",
-        "format_exists": "This book already has the content with such format"
+        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
     },
     "account": {
         "credits_invalid": "Invalid login or password",
@@ -92,20 +91,6 @@
         "invalid_token": "Invalid token",
         "no_user_data": "No user data provided",
         "no_email_data": "No email data provided"
-    },
-    "files": {
-        "ini_size": "File exceeds server limit",
-        "form_size": "File exceeds form limit",
-        "partial": "File was only partially uploaded",
-        "no_file": "No file was uploaded",
-        "no_tmp_dir": "Server has no temp directory",
-        "cant_write": "Server cannot write to disk",
-        "extension": "Upload stopped by extension",
-        "upload_fail": "Upload failed",
-        "file_empty": "File is empty",
-        "file_large": "File is too large (max :max MB)",
-        "invalid_upload": "Invalid upload",
-        "file_format": "Unsupported file format: :format"
     },
     "comments": {
         "empty": "Comment cannot be empty",
