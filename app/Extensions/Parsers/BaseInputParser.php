@@ -207,4 +207,79 @@ abstract class BaseInputParser
             static::fail($key, "'{$key}' must be a valid UUID");
         }
     }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<mixed>|null
+     */
+    public static function optionalArray(array $input, string $key): ?array
+    {
+        $value = $input[$key] ?? null;
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!is_array($value)) {
+            static::fail($key, "'{$key}' must be an array");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<string, mixed>|null
+     */
+    public static function optionalAssocArray(array $input, string $key): ?array
+    {
+        $value = self::optionalArray($input, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!array_is_list($value) === false && $value !== []) {
+            // array_is_list возвращает true для списка — нам нужен ассоциативный
+            static::fail($key, "'{$key}' must be an associative array");
+        }
+
+        return $value;
+    }
+
+    // ==================== Required ====================
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<mixed>
+     */
+    public static function array(array $input, string $key): array
+    {
+        if (!array_key_exists($key, $input)) {
+            static::fail($key, "'{$key}' is required");
+        }
+
+        $value = $input[$key];
+
+        if (!is_array($value)) {
+            static::fail($key, "'{$key}' must be an array");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    public static function assocArray(array $input, string $key): array
+    {
+        $value = self::array($input, $key);
+
+        if ($value === [] || array_is_list($value)) {
+            static::fail($key, "'{$key}' must be a non-empty associative array");
+        }
+
+        return $value;
+    }
 }

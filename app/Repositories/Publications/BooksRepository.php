@@ -193,6 +193,21 @@ final class BooksRepository extends PublicationsRepository
         return (int)$id;
     }
 
+    public function identifyContent(int $bookId, string $format) : ?Uuid 
+    {
+        $sql = "SELECT content_id FROM books_content 
+            WHERE book_id = :bookId AND format = :format";
+
+        $params = [
+            ':bookId' => ScriptParam::asInt($bookId),
+            ':format' => ScriptParam::asStr($format)
+        ];
+
+        $stmt = $this->execute($sql, $params);
+        $id = $stmt->fetchColumn();
+        return !is_string($id) ? NULL : Uuid::fromString($id);
+    }
+
     public function addContent(int $bookId, Uuid $contentId, string $format) : void
     {
         $values = [

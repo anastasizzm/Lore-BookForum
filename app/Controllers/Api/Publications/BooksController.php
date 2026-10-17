@@ -8,7 +8,10 @@ use App\Services\Publications\BooksService;
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Publications\BookFiles;
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookProgressForm;
+use App\Models\Enums\BookFormat;
 use App\Extensions\Parsers\RouteParamParser;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Controllers\Controller;
 
@@ -54,7 +57,6 @@ final class BooksController extends Controller
     public function deleteSave(HttpContext $context, string $bookId)
     {
         $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
-
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
@@ -75,5 +77,41 @@ final class BooksController extends Controller
             $userId
         );
         return $this->jsonCreatedId($bookId);
+    }
+
+    public function upsert(HttpContext $context, string $bookId)
+    {
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+            
+        $formData = $context->request->body();
+        $this->booksService->saveProgress($userId, $bookId, BookProgressForm::fromInput($formData));
+        return $this->jsonEmpty();
+    }
+
+    public function finish(HttpContext $context, string $bookId)
+    {
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $format = QueryParser::enum($context->request->body(), 'format', BookFormat::class);
+        $this->booksService->finishReading($userId, $bookId, $format);
+        return $this->jsonEmpty();
+    }
+
+    public function reset(HttpContext $context, string $bookId)
+    {
+        $bookId = RouteParamParser::positiveInt(['b' => $bookId], 'b');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $format = QueryParser::optionalEnum($context->request->body(), 'format', BookFormat::class);
+        $this->booksService->resetProgress($userId, bookId, $format);
+        return $this->jsonEmpty();
     }
 }
