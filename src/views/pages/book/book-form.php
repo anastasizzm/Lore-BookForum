@@ -312,6 +312,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           novalidate>
       <?= $view->csrfField() ?>
       <?= $langField ?>
+      <!-- iconId (uuid обложки): book-form.js грузит картинку через
+           POST /api/files/upload (category=cover) и вписывает сюда id.
+           contentIds[] JS добавляет сам — по одному на файл книги. -->
+      <input type="hidden" name="iconId" value="<?= $view->e($val('iconId')) ?>">
       <?php if ($isEdit): ?>
         <!-- edit-режим: id > 0; отправку блокирует book-form.js —
              endpoint'а обновления пока нет (см. шапку файла) -->
@@ -452,8 +456,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?= $errorBox('isbn') ?>
         </div>
 
-        <!-- ОБЛОЖКА: превью показывает book-form.js (object URL), без JS —
-             ничего не ломается, файл всё равно уйдёт в POST. -->
+        <!-- ОБЛОЖКА: превью показывает book-form.js (object URL).
+             У input НЕТ name: бинарник не входит в payload /api/books/new —
+             book-form.js грузит его отдельным POST /api/files/upload
+             (category=cover) и кладёт uuid в скрытое поле iconId. -->
         <div class="form-field book-form__cover">
           <label for="bookCover"><?= $tr('common.bookform.field_cover') ?></label>
 
@@ -473,7 +479,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
               <input class="file-input-hidden"
                      type="file"
                      id="bookCover"
-                     name="cover"
                      accept="image/jpeg,image/png,image/webp"
                      data-cover-input>
               <label class="btn btn--secondary file-upload__button" for="bookCover">
@@ -571,7 +576,8 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <!-- ФАЙЛЫ: один input multiple на pdf/epub/mobi/fb2, минимум один
              файл. Список выбранных (имя, размер, минус) рисует book-form.js.
-             Без JS уходит обычным POST — several files[] в multipart. -->
+             У input НЕТ name: файлы уходят отдельными запросами
+             POST /api/files/upload (category=book) → contentIds[]. -->
         <div class="form-field" data-files-field>
           <label for="bookFiles"><?= $tr('common.bookform.field_file') ?></label>
 
@@ -581,11 +587,9 @@ $categoryValue = $val('categoryId', $bookCategoryId);
             <input class="file-input-hidden"
                    type="file"
                    id="bookFiles"
-                   name="files[]"
                    accept=".pdf,.epub,.mobi,.fb2,application/pdf,application/epub+zip,application/x-mobipocket-ebook,application/fb2"
                    multiple
-                   data-files-input
-                   required>
+                   data-files-input>
             <label class="btn btn--secondary file-upload__button" for="bookFiles">
               <span data-file-button-text><?= $tr('common.bookform.file_choose') ?></span>
               <span class="file-upload__button-state" data-file-button-state><?= $tr('common.bookform.file_none') ?></span>

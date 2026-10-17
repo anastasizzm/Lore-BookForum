@@ -12,7 +12,9 @@
  *   4. наполнение <select> жанров и категорий из /api/additional/*;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
  *   6. отправку через fetch + FormData (multipart) на POST /api/books/new
- *      с Accept: application/json;
+ *      с Accept: application/json; обложка и файлы книги перед этим
+ *      уходят отдельными запросами POST /api/files/upload (category
+ *      cover|book) → iconId / contentIds[];
  *   7. многошаговость (FORM-01, как в article-form.js): шаги
  *      [data-step], «Далее»/«Назад», валидация ОБЯЗАТЕЛЬНЫХ полей
  *      своего шага перед переходом вперёд (STEP_FIELDS);
@@ -36,9 +38,13 @@
 (function () {
   'use strict';
 
-  var COVER_MAX_BYTES = 5 * 1024 * 1024;   // 5 MB  (как Uploader::MAX_BYTES)
-  var BOOK_FILE_MAX_BYTES = 50 * 1024 * 1024; // 50 MB на файл книги
+  var COVER_MAX_BYTES = 5 * 1024 * 1024;   // 5 MB  — config/settings.php, storage.cover
+  var BOOK_FILE_MAX_BYTES = 100 * 1024 * 1024; // 100 MB — config/settings.php, storage.book
   var COVER_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  // POST /api/files/upload (роут files.upload): multipart { file, category }
+  // → 201 { createdId: uuid }; category — FileCategory: 'cover' | 'book'.
+  var UPLOAD_URL = '/api/files/upload';
 
   // Поддерживаемые форматы книги (как минимум pdf; эпаб/моби/фб2 — тоже).
   var BOOK_FILE_EXTS  = ['pdf', 'epub', 'mobi', 'fb2'];
@@ -99,6 +105,82 @@
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, '') + ' MB';
+  }
+
+  /* ============================================================
+     ЗАГРУЗКА ФАЙЛОВ: POST /api/files/upload (F2-02)
+     Один файл за запрос: multipart { file, category }, CSRF-заголовок
+     добавляет LoreCsrf.fetch. Успех → 201 { createdId: uuid }.
+     ============================================================ */
+  /** fetch с CSRF: LoreCsrf.fetch ставит X-CSRF-Token к не-GET методам. */
+  function csrfFetch(url, options) {
+    if (window.LoreCsrf && typeof LoreCsrf.fetch === 'function') {
+      return LoreCsrf.fetch(url, options);
+    }
+    return fetch(url, options);
+  }
+
+  /** Кеш «файл → uuid»: повторная отправка после 422 не переливает файл. */
+  var uploadCache = {};
+
+  function uploadCacheKey(category, file) {
+    return [category, file.name || '', file.size || 0, file.lastModified || 0].join(':');
+  }
+
+  /** Локализованный текст ошибки загрузки (422/419/401/прочее). */
+  function describeUploadFailure(status, data, raw) {
+    if (status === 401) return t('errors.common.unauthorized');
+    if (status === 419) return t('errors.common.csrf_fail');
+
+    var details = data && data.error && data.error.details ? data.error.details : null;
+    if (details) {
+      var list = details.file || details.cover;
+      var first = Array.isArray(list) ? list[0] : list;
+      if (first) return String(first);
+    }
+
+    var fallback = t('errors.common.save_failed', { status: status });
+    return window.Messages
+      ? window.Messages.describe(status, data, raw, fallback)
+      : fallback;
+  }
+
+  /** Загружает один файл; резолвится uuid-строкой, иначе reject. */
+  function uploadFile(file, category) {
+    var key = uploadCacheKey(category, file);
+    if (uploadCache[key]) return Promise.resolve(uploadCache[key]);
+
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('category', category);
+
+    return csrfFetch(UPLOAD_URL, {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    }).then(function (response) {
+      return response.text().then(function (raw) {
+        var data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+        if (response.ok) {
+          var id = data ? data.createdId : null;
+          if (!id && data && data.data) id = data.data.id;
+          if (id) {
+            uploadCache[key] = String(id);
+            return String(id);
+          }
+        }
+
+        var err = new Error(describeUploadFailure(response.status, data, raw));
+        err.status = response.status;
+        throw err;
+      });
+    });
   }
 
   /* ============================================================
@@ -725,8 +807,13 @@
 
     function getField(name)   {
       var el = form.querySelector('[name="' + name + '"]');
-      if (!el && name === 'files') el = form.querySelector('[data-files-input]');
-      return el;
+      if (el) return el;
+      // Обложка и файлы книги — input'ы БЕЗ name (в payload они не
+      // входят, их грузит book-form.js в /api/files/upload) — ищем
+      // по data-атрибуту, чтобы валидация и ошибки находили поле.
+      if (name === 'cover') return form.querySelector('[data-cover-input]');
+      if (name === 'files') return form.querySelector('[data-files-input]');
+      return null;
     }
     function getErrorEl(name) { return form.querySelector('[data-error-for="' + name + '"]'); }
 
@@ -942,9 +1029,6 @@
       var labels = submitBtns.map(function (b) { return b.textContent; });
       var activeBtn = submitBtns[0] || null;
 
-      submitBtns.forEach(function (b) { b.disabled = true; });
-      if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
-
       function resetButtons() {
         submitBtns.forEach(function (b, i) {
           b.disabled = false;
@@ -954,66 +1038,139 @@
 
       // FormData(form) сам проставляет boundary и уносит поля; значение
       // кнопки-сабмитера в неё НЕ попадает — статуса в контракте нет.
+      // БINARY payload: у input[type=file] НЕТ name — файлы уходят
+      // отдельными запросами в /api/files/upload (см. uploadPhase ниже).
       var body = new FormData(form);
       body.delete('id');   // edit-режим отсечён выше; id бэк не принимает
 
-      // LoreCsrf.fetch сам добавляет заголовок X-CSRF-Token (токен из cookie).
-      var csrfFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
-        ? LoreCsrf.fetch
-        : function (url, opts) { return fetch(url, opts); };
+      // ---- Файлы: обложка (cover) и файлы книги (book) → /api/files/upload
+      var coverField = getField('cover');
+      var filesField = getField('files');
+      var coverFile = coverField && coverField.files && coverField.files.length
+        ? coverField.files[0]
+        : null;
+      var bookFiles = filesField && filesField.files
+        ? Array.prototype.slice.call(filesField.files)
+        : [];
 
-      csrfFetch(action, {
-        method: 'POST',
-        body: body,
-        credentials: 'same-origin',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      })
-        .then(function (response) {
-          return response.text().then(function (raw) {
-            var data = null;
-            try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      submitBtns.forEach(function (b) { b.disabled = true; });
+      if (activeBtn) {
+        activeBtn.textContent = t((coverFile || bookFiles.length)
+          ? 'js.bookform_uploading'
+          : 'js.bookform_saving');
+      }
 
-            if (response.ok) {
-              clearBackup();
-              dirty = false;
+      /** iconId / contentIds пересобираем на каждой отправке: обложку
+       *  или файл могли убрать после прошлой неудачной попытки. */
+      function resetUploadIds() {
+        var iconField = form.querySelector('input[name="iconId"]');
+        if (iconField) iconField.value = '';
+        body.delete('contentIds[]');
+      }
 
-              var createdId = data ? parseInt(data.createdId, 10) : NaN;
-              if (!createdId && data && data.data) createdId = parseInt(data.data.id, 10);
+      /** Грузит выбранные файлы; резолвится, когда id лежат в body. */
+      function uploadPhase() {
+        resetUploadIds();
+        var tasks = [];
 
-              var locationHeader = response.headers.get('Location');
-              var redirect = createdId
-                ? '/books/' + createdId
-                : (locationHeader || (response.redirected ? response.url : '/books'));
+        if (coverFile) {
+          tasks.push(uploadFile(coverFile, 'cover').then(function (uuid) {
+            var iconField = form.querySelector('input[name="iconId"]');
+            if (iconField) iconField.value = uuid;
+          }, function (err) {
+            err.field = 'cover';
+            throw err;
+          }));
+        }
 
-              notify(t('js.book_draft_created'), 'success');
-              window.location.href = redirect;
-              return;
-            }
+        if (bookFiles.length) {
+          tasks.push(
+            Promise.all(bookFiles.map(function (file) { return uploadFile(file, 'book'); }))
+              .then(function (ids) {
+                ids.forEach(function (id) { body.append('contentIds[]', id); });
+              }, function (err) {
+                err.field = 'files';
+                throw err;
+              })
+          );
+        }
 
-            // 422/400: ошибки полей (ExceptionMiddleware отдаёт
-            // error.details) — на поля + возврат на шаг с первой.
-            if (response.status === 400 || response.status === 422) {
-              var details = data && data.error && data.error.details
-                ? data.error.details
-                : (data && data.errors ? data.errors : null);
-              renderServerErrors(details);
-            }
+        return Promise.all(tasks);
+      }
 
-            if (response.status === 401) { notify(t('errors.common.unauthorized')); return; }
-            if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
+      // ---- Создание книги: POST /api/books/new ----
+      function sendCreate() {
+        if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
 
-            var fallback = t('errors.common.save_failed', { status: response.status });
-            notify(window.Messages
-              ? window.Messages.describe(response.status, data, raw, fallback)
-              : fallback);
-            resetButtons();
-          });
+        return csrfFetch(action, {
+          method: 'POST',
+          body: body,
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
         })
+          .then(function (response) {
+            return response.text().then(function (raw) {
+              var data = null;
+              try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+              if (response.ok) {
+                clearBackup();
+                dirty = false;
+
+                var createdId = data ? parseInt(data.createdId, 10) : NaN;
+                if (!createdId && data && data.data) createdId = parseInt(data.data.id, 10);
+
+                var locationHeader = response.headers.get('Location');
+                var redirect = createdId
+                  ? '/books/' + createdId
+                  : (locationHeader || (response.redirected ? response.url : '/books'));
+
+                notify(t('js.book_draft_created'), 'success');
+                window.location.href = redirect;
+                return;
+              }
+
+              // 422/400: ошибки полей (ExceptionMiddleware отдаёт
+              // error.details) — на поля + возврат на шаг с первой.
+              if (response.status === 400 || response.status === 422) {
+                var details = data && data.error && data.error.details
+                  ? data.error.details
+                  : (data && data.errors ? data.errors : null);
+                renderServerErrors(details);
+              }
+
+              if (response.status === 401) { notify(t('errors.common.unauthorized')); return; }
+              if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
+
+              var fallback = t('errors.common.save_failed', { status: response.status });
+              notify(window.Messages
+                ? window.Messages.describe(response.status, data, raw, fallback)
+                : fallback);
+              resetButtons();
+            });
+          })
+          .catch(function (err) {
+            console.error('[book-form] submit failed for', action, err);
+            resetButtons();
+            notify(t('errors.common.network_error'));
+          });
+      }
+
+      uploadPhase()
+        .then(function () { return sendCreate(); })
         .catch(function (err) {
-          console.error('[book-form] submit failed for', action, err);
+          if (err && err.field) {
+            // Файл не загрузился (тип/размер/422/419) — ошибка на поле.
+            setError(err.field, err.message || t('errors.common.save_failed', { status: '' }));
+            showFieldErrors();
+            focusFirstInvalid();
+            resetButtons();
+            return;
+          }
+          console.error('[book-form] upload phase failed', err);
           resetButtons();
           notify(t('errors.common.network_error'));
         });
