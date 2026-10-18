@@ -2,6 +2,11 @@
 /**
  * article-details — страница статьи (по аналогии с book/book-details.php).
  *
+ * Шапка страницы содержит меню «три точки» (details-menu.php): пункты
+ * «Редактировать» (ссылка на /articles/{id}/edit, цвет по правам —
+ * book-rights.js) и «Удалить» (DELETE /api/articles/{id}, details-menu.js);
+ * контракт обоих роутов — в шапке partial (бэк добавит, config/ заморожен).
+ *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
  *   $comments — массив постов (те же поля, что в feed-list.php);
@@ -169,6 +174,9 @@ if (!empty($article->iconId)) {
 
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
+    <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
+         по образцу book-details. Контракт — в шапке partial. -->
+    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId]); ?>
   </div>
 
   <div class="book-details">
@@ -600,6 +608,12 @@ if (!empty($article->iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав: цвет пункта
+       «Редактировать» в меню «три точки» (шапка) -->
+  <script src="/assets/js/book-rights.js"></script>
+  <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
+       удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
+  <script src="/assets/js/details-menu.js"></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>

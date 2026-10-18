@@ -19,87 +19,60 @@ $langField = $langQuery !== null && $langQuery !== ''
     : '';
 
 /*
- * КОНТРАКТ С БЭКОМ (P0, фронт готов — роуты добавляет команда бэка;
- * config/routes.php и app/ ЗАМОРОЖЕНЫ, правки запрещены):
+ * КОНТРАКТ С БЭКОМ (app/ и config/ для фронта заморожены — роуты уже
+ * заведены командой бэка):
  *
- *   GET  /books/create  → роут books.create,        AuthPolicy::Verified
- *        рендерит эту вьюху, передавая $user (для сайдбара);
- *        при повторном рендере после ошибок — $form (значения полей) и
- *        $errors (['title' => ['msg'], ...], ключи 'cover', 'files',
- *        'authors', 'editors').
+ *   GET  /books/new → роут books.create, AuthPolicy::Verified — рендерит
+ *        ЭТУ вьюху, передавая $user (для сайдбара). Повторный рендер
+ *        после 422 от веб-роута: $form (значения полей) и
+ *        $errors (['title' => ['msg'], ...]).
  *
- *   POST /books/store   → роут books.store, AuthPolicy::Verified
- *        (P0: имя роута books.store; ветка фронта, бэк добавит роут —
- *        сейчас POST /books/store отвечает 405, см. TESTING.md)
- *        enctype=multipart/form-data, поля:
- *          title (string, required, ≤200)
- *          annotation (string, optional, ≤5000)
- *          author_notes (string, optional, ≤2000) — «заметки автора»,
- *                  колонка author_notes уже есть в БД (PublicationExtended);
- *                  если бэк назовёт поле по-статьейному — author_note —
- *                  переименовать здесь (алиас authorNotes).
- *          genre (int id, required)     — список: GET /api/additional/genres
- *          category (int id, required)  — список: GET /api/additional/categories
- *          series (string, optional, ≤120) — в БД поля пока нет (см. book-details)
- *          isbn (string, optional, ≤20) — форма хранит до 20 символов, фронт
- *                  проверяет ISBN-13 (13 цифр, префикс 978/979, дефисы и
- *                  пробелы допустимы); бэк — та же проверка (см. фильтр
- *                  библиотеки: filters.js isbnValidate)
- *          authors[]  (array<int id>, optional, ≤30) — авторы книги;
- *                  ПОЛЕ СОЗДАТЕЛЯ НЕТ: создатель всегда один, не изменяем
- *                  и автоматически редактор (берётся из сессии бэком).
- *                  Гидрация после 422: $form['authors'] = [['id'=>..,
- *                  'username'=>..], ...]
- *          editors[]  (array<int id>, optional, без лимита) — редакторы;
- *                  в `$form` — та же форма, что у authors[]
- *          cover (file: jpeg/png/webp, ≤5MB, optional — иначе placeholder)
- *          files[] (array<file>, required ≥1; форматы pdf/epub/mobi/fb2,
- *                  не более одного файла каждого формата, ≤50MB на файл) —
- *                  книга в одном или нескольких форматах; дубли форматов
- *                  бэк тоже должен отсекать (фронт уже отсекает)
- *          status ('draft' | 'published', required) — кнопка-сабмитер
- *                  Нижней панели шага 2 (Create draft / Publish):
- *                    draft     → книга-черновик: видит только создатель
- *                                (политику держит бэк), успех → фронт
- *                                уводит на book-details (бейдж «Черновик»,
- *                                кнопка публикации внизу);
- *                    published → после УСПЕХА проверки фронт открывает
- *                                плашку выбора прав (см. ниже) и лишь
- *                                потом ведёт на страницу книги.
- *          _token (CSRF: поле csrfField() или заголовок X-CSRF-Token), lang
- *        успех: Accept: application/json → 201 { data: { id, redirect } }
- *               redirect — редирект бэка; если его нет, фронт уводит
- *               пользователя на страницу книги /books/{id} (draft) или
- *               на неё же после подтверждения прав (published).
- *               без JSON (прогрессивный POST без JS) → 302 на /books
- *        ошибки валидации → 422 { errors: { field: [msg, ...] } }
- *               Фронт возвращает пользователя на шаг, где ошибка: при
- *               ошибках сразу в двух шагах — сначала первый (порядок
- *               полей в DOM), дальше пользователь идёт сам.
+ *   POST /api/books/new → роут api.books.create.submit (config/
+ *        endpoints.php), AuthPolicy::Verified + CSRF (поле _token или
+ *        заголовок X-CSRF-Token). Accept: application/json.
+ *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
+ *          title       (string, required, 1..255)
+ *          description (string, required, 1..4000) — аннотация
+ *          authorNotes (string, required, 1..2000) — заметки автора
+ *          genreId     (int > 0, required) — GET /api/additional/genres
+ *          categoryId  (int > 0, required) — GET /api/additional/categories
+ *          publisher   (string, required, 1..255)
+ *          pages       (int > 0, required)
+ *          isbn        (string, optional, формат XXX-X-XXX-XXXXX-X —
+ *                       книга ровно в дефисах, фронт расставляет их сам)
+ *          iconId      (uuid, optional) — id обложки из POST
+ *                       /api/files/upload (category=cover); без него бэк
+ *                       ставит placeholder
+ *          contentIds[] (array<uuid>, required ≥1) — id файлов книги из
+ *                       POST /api/files/upload (category=book)
+ *          _token, lang — CSRF и локаль
+ *        ИМЕНА ПОЛЕЙ ОДИН В ОДИН = App\Forms\Publications\BookForm::
+ *        fromInput() — переименовывать поля формы без бэка нельзя.
+ *        успех: 201 { createdId: int } → book-form.js уводит на
+ *               /books/{createdId}: книга создаётся ЧЕРНОВИКОМ
+ *               (PublicationStatus::Draft), публикация — со страницы книги.
+ *        ошибки: 422 { error: { code, message,
+ *                              details: { field: [msg, ...] } } }
+ *               (ExceptionMiddleware → ResponseTemplates::error) —
+ *               book-form.js рисует их на полях и возвращает
+ *               пользователя на шаг с первой ошибкой (порядок полей в DOM);
+ *               401 — нет сессии, 419 — CSRF (см. book-form.js).
  *
- *   РЕЖИМ РЕДАКТИРОВАНИЯ (по образцу article-form):
- *   GET  /books/{id}/edit → роут books.edit, AuthPolicy::Verified (бэк)
- *        рендерит ЭТУ ЖЕ вьюху, передавая $book — гидрированную модель
- *        Book: id, title, genre(id), category(id), series, isbn,
- *        annotation (description), authorNotes, authors/editors, status.
- *        Вьюша прелфиллит поля из $book; $form (после 422) перебивает.
- *        Сохранение — тот же POST /books/store со скрытым полем id:
- *          id пусто → создание (201), id > 0 → обновление
- *          (200, redirect /books/{id}). В edit-режиме кнопка «Сохранить»
- *          шлёт status = ТЕКУЩИЙ статус книги (не меняет его).
- *        Нижняя панель edit-режима: ← Назад | Отмена | Сохранить |
- *        Опубликовать (ВСЕГДА; data-rights-open — открывает плашку выбора
- *        прав, rights-modal.js mode='publish': POST rights[] +
- *        POST /books/{id}/publish → переход на страницу книги).
- *        Локальная копия (localStorage «Восстановить») в edit-режиме
- *        НЕ пишется — только для создания.
+ *   БИНАРНЫЕ ФАЙЛЫ — НЕ в этом POST: обложка и файлы книги грузятся
+ *   отдельно через POST /api/files/upload (file + category →
+ *   201 { createdId: uuid }), id подставляются в iconId / contentIds[].
+ *   Поэтому payload /api/books/new собирается из полей формы, а файлы
+ *   book-form.js передаст отдельным запросом (см. F2-02 ниже).
  *
- *   ПУБЛИКАЦИЯ И ПРАВА (плашка rights-modal.php, JS rights-modal.js):
- *   GET  /api/additional/rights         — справочник прав, АСИНХРОННО при
- *        открытии плашки: 200 { items: [ { id, title, description? } ] }
- *        (по аналогии с /api/additional/genres, ResponseTemplates::list)
- *   POST /api/publications/{id}/rights  — сохранение выбранных прав:
- *        поля rights[] (array<int>), CSRF; 200/204 ок, 422 с errors
+ *   РЕЖИМ РЕДАКТИРОВАНИЯ: разметка зарезервирована ($book передаёт
+ *   контроллер, когда появится GET /books/{id}/edit и endpoint
+ *   обновления); отправка в edit-режиме блокируется в book-form.js —
+ *   POST /api/books/new только создаёт и дубликат не увидит.
+ *   Локальная копия (localStorage «Восстановить») — только для создания.
+ *
+ *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
+ *        ТОЛЬКО на book-details — из формы она убрана (F2-08), публикация
+ *        из формы не поддерживается (см. ниже).
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают)
@@ -115,22 +88,25 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        (формат ResponseTemplates::list). Фронт при ошибке/404 молча
  *        показывает «поиск недоступен», форма не ломается.
  *
- *   Сохранение файлов — по образцу App\Lib\Uploader::saveImage (cover) и
- *   отдельный приём книги (is_uploaded_file + finfo, формат — по
- *   расширению/MIME из списка pdf/epub/mobi/fb2, имя генерируется).
+ *   Сохранение файлов — POST /api/files/upload (FileController::upload,
+ *   категория cover | book → 201 { createdId: uuid }); бэк сам
+ *   проверяет MIME/размер (FilesValidator) и кладёт файл в storage.
  *
  * ---------------------------------------------------------------
  * МНОГОШАГОВОСТЬ (FORM-01, UI — по образцу article-form.php):
  *
  *   Шаг 1 «Данные книги» — формальности: название, жанр, категория,
- *                          серия, ISBN, обложка.
+ *                          издательство, страниц, ISBN, обложка.
  *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
  *                          файлы книги; временно здесь же списки
- *                          авторов/редакторов и кнопки отправки.
+ *                          авторов/редакторов и кнопка отправки.
  *
- *   ШАГ 3 «РОЛИ» (права, авторы/редакторы, финальные кнопки
- *   «Сохранить черновик» / «Опубликовать» → book-details → подтверждение)
- *   СОЗДАВАТЬСЯ НЕ БУДЕТ — пропущен по решению команды, доделаем отдельно:
+ *   ПУБЛИКАЦИЯ ИЗ ФОРМЫ УБРАНА: POST /api/books/new создаёт только
+ *   черновик (бэк не принимает status), кнопка «Опубликовать» живёт на
+ *   book-details (плашка rights-modal).
+ *
+ *   ШАГ 3 «РОЛИ» (права, авторы/редакторы) СОЗДАВАТЬСЯ НЕ БУДЕТ —
+ *   пропущен по решению команды, доделаем отдельно:
  *   тогда списки людей и блок .book-step__nav с кнопками переедут туда
  *   (разметка уже готова — нужен только перенос).
  *
@@ -139,8 +115,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   дальше не пускает.
  *
  *   НЕСОХРАНЁННЫЕ ИЗМЕНЕНИЯ: книга пишется в localStorage
- *   (ключ bookform:v1:new) при вводе; при следующем открытии
- *   /books/create на шаге 1 показывается плашка «Восстановить /
+ *   (ключ bookform:v2:new) при вводе; при следующем открытии
+ *   /books/new на шаге 1 показывается плашка «Восстановить /
  *   Отбросить» (data-restore). Копия стирается после успешной отправки.
  */
 $form   = $form   ?? [];
@@ -232,12 +208,18 @@ $err = static function (string $key) use ($errors): string {
 };
 
 /**
- * Ошибка поля + алиасы (бэк может прислать authorNotes вместо author_notes).
+ * Ошибка поля + алиасы: бэк отдаёт ключи BookForm (authorNotes,
+ * genreId, …), старые веб-имена (author_notes, genre) подстраховываем.
  */
 $errOf = static function (string $key) use ($err): string {
     $first = $err($key);
     if ($first !== '') return $first;
-    $aliases = ['author_notes' => ['author_note', 'authorNotes']];
+    $aliases = [
+        'authorNotes' => ['author_notes', 'author_note'],
+        'genreId'     => ['genre'],
+        'categoryId'  => ['category'],
+        'description' => ['annotation'],
+    ];
     foreach ($aliases[$key] ?? [] as $alias) {
         $one = $err($alias);
         if ($one !== '') return $one;
@@ -253,15 +235,17 @@ $errorBox = static function (string $key) use ($view, $errOf): string {
         . '</p>';
 };
 
-/** Все имена полей формы — для разбора $errors. */
-$fieldKeys = ['title', 'annotation', 'author_notes', 'genre', 'category', 'series', 'isbn',
-              'cover', 'files', 'authors', 'editors'];
+/** Все имена полей формы — ключи BookForm + то, что рисует JS (cover/files). */
+$fieldKeys = ['title', 'description', 'authorNotes', 'genreId', 'categoryId', 'publisher',
+              'pages', 'isbn', 'iconId', 'contentIds', 'cover', 'files', 'authors', 'editors'];
+/** Старые веб-имена полей: считаем их привязанными, чтобы не дублировать сверху. */
+$fieldAliases = ['annotation', 'author_notes', 'author_note', 'genre', 'category', 'series'];
 
 /** Ошибки, не привязанные к полю (например, «файл не сохранён»). */
 $unboundErrors = [];
 foreach ($errors as $field => $list) {
     if (in_array($field, $fieldKeys, true)) continue;
-    if (in_array($field, ['author_note', 'authorNotes'], true)) continue;
+    if (in_array($field, $fieldAliases, true)) continue;
     foreach ((array) $list as $one) $unboundErrors[] = $one;
 }
 
@@ -271,18 +255,14 @@ foreach ($fieldKeys as $key) {
     if ($errOf($key) !== '') $dirtyFields[] = $key;
 }
 
-$genreValue    = $val('genre', $bookGenreId);
-$categoryValue = $val('category', $bookCategoryId);
+$genreValue    = $val('genreId', $bookGenreId);
+$categoryValue = $val('categoryId', $bookCategoryId);
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
-  <!-- rights-modal.js — ДО book-form.js: после успешной публикации форма
-       вызывает window.RightsModal.open(...) -->
-  <script src="<?= $view->asset('js/rights-modal.js') ?>" defer></script>
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -310,11 +290,11 @@ $categoryValue = $val('category', $bookCategoryId);
        ============================================================ -->
   <section class="book-form card-base">
 
-    <!-- P0: action = books.store (POST /books/store). Роут books.store
-         добавит команда бэка (config/ и app/ для фронта заморожены),
-         поэтому путь захардкожен, а не через $view->url('books.store'),
-         который бросил бы RuntimeException при неизвестном имени. -->
-    <form action="<?= $view->e($withLang('/books/store')) ?>"
+    <!-- Форма шлёт JSON-эндпоинт бэка: POST /api/books/new (роут
+         api.books.create.submit в config/endpoints.php), multipart +
+         CSRF (_token / X-CSRF-Token), Accept: application/json.
+         ?lang= в action — чтобы бэк вернул ответ в той же локали. -->
+    <form action="<?= $view->e($withLang('/api/books/new')) ?>"
           method="POST"
           id="bookForm"
           data-book-form
@@ -325,8 +305,13 @@ $categoryValue = $val('category', $bookCategoryId);
           novalidate>
       <?= $view->csrfField() ?>
       <?= $langField ?>
+      <!-- iconId (uuid обложки): book-form.js грузит картинку через
+           POST /api/files/upload (category=cover) и вписывает сюда id.
+           contentIds[] JS добавляет сам — по одному на файл книги. -->
+      <input type="hidden" name="iconId" value="<?= $view->e($val('iconId')) ?>">
       <?php if ($isEdit): ?>
-        <!-- edit-режим: id > 0 → POST /books/store обновляет книгу (контракт в шапке) -->
+        <!-- edit-режим: id > 0; отправку блокирует book-form.js —
+             endpoint'а обновления пока нет (см. шапку файла) -->
         <input type="hidden" name="id" value="<?= $bookId ?>">
       <?php endif; ?>
 
@@ -374,7 +359,7 @@ $categoryValue = $val('category', $bookCategoryId);
                  data-selected — id из $form (после ошибки валидации). -->
             <select class="form-field__input book-form__select"
                     id="bookGenre"
-                    name="genre"
+                    name="genreId"
                     data-dynamic-select="genres"
                     data-selected="<?= $view->e($genreValue) ?>"
                     data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>"
@@ -385,7 +370,7 @@ $categoryValue = $val('category', $bookCategoryId);
                 <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
               <?php endif; ?>
             </select>
-            <?= $errorBox('genre') ?>
+            <?= $errorBox('genreId') ?>
           </div>
 
           <div class="form-field">
@@ -393,7 +378,7 @@ $categoryValue = $val('category', $bookCategoryId);
             <!-- Список: GET /api/additional/categories -->
             <select class="form-field__input book-form__select"
                     id="bookCategory"
-                    name="category"
+                    name="categoryId"
                     data-dynamic-select="categories"
                     data-selected="<?= $view->e($categoryValue) ?>"
                     data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>"
@@ -404,49 +389,70 @@ $categoryValue = $val('category', $bookCategoryId);
                 <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
               <?php endif; ?>
             </select>
-            <?= $errorBox('category') ?>
+            <?= $errorBox('categoryId') ?>
           </div>
 
         </div>
 
         <div class="form-row--two-cols">
 
+          <!-- Издательство и объём — обязательные поля BookForm
+               (publisher: 1..255, pages: int > 0). -->
           <div class="form-field">
-            <label for="bookSeries"><?= $tr('common.bookform.field_series') ?></label>
+            <label for="bookPublisher"><?= $tr('common.bookform.field_publisher') ?></label>
             <input class="form-field__input"
                    type="text"
-                   id="bookSeries"
-                   name="series"
-                   value="<?= $view->e($val('series', $fromBook('series'))) ?>"
-                   maxlength="120"
+                   id="bookPublisher"
+                   name="publisher"
+                   value="<?= $view->e($val('publisher', $fromBook('publisher'))) ?>"
+                   maxlength="255"
                    autocomplete="off"
-                   placeholder="<?= $tr('common.bookform.field_series_ph') ?>">
-            <?= $errorBox('series') ?>
+                   placeholder="<?= $tr('common.bookform.field_publisher_ph') ?>"
+                   required>
+            <?= $errorBox('publisher') ?>
           </div>
 
-          <!-- ISBN необязательный; форма и JS проверяют ISBN-13 (13 цифр,
-               префикс 978/979, дефисы/пробелы допустимы) — логика зеркалит
-               isbnValidate из filters.js. Подсказка — js.isbn_hint. -->
           <div class="form-field">
-            <label for="bookIsbn"><?= $tr('common.bookform.field_isbn') ?></label>
+            <label for="bookPages"><?= $tr('common.bookform.field_pages') ?></label>
             <input class="form-field__input"
-                   type="text"
-                   id="bookIsbn"
-                   name="isbn"
-                   value="<?= $view->e($val('isbn', $fromBook('isbn'))) ?>"
-                   maxlength="20"
+                   type="number"
+                   id="bookPages"
+                   name="pages"
+                   value="<?= $view->e($val('pages', $fromBook('pages'))) ?>"
+                   min="1"
+                   step="1"
                    inputmode="numeric"
                    autocomplete="off"
-                   aria-describedby="bookIsbnHint"
-                   placeholder="<?= $tr('common.bookform.isbn_ph') ?>">
-            <p class="book-form__hint" id="bookIsbnHint"><?= $tr('common.js.isbn_hint') ?></p>
-            <?= $errorBox('isbn') ?>
+                   placeholder="<?= $tr('common.bookform.field_pages_ph') ?>"
+                   required>
+            <?= $errorBox('pages') ?>
           </div>
 
         </div>
 
-        <!-- ОБЛОЖКА: превью показывает book-form.js (object URL), без JS —
-             ничего не ломается, файл всё равно уйдёт в POST. -->
+        <!-- ISBN необязательный; форма и JS проверяют ISBN-13 (13 цифр,
+             префикс 978/979), бэк принимает только XXX-X-XXX-XXXXX-X —
+             дефисы расставляет book-form.js. Подсказка — js.isbn_hint. -->
+        <div class="form-field">
+          <label for="bookIsbn"><?= $tr('common.bookform.field_isbn') ?></label>
+          <input class="form-field__input"
+                 type="text"
+                 id="bookIsbn"
+                 name="isbn"
+                 value="<?= $view->e($val('isbn', $fromBook('isbn'))) ?>"
+                 maxlength="20"
+                 inputmode="numeric"
+                 autocomplete="off"
+                 aria-describedby="bookIsbnHint"
+                 placeholder="<?= $tr('common.bookform.isbn_ph') ?>">
+          <p class="book-form__hint" id="bookIsbnHint"><?= $tr('common.js.isbn_hint') ?></p>
+          <?= $errorBox('isbn') ?>
+        </div>
+
+        <!-- ОБЛОЖКА: превью показывает book-form.js (object URL).
+             У input НЕТ name: бинарник не входит в payload /api/books/new —
+             book-form.js грузит его отдельным POST /api/files/upload
+             (category=cover) и кладёт uuid в скрытое поле iconId. -->
         <div class="form-field book-form__cover">
           <label for="bookCover"><?= $tr('common.bookform.field_cover') ?></label>
 
@@ -466,7 +472,6 @@ $categoryValue = $val('category', $bookCategoryId);
               <input class="file-input-hidden"
                      type="file"
                      id="bookCover"
-                     name="cover"
                      accept="image/jpeg,image/png,image/webp"
                      data-cover-input>
               <label class="btn btn--secondary file-upload__button" for="bookCover">
@@ -507,24 +512,24 @@ $categoryValue = $val('category', $bookCategoryId);
           <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAnnotation"
-                    name="annotation"
+                    name="description"
                     rows="6"
-                    maxlength="5000"
-                    placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('annotation', $fromBook('description'))) ?></textarea>
-          <?= $errorBox('annotation') ?>
+                    maxlength="4000"
+                    placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('description', $fromBook('description'))) ?></textarea>
+          <?= $errorBox('description') ?>
         </div>
 
-        <!-- Заметки автора: колонка author_notes уже есть в БД
-             (PublicationExtended), поле уходит на /books/store. -->
+        <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
+             имя уходит в POST /api/books/new. -->
         <div class="form-field">
           <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAuthorNotes"
-                    name="author_notes"
+                    name="authorNotes"
                     rows="4"
                     maxlength="2000"
-                    placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('author_notes', $fromBook('authorNotes'))) ?></textarea>
-          <?= $errorBox('author_notes') ?>
+                    placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
+          <?= $errorBox('authorNotes') ?>
         </div>
 
         <!-- ГЛАВЫ: только UI — input'ы БЕЗ name, в POST не участвуют
@@ -564,7 +569,8 @@ $categoryValue = $val('category', $bookCategoryId);
 
         <!-- ФАЙЛЫ: один input multiple на pdf/epub/mobi/fb2, минимум один
              файл. Список выбранных (имя, размер, минус) рисует book-form.js.
-             Без JS уходит обычным POST — several files[] в multipart. -->
+             У input НЕТ name: файлы уходят отдельными запросами
+             POST /api/files/upload (category=book) → contentIds[]. -->
         <div class="form-field" data-files-field>
           <label for="bookFiles"><?= $tr('common.bookform.field_file') ?></label>
 
@@ -574,11 +580,9 @@ $categoryValue = $val('category', $bookCategoryId);
             <input class="file-input-hidden"
                    type="file"
                    id="bookFiles"
-                   name="files[]"
                    accept=".pdf,.epub,.mobi,.fb2,application/pdf,application/epub+zip,application/x-mobipocket-ebook,application/fb2"
                    multiple
-                   data-files-input
-                   required>
+                   data-files-input>
             <label class="btn btn--secondary file-upload__button" for="bookFiles">
               <span data-file-button-text><?= $tr('common.bookform.file_choose') ?></span>
               <span class="file-upload__button-state" data-file-button-state><?= $tr('common.bookform.file_none') ?></span>
@@ -662,26 +666,16 @@ $categoryValue = $val('category', $bookCategoryId);
 
         <!-- ============================================================
              НАВИГАЦИЯ ПОСЛЕДНЕГО (пока) ШАГА — как в article-form.
-             Два режима:
 
-             СОЗДАНИЕ («Назад/Отмена» + ДВА исхода отправки):
-               Create draft → POST status=draft  → успех: редирект на
-                            страницу книги (book-details) с бейджом
-                            «Черновик» и кнопкой публикации внизу;
-               Publish      → POST status=published → успех (проверка
-                            прошла): открывается плашка выбора прав
-                            (rights-modal.php, справочник грузится
-                            асинхронно), после подтверждения — переход
-                            на страницу книги.
+             СОЗДАНИЕ («Назад/Отмена» + ОДНА отправка):
+               Create draft → POST /api/books/new → 201 { createdId } →
+                            редирект на страницу книги: бэк создаёт
+                            только черновик, публикация идёт с её
+                            страницы (плашка rights-modal).
 
-             РЕДАКТИРОВАНИЕ (отмена → /books/{id}):
-               Сохранить    → POST id>0, status = текущий статус книги
-                            → успех: редирект на страницу книги;
-               Опубликовать → ВСЕГДА видна; data-rights-open открывает
-                            плашку выбора прав (rights-modal.js
-                            mode='publish'): POST rights[] +
-                            POST /books/{id}/publish → переход на
-                            страницу книги (уже опубликованной).
+             РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
+             блокируется в book-form.js — endpoint'а обновления нет,
+             а /api/books/new только создаёт.
 
              Невалидные данные (клиентские или 422 от бэка) возвращают
              пользователя на шаг с ошибкой: сначала первая страница
@@ -699,20 +693,10 @@ $categoryValue = $val('category', $bookCategoryId);
             <button class="btn btn--secondary" type="submit" data-submit-save>
               <?= $tr('common.bookform.save') ?>
             </button>
-            <!-- Публикация существующей книги: открывает плашку выбора прав
-                 (rights-modal.js, mode='publish') — книга публикуется после
-                 подтверждения в плашке, не отправкой формы -->
-            <button class="btn btn--primary" type="button"
-                    data-rights-open data-book-id="<?= $bookId ?>">
-              <?= $tr('common.bookform.publish') ?>
-            </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" name="status" value="draft" data-submit-draft>
+            <button class="btn btn--primary" type="submit" data-submit-draft>
               <?= $tr('common.bookform.create_draft') ?>
-            </button>
-            <button class="btn btn--primary" type="submit" name="status" value="published" data-submit-publish>
-              <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>
         </div>
@@ -721,10 +705,6 @@ $categoryValue = $val('category', $bookCategoryId);
     </form>
 
   </section>
-
-  <!-- Плашка выбора прав: book-form открывает её после успешной публикации
-       (rights-modal.js, контракт — в шапке partial) -->
-  <?php $view->include('rights-modal'); ?>
 
 </div>
 
