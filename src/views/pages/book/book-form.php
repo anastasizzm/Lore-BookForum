@@ -36,6 +36,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          authorNotes (string, required, 1..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
+ *                       (UI — чипсы с одиночным выбором: бэк хранит ровно
+ *                       один жанр и одну категорию, см. 11.1)
  *          publisher   (string, required, 1..255)
  *          pages       (int > 0, required)
  *          isbn        (string, optional, формат XXX-X-XXX-XXXXX-X —
@@ -353,42 +355,42 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <div class="form-row--two-cols">
 
-          <div class="form-field">
-            <label for="bookGenre"><?= $tr('common.bookform.field_genre') ?></label>
-            <!-- Список наполняет book-form.js из GET /api/additional/genres.
-                 data-selected — id из $form (после ошибки валидации). -->
-            <select class="form-field__input book-form__select"
-                    id="bookGenre"
-                    name="genreId"
-                    data-dynamic-select="genres"
-                    data-selected="<?= $view->e($genreValue) ?>"
-                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>"
-                    required>
-              <?php if ($genreValue !== ''): ?>
-                <option value="<?= $view->e($genreValue) ?>" selected><?= $view->e($genreValue) ?></option>
-              <?php else: ?>
-                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
-              <?php endif; ?>
-            </select>
+          <div class="form-field book-form__chips-field" data-chips-field>
+            <label for="bookGenre" id="bookGenreLabel"><?= $tr('common.bookform.field_genre') ?></label>
+            <!-- Чипсы жанров (11.1): список наполняет book-form.js из
+                 GET /api/additional/genres; выбор ОДИН — бэкенд хранит
+                 ровно один genreId (int > 0). Значение уносит hidden
+                 input; value — id из $form (после 422) или книги (edit). -->
+            <input type="hidden"
+                   id="bookGenre"
+                   name="genreId"
+                   value="<?= $view->e($genreValue) ?>"
+                   data-chips-value>
+            <div class="book-chips"
+                 data-book-chips="genres"
+                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
+                 role="radiogroup"
+                 aria-labelledby="bookGenreLabel">
+              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
+            </div>
             <?= $errorBox('genreId') ?>
           </div>
 
-          <div class="form-field">
-            <label for="bookCategory"><?= $tr('common.bookform.field_category') ?></label>
-            <!-- Список: GET /api/additional/categories -->
-            <select class="form-field__input book-form__select"
-                    id="bookCategory"
-                    name="categoryId"
-                    data-dynamic-select="categories"
-                    data-selected="<?= $view->e($categoryValue) ?>"
-                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>"
-                    required>
-              <?php if ($categoryValue !== ''): ?>
-                <option value="<?= $view->e($categoryValue) ?>" selected><?= $view->e($categoryValue) ?></option>
-              <?php else: ?>
-                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
-              <?php endif; ?>
-            </select>
+          <div class="form-field book-form__chips-field" data-chips-field>
+            <label for="bookCategory" id="bookCategoryLabel"><?= $tr('common.bookform.field_category') ?></label>
+            <!-- Чипсы категорий: GET /api/additional/categories, выбор один. -->
+            <input type="hidden"
+                   id="bookCategory"
+                   name="categoryId"
+                   value="<?= $view->e($categoryValue) ?>"
+                   data-chips-value>
+            <div class="book-chips"
+                 data-book-chips="categories"
+                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
+                 role="radiogroup"
+                 aria-labelledby="bookCategoryLabel">
+              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
+            </div>
             <?= $errorBox('categoryId') ?>
           </div>
 

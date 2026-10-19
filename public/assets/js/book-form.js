@@ -9,7 +9,7 @@
  *      у автора (дублирует его в редакторы, автором он остаётся);
  *   3. список выбранных файлов книги (pdf/epub/mobi/fb2, ≥1 файл)
  *      с удалением по минусу;
- *   4. наполнение <select> жанров и категорий из /api/additional/*;
+ *   4. чипсы жанров и категорий (одиночный выбор) из /api/additional/*;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
  *   6. отправку через fetch + FormData (multipart) на POST /api/books/new
  *      с Accept: application/json; обложка и файлы книги перед этим
@@ -58,7 +58,7 @@
 
   var AUTHORS_MAX = 30; // редакторы — без лимита
 
-  // Источники для <select data-dynamic-select="...">.
+  // Источники для чипсов [data-book-chips="..."].
   var SOURCES = {
     genres:     '/api/additional/genres',
     categories: '/api/additional/categories'
@@ -74,6 +74,9 @@
   var BACKUP_KEY = 'bookform:v2:new';
 
   var listCache = {};
+  // Перерисовка чипсов по имени поля (genreId/categoryId) — нужна
+  // локальной копии (applyBackup), когда список уже загружен.
+  var chipRenderers = {};
 
   function t(key, params) {
     return window.LoreI18n ? LoreI18n.t(key, params) : key;
@@ -265,7 +268,11 @@
   }
 
   /* ============================================================
-     СПИСКИ: жанры и категории.
+     СПИСКИ: чипсы жанров и категорий (11.1).
+     Выбор ОДИН на группу — бэкенд хранит ровно один genreId и одну
+     categoryId (BookForm: int > 0); значение уносит hidden input
+     [data-chips-value], чипсы — только UI (role=radio, клик выбирает,
+     повторный клик снимает).
 
      Контракт /api/additional/{genres,categories}:
      - 200 {"items": [...], "meta": {"page","pageSize","hasNext"}}
@@ -275,9 +282,9 @@
      - элемент: { id, name, ... }.
 
      Пока справочники грузятся, кнопки «Далее» заблокированы: выбор
-     жанра и категории обязателен, а пустой <select> дал бы ложную
-     422. При сбое загрузки поле помечается data-catalog-failed и
-     повторяет попытку при следующем обращении к нему.
+     жанра и категории обязателен, а пустой список дал бы ложную
+     422. При сбое загрузки блок помечается data-catalog-failed —
+     повторная попытка по клику на подсказку.
      ============================================================ */
   var CATALOG_PS = 50;      // максимум строк на страницу в API
   var CATALOG_MAX_PAGES = 20;
@@ -330,26 +337,78 @@
     return next();
   }
 
-  function populateSelect(select) {
-    var url = SOURCES[select.getAttribute('data-dynamic-select')];
-    if (!url) return Promise.resolve();
+  /**
+   * Чипсы одного справочника: [data-book-chips="genres|categories"].
+   * Бэкенд хранит ровно один genreId/одну categoryId (int > 0) — выбор
+   * одиночный: клик выбирает, повторный клик снимает. Значение живёт в
+   * hidden input [data-chips-value] рядом с блоком — на него вешаются
+   * валидация (RULES genreId/categoryId), ошибки 422 и локальная копия.
+   */
+  function initCatalogChips(block) {
+    var kind = block.getAttribute('data-book-chips');
+    var url = SOURCES[kind];
+    if (!url) return;
 
-    var selected = select.getAttribute('data-selected') || '';
-    var placeholder = select.getAttribute('data-placeholder') || '';
+    var field = block.closest ? block.closest('[data-chips-field]') : null;
+    var input = field ? field.querySelector('[data-chips-value]') : null;
+    if (!input) return;
 
-    var willLoad = !listCache[url];   // из кэша — мгновенно, без блокировки
-    if (willLoad) {
-      catalogsPending += 1;
-      select.disabled = true;
-      select.setAttribute('data-catalog-loading', '');
-      syncCatalogGate();
+    var name = input.getAttribute('name');   // genreId | categoryId
+    var placeholder = block.getAttribute('data-placeholder') || '';
+    var hint = block.querySelector('[data-chips-hint]');
+
+    /** Подсказка внутри блока: placeholder / «Загрузка…» / ошибка. */
+    function showHint(text) {
+      if (!hint || !hint.parentNode) {
+        hint = document.createElement('p');
+        hint.className = 'book-chips__hint';
+        hint.setAttribute('data-chips-hint', '');
+        block.appendChild(hint);
+      }
+      hint.textContent = text;
+      hint.hidden = text === '';
     }
 
-    return fetchAll(url).then(function (list) {
-      var options = '<option value=""' + (selected ? '' : ' selected disabled') + '>' +
-        escapeHtml(placeholder) + '</option>';
+    /** Подсвечивает выбранную чипсу по текущему значению input. */
+    function renderSelection() {
+      var value = input.value || '';
+      Array.prototype.forEach.call(block.querySelectorAll('[data-chips-item]'), function (btn) {
+        var on = btn.getAttribute('data-chips-item') === value;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      });
+      showHint(value === '' ? placeholder : '');
+    }
 
+    /** Выбрать/снять выбор: change будит валидацию поля и «копию». */
+    function select(value) {
+      input.value = value;
+      renderSelection();
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function makeChip(id, title) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'book-chips__item';
+      btn.setAttribute('data-chips-item', id);
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', 'false');
+      btn.textContent = title;
+      btn.addEventListener('click', function () {
+        select(input.value === id ? '' : id);
+      });
+      return btn;
+    }
+
+    /** Рисует чипсы из списка справочника (кэш fetchAll). */
+    function renderList(list) {
+      block.innerHTML = '';
+      hint = null;   // showHint пересоздаст подсказку после innerHTML
+
+      var selected = input.value || '';
       var found = false;
+
       for (var i = 0; i < list.length; i++) {
         var item = list[i] || {};
         var id = String(item.id !== undefined ? item.id : (item.value !== undefined ? item.value : ''));
@@ -360,41 +419,56 @@
           (item.label !== undefined ? item.label : id))
         );
         if (id === selected) found = true;
-        options += '<option value="' + escapeHtml(id) + '"' + (id === selected ? ' selected' : '') + '>' +
-          escapeHtml(title) + '</option>';
+        block.appendChild(makeChip(id, title));
       }
 
-      // id из $form не нашёлся в справочнике — оставляем его сырым,
-      // чтобы повторный POST без JS всё равно унёс выбранное значение.
-      if (selected && !found) {
-        options += '<option value="' + escapeHtml(selected) + '" selected>' + escapeHtml(selected) + '</option>';
-      }
+      // id из $form/книги не нашёлся в справочнике — оставляем его сырым,
+      // чтобы выбор не пропадал (POST всё равно унесёт hidden input).
+      if (selected && !found) block.appendChild(makeChip(selected, selected));
 
-      select.innerHTML = options;
-    }).catch(function (err) {
-      console.error('[book-form] failed to load', url, err);
-      notify(t('errors.common.list_load_failed'));
-      select.removeAttribute('data-catalog-loading');
-      select.disabled = false;
-      // Справочник не загрузился: при следующем обращении к полю
-      // (фокус/клик) пробуем подтянуть заново, без перезагрузки страницы.
-      select.setAttribute('data-catalog-failed', '');
-      select.addEventListener('focus', retryCatalog, { once: true });
-    }).then(function () {
+      renderSelection();
+    }
+
+    // Для applyBackup (локальная копия): перерисовать выбор, если список
+    // уже в кэше; если ещё грузится — рендер сам подхватит значение.
+    chipRenderers[name] = function () {
+      var list = listCache[url];
+      if (list) renderList(list);
+    };
+
+    function load() {
+      var willLoad = !listCache[url];   // из кэша — мгновенно, без блокировки
       if (willLoad) {
-        catalogsPending = Math.max(0, catalogsPending - 1);
-        select.removeAttribute('data-catalog-loading');
+        catalogsPending += 1;
+        block.setAttribute('data-catalog-loading', '');
+        showHint(t('bookform.chips_loading'));
         syncCatalogGate();
       }
-    });
-  }
 
-  /** Повторная загрузка справочника после сбоя (см. catch выше). */
-  function retryCatalog(ev) {
-    var select = ev.currentTarget;
-    select.removeEventListener('focus', retryCatalog);
-    select.removeAttribute('data-catalog-failed');
-    populateSelect(select);
+      return fetchAll(url).then(renderList).catch(function (err) {
+        console.error('[book-form] failed to load', url, err);
+        notify(t('errors.common.list_load_failed'));
+        block.removeAttribute('data-catalog-loading');
+        block.setAttribute('data-catalog-failed', '');
+        showHint(t('bookform.chips_failed'));
+        // Чипсы не отрисованы — клик по подсказке/блоку повторяет
+        // попытку (слушатель один: после успеха он уже не нужен).
+        block.addEventListener('click', retryChips, { once: true });
+      }).then(function () {
+        if (willLoad) {
+          catalogsPending = Math.max(0, catalogsPending - 1);
+          block.removeAttribute('data-catalog-loading');
+          syncCatalogGate();
+        }
+      });
+    }
+
+    function retryChips() {
+      block.removeAttribute('data-catalog-failed');
+      load();
+    }
+
+    load();
   }
 
   /* ============================================================
@@ -829,8 +903,8 @@
       // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
       description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
       authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note' },
-      genreId:     { required: true,  select: true,    msgKey: 'js.rule_book_genre' },
-      categoryId:  { required: true,  select: true,    msgKey: 'js.rule_book_category' },
+      genreId:     { required: true,  msgKey: 'js.rule_book_genre' },
+      categoryId:  { required: true,  msgKey: 'js.rule_book_category' },
       publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
       // pages: целое ≥ 1 — см. custom: 'pages' ниже
       pages:       { required: true,  min: 1,          msgKey: 'js.rule_book_pages' },
@@ -884,10 +958,18 @@
     }
     function getErrorEl(name) { return form.querySelector('[data-error-for="' + name + '"]'); }
 
+    /** Визуал ошибки у чипсов: сам input скрыт — красим контейнер. */
+    function syncChipsInvalid(field, on) {
+      if (!field || !field.closest) return;
+      var chips = field.closest('[data-chips-field]');
+      if (chips) chips.classList.toggle('book-form__chips-field--invalid', !!on);
+    }
+
     function setError(name, message) {
       var field = getField(name);
       var errorEl = getErrorEl(name);
       if (field) field.classList.add('form-field__input--invalid');
+      syncChipsInvalid(field, true);
       if (errorEl) {
         errorEl.innerHTML = '<span class="field-error-icon" title="' +
           escapeHtml(message) + '">!</span>';
@@ -898,6 +980,7 @@
       var field = getField(name);
       var errorEl = getErrorEl(name);
       if (field) field.classList.remove('form-field__input--invalid');
+      syncChipsInvalid(field, false);
       if (errorEl) {
         errorEl.classList.remove('form-field__error--warning');
         errorEl.innerHTML = '';
@@ -970,14 +1053,28 @@
 
     function focusFirstInvalid() {
       var firstInvalid = form.querySelector('.form-field__input--invalid');
-      if (firstInvalid) {
-        // Ошибка может жить на скрытом шаге (например, пришёл 422 от бэка) —
-        // сначала раскрываем шаг, потом скроллим к полю.
-        var step = firstInvalid.closest ? firstInvalid.closest('.book-step') : null;
-        if (step && step.hidden && stepsApi) stepsApi.reveal(step);
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (firstInvalid.focus) firstInvalid.focus();
+      if (!firstInvalid) return;
+
+      // Ошибка может жить на скрытом шаге (например, пришёл 422 от бэка) —
+      // сначала раскрываем шаг, потом скроллим к полю.
+      var step = firstInvalid.closest ? firstInvalid.closest('.book-step') : null;
+      if (step && step.hidden && stepsApi) stepsApi.reveal(step);
+
+      // Скрытый input чипсов (жанр/категория) бокса не имеет: скроллим к
+      // контейнеру, фокус — на первую чипсу (список к моменту валидации
+      // уже отрисован: переход дальше держит каталог-гейт).
+      var target = firstInvalid;
+      if (firstInvalid.tagName === 'INPUT' && firstInvalid.type === 'hidden') {
+        var container = firstInvalid.closest ? firstInvalid.closest('[data-chips-field]') : null;
+        if (container) {
+          target = container;
+          var firstChip = container.querySelector('[data-chips-item]');
+          if (firstChip) target = firstChip;
+        }
       }
+
+      if (target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (target.focus) target.focus();
     }
 
     function showFieldErrors() {
@@ -1259,9 +1356,9 @@
     });
 
     // --------------------------------------------------------
-    // Справочники
+    // Справочники (чипсы жанров и категорий)
     // --------------------------------------------------------
-    form.querySelectorAll('[data-dynamic-select]').forEach(populateSelect);
+    form.querySelectorAll('[data-book-chips]').forEach(initCatalogChips);
 
     // --------------------------------------------------------
     // ГЛАВЫ КНИГИ — только UI (input'ы без name, в POST не уходят;
@@ -1467,28 +1564,12 @@
         var el = getField(name);
         if (!el) return;
 
-        if (el.tagName === 'SELECT') {
-          var value = String(b[name]);
-          if (value === '') return;
-          el.setAttribute('data-selected', value);
-          // Опции могли ещё не подгрузиться — гарантируем временную,
-          // populateSelect ниже перечитает список из кэша с data-selected.
-          var found = null;
-          Array.prototype.forEach.call(el.options, function (opt) {
-            if (opt.value === value) found = opt;
-          });
-          if (!found) {
-            found = document.createElement('option');
-            found.value = value;
-            found.textContent = value;
-            el.appendChild(found);
-          }
-          el.value = value;
-          populateSelect(el);
-          return;
-        }
-
         el.value = String(b[name]);
+
+        // Чипсы (genreId/categoryId): перерисовать выбор, если список уже
+        // загружен; иначе рендер сам подхватит значение при готовности.
+        var rerender = chipRenderers[name];
+        if (rerender) rerender();
       });
 
       if (Object.prototype.hasOwnProperty.call(b, 'chapters')) setChapters(b.chapters || []);

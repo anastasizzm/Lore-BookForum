@@ -96,11 +96,15 @@ $isSaved       = (bool)   ($readerCtx?->isSaved ?? $book->isSaved ?? false);
 $readingStatus = (string) ($readingMap[$statusRaw] ?? $statusRaw);
 $savesCount    = (int)    ($book->savedCount    ?? 0);
 
-// rating_avg в БД хранится умноженным на 10 (46 -> 4.6)
-$rating = (float) ($book->rating ?? 0);
-if ($rating > 5) {
-    $rating /= 10;
-}
+// rating_avg в БД хранится умноженным на 10 (46 -> 4.6);0 — оценок нет.
+// Деление всегда: модель отдаёт ровно контрактные ×10 (int 0..50),
+// эвристика «> 5» ломалась на значениях 1..5 (среднее 0.1..0.5).
+// Читаем и объект (прод), и query-массив (тест-роут /pages/test).
+$ratingRaw = (float) (is_array($book) ? ($book['rating'] ?? 0) : ($book->rating ?? 0));
+$rating = $ratingRaw / 10;
+if ($rating > 5) $rating = 5;
+if ($rating < 0) $rating = 0;
+$hasRating = $ratingRaw > 0;
 
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
@@ -140,7 +144,9 @@ $tableOfContents = (array)  ($book->tableOfContents ?? []);
 
 /* ---------- Обложка ---------- */
 
-$coverUrl = 'https://placehold.co/400x560?text=Cover';
+// Плейсхолдер — локальный SVG (тот же, что в article-details): раньше тут
+// был внешний placehold.co, который без сети/блокировок даёт битую картинку.
+$coverUrl = '/img/book-placeholder.svg';
 if (!empty($book->iconId)) {
     if ($book->iconId instanceof \Stringable) {
         $coverUrl = '/uploads/covers/' . (string) $book->iconId;
@@ -273,10 +279,18 @@ $isDraft   = $status === 'draft';
           <span class="book-rating__stars"
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
-                aria-label="<?= $tr('common.book.rating_aria', ['value' => number_format($rating, 1)]) ?>">
+                aria-label="<?= $hasRating
+                    ? $tr('common.book.rating_aria', ['value' => number_format($rating, 1)])
+                    : $tr('common.book.no_rating') ?>">
             ★★★★★
           </span>
-          <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php if ($hasRating): ?>
+            <!-- Дробный балл из rating_avg ×10: 46 -> 4.6, без округления -->
+            <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php else: ?>
+            <!-- Оценок нет — серая подпись вместо «0.0» -->
+            <span class="book-rating__value book-rating__value--none"><?= $tr('common.book.no_rating') ?></span>
+          <?php endif; ?>
         </div>
         <span class="book-rating__saves">
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">

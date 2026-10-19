@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 560" width="400" height="560" role="img" aria-label="No cover">
+  <!-- Локальный плейсхолдер обложки (book-details / article-details):
+       серая плашка 5:7 + контур книжки, без текста — не зависит от локали
+       и внешних сервисов (раньше book-details ссылался на placehold.co). -->
+  <rect width="400" height="560" fill="#e2e8f0"/>
+  <g fill="none" stroke="#94a3b8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200 160c-28-22-64-30-100-28v268c36-2 72 6 100 28 28-22 64-30 100-28V132c-36-2-72 6-100 28z"/>
+    <path d="M200 160v268"/>
+  </g>
+</svg>
