@@ -50,6 +50,13 @@ class PublicationAccessRules extends Dto implements OperationChecker
         };
     }
 
+    public static function fromEmpty() : self 
+    {
+        return new self(
+            false, false, false, false , false, false, false
+        );
+    }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(

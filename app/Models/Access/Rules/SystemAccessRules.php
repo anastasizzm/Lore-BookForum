@@ -41,12 +41,19 @@ readonly class SystemAccessRules extends Dto
         };
     }
 
+    public static function fromEmpty() : self 
+    {
+        return new self(
+            false, false, false, false
+        );
+    }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(
             manageAccounts: self::bool($row, $prefix . 'manage_accounts'),
             manageAdditionals: self::bool($row, $prefix . 'manage_additionals'),
-            managePeople: self::bool($row, $prefix . 'manage_people'),
+            managePeople: self::bool($row, $prefix . 'manage_ppl'),
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
         );
     }

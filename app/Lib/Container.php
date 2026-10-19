@@ -10,6 +10,8 @@ use RuntimeException;
 
 final class Container
 {
+    private const string KEY_IDENTIFIER = '__KEY__ID__';
+
     /** @var array<string, Closure> */
     private array $factories = [];
 
@@ -22,11 +24,39 @@ final class Container
         $this->factories[$id] = $factory ?? static fn(self $c) => new $id();
     }
 
+    public function signletonKeyed(string $key, string $id, ?Closure $factory = NULL) : void 
+    {
+        $savedId = $this->generateKey($key, $id);
+        $this->factories[$savedId] = $factory ?? static fn(self $c, $key) => new $id();
+    }
+
     /** Register a pre-built instance. */
     public function instance(string $id, object $value): void
     {
         $this->instances[$id] = $value;
     }
+
+    public function instanceKeyed(string $key, string $id, object $value) : void 
+    {
+        $this->instance($this->generateKey($key, $id), $value);
+    }
+
+    public function getKeyed(string $key, string $id) : object 
+    {
+        $savedId = $this->generateKey($key, $id);
+
+        if (isset($this->instances[$savedId])) {
+            return $this->instances[$savedId];
+        }
+
+        if (isset($this->factories[$savedId])) {
+            return $this->instances[$savedId] = ($this->factories[$savedId])($this, $key);
+        }
+
+        throw new RuntimeException("The keyed '$key' service of id '$id' is not set");
+    }
+
+    private function generateKey(string $key, string $id) : string { return $id . self::KEY_IDENTIFIER . $key; }
 
     /** Resolve a class / service id, building it on first use. */
     public function get(string $id): object

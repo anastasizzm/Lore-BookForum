@@ -38,6 +38,7 @@ use App\Services\Auth\EmailVerificationService;
 use App\Services\Configuration\CookieService;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Configuration\DatabaseUnitOfWork;
+use App\Services\Access\AccessService;
 use App\Services\Mail\Mailer;
 use App\Services\Mail\SmtpMailer;
 
@@ -46,6 +47,13 @@ use App\Storage\LocalFileStorage;
 
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\Users\ProfilesRepository;
+use App\Repositories\RuleProviders\Concrete\RuleProvider;
+use App\Repositories\RuleProviders\Concrete\PublicationRuleProvider;
+use App\Repositories\RuleProviders\Concrete\PostRuleProvider;
+use App\Repositories\RuleProviders\Common\CommonRuleProvider;
+use App\Repositories\RuleProviders\Common\PostRuleProvider as CommonPostRuleProvider;
+use App\Repositories\RuleProviders\Common\PublicationRuleProvider as CommonPublicationRuleProvider;
+use App\Repositories\RuleProviders\Common\SystemRuleProvider;
 
 
 // Policies
@@ -89,3 +97,47 @@ $container->singleton(UserContextCache::class, fn(Container $c) => new RedisUser
 $container->singleton(PassResetCache::class, fn(Container $c) => new RedisPassResetCache($c->get(RedisClient::class)));
 $container->singleton(TokenResetTtlCache::class, fn(Container $c) => new RedisTokenResetTtlCache($c->get(RedisClient::class)));
 $container->singleton(MailVerifyCache::class, fn(Container $c) => new RedisMailVerifyCache($c->get(RedisClient::class)));
+
+// Access
+$publicationAccessKey = App\Policies\Access\Publication\PublicationAccessRequirement::CONTAINER_KEY;
+$postAccessKey = App\Policies\Access\Post\PostAccessRequirement::CONTAINER_KEY;
+$systemAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
+
+$container->singletonKeyed($publicationAccessKey, RuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new PublicationRuleProvider($db);
+});
+$container->singletonKeyed($postAccessKey, RuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new PostRuleProvider($db);
+});
+
+$container->singletonKeyed($postAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new CommonPostRuleProvider($db);
+});
+$container->singletonKeyed($publicationAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new CommonPublicationRuleProvider($db);
+});
+$container->singletonKeyed($systemAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new SystemRuleProvider($db);
+});
+
+foreach([$publicationAccessKey, $postAccessKey, $systemAccessKey] as $key)
+{
+    $container->singletonKeyed($key, AccessService::Class, function (Container $c) use ($key){
+        $rp = NULL;
+        $crp = NULL;
+        try{
+            $rp = $c->getKeyed($key, RuleProvider::class);
+        }
+        catch(\Throwable $e){}
+        try{
+            $crp = $c->getKeyed($key, CommonRuleProvider::class);
+        }
+        catch(\Throwable $e){}
+        return new AccessService(ruleProvider: $rp, commonRuleProvider: $crp);
+    });
+}
