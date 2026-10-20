@@ -18,15 +18,21 @@
  *   $status   — контроллер может передать напрямую ('draft' | 'published');
  *               иначе вьюха читает $book->status (поле появится в модели,
  *               когда бэк введёт статусы публикации).
- *   КНОПКА «РЕДАКТИРОВАТЬ» (data-edit-btn) — рендерится ВСЕГДА; цвет
- *               состояния подгружается АСИНХРОННО (book-rights.js):
+ *   КНОПКА «РЕДАКТИРОВАТЬ» — пункт меню «три точки» в шапке страницы
+ *               (details-menu.php, рядом с заголовком «О книге»); пункт
+ *               рендерится ВСЕГДА; цвет состояния подгружается
+ *               АСИНХРОННО (book-rights.js):
  *                 красная  — есть права на публикацию книги (canPublish),
  *                 синяя    — есть права на редактирование (canEdit),
  *                 серая    — прав нет.
  *               КОНТРАКТ (роут добавит бэк; config/ и app/ заморожены):
  *                 GET /api/publications/{id}/rights
  *                 200 { data: { canEdit: bool, canPublish: bool } }
- *                 401/403/404/5xx → кнопка остаётся серой.
+ *                 401/403/404/5xx → пункт остаётся серым.
+ *   УДАЛЕНИЕ КНИГИ — второй пункт того же меню (details-menu.js):
+ *               DELETE /api/books/{id} → 204;401 — нет сессии, 419 — CSRF,
+ *               403/404 — нет прав или уже удалена; успех → редирект
+ *               на /books. Роут добавит бэк (см. шапку details-menu.php).
  *   Статус draft: у книги внизу страницы ВСЕГДА есть кнопка «Опубликовать
  *               книгу» (бейдж «Черновик» в шапке), она открывает плашку
  *               выбора прав (rights-modal.php; справочник грузится
@@ -90,11 +96,15 @@ $isSaved       = (bool)   ($readerCtx?->isSaved ?? $book->isSaved ?? false);
 $readingStatus = (string) ($readingMap[$statusRaw] ?? $statusRaw);
 $savesCount    = (int)    ($book->savedCount    ?? 0);
 
-// rating_avg в БД хранится умноженным на 10 (46 -> 4.6)
-$rating = (float) ($book->rating ?? 0);
-if ($rating > 5) {
-    $rating /= 10;
-}
+// rating_avg в БД хранится умноженным на 10 (46 -> 4.6);0 — оценок нет.
+// Деление всегда: модель отдаёт ровно контрактные ×10 (int 0..50),
+// эвристика «> 5» ломалась на значениях 1..5 (среднее 0.1..0.5).
+// Читаем и объект (прод), и query-массив (тест-роут /pages/test).
+$ratingRaw = (float) (is_array($book) ? ($book['rating'] ?? 0) : ($book->rating ?? 0));
+$rating = $ratingRaw / 10;
+if ($rating > 5) $rating = 5;
+if ($rating < 0) $rating = 0;
+$hasRating = $ratingRaw > 0;
 
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
@@ -134,12 +144,17 @@ $tableOfContents = (array)  ($book->tableOfContents ?? []);
 
 /* ---------- Обложка ---------- */
 
-$coverUrl = 'https://placehold.co/400x560?text=Cover';
-if (!empty($book->iconId)) {
-    if ($book->iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $book->iconId;
-    } elseif (is_string($book->iconId)) {
-        $coverUrl = '/uploads/covers/' . $book->iconId;
+// Нет обложки — пустая строка: вьюха рисует .cover--empty (готовый
+// data-URI-вектор из component.css, тот же, что в library/saved);
+// внешних файлов-плейсхолдеров больше нет.
+// iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
+$iconId = is_array($book) ? ($book['iconId'] ?? null) : ($book->iconId ?? null);
+$coverUrl = '';
+if (!empty($iconId)) {
+    if ($iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $iconId;
+    } elseif (is_string($iconId)) {
+        $coverUrl = '/uploads/covers/' . $iconId;
     }
 }
 
@@ -204,8 +219,9 @@ $statusRaw = $status ?? $get($book, 'status', '');
 $status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
 $isDraft   = $status === 'draft';
 
-// Кнопка «Редактировать» рендерится всегда; цвет (красная/синяя/серая
-// по правам) подгружает асинхронно book-rights.js — см. шапку файла.
+// Пункт «Редактировать» в меню «три точки» (шапка) рендерится всегда;
+// цвет (красная/синяя/серая по правам) подгружает асинхронно
+// book-rights.js — см. шапку файла.
 ?>
 <?php $view->extends('main'); ?>
 
@@ -228,15 +244,25 @@ $isDraft   = $status === 'draft';
       <span class="book-page-header__badge"
             title="<?= $tr('common.book.draft_hint') ?>"><?= $tr('common.book.draft_badge') ?></span>
     <?php endif; ?>
+    <!-- Меню «три точки» справа в шапке: «Редактировать» (переехало из
+         .book-actions) и «Удалить». Контракт — в шапке partial. -->
+    <?php $view->include('details-menu', ['type' => 'book', 'id' => $bookId]); ?>
   </div>
 
   <div class="book-details">
     <div class="book-details__cover-col">
-      <div class="book-details__cover">
-        <img src="<?= $view->e($coverUrl) ?>"
-             alt="<?= $tr('common.book.cover_alt', ['title' => (string) ($book->title ?? '')]) ?>"
-             onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-      </div>
+      <?php if ($coverUrl === ''): ?>
+        <!-- Обложки нет: .cover--empty — data-URI-иконка книжки
+             из component.css (как в library/saved), <img> не нужен -->
+        <div class="book-details__cover cover--empty" aria-hidden="true"></div>
+      <?php else: ?>
+        <!-- Битую загрузку (404) пометит cover--empty app.js — той же
+             логикой пользуются карточки library/saved -->
+        <div class="book-details__cover">
+          <img src="<?= $view->e($coverUrl) ?>"
+               alt="<?= $tr('common.book.cover_alt', ['title' => (string) ($book->title ?? '')]) ?>">
+        </div>
+      <?php endif; ?>
 
       <div class="book-actions">
         <button type="button"
@@ -254,15 +280,8 @@ $isDraft   = $status === 'draft';
            class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
            data-start-reading
            data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></a>
-          <!-- Кнопка «Редактировать» — видна ВСЕГДА; цвет по правам
-               (красная/синяя/серая) подгружается асинхронно:
-               book-rights.js → GET /api/publications/{id}/rights.
-               Роут /books/{id}/edit добавит бэк (config/ заморожен). -->
-          <a href="<?= $view->e('/books/' . $bookId . '/edit') ?>"
-             class="btn btn--secondary btn--pill book-actions__edit"
-             data-edit-btn
-             data-book-id="<?= (int) $bookId ?>"
-             data-rights-state="none"><?= $tr('common.book.edit') ?></a>
+        <!-- «Редактировать» переехало в меню «три точки» в шапке
+             (details-menu.php) — здесь больше не рендерится. -->
       </div>
 
       <div class="book-rating">
@@ -270,10 +289,18 @@ $isDraft   = $status === 'draft';
           <span class="book-rating__stars"
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
-                aria-label="<?= $tr('common.book.rating_aria', ['value' => number_format($rating, 1)]) ?>">
+                aria-label="<?= $hasRating
+                    ? $tr('common.book.rating_aria', ['value' => number_format($rating, 1)])
+                    : $tr('common.book.no_rating') ?>">
             ★★★★★
           </span>
-          <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php if ($hasRating): ?>
+            <!-- Дробный балл из rating_avg ×10: 46 -> 4.6, без округления -->
+            <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php else: ?>
+            <!-- Оценок нет — серая подпись вместо «0.0» -->
+            <span class="book-rating__value book-rating__value--none"><?= $tr('common.book.no_rating') ?></span>
+          <?php endif; ?>
         </div>
         <span class="book-rating__saves">
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -669,8 +696,11 @@ $isDraft   = $status === 'draft';
 
 <?php $view->startBlock('scripts'); ?>
   <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав пользователя на книгу:
-       цвет кнопки «Редактировать» (красная/синяя/серая) -->
+       цвет пункта «Редактировать» в меню «три точки» (шапка) -->
   <script src="/assets/js/book-rights.js"></script>
+  <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
+       удаление книги (DELETE /api/books/{id}, контракт — в partial) -->
+  <script src="/assets/js/details-menu.js"></script>
   <!-- rights-modal.js — плашка выбора прав (кнопка «Опубликовать книгу»
        у черновика); подключается до book.js, но порядок не важен —
        обработчики вешаются делегированием на document -->

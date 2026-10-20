@@ -32,7 +32,8 @@
         "publications_failed_short": "Не удалось загрузить.",
         "search_failed": "Поиск не удался. Попробуйте ещё раз.",
         "search_failed_http": "Поиск не выполнен (HTTP :status).",
-        "users_load_failed": "Не удалось загрузить список пользователей."
+        "users_load_failed": "Не удалось загрузить список пользователей.",
+        "delete_failed": "Не удалось удалить (HTTP :status)."
     },
     "validation": {
         "invalid_login": "Неверный логин или email",

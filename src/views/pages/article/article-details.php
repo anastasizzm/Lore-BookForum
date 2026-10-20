@@ -2,6 +2,11 @@
 /**
  * article-details — страница статьи (по аналогии с book/book-details.php).
  *
+ * Шапка страницы содержит меню «три точки» (details-menu.php): пункты
+ * «Редактировать» (ссылка на /articles/{id}/edit, цвет по правам —
+ * book-rights.js) и «Удалить» (DELETE /api/articles/{id}, details-menu.js);
+ * контракт обоих роутов — в шапке partial (бэк добавит, config/ заморожен).
+ *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
  *   $comments — массив постов (те же поля, что в feed-list.php);
@@ -61,11 +66,15 @@ $articleId     = (int)  ($article->id ?? 0);
 $isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
 $savesCount    = (int)  ($article->savedCount ?? 0);
 
-// rating_avg в БД хранится умноженным на 10 (46 -> 4.6)
-$rating = (float) ($article->rating ?? 0);
-if ($rating > 5) {
-    $rating /= 10;
-}
+// rating_avg в БД хранится умноженным на 10 (46 -> 4.6);0 — оценок нет.
+// Деление всегда: модель отдаёт ровно контрактные ×10 (int 0..50),
+// эвристика «> 5» ломалась на значениях 1..5 (среднее 0.1..0.5).
+// Читаем и объект (прод), и query-массив (тест-роут /pages/test).
+$ratingRaw = (float) (is_array($article) ? ($article['rating'] ?? 0) : ($article->rating ?? 0));
+$rating = $ratingRaw / 10;
+if ($rating > 5) $rating = 5;
+if ($rating < 0) $rating = 0;
+$hasRating = $ratingRaw > 0;
 
 $percent = number_format(max(0, min(100, $rating / 5 * 100)), 2, '.', '');
 
@@ -91,7 +100,9 @@ if (($article->creator ?? null) !== null) {
 /* ---------- Жанр / DOI ---------- */
 
 $genreTitle = $str($article->genre ?? null);
-$doi        = $str($article->doi   ?? null);
+// DOI — колонка articles.doi (ArticlesScriptDirector выбирает её явно);
+// объект (прод) или query-массив (тест-роут).
+$doi        = $str(is_array($article) ? ($article['doi'] ?? null) : ($article->doi ?? null));
 
 /* ---------- Тип статьи / книга-источник ---------- */
 /**
@@ -146,12 +157,16 @@ $meAvatar = (string) ($me->avatar ?? '');
 
 /* ---------- Обложка ---------- */
 
-$coverUrl = '/img/book-placeholder.svg';
-if (!empty($article->iconId)) {
-    if ($article->iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $article->iconId;
-    } elseif (is_string($article->iconId)) {
-        $coverUrl = '/uploads/covers/' . $article->iconId;
+// Нет обложки — пустая строка: вьюха рисует .cover--empty (готовый
+// data-URI-вектор из component.css, тот же, что в library/saved).
+// iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
+$iconId = is_array($article) ? ($article['iconId'] ?? null) : ($article->iconId ?? null);
+$coverUrl = '';
+if (!empty($iconId)) {
+    if ($iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $iconId;
+    } elseif (is_string($iconId)) {
+        $coverUrl = '/uploads/covers/' . $iconId;
     }
 }
 ?>
@@ -169,15 +184,25 @@ if (!empty($article->iconId)) {
 
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
+    <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
+         по образцу book-details. Контракт — в шапке partial. -->
+    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId]); ?>
   </div>
 
   <div class="book-details">
     <div class="book-details__cover-col">
-      <div class="book-details__cover">
-        <img src="<?= $view->e($coverUrl) ?>"
-             alt="<?= $view->e($article->title ?? '') ?>"
-             onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-      </div>
+      <?php if ($coverUrl === ''): ?>
+        <!-- Обложки нет: .cover--empty — data-URI-иконка книжки
+             из component.css (как в library/saved), <img> не нужен -->
+        <div class="book-details__cover cover--empty" aria-hidden="true"></div>
+      <?php else: ?>
+        <!-- Битую загрузку (404) пометит cover--empty app.js — той же
+             логикой пользуются карточки library/saved -->
+        <div class="book-details__cover">
+          <img src="<?= $view->e($coverUrl) ?>"
+               alt="<?= $view->e((string) ($article->title ?? '')) ?>">
+        </div>
+      <?php endif; ?>
 
       <div class="book-actions">
         <button type="button"
@@ -207,10 +232,18 @@ if (!empty($article->iconId)) {
           <span class="book-rating__stars"
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
-                aria-label="<?= $tr('common.book.rating_aria', ['value' => number_format($rating, 1)]) ?>">
+                aria-label="<?= $hasRating
+                    ? $tr('common.book.rating_aria', ['value' => number_format($rating, 1)])
+                    : $tr('common.book.no_rating') ?>">
             ★★★★★
           </span>
-          <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php if ($hasRating): ?>
+            <!-- Дробный балл из rating_avg ×10: 46 -> 4.6, без округления -->
+            <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+          <?php else: ?>
+            <!-- Оценок нет — серая подпись вместо «0.0» -->
+            <span class="book-rating__value book-rating__value--none"><?= $tr('common.book.no_rating') ?></span>
+          <?php endif; ?>
         </div>
         <span class="book-rating__saves">
           <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -600,6 +633,12 @@ if (!empty($article->iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав: цвет пункта
+       «Редактировать» в меню «три точки» (шапка) -->
+  <script src="/assets/js/book-rights.js"></script>
+  <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
+       удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
+  <script src="/assets/js/details-menu.js"></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>

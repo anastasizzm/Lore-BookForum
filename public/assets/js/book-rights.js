@@ -1,14 +1,15 @@
 /**
  * book-rights.js — асинхронная подгрузка прав текущего пользователя
- * на книгу (книжная страница book-details.php).
+ * на публикацию (книжная страница book-details.php и article-details.php).
  *
- * Кнопка «Редактировать» (data-edit-btn) рендерится вьюхой ВСЕГДА
+ * Пункт «Редактировать» (data-edit-btn, лежит в меню «три точки» в шапке
+ * страницы — details-menu.php) рендерится вьюхой ВСЕГДА
  * в нейтральном (сером) состоянии; после загрузки прав получает цвет:
- *   canPublish → book-actions__edit--publish (красная — есть права
+ *   canPublish → book-actions__edit--publish (красный — есть права
  *                на публикацию книги),
- *   canEdit    → book-actions__edit--edit    (синяя — есть права
+ *   canEdit    → book-actions__edit--edit    (синий — есть права
  *                на редактирование),
- *   иначе      → book-actions__edit--none    (серая — прав нет;
+ *   иначе      → book-actions__edit--none    (серый — прав нет;
  *                состояние уже стоит в разметке, но на ошибке
  *                сети возвращаем его явно).
  *
@@ -37,7 +38,9 @@
   }
 
   function loadRights(btn) {
-    var id = parseInt(btn.getAttribute('data-book-id'), 10) || 0;
+    // data-book-id — книга (book-details), data-pub-id — статья
+    // (article-details): роут /api/publications/{id}/rights один на оба вида.
+    var id = parseInt(btn.getAttribute('data-book-id') || btn.getAttribute('data-pub-id'), 10) || 0;
     if (!id) return;
 
     fetch('/api/publications/' + id + '/rights', {

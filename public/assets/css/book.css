@@ -171,6 +171,14 @@
   color: var(--color-text, #1A3760);
 }
 
+/* Оценок нет (book.no_rating): серая подпись вместо дробного балла —
+   звёзды остаются пустыми (--rating-percent: 0%) */
+.book-rating__value--none {
+  font-size: var(--fs-small, 14px);
+  font-weight: 400;
+  color: var(--color-text-muted, #6F84A5);
+}
+
 .book-rating__saves {
   display: inline-flex;
   align-items: center;
@@ -547,52 +555,102 @@ html:has(.reader) body {
   cursor: help;
 }
 
-/* Кнопка «Редактировать» живёт в .book-actions под обложкой:
-   там уже иконка сохранения + тянущаяся кнопка чтения — даём перенос.
-   СОСТОЯНИЯ ПО ПРАВАМ (цвет подгружает book-rights.js, GET
-   /api/publications/{id}/rights):
-     серая (--none, состояние по умолчанию) — прав нет;
-     синяя (--edit)   — есть права на редактирование;
-     красная (--publish) — есть права на публикацию книги. */
-.book-actions {
-  flex-wrap: wrap;
+/* ---------------- Меню «три точки» в шапке details (F2-09) ----------------
+   Кнопка «Редактировать» переехала из .book-actions в меню в шапке
+   страницы (details-menu.php), рядом с заголовком справа. */
+
+/* Шапка: заголовок + бейдж слева, меню прижато вправо */
+.book-page-header .details-menu {
+  margin-left: auto;
 }
 
-.book-actions__edit {
-  flex: 1 1 100%;
-  text-align: center;
-  justify-content: center;
-  background: #94a3b8;
-  border-color: transparent;
-  color: #fff;
+.details-menu {
+  position: relative;
 }
 
-.book-actions__edit:hover,
-.book-actions__edit:focus-visible {
-  background: #64748b;
-  border-color: transparent;
+.details-menu__toggle {
+  flex: 0 0 auto;
+  color: var(--color-text-muted, #6F84A5);
 }
 
-.book-actions__edit--edit {
-  background: var(--color-primary);
-  border-color: transparent;
+.details-menu__toggle[aria-expanded="true"] {
+  color: var(--color-primary, #1A3760);
 }
 
-.book-actions__edit--edit:hover,
-.book-actions__edit--edit:focus-visible {
-  background: var(--color-hover, #0f2440);
-  border-color: transparent;
+/* Выпадашка открывается ПОД иконкой, прижата к правому краю */
+.details-menu__popup {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 168px;
+  padding: 6px;
+  background: var(--color-bg-elevated, #FFFFFF);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.1));
 }
 
-.book-actions__edit--publish {
-  background: var(--color-error);
-  border-color: transparent;
+.details-menu__item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text, #1A3760);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.book-actions__edit--publish:hover,
-.book-actions__edit--publish:focus-visible {
-  background: #c93a3f;
-  border-color: transparent;
+.details-menu__item:hover,
+.details-menu__item:focus-visible {
+  background: var(--color-bg-subtle, #F3F6FB);
+}
+
+.details-menu__item--danger {
+  color: var(--color-error, #EF4444);
+}
+
+.details-menu__item--danger:hover,
+.details-menu__item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error, #EF4444);
+}
+
+/* СОСТОЯНИЯ ПО ПРАВАМ: book-rights.js подгружает права и вешает на пункт
+   «Редактировать» (data-edit-btn) классы book-actions__edit--*.
+   В контексте меню состояние показываем ЦВЕТОМ ТЕКСТА, а не фоном pill:
+     серый (--none, состояние по умолчанию) — прав нет;
+     синий (--edit)   — есть права на редактирование;
+     красный (--publish) — есть права на публикацию книги. */
+.book-page-header .details-menu__item.book-actions__edit--edit {
+  background: none;
+  color: var(--color-primary, #1A3760);
+}
+
+.book-page-header .details-menu__item.book-actions__edit--publish {
+  background: none;
+  color: var(--color-error, #EF4444);
+}
+
+.book-page-header .details-menu__item.book-actions__edit--none {
+  background: none;
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.book-page-header .details-menu__item.book-actions__edit--edit:hover,
+.book-page-header .details-menu__item.book-actions__edit--edit:focus-visible,
+.book-page-header .details-menu__item.book-actions__edit--publish:hover,
+.book-page-header .details-menu__item.book-actions__edit--publish:focus-visible,
+.book-page-header .details-menu__item.book-actions__edit--none:hover,
+.book-page-header .details-menu__item.book-actions__edit--none:focus-visible {
+  background: var(--color-bg-subtle, #F3F6FB);
 }
 
 /* Панель публикации внизу страницы — видна, пока статус draft */
