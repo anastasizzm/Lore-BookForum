@@ -445,6 +445,11 @@
         "publish_submit": "Опубликовать",
         "create_draft": "Создать черновик"
     },
+    "fab":{
+        "create": "Создать",
+        "article": "Создать статью",
+        "book": "Создать книгу"
+    },
     "js": {
         "toast_error": "Ошибка",
         "toast_warning": "Внимание",
