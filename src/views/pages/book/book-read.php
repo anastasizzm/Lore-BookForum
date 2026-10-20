@@ -38,6 +38,7 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
+<?php $view->setBlock('hideFab', '1'); /* правый нижний угол занят — плавающую «+» скрываем */ ?>
 
 <?php $view->startBlock('title'); ?>
   <?= $title !== '' ? $view->e($title) . ' — ' : '' ?><?= $tr('common.reader.title') ?> — <?= $tr('common.common.app_name') ?>
