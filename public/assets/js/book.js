@@ -421,7 +421,9 @@
           initials: null,
           user: null,
           text: text,
-          date: new Date().toISOString(),
+          // dd.mm.yyyy — как после перезагрузки (loadComments/formatDate),
+          // иначе в [data-c-date] попадала бы сырая ISO-строка.
+          date: formatDate(new Date().toISOString()),
           likes: 0,
           liked: false
         }, true);
@@ -661,7 +663,10 @@
           authorUsername: me.author,
           initials: me.initials,
           avatar: me.avatar,
-          text: text
+          text: text,
+          // как у нового комментария: сразу показываем сегодняшнюю дату
+          // в том же формате, что и после перезагрузки (loadReplies).
+          date: formatDate(new Date().toISOString())
         });
         bumpCount();
         input.value = '';
