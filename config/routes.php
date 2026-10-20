@@ -7,6 +7,22 @@ use App\Http\Response;
 use App\Lib\Auth\AuthPolicy;
 use App\Lib\View;
 
+use App\Models\Access\Operations\Publications\CreatePublicationOperation;
+use App\Models\Access\Operations\Publications\DeletePublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateMetaPublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
+use App\Models\Access\Operations\Publications\ReadPublicationOperation;
+use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
+use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Posts\CreatePostOperation;
+use App\Models\Access\Operations\Posts\DeletePostOperation;
+use App\Models\Access\Operations\Posts\UpdatePostOperation; 
+use App\Models\Access\Operations\Accounts\BlockAccountOperation;
+use App\Models\Access\Operations\Accounts\ManageAccountOperation; 
+use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
+use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
+use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+
 return function(Router $router)
 {
     $router->get('/pages/test', function (HttpContext $context){
@@ -51,20 +67,20 @@ return function(Router $router)
     // Publications
     $router->get('/books', [App\Controllers\Publications\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
     $router->get('/books/saved', [App\Controllers\Publications\BooksController::class, 'savedList'], 'books.saved', AuthPolicy::Auth);
-    $router->get('/books/new', [App\Controllers\Publications\BooksController::class, 'getCreate'], 'books.create', AuthPolicy::Verified);
-    $router->post('/books/new', [App\Controllers\Publications\BooksController::class, 'create'], 'books.create.submit', AuthPolicy::Verified);
-    $router->get('/books/{bookId}', [App\Controllers\Publications\BooksController::class, 'retrieve'], 'books.retrieve', AuthPolicy::Auth);
-    $router->get('/books/{bookId}/read', [App\Controllers\Publications\BooksController::class, 'read'], 'books.read', AuthPolicy::Verified);
+    $router->get('/books/new', [App\Controllers\Publications\BooksController::class, 'getCreate'], 'books.create', CreatePublicationOperation::class);
+    $router->post('/books/new', [App\Controllers\Publications\BooksController::class, 'create'], 'books.create.submit', CreatePublicationOperation::class);
+    $router->get('/books/{bookId}', [App\Controllers\Publications\BooksController::class, 'retrieve'], 'books.retrieve', ReadPublicationOperation::class);
+    $router->get('/books/{bookId}/read', [App\Controllers\Publications\BooksController::class, 'read'], 'books.read', ReadPublicationOperation::class);
 
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
     $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
-    $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', AuthPolicy::Auth);
+    $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
     
 
     // Profile
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
     $router->get('/users/{userId}', [App\Controllers\Users\UsersController::class, 'retrieve'], 'users.profile', AuthPolicy::Auth);
-    $router->get('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'getEdit'], 'users.profile.edit', 'profile_owner');
+    $router->get('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'getEdit'], 'users.profile.edit', ManageAccountOperation::class);
 
     $router->get('/users/{userId}/books', [App\Controllers\Users\UsersController::class, 'getBooks'], 'users.profile.books', AuthPolicy::Auth);
     $router->get('/users/{userId}/articles', [App\Controllers\Users\UsersController::class, 'getArticles'], 'users.profile.articles', AuthPolicy::Auth);

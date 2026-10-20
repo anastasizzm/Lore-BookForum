@@ -6,16 +6,32 @@ use App\Http\Response;
 
 use App\Lib\Auth\AuthPolicy;
 
+use App\Models\Access\Operations\Publications\CreatePublicationOperation;
+use App\Models\Access\Operations\Publications\DeletePublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateMetaPublicationOperation;
+use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
+use App\Models\Access\Operations\Publications\ReadPublicationOperation;
+use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
+use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Posts\CreatePostOperation;
+use App\Models\Access\Operations\Posts\DeletePostOperation;
+use App\Models\Access\Operations\Posts\UpdatePostOperation; 
+use App\Models\Access\Operations\Accounts\BlockAccountOperation;
+use App\Models\Access\Operations\Accounts\ManageAccountOperation; 
+use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
+use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
+use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+
 return function(Router $router)
 {
     // Auth
     $router->post('/api/mail/resend', [App\Controllers\Api\Auth\AccountController::class, 'resendMailVerify'], 'api.sendmail', AuthPolicy::Public);
     
-    $router->put('/api/users/{userId}/credits/edit', [App\Controllers\Api\Auth\AccountController::class, 'changeCredits'], 'api.users.credits.edit.submit', 'profile_owner');
+    $router->put('/api/users/{userId}/credits/edit', [App\Controllers\Api\Auth\AccountController::class, 'changeCredits'], 'api.users.credits.edit.submit', ManageAccountOperation::class);
 
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
-    $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', AuthPolicy::Verified);
+    $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
     $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', AuthPolicy::Verified);
     $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', AuthPolicy::Verified);
     $router->post('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', AuthPolicy::Verified);
@@ -29,9 +45,9 @@ return function(Router $router)
 
     // Posts
     $router->get('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'list'], 'api.post', AuthPolicy::Auth);
-    $router->post('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.add', AuthPolicy::Verified);
-    $router->post('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.subAdd', AuthPolicy::Verified);
-    $router->delete('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'removeComment'], 'api.post.remove', 'post_owner');
+    $router->post('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.add', CreatePostOperation::class);
+    $router->post('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.subAdd', CreatePostOperation::class);
+    $router->delete('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'removeComment'], 'api.post.remove', DeletePostOperation::class);
     
     $router->post('/api/posts/{postId}/like', [App\Controllers\Api\Publications\PostsController::class, 'setLike'], 'api.post.like', AuthPolicy::Verified);
     $router->delete('/api/posts/{postId}/like', [App\Controllers\Api\Publications\PostsController::class, 'removeLike'], 'api.post.unlike', AuthPolicy::Verified);
@@ -46,7 +62,7 @@ return function(Router $router)
 
 
     // Users
-    $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', 'profile_owner');
+    $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', ManageAccountOperation::class);
     
 
     // Files

@@ -102,6 +102,7 @@ $container->singleton(MailVerifyCache::class, fn(Container $c) => new RedisMailV
 $publicationAccessKey = App\Policies\Access\Publication\PublicationAccessRequirement::CONTAINER_KEY;
 $postAccessKey = App\Policies\Access\Post\PostAccessRequirement::CONTAINER_KEY;
 $systemAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
+$accountAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
 
 $container->singletonKeyed($publicationAccessKey, RuleProvider::class, function (Container $c, string $key){
     $db = $c->get(Database::class);
@@ -124,8 +125,12 @@ $container->singletonKeyed($systemAccessKey, CommonRuleProvider::class, function
     $db = $c->get(Database::class);
     return new SystemRuleProvider($db);
 });
+$container->singletonKeyed($accountAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
+    $db = $c->get(Database::class);
+    return new AccountRuleProvider($db);
+});
 
-foreach([$publicationAccessKey, $postAccessKey, $systemAccessKey] as $key)
+foreach([$publicationAccessKey, $postAccessKey, $systemAccessKey, $accountAccessKey] as $key)
 {
     $container->singletonKeyed($key, AccessService::Class, function (Container $c) use ($key){
         $rp = NULL;

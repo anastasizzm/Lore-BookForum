@@ -83,7 +83,8 @@
         "access": {
             "publication": "The user should have permissions to the publication",
             "post": "The user should have permissions to the post",
-            "system": "The user should have permissions to the system"
+            "system": "The user should have permissions to the system",
+            "account": "The user should have permissions to the account"
         }
     },
     "mail": {
