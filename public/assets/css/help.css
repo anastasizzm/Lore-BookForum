@@ -1,0 +1,134 @@
+/* ============================================================
+   help.css — статическая страница помощи (src/views/pages/help.php)
+
+   Каркас панели — общий .books-panel (component.css). Здесь —
+   оглавление с якорями и разделы с иконками. JS не нужен:
+   переход по якорю #help-<id> делает сам браузер.
+   ============================================================ */
+
+.help-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ------------------------------------------------------------
+   ОГЛАВЛЕНИЕ (якорная навигация по разделам)
+   ------------------------------------------------------------ */
+.help-toc__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.help-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Пилюля-ссылка: как btn--secondary, но легче */
+.help-toc__link {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.help-toc__link:hover {
+  background: var(--color-overlay);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------
+   РАЗДЕЛ: иконка + заголовок, текст и список пунктов
+   ------------------------------------------------------------ */
+.help-section {
+  /* якорь не должен прятаться под шапкой при переходе */
+  scroll-margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Первый раздел — без линии сверху (после оглавления) */
+.help-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.help-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.help-section__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-secondary);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.help-section__icon svg {
+  display: block;
+}
+
+.help-section__text {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.help-section__list {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.help-section__list li::marker {
+  color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------
+   Узкие экраны: заголовок и текст мельче, без переполнения
+   ------------------------------------------------------------ */
+@media (max-width: 480px) {
+  .help-section__title {
+    font-size: var(--fs-body);
+  }
+
+  .help-section__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .help-toc__list {
+    gap: var(--space-1) var(--space-2);
+  }
+}
