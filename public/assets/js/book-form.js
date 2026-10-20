@@ -30,6 +30,10 @@
  *      (черновик) → 201 { createdId } → POST /books/{id}/publish;
  *      при неудаче publish черновик уже создан — редирект на его
  *      страницу с предупреждением (опубликовать можно и оттуда).
+ *   11. окно публикации (11.3): списки авторов/редакторов переехали
+ *      из шага 2 в модалку book-publish-dialog — её открывает только
+ *      Publish (когда форма валидна), Cancel/Esc/фон закрывают;
+ *      отправка — кнопкой внутри окна (data-submit-publish).
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
@@ -886,6 +890,12 @@
         }
         timer = setTimeout(function () { doSearch(query); }, 250);
       });
+
+      // Enter в строке поиска: результат добавляется кликом, а не Enter'ом —
+      // иначе браузер отправит форму (кнопка-сабмитер рядом, в диалоге).
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') e.preventDefault();
+      });
     });
 
     // Оба списка готовы: изменение любого из них обновляет кнопки
@@ -896,6 +906,78 @@
     }
 
     return state;
+  }
+
+  /* ============================================================
+     ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
+     в модалку book-publish-dialog (partial, внутри <form> — hidden
+     inputs authors[]/editors[] попадают в FormData).
+     Открывает окно кнопка Publish [data-publish-open] в нижней
+     панели; отправка — кнопкой внутри окна (data-submit-publish).
+     ============================================================ */
+  function initPublishDialog(form) {
+    var root = form.querySelector('[data-book-publish-dialog]');
+    if (!root) return null;
+
+    var lastFocus = null;
+
+    function focusables() {
+      return Array.prototype.slice.call(
+        root.querySelectorAll('button, [href], input, select, textarea, [tabindex]')
+      ).filter(function (el) { return !el.disabled && !el.hidden && el.offsetParent !== null; });
+    }
+
+    function onKeydown(e) {
+      if (root.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'Tab') {
+        var items = focusables();
+        if (!items.length) return;
+        var first = items[0];
+        var last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+
+    function open() {
+      if (!root.hidden) return;
+      lastFocus = document.activeElement;
+      root.hidden = false;
+      document.body.classList.add('is-modal-open');
+      document.addEventListener('keydown', onKeydown, true);
+      // фокус — в поиск авторов (первое поле окна)
+      var first = root.querySelector('[data-people-search]');
+      if (first) { try { first.focus(); } catch (_) {} }
+    }
+
+    function close() {
+      if (root.hidden) return;
+      root.hidden = true;
+      document.body.classList.remove('is-modal-open');
+      document.removeEventListener('keydown', onKeydown, true);
+      var target = lastFocus;
+      lastFocus = null;
+      // вернуть фокус на кнопку, открывшую окно
+      if (target && target.isConnected && target.offsetParent !== null) {
+        try { target.focus(); return; } catch (_) {}
+      }
+      var fallback = form.querySelector('[data-publish-open]');
+      if (fallback) { try { fallback.focus(); } catch (_) {} }
+    }
+
+    root.addEventListener('click', function (e) {
+      if (e.target.closest('[data-publish-dialog-backdrop]') ||
+          e.target.closest('[data-publish-dialog-close]')) {
+        close();
+      }
+    });
+
+    return {
+      open: open,
+      close: close,
+      isOpen: function () { return !root.hidden; },
+    };
   }
 
   /* ============================================================
@@ -945,6 +1027,21 @@
 
     // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
     initPeople(form);
+
+    // Окно публикации (11.3): Publish в нижней панели открывает его.
+    // Открываем ТОЛЬКО когда форма валидна — иначе ошибки полей
+    // невидны под модалкой.
+    var publishDialog = initPublishDialog(form);
+    Array.prototype.forEach.call(form.querySelectorAll('[data-publish-open]'), function (btn) {
+      btn.addEventListener('click', function () {
+        if (!validateAll()) {
+          showFieldErrors();
+          focusFirstInvalid();
+          return;
+        }
+        if (publishDialog) publishDialog.open();
+      });
+    });
 
     // API переключения шагов (нужен focusFirstInvalid, чтобы показать шаг,
     // на котором лежит первое невалидное поле) и флаг несохранённых
@@ -1251,6 +1348,9 @@
       if (!activeBtn) activeBtn = submitBtns[0] || null;
 
       function resetButtons() {
+        // Ошибка отправки — закрываем окно: ошибки полей видны только
+        // на форме (люди их не перекрывают).
+        if (publishDialog) publishDialog.close();
         submitBtns.forEach(function (b, i) {
           b.disabled = false;
           if (labels[i] !== undefined) b.textContent = labels[i];
@@ -1369,7 +1469,7 @@
                 renderServerErrors(details);
               }
 
-              if (response.status === 401) { notify(t('errors.common.unauthorized')); return; }
+              if (response.status === 401) { if (publishDialog) publishDialog.close(); notify(t('errors.common.unauthorized')); return; }
               if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
 
               var fallback = t('errors.common.save_failed', { status: response.status });

@@ -103,8 +103,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Шаг 1 «Данные книги» — формальности: название, жанр, категория,
  *                          издательство, страниц, ISBN, обложка.
  *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
- *                          файлы книги; временно здесь же списки
- *                          авторов/редакторов.
+ *                          файлы книги.
  *
  *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
  *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
@@ -113,10 +112,13 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   POST /books/{id}/publish; при неудаче publish — черновик уже
  *   создан, редирект на страницу книги (см. book-form.js).
  *
- *   ШАГ 3 «РОЛИ» (права, авторы/редакторы) СОЗДАВАТЬСЯ НЕ БУДЕТ —
- *   пропущен по решению команды, доделаем отдельно:
- *   тогда списки людей переедут туда (разметка уже готова —
- *   нужен только перенос).
+ *   ОКНО ПУБЛИКАЦИИ (11.3): списки авторов/редакторов переехали из
+ *   шага 2 в модалку book-publish-dialog (partial, внутри <form>);
+ *   кнопка Publish [data-publish-open] открывает её (только когда
+ *   форма валидна), отправка — кнопкой внутри окна.
+ *
+ *   ШАГ 3 «РОЛИ» СОЗДАВАТЬСЯ НЕ БУДЕТ — пропущен по решению команды;
+ *   списки людей живут в окне публикации (11.3).
  *
  *   Переход «Далее» прогоняет валидацию полей своего шага
  *   (см. book-form.js, STEP_FIELDS): без валидных обязательных полей
@@ -608,72 +610,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
 
         <!-- ============================================================
-             ВРЕМЕННО НА ШАГЕ 2: списки авторов/редакторов.
-             Шаг 3 «Роли» пропущен (см. договорённости в шапке файла) —
-             когда его будут делать, эти два блока просто переносятся
-             туда без изменений.
+             СПИСКИ АВТОРОВ/РЕДАКТОРОВ (11.3) переехали в окно
+             публикации — partial book-publish-dialog (ниже, внутри
+             <form>), открывается кнопкой Publish в нижней панели.
              ============================================================ -->
-        <h3 class="book-form__section-title"><?= $tr('common.bookform.section_roles') ?></h3>
-
-        <!-- АВТОРЫ: поиск людей по нику (заглушка /api/users/search),
-             список до 30 человек под поиском, у каждого кнопка
-             «сделать редактором» (переносит его же в список редакторов,
-             остаётся автором) и минус для удаления. -->
-        <div class="form-field" data-people-field="authors">
-          <label for="bookAuthorsSearch"><?= $tr('common.bookform.field_authors') ?></label>
-          <input class="form-field__input"
-                 type="text"
-                 id="bookAuthorsSearch"
-                 data-people-search
-                 maxlength="100"
-                 autocomplete="off"
-                 placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
-                 aria-describedby="bookAuthorsHint">
-          <ul class="people-search__results" data-people-results hidden></ul>
-          <ul class="people-list" data-people-list>
-            <?php foreach ($authors as $person): ?>
-              <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
-                <span class="people-list__name"><?= $view->e($person['username']) ?></span>
-                <button class="people-list__action" type="button" data-make-editor><?= $tr('common.bookform.make_editor') ?></button>
-                <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <!-- по одному hidden на человека: без JS POST унесёт authors[]=id,… -->
-          <?php foreach ($authors as $person): ?>
-            <input type="hidden" name="authors[]" data-people-value value="<?= $view->e($person['id']) ?>">
-          <?php endforeach; ?>
-          <p class="book-form__hint" id="bookAuthorsHint"><?= $tr('common.bookform.authors_hint') ?></p>
-          <?= $errorBox('authors') ?>
-        </div>
-
-        <!-- РЕДАКТОРЫ: тот же поиск, лимита нет; минус убирает из списка.
-             Создатель книги сюда не попадает — он редактор по умолчанию. -->
-        <div class="form-field" data-people-field="editors">
-          <label for="bookEditorsSearch"><?= $tr('common.bookform.field_editors') ?></label>
-          <input class="form-field__input"
-                 type="text"
-                 id="bookEditorsSearch"
-                 data-people-search
-                 maxlength="100"
-                 autocomplete="off"
-                 placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
-                 aria-describedby="bookEditorsHint">
-          <ul class="people-search__results" data-people-results hidden></ul>
-          <ul class="people-list" data-people-list>
-            <?php foreach ($editors as $person): ?>
-              <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
-                <span class="people-list__name"><?= $view->e($person['username']) ?></span>
-                <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <?php foreach ($editors as $person): ?>
-            <input type="hidden" name="editors[]" data-people-value value="<?= $view->e($person['id']) ?>">
-          <?php endforeach; ?>
-          <p class="book-form__hint" id="bookEditorsHint"><?= $tr('common.bookform.editors_hint') ?></p>
-          <?= $errorBox('editors') ?>
-        </div>
 
         <!-- Кнопки действий ушли в общую нижнюю панель
              .book-form__actions (11.4) — см. ниже, перед </form>. -->
@@ -721,12 +661,28 @@ $categoryValue = $val('categoryId', $bookCategoryId);
             <button class="btn btn--secondary" type="submit" data-submit-draft>
               <?= $tr('common.bookform.create_draft') ?>
             </button>
-            <button class="btn btn--primary" type="submit" data-submit-publish>
+            <!-- Publish (11.3): открывает окно выбора авторов/редакторов
+                 (book-publish-dialog); отправка — кнопкой внутри окна. -->
+            <button class="btn btn--primary" type="button" data-publish-open>
               <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>
         </div>
       </div>
+
+      <!-- ============================================================
+           ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
+           в book-publish-dialog (partial). Publish в нижней панели —
+           кнопка-открыватель [data-publish-open]; отправка — кнопкой
+           внутри окна (data-submit-publish).
+           Окно лежит ВНУТРИ <form>: hidden inputs authors[]/editors[]
+           должны попадать в FormData.
+           ============================================================ -->
+      <?php $view->include('book-publish-dialog', [
+          'authors'    => $authors,
+          'editors'    => $editors,
+          'errorBoxFn' => $errorBox,
+      ]); ?>
 
     </form>
 

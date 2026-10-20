@@ -137,6 +137,7 @@
         "restore_discard": "Discard",
         "create_draft": "Create draft",
         "publish": "Publish",
+        "publish_dialog_hint": "Pick who can work on this book: authors write it, editors can change it. You can skip this — the creator is always an editor.",
         "title_edit": "Edit book",
         "save": "Save"
     },
@@ -531,6 +532,7 @@
         "rule_book_author_note_required": "Author's notes are required — the field cannot be empty.",
         "book_draft_created": "Draft created.",
         "book_publish_failed": "The draft was created, but publishing failed — you can publish it from the book page.",
+        "publish_dialog_hint": "Specify the authors and editors before publishing. The draft is saved before the publication check.",
         "book_edit_unavailable": "Editing a book is not available yet — for now the form only creates new books.",
         "book_published": "Book published.",
         "book_updated": "The book has been updated.",
