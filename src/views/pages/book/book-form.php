@@ -73,11 +73,14 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
- *        ТОЛЬКО на book-details — из формы она убрана (F2-08), публикация
- *        из формы не поддерживается (см. ниже).
+ *        ТОЛЬКО на book-details; из формы (11.4) публикация идёт второй
+ *        фазой после создания черновика — POST /books/{id}/publish,
+ *        при неудаче редирект на страницу книги (права можно выставить
+ *        там). Права (rights-modal) из формы не выбираются.
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
- *        перезагрузка страницы (бейдж и кнопка исчезают)
+ *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
+ *        также кнопкой Publish в форме создания
  *
  *   ГЛАВЫ КНИГИ: UI-список есть (шаг 2), но input'ы БЕЗ name — в POST не
  *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
@@ -101,16 +104,19 @@ $langField = $langQuery !== null && $langQuery !== ''
  *                          издательство, страниц, ISBN, обложка.
  *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
  *                          файлы книги; временно здесь же списки
- *                          авторов/редакторов и кнопка отправки.
+ *                          авторов/редакторов.
  *
- *   ПУБЛИКАЦИЯ ИЗ ФОРМЫ УБРАНА: POST /api/books/new создаёт только
- *   черновик (бэк не принимает status), кнопка «Опубликовать» живёт на
- *   book-details (плашка rights-modal).
+ *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
+ *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
+ *   внутри <form> (sticky, видна на всех шагах); «Назад» скрыта на
+ *   шаге 1. Publish: POST /api/books/new → 201 { createdId } →
+ *   POST /books/{id}/publish; при неудаче publish — черновик уже
+ *   создан, редирект на страницу книги (см. book-form.js).
  *
  *   ШАГ 3 «РОЛИ» (права, авторы/редакторы) СОЗДАВАТЬСЯ НЕ БУДЕТ —
  *   пропущен по решению команды, доделаем отдельно:
- *   тогда списки людей и блок .book-step__nav с кнопками переедут туда
- *   (разметка уже готова — нужен только перенос).
+ *   тогда списки людей переедут туда (разметка уже готова —
+ *   нужен только перенос).
  *
  *   Переход «Далее» прогоняет валидацию полей своего шага
  *   (см. book-form.js, STEP_FIELDS): без валидных обязательных полей
@@ -669,43 +675,58 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?= $errorBox('editors') ?>
         </div>
 
+        <!-- Кнопки действий ушли в общую нижнюю панель
+             .book-form__actions (11.4) — см. ниже, перед </form>. -->
+
         <!-- ============================================================
-             НАВИГАЦИЯ ПОСЛЕДНЕГО (пока) ШАГА — как в article-form.
-
-             СОЗДАНИЕ («Назад/Отмена» + ОДНА отправка):
-               Create draft → POST /api/books/new → 201 { createdId } →
-                            редирект на страницу книги: бэк создаёт
-                            только черновик, публикация идёт с её
-                            страницы (плашка rights-modal).
-
-             РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
-             блокируется в book-form.js — endpoint'а обновления нет,
-             а /api/books/new только создаёт.
-
              Невалидные данные (клиентские или 422 от бэка) возвращают
              пользователя на шаг с ошибкой: сначала первая страница
              (порядок полей в DOM), затем он сам перейдёт на вторую —
              см. focusFirstInvalid в book-form.js.
-             Когда появится шаг 3 «Роли», блок действий переедет туда.
              ============================================================ -->
-        <div class="book-step__nav">
-          <button type="button" class="btn btn--secondary" data-step-prev>
-            ← <?= $tr('common.bookform.back') ?>
-          </button>
+      </section>
+
+      <!-- ============================================================
+           НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ ФОРМЫ (11.4): sticky, видна на всех
+           шагах. «Назад» скрыта на шаге 1 (book-form.js, initSteps).
+
+           СОЗДАНИЕ («Отмена» + Create draft / Publish):
+             Create draft → POST /api/books/new → 201 { createdId } →
+                          редирект на страницу книги: бэк создаёт
+                          только черновик.
+             Publish → тот же POST /api/books/new (черновик), затем
+                       POST /books/{id}/publish (P0-маршрут, см.
+                       rights-modal.php). Если publish не прошёл —
+                       черновик уже создан, поэтому уводим на страницу
+                       книги с предупреждением (публикация возможна
+                       и с неё).
+
+           РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
+           блокируется в book-form.js — endpoint'а обновления нет,
+           а /api/books/new только создаёт.
+           ============================================================ -->
+      <div class="book-form__actions">
+        <button type="button" class="btn btn--secondary" data-step-prev hidden>
+          ← <?= $tr('common.bookform.back') ?>
+        </button>
+        <div class="book-form__actions-right">
           <?php if ($isEdit): ?>
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" data-submit-save>
+            <button class="btn btn--primary" type="submit" data-submit-save>
               <?= $tr('common.bookform.save') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--primary" type="submit" data-submit-draft>
+            <button class="btn btn--secondary" type="submit" data-submit-draft>
               <?= $tr('common.bookform.create_draft') ?>
+            </button>
+            <button class="btn btn--primary" type="submit" data-submit-publish>
+              <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>
         </div>
-      </section>
+      </div>
 
     </form>
 

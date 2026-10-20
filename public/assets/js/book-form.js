@@ -16,21 +16,28 @@
  *      уходят отдельными запросами POST /api/files/upload (category
  *      cover|book) → iconId / contentIds[];
  *   7. многошаговость (FORM-01, как в article-form.js): шаги
- *      [data-step], «Далее»/«Назад», валидация ОБЯЗАТЕЛЬНЫХ полей
- *      своего шага перед переходом вперёд (STEP_FIELDS);
+ *      [data-step], «Далее»/«Назад» (кнопки — в общей нижней панели
+ *      .book-form__actions, «Назад» скрыта на шаге 1), валидация
+ *      ОБЯЗАТЕЛЬНЫХ полей своего шага перед переходом вперёд
+ *      (STEP_FIELDS);
  *   8. список глав книги — только UI (input'ы без name, в POST не
  *      уходят: контракт с бэкендом уточняется);
  *   9. локальную копию несохранённых изменений (localStorage,
  *      ключ bookform:v2:new) + плашку «Восстановить / Отбросить»
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
+ *   10. публикацию (11.4): кнопка Publish → POST /api/books/new
+ *      (черновик) → 201 { createdId } → POST /books/{id}/publish;
+ *      при неудаче publish черновик уже создан — редирект на его
+ *      страницу с предупреждением (опубликовать можно и оттуда).
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
  *
  * Контракт с бэком (подробно — в шапке book-form.php):
  *   POST /api/books/new, Accept: application/json →
- *   201 { createdId } → уходим на /books/{createdId}, либо
+ *   201 { createdId } → Publish? вторая фаза POST /books/{id}/publish,
+ *   иначе уходим на /books/{createdId}; либо
  *   422 { error: { details: { field: [msg] } } } — ошибки рисуем на
  *   полях и возвращаем пользователя на шаг с первой из них;
  *   401 — нет сессии, 419 — CSRF (см. обработку ниже).
@@ -1172,15 +1179,35 @@
     // --------------------------------------------------------
     // Отправка: fetch + FormData (multipart) → POST /api/books/new.
     // Ответ (Accept: application/json):
-    //   201 { createdId } → уходим на /books/{createdId} — книга
-    //        создаётся черновиком, публикация идёт со страницы книги;
+    //   201 { createdId } → Publish (11.4): вторая фаза
+    //        POST /books/{id}/publish, иначе — как раньше, уходим
+    //        на /books/{createdId} с уведомлением «черновик создан»;
     //   422/400 → error.details: { field: [msg] } — рисуем на полях и
     //        возвращаем пользователя на шаг с первой ошибкой;
     //   401 — нет сессии, 419 — CSRF; прочее — общий текст ошибки.
     // --------------------------------------------------------
+
+    // «Чем отправили»: e.submitter есть не во всех браузерах —
+    // держим флаг последнего клика по кнопкам-отправителям.
+    // Enter в поле отправляет без клика — срабатывает последнее намерение.
+    var publishRequested = false;
+    Array.prototype.forEach.call(
+      form.querySelectorAll('[data-submit-publish], [data-submit-draft], [data-submit-save]'),
+      function (btn) {
+        btn.addEventListener('click', function () {
+          publishRequested = btn.hasAttribute('data-submit-publish');
+        });
+      }
+    );
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearAllErrors();
+
+      var wantPublish = !editId
+        && !!(e.submitter
+          ? e.submitter.hasAttribute('data-submit-publish')
+          : publishRequested);
 
       // edit-режим заблокирован: endpoint'а обновления нет, а
       // POST /api/books/new только создаёт — не плодим дубликаты.
@@ -1213,7 +1240,15 @@
         form.querySelectorAll('[data-submit-save], [data-submit-draft], [data-submit-publish]')
       );
       var labels = submitBtns.map(function (b) { return b.textContent; });
-      var activeBtn = submitBtns[0] || null;
+      // Активная кнопка — та, которой отправили (submitter), иначе
+      // Publish по флагу клика, иначе первая в DOM
+      var activeBtn = (e.submitter && submitBtns.indexOf(e.submitter) !== -1)
+        ? e.submitter
+        : null;
+      if (!activeBtn && wantPublish) {
+        activeBtn = form.querySelector('[data-submit-publish]') || null;
+      }
+      if (!activeBtn) activeBtn = submitBtns[0] || null;
 
       function resetButtons() {
         submitBtns.forEach(function (b, i) {
@@ -1314,6 +1349,12 @@
                   ? '/books/' + createdId
                   : (locationHeader || (response.redirected ? response.url : '/books'));
 
+                // Publish (11.4): черновик создан — вторая фаза
+                // POST /books/{id}/publish; иначе уходим как раньше.
+                if (wantPublish && createdId) {
+                  return publishPhase(createdId, redirect);
+                }
+
                 notify(t('js.book_draft_created'), 'success');
                 window.location.href = redirect;
                 return;
@@ -1343,6 +1384,43 @@
             resetButtons();
             notify(t('errors.common.network_error'));
           });
+      }
+
+      // ---- Публикация (11.4): POST /books/{id}/publish после создания ----
+      // P0-роут (см. rights-modal.php): переводит черновик в published.
+      // Бэкенд-контракт фронта заморожен — при 404/прочем ошибке
+      // НЕ роняем процесс: черновик уже создан, уводим на его страницу
+      // с предупреждением (опубликовать можно и оттуда, rights-modal).
+      function publishPhase(createdId, redirect) {
+        if (activeBtn) activeBtn.textContent = t('js.bookform_publishing');
+
+        return csrfFetch('/books/' + createdId + '/publish', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        })
+          .then(function (response) {
+            if (response.ok) {
+              notify(t('js.book_published'), 'success');
+            } else {
+              notify(t('js.book_publish_failed'), 'warning');
+            }
+            leaveAndRedirect(redirect);
+          })
+          .catch(function (err) {
+            console.error('[book-form] publish failed for', createdId, err);
+            notify(t('js.book_publish_failed'), 'warning');
+            leaveAndRedirect(redirect);
+          });
+      }
+
+      /** Уход со страницы после успеха: снимаем защиту beforeunload. */
+      function leaveAndRedirect(url) {
+        window.dispatchEvent(new Event('bookform:leave'));
+        window.location.href = url;
       }
 
       uploadPhase()
@@ -1463,6 +1541,13 @@
           step.hidden = parseInt(step.getAttribute('data-step'), 10) !== n;
         });
         current = n;
+
+        // Нижняя панель (11.4): «Назад» скрыта на первом шаге
+        Array.prototype.forEach.call(
+          form.querySelectorAll('.book-form__actions [data-step-prev]'),
+          function (btn) { btn.hidden = n <= 1; }
+        );
+
         if (window.history && history.replaceState) {
           history.replaceState(null, '', '#step-' + n);
         }
