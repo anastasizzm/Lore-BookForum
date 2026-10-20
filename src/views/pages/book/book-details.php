@@ -310,7 +310,10 @@ $isDraft   = $status === 'draft';
         </span>
       </div>
 
-      <div class="rate" data-rate role="radiogroup" aria-label="<?= $tr('common.book.rate_group') ?>">
+      <div class="rate" data-rate role="radiogroup"
+           data-rate-kind="books"
+           data-rate-publication="<?= (int) $publicationId ?>"
+           aria-label="<?= $tr('common.book.rate_group') ?>">
         <span class="rate__label"><?= $tr('common.book.rate_label') ?></span>
         <div class="rate__stars">
           <?php for ($i = 1; $i <= 5; $i++): ?>

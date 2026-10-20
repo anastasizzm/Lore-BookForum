@@ -531,6 +531,7 @@
         "rule_book_author_note_required": "Author's notes are required — the field cannot be empty.",
         "book_draft_created": "Draft created.",
         "book_publish_failed": "The draft was created, but publishing failed — you can publish it from the book page.",
+        "book_rate_failed": "Rating is temporarily unavailable — please try again later.",
         "publish_dialog_hint": "Specify the authors and editors before publishing. The draft is saved before the publication check.",
         "book_edit_unavailable": "Editing a book is not available yet — for now the form only creates new books.",
         "book_published": "Book published.",
