@@ -36,8 +36,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          authorNotes (string, required, 1..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
- *                       (UI — чипсы с одиночным выбором: бэк хранит ровно
- *                       один жанр и одну категорию, см. 11.1)
+ *                       (UI — выпадающие списки select, выбор один: бэк
+ *                       хранит ровно один жанр и одну категорию)
  *          publisher   (string, required, 1..255)
  *          pages       (int > 0, required)
  *          isbn        (string, optional, формат XXX-X-XXX-XXXXX-X —
@@ -363,42 +363,41 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <div class="form-row--two-cols">
 
-          <div class="form-field book-form__chips-field" data-chips-field>
-            <label for="bookGenre" id="bookGenreLabel"><?= $tr('common.bookform.field_genre') ?></label>
-            <!-- Чипсы жанров (11.1): список наполняет book-form.js из
-                 GET /api/additional/genres; выбор ОДИН — бэкенд хранит
-                 ровно один genreId (int > 0). Значение уносит hidden
-                 input; value — id из $form (после 422) или книги (edit). -->
-            <input type="hidden"
-                   id="bookGenre"
-                   name="genreId"
-                   value="<?= $view->e($genreValue) ?>"
-                   data-chips-value>
-            <div class="book-chips"
-                 data-book-chips="genres"
-                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
-                 role="radiogroup"
-                 aria-labelledby="bookGenreLabel">
-              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
-            </div>
+          <div class="form-field">
+            <label for="bookGenre"><?= $tr('common.bookform.field_genre') ?></label>
+            <!-- Выпадающий список жанров: справочник GET /api/additional/genres
+                 наполняет book-form.js (initCatalogSelect); выбор ОДИН — бэкенд
+                 хранит ровно один genreId (int > 0). Select сам несёт name и
+                 value (value — id из $form после 422 или книги при edit). -->
+            <select class="form-field__input book-form__select"
+                    id="bookGenre"
+                    name="genreId"
+                    data-catalog-select="genres"
+                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>">
+              <?php if ((string) $genreValue !== ''): ?>
+                <option value="<?= $view->e($genreValue) ?>" selected><?= $view->e($genreValue) ?></option>
+              <?php else: ?>
+                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
+              <?php endif; ?>
+            </select>
             <?= $errorBox('genreId') ?>
           </div>
 
-          <div class="form-field book-form__chips-field" data-chips-field>
-            <label for="bookCategory" id="bookCategoryLabel"><?= $tr('common.bookform.field_category') ?></label>
-            <!-- Чипсы категорий: GET /api/additional/categories, выбор один. -->
-            <input type="hidden"
-                   id="bookCategory"
-                   name="categoryId"
-                   value="<?= $view->e($categoryValue) ?>"
-                   data-chips-value>
-            <div class="book-chips"
-                 data-book-chips="categories"
-                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
-                 role="radiogroup"
-                 aria-labelledby="bookCategoryLabel">
-              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
-            </div>
+          <div class="form-field">
+            <label for="bookCategory"><?= $tr('common.bookform.field_category') ?></label>
+            <!-- Выпадающий список категорий: GET /api/additional/categories,
+                 выбор один (см. комментарий к жанру выше). -->
+            <select class="form-field__input book-form__select"
+                    id="bookCategory"
+                    name="categoryId"
+                    data-catalog-select="categories"
+                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>">
+              <?php if ((string) $categoryValue !== ''): ?>
+                <option value="<?= $view->e($categoryValue) ?>" selected><?= $view->e($categoryValue) ?></option>
+              <?php else: ?>
+                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
+              <?php endif; ?>
+            </select>
             <?= $errorBox('categoryId') ?>
           </div>
 
