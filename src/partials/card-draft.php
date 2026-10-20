@@ -29,6 +29,8 @@ $isArticle = $type === 'article';
 $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
+// TODO(backend): роутов books.edit / articles.edit в config/routes.php нет —
+// «Продолжить» пока даёт 404. Когда появятся — заменить на $view->url(...).
 // Роутов edit пока нет (см. шапку) — ссылка всё равно строится по шаблону,
 // чтобы вёрстка и локализация были готовы к моменту, когда бэк их добавит.
 $editUrl = $id > 0 ? $basePath . $id . '/edit' : '#';

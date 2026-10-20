@@ -8,6 +8,13 @@
  * КОНТРАКТ С БЭКОМ (фронт-каркас готов; роут и контроллер добавит бэк —
  * config/routes.php и app/ для фронта заморожены):
  *
+ *   TODO(backend): роута GET /drafts в config/routes.php ПОКА НЕТ — страница
+ *   доступна только через тест-роут. Нужны: роут drafts (AuthPolicy::Auth),
+ *   метод контроллера со списком своих черновиков (книги+статьи, draft),
+ *   пагинация ?page=. Ссылка в сайдбаре вести на него должна через
+ *   $view->url('drafts') ТОЛЬКО после добавления роута (до этого — 404/исключение
+ *   генератора URL).
+ *
  *   GET /drafts → роут drafts, AuthPolicy::Auth
  *        рендерит эту вьюху, передавая:
  *          $user  — UserContext текущего пользователя (сайдбар);
@@ -24,6 +31,10 @@
  *                      createdAt — DateTimeInterface|string (фолбэк даты)
  *          $meta  — ['page' => int, 'pageSize' => int, 'hasNext' => bool]
  *                   (как у BooksController::savedList — пагинация).
+ *
+ *        Сайдбар: ссылка «Черновики» пока ведёт на /articles?status=draft
+ *        ($draftsUrl в sidebar.php); когда роут drafts появится — заменить
+ *        на $url('drafts') (одна строка).
  *
  *        Ссылки «Продолжить» ведут на /books/{id}/edit и /articles/{id}/edit —
  *        этих роутов пока нет (см. card-draft); «Открыть» — на существующие
@@ -129,6 +140,9 @@ $pageLink = static function (int $to) use ($currentPath, $currentLang): string {
 };
 
 $shown = ($page - 1) * $pageSize + count($cards);
+
+/** Совсем нет черновиков (а не «страница пагинации опустела»). */
+$isEmptyAll = empty($cards) && $page <= 1 && !$hasNext;
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr('common.drafts.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
@@ -144,7 +158,7 @@ $shown = ($page - 1) * $pageSize + count($cards);
     'subtitle' => $view->t('common.drafts.subtitle'),
 ]); ?>
 
-<?php if (empty($cards)): ?>
+<?php if ($isEmptyAll): ?>
 
   <!-- ============================================================
        ПУСТОЕ СОСТОЯНИЕ (DR-08): ни одной строки от бэка
@@ -191,7 +205,8 @@ $shown = ($page - 1) * $pageSize + count($cards);
     </header>
 
     <?php if (empty($cards)): ?>
-      <!-- Страница в есть, но на ней пусто (пагинация увела дальше) -->
+      <!-- Страница есть, но на ней пусто (пагинация увела дальше): ниже
+           остаётся pager, чтобы вернуться назад -->
       <p class="empty-state__text"><?= $tr('common.drafts.none_page') ?></p>
     <?php else: ?>
       <div class="grid-books drafts-grid">
