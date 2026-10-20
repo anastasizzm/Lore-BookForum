@@ -171,6 +171,14 @@
   color: var(--color-text, #1A3760);
 }
 
+/* Оценок нет (book.no_rating): серая подпись вместо дробного балла —
+   звёзды остаются пустыми (--rating-percent: 0%) */
+.book-rating__value--none {
+  font-size: var(--fs-small, 14px);
+  font-weight: 400;
+  color: var(--color-text-muted, #6F84A5);
+}
+
 .book-rating__saves {
   display: inline-flex;
   align-items: center;

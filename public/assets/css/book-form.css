@@ -95,20 +95,66 @@
 }
 
 /* ============================================
-   СЕЛЕКТЫ (жанр, категория)
+   ЧИПСЫ (жанр, категория) — одиночный выбор (11.1)
+   Бэк хранит один genreId/одну categoryId; чипсы — UI поверх
+   hidden input [data-chips-value], рендерит book-form.js.
    ============================================ */
-.book-form__select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: var(--space-5);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236F84A5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right var(--space-3) center;
-  cursor: pointer;
+.book-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-.book-form__select:invalid {
+.book-chips[data-catalog-loading] {
+  opacity: 0.7;
+}
+
+.book-chips__hint {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
   color: var(--color-text-muted);
+}
+
+.book-chips__item {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.book-chips__item:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.book-chips__item.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.book-chips__item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Ошибка выбора (422 / клиентская валидация): красим контейнер —
+   сам input скрыт, класс вешает book-form.js. */
+.book-form__chips-field--invalid .book-chips {
+  border-color: var(--color-error);
 }
 
 /* ============================================
