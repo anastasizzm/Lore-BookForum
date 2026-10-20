@@ -157,12 +157,16 @@ $meAvatar = (string) ($me->avatar ?? '');
 
 /* ---------- Обложка ---------- */
 
-$coverUrl = '/img/book-placeholder.svg';
-if (!empty($article->iconId)) {
-    if ($article->iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $article->iconId;
-    } elseif (is_string($article->iconId)) {
-        $coverUrl = '/uploads/covers/' . $article->iconId;
+// Нет обложки — пустая строка: вьюха рисует .cover--empty (готовый
+// data-URI-вектор из component.css, тот же, что в library/saved).
+// iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
+$iconId = is_array($article) ? ($article['iconId'] ?? null) : ($article->iconId ?? null);
+$coverUrl = '';
+if (!empty($iconId)) {
+    if ($iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $iconId;
+    } elseif (is_string($iconId)) {
+        $coverUrl = '/uploads/covers/' . $iconId;
     }
 }
 ?>
@@ -187,11 +191,18 @@ if (!empty($article->iconId)) {
 
   <div class="book-details">
     <div class="book-details__cover-col">
-      <div class="book-details__cover">
-        <img src="<?= $view->e($coverUrl) ?>"
-             alt="<?= $view->e($article->title ?? '') ?>"
-             onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-      </div>
+      <?php if ($coverUrl === ''): ?>
+        <!-- Обложки нет: .cover--empty — data-URI-иконка книжки
+             из component.css (как в library/saved), <img> не нужен -->
+        <div class="book-details__cover cover--empty" aria-hidden="true"></div>
+      <?php else: ?>
+        <!-- Битую загрузку (404) пометит cover--empty app.js — той же
+             логикой пользуются карточки library/saved -->
+        <div class="book-details__cover">
+          <img src="<?= $view->e($coverUrl) ?>"
+               alt="<?= $view->e((string) ($article->title ?? '')) ?>">
+        </div>
+      <?php endif; ?>
 
       <div class="book-actions">
         <button type="button"

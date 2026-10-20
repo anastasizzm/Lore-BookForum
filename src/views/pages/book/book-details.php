@@ -144,14 +144,17 @@ $tableOfContents = (array)  ($book->tableOfContents ?? []);
 
 /* ---------- Обложка ---------- */
 
-// Плейсхолдер — локальный SVG (тот же, что в article-details): раньше тут
-// был внешний placehold.co, который без сети/блокировок даёт битую картинку.
-$coverUrl = '/img/book-placeholder.svg';
-if (!empty($book->iconId)) {
-    if ($book->iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $book->iconId;
-    } elseif (is_string($book->iconId)) {
-        $coverUrl = '/uploads/covers/' . $book->iconId;
+// Нет обложки — пустая строка: вьюха рисует .cover--empty (готовый
+// data-URI-вектор из component.css, тот же, что в library/saved);
+// внешних файлов-плейсхолдеров больше нет.
+// iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
+$iconId = is_array($book) ? ($book['iconId'] ?? null) : ($book->iconId ?? null);
+$coverUrl = '';
+if (!empty($iconId)) {
+    if ($iconId instanceof \Stringable) {
+        $coverUrl = '/uploads/covers/' . (string) $iconId;
+    } elseif (is_string($iconId)) {
+        $coverUrl = '/uploads/covers/' . $iconId;
     }
 }
 
@@ -248,11 +251,18 @@ $isDraft   = $status === 'draft';
 
   <div class="book-details">
     <div class="book-details__cover-col">
-      <div class="book-details__cover">
-        <img src="<?= $view->e($coverUrl) ?>"
-             alt="<?= $tr('common.book.cover_alt', ['title' => (string) ($book->title ?? '')]) ?>"
-             onerror="this.onerror = null; this.src = '/img/book-placeholder.svg';">
-      </div>
+      <?php if ($coverUrl === ''): ?>
+        <!-- Обложки нет: .cover--empty — data-URI-иконка книжки
+             из component.css (как в library/saved), <img> не нужен -->
+        <div class="book-details__cover cover--empty" aria-hidden="true"></div>
+      <?php else: ?>
+        <!-- Битую загрузку (404) пометит cover--empty app.js — той же
+             логикой пользуются карточки library/saved -->
+        <div class="book-details__cover">
+          <img src="<?= $view->e($coverUrl) ?>"
+               alt="<?= $tr('common.book.cover_alt', ['title' => (string) ($book->title ?? '')]) ?>">
+        </div>
+      <?php endif; ?>
 
       <div class="book-actions">
         <button type="button"
