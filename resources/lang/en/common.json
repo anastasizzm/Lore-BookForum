@@ -527,6 +527,7 @@
         "rule_book_authors_limit": "Maximum 30 authors.",
         "rule_book_file_dup": "The {format} format is already added — only one file per format is allowed.",
         "rule_book_author_note": "The author's notes are too long (2000 characters max).",
+        "rule_book_author_note_required": "Author's notes are required — the field cannot be empty.",
         "book_draft_created": "Draft created.",
         "book_edit_unavailable": "Editing a book is not available yet — for now the form only creates new books.",
         "book_published": "Book published.",

@@ -902,7 +902,12 @@
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
       // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
       description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
-      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note' },
+      // Заметки автора (11.2): бэк требует 1..2000 (PublicationFormValidator::
+      // NOTES_MAX_LEN) — поле ОБЯЗАТЕЛЬНОЕ. Пустое и слишком длинное —
+      // разные сообщения: requiredMsgKey (пусто, включая пробелы —
+      // trim в validateField), msgKey (длина > 2000).
+      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note',
+                     requiredMsgKey: 'js.rule_book_author_note_required' },
       genreId:     { required: true,  msgKey: 'js.rule_book_genre' },
       categoryId:  { required: true,  msgKey: 'js.rule_book_category' },
       publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
@@ -1018,7 +1023,9 @@
       }
 
       var value = (field.value || '').trim();
-      if (rule.required && value === '') { setError(name, t(rule.msgKey)); return false; }
+      // Пустое обязательное поле: сообщение requiredMsgKey, если задано
+      // (иначе общее msgKey) — «слишком длинное» для пустого значения неверно.
+      if (rule.required && value === '') { setError(name, t(rule.requiredMsgKey || rule.msgKey)); return false; }
       if (value === '') { clearError(name); return true; }
       if (rule.maxLength && value.length > rule.maxLength) { setError(name, t(rule.msgKey)); return false; }
 
