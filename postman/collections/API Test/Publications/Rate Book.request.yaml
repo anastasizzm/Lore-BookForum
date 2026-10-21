@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/books/{{bookId}}/rate"
+method: PUT
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r\n    \"rating\": 4\r\n}"
+order: 14000

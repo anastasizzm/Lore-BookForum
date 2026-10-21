@@ -37,10 +37,30 @@
     });
   }
 
+  /* ============================================================
+     ОЦЕНКА КНИГИ/СТАТЬИ: клик по звезде отправляет оценку на бэк.
+
+     Контракт (роут пока НЕ заведён — config/ заморожен, см. отчёт):
+       POST   /api/{books|articles}/{id}/rating  body: value=1..5
+       DELETE /api/{books|articles}/{id}/rating  — снять свою оценку
+     (таблица ratings в БД уже есть: PK (publication_id, user_id),
+     триггер bump_publication_rating() обновляет rating_avg).
+
+     До появления роута ответ будет 404/405: UI откатывается к прежней
+     оценке и показывает предупреждение js.book_rate_failed — как в
+     publish-фазе формы (11.4).
+     ============================================================ */
   var rate = document.querySelector('[data-rate]');
   if (rate) {
     var stars = rate.querySelectorAll('[data-rate-value]');
     var current = 0;
+    var rateSending = false;
+
+    var rateUrl = (function () {
+      var kind = rate.getAttribute('data-rate-kind') || 'books';
+      var id = Number(rate.getAttribute('data-rate-publication') || 0);
+      return id ? '/api/' + kind + '/' + id + '/rating' : '';
+    })();
 
     var paint = function (value) {
       stars.forEach(function (star, i) {
@@ -49,12 +69,54 @@
       });
     };
 
+    /** Неудача: откат к прежней оценке + предупреждение. */
+    var rateFailed = function (previous) {
+      current = previous;
+      paint(current);
+      if (window.Messages) window.Messages.show(t('js.book_rate_failed'), { type: 'warning' });
+    };
+
+    /** value: 1..5 — поставить оценку, 0 — снять (повторный клик). */
+    var sendRating = function (value, previous) {
+      if (rateSending) return;
+      if (!rateUrl) { rateFailed(previous); return; }   // нет id публикации
+      rateSending = true;
+
+      var opts = {
+        method: value ? 'POST' : 'DELETE',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      };
+      if (value) opts.body = 'value=' + value;
+
+      var doFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
+        ? LoreCsrf.fetch
+        : fetch;
+
+      doFetch(rateUrl, opts).then(function (res) {
+        return res.text().then(function (raw) {
+          // HTML вместо JSON (редирект на логин и т.п.) тоже считаем
+          // неудачей — иначе «успех» показали бы неавторизованному.
+          if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
+        });
+      }).then(function () {
+        rateSending = false;
+      }, function (err) {
+        rateSending = false;
+        console.warn('[rate] ' + (opts.method) + ' ' + rateUrl + ' failed', err);
+        rateFailed(previous);
+      });
+    };
+
     stars.forEach(function (star) {
       var value = Number(star.dataset.rateValue);
       star.addEventListener('mouseenter', function () { paint(value); });
       star.addEventListener('click', function () {
+        if (rateSending) return;
+        var previous = current;
         current = current === value ? 0 : value;
         paint(current);
+        sendRating(current, previous);
       });
     });
 
@@ -387,7 +449,9 @@
           initials: null,
           user: null,
           text: text,
-          date: new Date().toISOString(),
+          // dd.mm.yyyy — как после перезагрузки (loadComments/formatDate),
+          // иначе в [data-c-date] попадала бы сырая ISO-строка.
+          date: formatDate(new Date().toISOString()),
           likes: 0,
           liked: false
         }, true);
@@ -627,7 +691,10 @@
           authorUsername: me.author,
           initials: me.initials,
           avatar: me.avatar,
-          text: text
+          text: text,
+          // как у нового комментария: сразу показываем сегодняшнюю дату
+          // в том же формате, что и после перезагрузки (loadReplies).
+          date: formatDate(new Date().toISOString())
         });
         bumpCount();
         input.value = '';

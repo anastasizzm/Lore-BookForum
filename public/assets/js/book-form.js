@@ -9,28 +9,40 @@
  *      у автора (дублирует его в редакторы, автором он остаётся);
  *   3. список выбранных файлов книги (pdf/epub/mobi/fb2, ≥1 файл)
  *      с удалением по минусу;
- *   4. чипсы жанров и категорий (одиночный выбор) из /api/additional/*;
+ *   4. выпадающие списки жанра и категории (одиночный выбор) из
+ *      /api/additional/* — <select name="genreId|categoryId">;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
  *   6. отправку через fetch + FormData (multipart) на POST /api/books/new
  *      с Accept: application/json; обложка и файлы книги перед этим
  *      уходят отдельными запросами POST /api/files/upload (category
  *      cover|book) → iconId / contentIds[];
  *   7. многошаговость (FORM-01, как в article-form.js): шаги
- *      [data-step], «Далее»/«Назад», валидация ОБЯЗАТЕЛЬНЫХ полей
- *      своего шага перед переходом вперёд (STEP_FIELDS);
+ *      [data-step], «Далее»/«Назад» (кнопки — в общей нижней панели
+ *      .book-form__actions, «Назад» скрыта на шаге 1), валидация
+ *      ОБЯЗАТЕЛЬНЫХ полей своего шага перед переходом вперёд
+ *      (STEP_FIELDS);
  *   8. список глав книги — только UI (input'ы без name, в POST не
  *      уходят: контракт с бэкендом уточняется);
  *   9. локальную копию несохранённых изменений (localStorage,
  *      ключ bookform:v2:new) + плашку «Восстановить / Отбросить»
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
+ *   10. публикацию (11.4): кнопка Publish → POST /api/books/new
+ *      (черновик) → 201 { createdId } → POST /books/{id}/publish;
+ *      при неудаче publish черновик уже создан — редирект на его
+ *      страницу с предупреждением (опубликовать можно и оттуда).
+ *   11. окно публикации (11.3): списки авторов/редакторов переехали
+ *      из шага 2 в модалку book-publish-dialog — её открывает только
+ *      Publish (когда форма валидна), Cancel/Esc/фон закрывают;
+ *      отправка — кнопкой внутри окна (data-submit-publish).
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
  *
  * Контракт с бэком (подробно — в шапке book-form.php):
  *   POST /api/books/new, Accept: application/json →
- *   201 { createdId } → уходим на /books/{createdId}, либо
+ *   201 { createdId } → Publish? вторая фаза POST /books/{id}/publish,
+ *   иначе уходим на /books/{createdId}; либо
  *   422 { error: { details: { field: [msg] } } } — ошибки рисуем на
  *   полях и возвращаем пользователя на шаг с первой из них;
  *   401 — нет сессии, 419 — CSRF (см. обработку ниже).
@@ -58,7 +70,7 @@
 
   var AUTHORS_MAX = 30; // редакторы — без лимита
 
-  // Источники для чипсов [data-book-chips="..."].
+  // Источники справочников для выпадающих списков [data-catalog-select="..."].
   var SOURCES = {
     genres:     '/api/additional/genres',
     categories: '/api/additional/categories'
@@ -74,9 +86,9 @@
   var BACKUP_KEY = 'bookform:v2:new';
 
   var listCache = {};
-  // Перерисовка чипсов по имени поля (genreId/categoryId) — нужна
+  // Перерисовка справочников по имени поля (genreId/categoryId) — нужна
   // локальной копии (applyBackup), когда список уже загружен.
-  var chipRenderers = {};
+  var catalogRenderers = {};
 
   function t(key, params) {
     return window.LoreI18n ? LoreI18n.t(key, params) : key;
@@ -268,11 +280,11 @@
   }
 
   /* ============================================================
-     СПИСКИ: чипсы жанров и категорий (11.1).
+     СПИСКИ: выпадающие списки жанра и категории (11.1 → select).
      Выбор ОДИН на группу — бэкенд хранит ровно один genreId и одну
-     categoryId (BookForm: int > 0); значение уносит hidden input
-     [data-chips-value], чипсы — только UI (role=radio, клик выбирает,
-     повторный клик снимает).
+     categoryId (BookForm: int > 0); значение несёт сам <select
+     name="genreId|categoryId"> — на него вешаются валидация (RULES),
+     ошибки 422 и локальная копия, как на обычное поле.
 
      Контракт /api/additional/{genres,categories}:
      - 200 {"items": [...], "meta": {"page","pageSize","hasNext"}}
@@ -283,8 +295,8 @@
 
      Пока справочники грузятся, кнопки «Далее» заблокированы: выбор
      жанра и категории обязателен, а пустой список дал бы ложную
-     422. При сбое загрузки блок помечается data-catalog-failed —
-     повторная попытка по клику на подсказку.
+     422. При сбое загрузки в список попадает пункт-статус с текстом
+     «повторить» — клик по select повторяет попытку.
      ============================================================ */
   var CATALOG_PS = 50;      // максимум строк на страницу в API
   var CATALOG_MAX_PAGES = 20;
@@ -342,75 +354,52 @@
   }
 
   /**
-   * Чипсы одного справочника: [data-book-chips="genres|categories"].
+   * Один справочник в выпадающем списке:
+   * [data-catalog-select="genres|categories"].
    * Бэкенд хранит ровно один genreId/одну categoryId (int > 0) — выбор
-   * одиночный: клик выбирает, повторный клик снимает. Значение живёт в
-   * hidden input [data-chips-value] рядом с блоком — на него вешаются
-   * валидация (RULES genreId/categoryId), ошибки 422 и локальная копия.
+   * одиночный; <select> сам несёт name/value — на него вешаются валидация
+   * (RULES genreId/categoryId), ошибки 422 и локальная копия.
+   *
+   * current — «источник истины» для selected: select.value нельзя
+   * присвоить отсутствующий option (value молча сбросится в ''), поэтому
+   * до отрисовки списка выбор держим здесь (applyBackup передаёт его в
+   * catalogRenderers[name](value)).
    */
-  function initCatalogChips(block) {
-    var kind = block.getAttribute('data-book-chips');
+  function initCatalogSelect(select) {
+    var kind = select.getAttribute('data-catalog-select');
     var url = SOURCES[kind];
     if (!url) return;
 
-    var field = block.closest ? block.closest('[data-chips-field]') : null;
-    var input = field ? field.querySelector('[data-chips-value]') : null;
-    if (!input) return;
+    var name = select.getAttribute('name');   // genreId | categoryId
+    var placeholder = select.getAttribute('data-placeholder') || '';
+    var current = select.value || '';
 
-    var name = input.getAttribute('name');   // genreId | categoryId
-    var placeholder = block.getAttribute('data-placeholder') || '';
-    var hint = block.querySelector('[data-chips-hint]');
+    // Выбор пользователя — обычный change самого select.
+    select.addEventListener('change', function () { current = select.value; });
 
-    /** Подсказка внутри блока: placeholder / «Загрузка…» / ошибка. */
-    function showHint(text) {
-      if (!hint || !hint.parentNode) {
-        hint = document.createElement('p');
-        hint.className = 'book-chips__hint';
-        hint.setAttribute('data-chips-hint', '');
-        block.appendChild(hint);
+    /** Пункт-статус («Загрузка…» / «Не удалось…»); текущий выбор не теряем. */
+    function showStatus(text) {
+      select.innerHTML = '';
+
+      var opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = text;
+      if (current === '') { opt.selected = true; opt.disabled = true; }
+      select.appendChild(opt);
+
+      if (current !== '') {   // выбор уже сделан — показываем его, не плейсхолдер
+        var keep = document.createElement('option');
+        keep.value = current;
+        keep.textContent = current;
+        keep.selected = true;
+        select.appendChild(keep);
       }
-      hint.textContent = text;
-      hint.hidden = text === '';
     }
 
-    /** Подсвечивает выбранную чипсу по текущему значению input. */
-    function renderSelection() {
-      var value = input.value || '';
-      Array.prototype.forEach.call(block.querySelectorAll('[data-chips-item]'), function (btn) {
-        var on = btn.getAttribute('data-chips-item') === value;
-        btn.classList.toggle('is-active', on);
-        btn.setAttribute('aria-checked', on ? 'true' : 'false');
-      });
-      showHint(value === '' ? placeholder : '');
-    }
-
-    /** Выбрать/снять выбор: change будит валидацию поля и «копию». */
-    function select(value) {
-      input.value = value;
-      renderSelection();
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    function makeChip(id, title) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'book-chips__item';
-      btn.setAttribute('data-chips-item', id);
-      btn.setAttribute('role', 'radio');
-      btn.setAttribute('aria-checked', 'false');
-      btn.textContent = title;
-      btn.addEventListener('click', function () {
-        select(input.value === id ? '' : id);
-      });
-      return btn;
-    }
-
-        /** Рисует чипсы из списка справочника (кэш fetchAll). */
+    /** Рисует options из списка справочника (кэш fetchAll). */
     function renderList(list) {
-      block.innerHTML = '';
-      hint = null;   // showHint пересоздаст подсказку после innerHTML
-
-      var selected = input.value || '';
+      var html = '<option value=""' + (current === '' ? ' selected disabled' : '') + '>' +
+        escapeHtml(placeholder) + '</option>';
       var found = false;
 
       for (var i = 0; i < list.length; i++) {
@@ -422,20 +411,42 @@
           (item.title !== undefined ? item.title :
           (item.label !== undefined ? item.label : id))
         );
-        if (id === selected) found = true;
-        block.appendChild(makeChip(id, title));
+        if (id === current) found = true;
+        html += '<option value="' + escapeHtml(id) + '"' +
+          (id === current ? ' selected' : '') + '>' + escapeHtml(title) + '</option>';
       }
 
       // id из $form/книги не нашёлся в справочнике — оставляем его сырым,
-      // чтобы выбор не пропадал (POST всё равно унесёт hidden input).
-      if (selected && !found) block.appendChild(makeChip(selected, selected));
+      // чтобы выбор не пропадал (POST всё равно унесёт select).
+      if (current !== '' && !found) {
+        html += '<option value="' + escapeHtml(current) + '" selected>' +
+          escapeHtml(current) + '</option>';
+      }
 
-      renderSelection();
+      select.innerHTML = html;
+      current = select.value;   // выравниваем: selected мог не найтись
     }
 
     // Для applyBackup (локальная копия): перерисовать выбор, если список
-    // уже в кэше; если ещё грузится — рендер сам подхватит значение.
-    chipRenderers[name] = function () {
+    // уже в кэше; если ещё грузится — renderList подхватит current, когда
+    // список будет готов (значение приходит аргументом из applyBackup).
+    catalogRenderers[name] = function (value) {
+      if (value !== undefined) {
+        current = String(value);
+        if (current !== '') {
+          // option с этим значением может ещё не существовать (список не
+          // рисовался / не загрузился): select.value молча сбросился бы в ''
+          // — добавляем пункт сырым, renderList позже заменит его названием.
+          select.value = current;
+          if (select.value !== current) {
+            var raw = document.createElement('option');
+            raw.value = current;
+            raw.textContent = current;
+            raw.selected = true;
+            select.appendChild(raw);
+          }
+        }
+      }
       var list = listCache[url];
       if (list) renderList(list);
     };
@@ -445,31 +456,31 @@
 
       if (willLoad) {
         catalogsPending += 1;
-        block.setAttribute('data-catalog-loading', '');
-        showHint(t('bookform.chips_loading'));
+        select.setAttribute('data-catalog-loading', '');
+        showStatus(t('bookform.select_loading'));
         syncCatalogGate();
       }
 
       return fetchAll(url).then(renderList).catch(function (err) {
         console.error('[book-form] failed to load', url, err);
         notify(t('errors.common.list_load_failed'));
-        block.removeAttribute('data-catalog-loading');
-        block.setAttribute('data-catalog-failed', '');
-        showHint(t('bookform.chips_failed'));
-        // Чипсы не отрисованы — клик по подсказке/блоку повторяет
-        // попытку (слушатель один: после успеха он уже не нужен).
-        block.addEventListener('click', retryChips, { once: true });
+        select.removeAttribute('data-catalog-loading');
+        select.setAttribute('data-catalog-failed', '');
+        showStatus(t('bookform.select_failed'));
+        // Список не отрисован — клик по select повторяет попытку
+        // (слушатель один: после успеха он уже не нужен).
+        select.addEventListener('click', retry, { once: true });
       }).then(function () {
         if (willLoad) {
           catalogsPending = Math.max(0, catalogsPending - 1);
-          block.removeAttribute('data-catalog-loading');
+          select.removeAttribute('data-catalog-loading');
           syncCatalogGate();
         }
       });
     }
 
-    function retryChips() {
-      block.removeAttribute('data-catalog-failed');
+    function retry() {
+      select.removeAttribute('data-catalog-failed');
       load();
     }
 
@@ -884,6 +895,12 @@
         }
         timer = setTimeout(function () { doSearch(query); }, 250);
       });
+
+      // Enter в строке поиска: результат добавляется кликом, а не Enter'ом —
+      // иначе браузер отправит форму (кнопка-сабмитер рядом, в диалоге).
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') e.preventDefault();
+      });
     });
 
     // Оба списка готовы: изменение любого из них обновляет кнопки
@@ -897,6 +914,78 @@
   }
 
   /* ============================================================
+     ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
+     в модалку book-publish-dialog (partial, внутри <form> — hidden
+     inputs authors[]/editors[] попадают в FormData).
+     Открывает окно кнопка Publish [data-publish-open] в нижней
+     панели; отправка — кнопкой внутри окна (data-submit-publish).
+     ============================================================ */
+  function initPublishDialog(form) {
+    var root = form.querySelector('[data-book-publish-dialog]');
+    if (!root) return null;
+
+    var lastFocus = null;
+
+    function focusables() {
+      return Array.prototype.slice.call(
+        root.querySelectorAll('button, [href], input, select, textarea, [tabindex]')
+      ).filter(function (el) { return !el.disabled && !el.hidden && el.offsetParent !== null; });
+    }
+
+    function onKeydown(e) {
+      if (root.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key === 'Tab') {
+        var items = focusables();
+        if (!items.length) return;
+        var first = items[0];
+        var last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+
+    function open() {
+      if (!root.hidden) return;
+      lastFocus = document.activeElement;
+      root.hidden = false;
+      document.body.classList.add('is-modal-open');
+      document.addEventListener('keydown', onKeydown, true);
+      // фокус — в поиск авторов (первое поле окна)
+      var first = root.querySelector('[data-people-search]');
+      if (first) { try { first.focus(); } catch (_) {} }
+    }
+
+    function close() {
+      if (root.hidden) return;
+      root.hidden = true;
+      document.body.classList.remove('is-modal-open');
+      document.removeEventListener('keydown', onKeydown, true);
+      var target = lastFocus;
+      lastFocus = null;
+      // вернуть фокус на кнопку, открывшую окно
+      if (target && target.isConnected && target.offsetParent !== null) {
+        try { target.focus(); return; } catch (_) {}
+      }
+      var fallback = form.querySelector('[data-publish-open]');
+      if (fallback) { try { fallback.focus(); } catch (_) {} }
+    }
+
+    root.addEventListener('click', function (e) {
+      if (e.target.closest('[data-publish-dialog-backdrop]') ||
+          e.target.closest('[data-publish-dialog-close]')) {
+        close();
+      }
+    });
+
+    return {
+      open: open,
+      close: close,
+      isOpen: function () { return !root.hidden; },
+    };
+  }
+
+  /* ============================================================
      ФОРМА
      ============================================================ */
   function initForm(form) {
@@ -907,7 +996,12 @@
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
       // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
       description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
-      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note' },
+      // Заметки автора (11.2): бэк требует 1..2000 (PublicationFormValidator::
+      // NOTES_MAX_LEN) — поле ОБЯЗАТЕЛЬНОЕ. Пустое и слишком длинное —
+      // разные сообщения: requiredMsgKey (пусто, включая пробелы —
+      // trim в validateField), msgKey (длина > 2000).
+      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note',
+                     requiredMsgKey: 'js.rule_book_author_note_required' },
       genreId:     { required: true,  msgKey: 'js.rule_book_genre' },
       categoryId:  { required: true,  msgKey: 'js.rule_book_category' },
       publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
@@ -939,6 +1033,21 @@
     // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
     initPeople(form);
 
+    // Окно публикации (11.3): Publish в нижней панели открывает его.
+    // Открываем ТОЛЬКО когда форма валидна — иначе ошибки полей
+    // невидны под модалкой.
+    var publishDialog = initPublishDialog(form);
+    Array.prototype.forEach.call(form.querySelectorAll('[data-publish-open]'), function (btn) {
+      btn.addEventListener('click', function () {
+        if (!validateAll()) {
+          showFieldErrors();
+          focusFirstInvalid();
+          return;
+        }
+        if (publishDialog) publishDialog.open();
+      });
+    });
+
     // API переключения шагов (нужен focusFirstInvalid, чтобы показать шаг,
     // на котором лежит первое невалидное поле) и флаг несохранённых
     // изменений (см. локальную копию ниже).
@@ -963,18 +1072,10 @@
     }
     function getErrorEl(name) { return form.querySelector('[data-error-for="' + name + '"]'); }
 
-    /** Визуал ошибки у чипсов: сам input скрыт — красим контейнер. */
-    function syncChipsInvalid(field, on) {
-      if (!field || !field.closest) return;
-      var chips = field.closest('[data-chips-field]');
-      if (chips) chips.classList.toggle('book-form__chips-field--invalid', !!on);
-    }
-
     function setError(name, message) {
       var field = getField(name);
       var errorEl = getErrorEl(name);
       if (field) field.classList.add('form-field__input--invalid');
-      syncChipsInvalid(field, true);
       if (errorEl) {
         errorEl.innerHTML = '<span class="field-error-icon" title="' +
           escapeHtml(message) + '">!</span>';
@@ -985,7 +1086,6 @@
       var field = getField(name);
       var errorEl = getErrorEl(name);
       if (field) field.classList.remove('form-field__input--invalid');
-      syncChipsInvalid(field, false);
       if (errorEl) {
         errorEl.classList.remove('form-field__error--warning');
         errorEl.innerHTML = '';
@@ -1023,7 +1123,9 @@
       }
 
       var value = (field.value || '').trim();
-      if (rule.required && value === '') { setError(name, t(rule.msgKey)); return false; }
+      // Пустое обязательное поле: сообщение requiredMsgKey, если задано
+      // (иначе общее msgKey) — «слишком длинное» для пустого значения неверно.
+      if (rule.required && value === '') { setError(name, t(rule.requiredMsgKey || rule.msgKey)); return false; }
       if (value === '') { clearError(name); return true; }
       if (rule.maxLength && value.length > rule.maxLength) { setError(name, t(rule.msgKey)); return false; }
 
@@ -1061,23 +1163,12 @@
       if (!firstInvalid) return;
 
       // Ошибка может жить на скрытом шаге (например, пришёл 422 от бэка) —
-      // сначала раскрываем шаг, потом скроллим к полю.
+      // сначала раскрываем шаг, потом скроллим к полю (жанр/категория —
+      // обычные select, фокусируются напрямую).
       var step = firstInvalid.closest ? firstInvalid.closest('.book-step') : null;
       if (step && step.hidden && stepsApi) stepsApi.reveal(step);
 
-      // Скрытый input чипсов (жанр/категория) бокса не имеет: скроллим к
-      // контейнеру, фокус — на первую чипсу (список к моменту валидации
-      // уже отрисован: переход дальше держит каталог-гейт).
       var target = firstInvalid;
-      if (firstInvalid.tagName === 'INPUT' && firstInvalid.type === 'hidden') {
-        var container = firstInvalid.closest ? firstInvalid.closest('[data-chips-field]') : null;
-        if (container) {
-          target = container;
-          var firstChip = container.querySelector('[data-chips-item]');
-          if (firstChip) target = firstChip;
-        }
-      }
-
       if (target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       if (target.focus) target.focus();
     }
@@ -1170,15 +1261,35 @@
     // --------------------------------------------------------
     // Отправка: fetch + FormData (multipart) → POST /api/books/new.
     // Ответ (Accept: application/json):
-    //   201 { createdId } → уходим на /books/{createdId} — книга
-    //        создаётся черновиком, публикация идёт со страницы книги;
+    //   201 { createdId } → Publish (11.4): вторая фаза
+    //        POST /books/{id}/publish, иначе — как раньше, уходим
+    //        на /books/{createdId} с уведомлением «черновик создан»;
     //   422/400 → error.details: { field: [msg] } — рисуем на полях и
     //        возвращаем пользователя на шаг с первой ошибкой;
     //   401 — нет сессии, 419 — CSRF; прочее — общий текст ошибки.
     // --------------------------------------------------------
+
+    // «Чем отправили»: e.submitter есть не во всех браузерах —
+    // держим флаг последнего клика по кнопкам-отправителям.
+    // Enter в поле отправляет без клика — срабатывает последнее намерение.
+    var publishRequested = false;
+    Array.prototype.forEach.call(
+      form.querySelectorAll('[data-submit-publish], [data-submit-draft], [data-submit-save]'),
+      function (btn) {
+        btn.addEventListener('click', function () {
+          publishRequested = btn.hasAttribute('data-submit-publish');
+        });
+      }
+    );
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       clearAllErrors();
+
+      var wantPublish = !editId
+        && !!(e.submitter
+          ? e.submitter.hasAttribute('data-submit-publish')
+          : publishRequested);
 
       // edit-режим заблокирован: endpoint'а обновления нет, а
       // POST /api/books/new только создаёт — не плодим дубликаты.
@@ -1211,9 +1322,20 @@
         form.querySelectorAll('[data-submit-save], [data-submit-draft], [data-submit-publish]')
       );
       var labels = submitBtns.map(function (b) { return b.textContent; });
-      var activeBtn = submitBtns[0] || null;
+      // Активная кнопка — та, которой отправили (submitter), иначе
+      // Publish по флагу клика, иначе первая в DOM
+      var activeBtn = (e.submitter && submitBtns.indexOf(e.submitter) !== -1)
+        ? e.submitter
+        : null;
+      if (!activeBtn && wantPublish) {
+        activeBtn = form.querySelector('[data-submit-publish]') || null;
+      }
+      if (!activeBtn) activeBtn = submitBtns[0] || null;
 
       function resetButtons() {
+        // Ошибка отправки — закрываем окно: ошибки полей видны только
+        // на форме (люди их не перекрывают).
+        if (publishDialog) publishDialog.close();
         submitBtns.forEach(function (b, i) {
           b.disabled = false;
           if (labels[i] !== undefined) b.textContent = labels[i];
@@ -1312,6 +1434,12 @@
                   ? '/books/' + createdId
                   : (locationHeader || (response.redirected ? response.url : '/books'));
 
+                // Publish (11.4): черновик создан — вторая фаза
+                // POST /books/{id}/publish; иначе уходим как раньше.
+                if (wantPublish && createdId) {
+                  return publishPhase(createdId, redirect);
+                }
+
                 notify(t('js.book_draft_created'), 'success');
                 window.location.href = redirect;
                 return;
@@ -1326,7 +1454,7 @@
                 renderServerErrors(details);
               }
 
-              if (response.status === 401) { notify(t('errors.common.unauthorized')); return; }
+              if (response.status === 401) { if (publishDialog) publishDialog.close(); notify(t('errors.common.unauthorized')); return; }
               if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
 
               var fallback = t('errors.common.save_failed', { status: response.status });
@@ -1341,6 +1469,43 @@
             resetButtons();
             notify(t('errors.common.network_error'));
           });
+      }
+
+      // ---- Публикация (11.4): POST /books/{id}/publish после создания ----
+      // P0-роут (см. rights-modal.php): переводит черновик в published.
+      // Бэкенд-контракт фронта заморожен — при 404/прочем ошибке
+      // НЕ роняем процесс: черновик уже создан, уводим на его страницу
+      // с предупреждением (опубликовать можно и оттуда, rights-modal).
+      function publishPhase(createdId, redirect) {
+        if (activeBtn) activeBtn.textContent = t('js.bookform_publishing');
+
+        return csrfFetch('/books/' + createdId + '/publish', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+        })
+          .then(function (response) {
+            if (response.ok) {
+              notify(t('js.book_published'), 'success');
+            } else {
+              notify(t('js.book_publish_failed'), 'warning');
+            }
+            leaveAndRedirect(redirect);
+          })
+          .catch(function (err) {
+            console.error('[book-form] publish failed for', createdId, err);
+            notify(t('js.book_publish_failed'), 'warning');
+            leaveAndRedirect(redirect);
+          });
+      }
+
+      /** Уход со страницы после успеха: снимаем защиту beforeunload. */
+      function leaveAndRedirect(url) {
+        window.dispatchEvent(new Event('bookform:leave'));
+        window.location.href = url;
       }
 
       uploadPhase()
@@ -1361,9 +1526,9 @@
     });
 
     // --------------------------------------------------------
-    // Справочники (чипсы жанров и категорий)
+    // Справочники (выпадающие списки жанра и категории)
     // --------------------------------------------------------
-    form.querySelectorAll('[data-book-chips]').forEach(initCatalogChips);
+    form.querySelectorAll('[data-catalog-select]').forEach(initCatalogSelect);
 
     // --------------------------------------------------------
     // ГЛАВЫ КНИГИ — только UI (input'ы без name, в POST не уходят;
@@ -1461,6 +1626,13 @@
           step.hidden = parseInt(step.getAttribute('data-step'), 10) !== n;
         });
         current = n;
+
+        // Нижняя панель (11.4): «Назад» скрыта на первом шаге
+        Array.prototype.forEach.call(
+          form.querySelectorAll('.book-form__actions [data-step-prev]'),
+          function (btn) { btn.hidden = n <= 1; }
+        );
+
         if (window.history && history.replaceState) {
           history.replaceState(null, '', '#step-' + n);
         }
@@ -1571,10 +1743,12 @@
 
         el.value = String(b[name]);
 
-        // Чипсы (genreId/categoryId): перерисовать выбор, если список уже
-        // загружен; иначе рендер сам подхватит значение при готовности.
-        var rerender = chipRenderers[name];
-        if (rerender) rerender();
+        // Справочники (genreId/categoryId): перерисовать выбор, если список
+        // уже загружен; иначе renderList подхватит значение при готовности.
+        // Значение передаём аргументом: у select присваивание несуществующего
+        // option молча сбрасывает value в '' — рендер держит его сам.
+        var rerender = catalogRenderers[name];
+        if (rerender) rerender(String(b[name]));
       });
 
       if (Object.prototype.hasOwnProperty.call(b, 'chapters')) setChapters(b.chapters || []);

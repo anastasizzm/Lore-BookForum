@@ -47,6 +47,27 @@ abstract class PublicationsRepository extends Repository
         return $row === false ? null : PublicationShort::fromRow($row);
     }
 
+    public function rate(int $userId, int $publicationId, int $rating) : void 
+    {
+        $stmt = $this->pdo()->prepare(
+            "INSERT INTO ratings (user_id, publication_id, rating)
+                VALUES (:userId, :pubId, :rating)
+                ON CONFLICT (user_id, publication_id)
+                DO UPDATE SET rating = EXCLUDED.rating;
+            "
+        );
+        $stmt->execute([':userId' => $userId, ':pubId' => $publicationId, ':rating' => $rating]);
+    }
+
+    public function unrate(int $userId, int $publicationId) : void 
+    {
+        $stmt = $this->pdo()->prepare(
+            'DELETE FROM ratings WHERE user_id = :userId AND publication_id = :pubId'
+        );
+
+        $stmt->execute([':userId' => $userId, ':pubId' => $publicationId]);
+    }
+
     public function save(int $userId, int $publicationId) : void
     {
         $stmt = $this->pdo()->prepare(

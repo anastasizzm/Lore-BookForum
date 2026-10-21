@@ -3,6 +3,7 @@
         "required": "The field is required",
         "not_found": "Not found",
         "not_exists": "Does not exists",
+        "not_allowed": "The value is not allowed",
         "format": "Invalid format",
         "csrf_fail": "CSRF token mismatch",
         "already_exists": "Already exists",
@@ -95,6 +96,7 @@
     },
     "comments": {
         "empty": "Comment cannot be empty",
+        "sent": "Comment sent.",
         "duplicate": "You have already sent this comment.",
         "id_missing": "Cannot send the reply: the comment id is missing.",
         "publication_id_missing": "Cannot send the reply: the publication id is missing on this page.",

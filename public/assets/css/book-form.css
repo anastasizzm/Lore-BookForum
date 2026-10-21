@@ -95,66 +95,29 @@
 }
 
 /* ============================================
-   ЧИПСЫ (жанр, категория) — одиночный выбор (11.1)
-   Бэк хранит один genreId/одну categoryId; чипсы — UI поверх
-   hidden input [data-chips-value], рендерит book-form.js.
+   ВЫПАДАЮЩИЕ СПИСКИ (жанр, категория) — одиночный выбор (11.1 → select)
+   Бэк хранит один genreId/одну categoryId; <select name="..."> несёт
+   значение сам, options рендерит book-form.js (initCatalogSelect).
    ============================================ */
-.book-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.book-chips[data-catalog-loading] {
-  opacity: 0.7;
-}
-
-.book-chips__hint {
-  margin: 0;
-  font-size: var(--fs-small);
-  line-height: var(--lh-normal);
-  color: var(--color-text-muted);
-}
-
-.book-chips__item {
+.book-form__select {
   appearance: none;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text);
-  border-radius: var(--radius-pill);
-  padding: 5px 14px;
-  font-size: var(--fs-small);
-  line-height: var(--lh-normal);
+  -webkit-appearance: none;
+  padding-right: var(--space-5);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236F84A5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.book-chips__item:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+/* Пока справочник грузится — список недоступен (гейт держит «Далее»). */
+.book-form__select[data-catalog-loading] {
+  opacity: 0.7;
+  cursor: progress;
 }
 
-.book-chips__item.is-active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-primary-text);
-}
-
-.book-chips__item:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* Ошибка выбора (422 / клиентская валидация): красим контейнер —
-   сам input скрыт, класс вешает book-form.js. */
-.book-form__chips-field--invalid .book-chips {
-  border-color: var(--color-error);
+/* Пустой выбор (placeholder) — приглушённый цвет, как в article-form. */
+.book-form__select:invalid {
+  color: var(--color-text-muted);
 }
 
 /* ============================================
@@ -468,16 +431,71 @@
 }
 
 /* ============================================
-   КНОПКИ
+   КНОПКИ: общая нижняя панель действий формы (11.4)
+   sticky-низ по образцу .article-form__actions:
+   «Назад» слева (кнопка вне .book-form__actions-right),
+   остальное справа; видна на всех шагах.
    ============================================ */
 .book-form__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-3);
-  padding-top: var(--space-3);
+  padding: var(--space-3) 0;
+  background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   width: 100%;
+}
+
+.book-form__actions [data-step-prev] {
+  margin-right: auto;
+}
+
+/* base.css глобально прячет [hidden] только на ≥1024px — здесь
+   свой !important, чтобы кнопка «Назад» не вылезала на шаге 1
+   и на узких экранах. */
+.book-form__actions [data-step-prev][hidden] {
+  display: none !important;
+}
+
+.book-form__actions-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* ============================================
+   ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы.
+   Каркас .modal (modal.css): backdrop, panel, футер.
+   Здесь — габариты панели и скролл тела со списками.
+   ============================================ */
+.book-publish-dialog__dialog {
+  max-width: 520px;
+  width: 100%;
+  max-height: calc(100vh - var(--space-4) * 2);
+  display: flex;
+  flex-direction: column;
+}
+
+.book-publish-dialog__hint {
+  margin: 0 0 var(--space-3);
+  flex-shrink: 0;
+}
+
+.book-publish-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 2px; /* зазор, чтобы скроллбар не наезжал на поля */
 }
 
 /* ============================================
@@ -657,6 +675,14 @@
 
   .book-form__actions .btn,
   .book-step__nav .btn {
+    width: 100%;
+  }
+
+  .book-form__actions [data-step-prev] {
+    margin-right: 0;
+  }
+
+  .book-form__actions-right {
     width: 100%;
   }
 
