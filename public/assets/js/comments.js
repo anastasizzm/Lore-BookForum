@@ -731,9 +731,10 @@
 
         var flatList = card.closest('[data-fc-list]');
         if (flatList) {
-          payload.date = (window.LoreI18n && typeof LoreI18n.formatDate === 'function')
-            ? LoreI18n.formatDate(new Date().toISOString())
-            : formatDate(new Date().toISOString());
+          // dd.mm.yyyy — тот же формат, что у загруженных комментариев
+          // (loadComments/formatDate) и у ответа ниже: локале-зависимый
+          // LoreI18n.formatDate здесь давал бы «Oct 21, 2026» в en.
+          payload.date = formatDate(new Date().toISOString());
           payload.replies = 0;
           var flatNode = commentNode(payload);
           if (flatNode) flatList.appendChild(flatNode);
