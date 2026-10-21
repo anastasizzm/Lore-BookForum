@@ -9,7 +9,7 @@ use Attribute;
 final class Inject
 {
     public function __construct(
-        public readonly ?string $key = null,
+        public readonly mixed $key = null,
         public readonly ?string $id  = null,
     ) {}
 }

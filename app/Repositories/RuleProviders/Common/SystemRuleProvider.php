@@ -29,7 +29,7 @@ final class SystemRuleProvider extends Repository implements CommonRuleProvider
             ->addSelect("COALESCE(bool_or(rp.sys_manage_additionals), false) as manage_additionals")
             ->addSelect("COALESCE(bool_or(rp.sys_manage_ppl), false) as manage_ppl")
             ->addSelect("COALESCE(bool_or(rp.sys_manage_roles), false) as manage_roles")
-            ->addJoin("INNER JOIN roles_permissions rp ON rp.role_id = ru.role_id AND rp.publication_id = ru.publication_id")
+            ->addJoin("INNER JOIN roles_permissions rp ON rp.role_id = ru.role_id AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
             ->addWhere("ru.publication_id IS NULL")
             ->addWhere("ru.is_valid")
             ->addWhere("ru.user_id = :userId", [":userId" => ScriptParam::asInt($userId)])

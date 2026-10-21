@@ -68,6 +68,7 @@ $registry = new PolicyRegistry();
 require __DIR__ . '/policies.php';
 
 //Settings
+$container->instance(Container::class, $container);
 $container->instance(I18nSettings::class, $settings->i18n);
 $container->instance(JwtSettings::class, $settings->jwt);
 $container->instance(MailSettings::class, $settings->mail);
@@ -161,7 +162,7 @@ foreach($ruleProvidersArray as $type => $providers)
 
     foreach($providers as $name => $args)
     {
-        $container->singletonKeyed($args['accessKey'], $interfaceClass, function (Container $c, string $key) 
+        $container->singletonKeyed($args['accessKey'], $interfaceClass, function (Container $c, mixed $key) 
             use ($name, $args, $interfaceClass, $cachingClass){
 
             $db = $c->get(Database::class);
@@ -179,7 +180,7 @@ foreach($ruleProvidersArray as $type => $providers)
 
 foreach(ServiceType::cases() as $key)
 {
-    $container->singletonKeyed($key, AccessService::class, function (Container $c) use ($key){
+    $container->singletonKeyed($key, AccessService::class, function (Container $c, mixed $key){
         $rp = NULL;
         $crp = NULL;
         try{

@@ -32,7 +32,7 @@ final class PublicationRuleProvider extends Repository implements CommonRuleProv
             ->addSelect("COALESCE(bool_or(rp.pub_read), false) as read")
             ->addSelect("COALESCE(bool_or(rp.pub_manage_ppl), false) as manage_ppl")
             ->addSelect("COALESCE(bool_or(rp.pub_manage_roles), false) as manage_roles")
-            ->addJoin("INNER JOIN roles_permissions rp ON rp.role_id = ru.role_id AND rp.publication_id = ru.publication_id")
+            ->addJoin("INNER JOIN roles_permissions rp ON rp.role_id = ru.role_id AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
             ->addWhere("ru.publication_id IS NULL")
             ->addWhere("ru.is_valid")
             ->addWhere("ru.user_id = :userId", [":userId" => ScriptParam::asInt($userId)])

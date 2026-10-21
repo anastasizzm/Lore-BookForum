@@ -13,6 +13,6 @@ abstract class AccessRequirement implements AuthorizationRequirement
         public readonly AccessOperation $operation,
     ){}
 
-    public abstract function getTypeKey() : string;
+    public abstract function getTypeKey() : mixed;
     public abstract function describe() : string;
 }

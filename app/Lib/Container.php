@@ -10,6 +10,10 @@ use ReflectionNamedType;
 use ReflectionParameter;
 use RuntimeException;
 
+use BackedEnum;
+use UnitEnum;
+use Stringable;
+
 final class Container
 {
     private const string KEY_IDENTIFIER = '__KEY__ID__';
@@ -20,30 +24,28 @@ final class Container
     /** @var array<string, object> */
     private array $instances = [];
 
-    /** Register a factory (lazy, one instance per container). */
     public function singleton(string $id, ?Closure $factory = null): void
     {
         $this->factories[$id] = $factory ?? static fn(self $c) => new $id();
     }
 
-    public function singletonKeyed(string $key, string $id, ?Closure $factory = null): void
+    public function singletonKeyed(mixed $key, string $id, ?Closure $factory = null): void
     {
         $savedId = $this->generateKey($key, $id);
-        $this->factories[$savedId] = $factory ?? static fn(self $c, $key) => new $id();
+        $this->factories[$savedId] = $factory ?? static fn(self $c, mixed $key) => new $id();
     }
 
-    /** Register a pre-built instance. */
     public function instance(string $id, object $value): void
     {
         $this->instances[$id] = $value;
     }
 
-    public function instanceKeyed(string $key, string $id, object $value): void
+    public function instanceKeyed(mixed $key, string $id, object $value): void
     {
         $this->instance($this->generateKey($key, $id), $value);
     }
 
-    public function getKeyed(string $key, string $id): object
+    public function getKeyed(mixed $key, string $id): object
     {
         $savedId = $this->generateKey($key, $id);
 
@@ -55,12 +57,31 @@ final class Container
             return $this->instances[$savedId] = ($this->factories[$savedId])($this, $key);
         }
 
-        throw new RuntimeException("The keyed '$key' service of id '$id' is not set");
+        throw new RuntimeException("The keyed '{$this->normalizeKey($key)}' service of id '$id' is not set");
     }
 
-    private function generateKey(string $key, string $id): string
+    private function generateKey(mixed $key, string $id): string
     {
-        return $id . self::KEY_IDENTIFIER . $key;
+        return $id . self::KEY_IDENTIFIER . self::normalizeKey($key);
+    }
+
+    private static function normalizeKey(mixed $key): string
+    {
+        return match (true) {
+            is_string($key)            => $key,
+            is_int($key)               => (string) $key,
+            is_float($key)             => (string) $key,
+            is_bool($key)              => $key ? '1' : '0',
+            $key instanceof BackedEnum => (string) $key->value,
+            $key instanceof UnitEnum   => $key->name,
+            $key instanceof Stringable => (string) $key,
+            $key === null              => 'null',
+            default => throw new InvalidArgumentException(
+                'Container key must be string, int, float, bool, null, '
+                . 'an enum case, or Stringable; got '
+                . get_debug_type($key)
+            ),
+        };
     }
 
     /** Resolve a class / service id, building it on first use. */

@@ -16,6 +16,6 @@ final class AccountAccessRequirement extends AccessRequirement
         parent::__construct($pathPattern, $operation);
     }
 
-    public function getTypeKey() : string { return ServiceType::Account; }
+    public function getTypeKey() : mixed { return ServiceType::Account; }
     public function describe() : string { return 'errors.policies.access.account'; }
 }

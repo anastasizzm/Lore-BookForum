@@ -24,13 +24,13 @@ final class AccessHandler implements AuthorizationHandler
     ){}
 
     public function handle(AuthorizationRequirement $requirement, HttpContext $ctx): Decision
-    {
+    {  
         if (!$requirement instanceof AccessRequirement)
             return Decision::forbidden(ErrorCodes::INVALID_REQUIREMENT, 'Invalid requirement used');
 
         $currentUserId = $ctx->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Decision::unauthorized(ErrorCodes::UNAUTH_TRY);
+            return Decision::unauthorized(ErrorCodes::UNAUTHORIZED);
 
         $service = $this->container->getKeyed($requirement->getTypeKey(), AccessService::class);
 

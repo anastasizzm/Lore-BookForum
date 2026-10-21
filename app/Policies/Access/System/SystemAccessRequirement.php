@@ -16,6 +16,6 @@ final class SystemAccessRequirement extends AccessRequirement
         parent::__construct($pathPattern, $operation);
     }
 
-    public function getTypeKey() : string { return ServiceType::System; }
+    public function getTypeKey() : mixed { return ServiceType::System; }
     public function describe() : string { return 'errors.policies.access.system'; }
 }

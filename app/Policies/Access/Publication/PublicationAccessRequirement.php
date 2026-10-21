@@ -16,6 +16,6 @@ final class PublicationAccessRequirement extends AccessRequirement
         parent::__construct($pathPattern, $operation);
     }
 
-    public function getTypeKey() : string { return ServiceType::Publication; }
+    public function getTypeKey() : mixed { return ServiceType::Publication; }
     public function describe() : string { return 'errors.policies.access.publication'; }
 }

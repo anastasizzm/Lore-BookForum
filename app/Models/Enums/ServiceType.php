@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace App\Models\Enums;
 
-enum ServiceType 
+enum ServiceType : string
 {
-    case Publication;
-    case Post;
-    case System;
-    case Account;
+    case Publication = 'publication';
+    case Post = 'post';
+    case System = 'system';
+    case Account = 'account';
 }

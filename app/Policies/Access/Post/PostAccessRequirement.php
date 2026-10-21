@@ -16,6 +16,6 @@ final class PostAccessRequirement extends AccessRequirement
         parent::__construct($pathPattern, $operation);
     }
 
-    public function getTypeKey() : string { return ServiceType::Post; }
+    public function getTypeKey() : mixed { return ServiceType::Post; }
     public function describe() : string { return 'errors.policies.access.post'; }
 }
