@@ -6,6 +6,7 @@ namespace App\Lib;
 use Closure;
 use ReflectionClass;
 use ReflectionNamedType;
+use ReflectionParameter;
 use RuntimeException;
 
 final class Container
@@ -24,7 +25,7 @@ final class Container
         $this->factories[$id] = $factory ?? static fn(self $c) => new $id();
     }
 
-    public function signletonKeyed(string $key, string $id, ?Closure $factory = NULL) : void 
+    public function singletonKeyed(string $key, string $id, ?Closure $factory = null): void
     {
         $savedId = $this->generateKey($key, $id);
         $this->factories[$savedId] = $factory ?? static fn(self $c, $key) => new $id();
@@ -36,12 +37,12 @@ final class Container
         $this->instances[$id] = $value;
     }
 
-    public function instanceKeyed(string $key, string $id, object $value) : void 
+    public function instanceKeyed(string $key, string $id, object $value): void
     {
         $this->instance($this->generateKey($key, $id), $value);
     }
 
-    public function getKeyed(string $key, string $id) : object 
+    public function getKeyed(string $key, string $id): object
     {
         $savedId = $this->generateKey($key, $id);
 
@@ -56,7 +57,10 @@ final class Container
         throw new RuntimeException("The keyed '$key' service of id '$id' is not set");
     }
 
-    private function generateKey(string $key, string $id) : string { return $id . self::KEY_IDENTIFIER . $key; }
+    private function generateKey(string $key, string $id): string
+    {
+        return $id . self::KEY_IDENTIFIER . $key;
+    }
 
     /** Resolve a class / service id, building it on first use. */
     public function get(string $id): object
@@ -93,21 +97,50 @@ final class Container
 
         $args = [];
         foreach ($ctor->getParameters() as $param) {
-            $type = $param->getType();
-
-            if (!$type instanceof ReflectionNamedType || $type->isBuiltin()) {
-                if ($param->isDefaultValueAvailable()) {
-                    $args[] = $param->getDefaultValue();
-                    continue;
-                }
-                throw new RuntimeException(
-                    "Cannot auto-wire \${$param->getName()} in $class"
-                );
-            }
-
-            $args[] = $this->get($type->getName());
+            $args[] = $this->resolveParameter($param, $class);
         }
 
         return $ref->newInstanceArgs($args);
+    }
+
+    private function resolveParameter(ReflectionParameter $param, string $class): mixed
+    {
+        $attr   = $param->getAttributes(Inject::class)[0] ?? null;
+        $inject = $attr?->newInstance();
+
+        $type     = $param->getType();
+        $typeName = $type instanceof ReflectionNamedType && !$type->isBuiltin()
+            ? $type->getName()
+            : null;
+
+        // 1) Explicit #[Inject] attribute wins.
+        if ($inject !== null) {
+            $id = $inject->id ?? $typeName;
+
+            if ($id === null) {
+                throw new RuntimeException(
+                    "Cannot resolve \${$param->getName()} in $class: " .
+                    "#[Inject] requires either a class type or an explicit id"
+                );
+            }
+
+            return $inject->key !== null
+                ? $this->getKeyed($inject->key, $id)
+                : $this->get($id);
+        }
+
+        // 2) No attribute: fall back to type-based auto-wiring.
+        if ($typeName !== null) {
+            return $this->get($typeName);
+        }
+
+        // 3) Scalar / untyped parameter — only resolvable via default value.
+        if ($param->isDefaultValueAvailable()) {
+            return $param->getDefaultValue();
+        }
+
+        throw new RuntimeException(
+            "Cannot auto-wire \${$param->getName()} in $class"
+        );
     }
 }

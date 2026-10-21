@@ -36,8 +36,7 @@ final class PostsContextRepository extends Repository
 
             SELECT
                 p.id AS post_id,
-                COALESCE(bool_or(likes.comment_id IS NOT NULL), false) as is_liked,
-                COALESCE(bool_or(v.is_admin OR p.creator_id = v.user_id), false) as is_editor
+                COALESCE(bool_or(likes.comment_id IS NOT NULL), false) as is_liked
             FROM comments p
             CROSS JOIN viewer v
             LEFT JOIN comments_likes likes ON likes.comment_id = p.id AND likes.user_id = v.user_id

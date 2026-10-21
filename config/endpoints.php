@@ -32,20 +32,20 @@ return function(Router $router)
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
-    $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', AuthPolicy::Verified);
-    $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', AuthPolicy::Verified);
-    $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', AuthPolicy::Verified);
-    $router->delete('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'unrate'], 'api.books.unrate', AuthPolicy::Verified);
-    $router->post('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', AuthPolicy::Verified);
-    $router->post('/api/books/{bookId}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', AuthPolicy::Verified);
-    $router->delete('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', AuthPolicy::Verified);
+    $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
+    $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
+    $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
+    $router->delete('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'unrate'], 'api.books.unrate', ReadPublicationOperation::class);
+    $router->post('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', ReadPublicationOperation::class);
+    $router->post('/api/books/{bookId}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
+    $router->delete('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
 
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
-    $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', AuthPolicy::Verified);
-    $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', AuthPolicy::Verified);
-    $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', AuthPolicy::Verified);
-    $router->delete('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', AuthPolicy::Verified);
+    $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
+    $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
+    $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
+    $router->delete('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
 
 
     // Posts
