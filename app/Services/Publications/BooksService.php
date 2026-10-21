@@ -9,9 +9,11 @@ use App\Services\Enrichers\PublicationContextEnricher;
 use App\Services\Storage\FileService;
 
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\RateForm;
 use App\Forms\Publications\BookProgressForm;
 use App\Validators\Publications\BookFormValidator;
 use App\Validators\Publications\BookProgressFormValidator;
+use App\Validators\Publications\RateFormValidator;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
@@ -49,6 +51,7 @@ final class BooksService
         private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
         private readonly BookProgressFormValidator $progressValidator,
+        private readonly RateFormValidator $rateValidator,
         private readonly FileService $fileService
     ){}
 
@@ -219,6 +222,39 @@ final class BooksService
                 if (!$this->booksRepo->checkType($bookId))
                     throw new ValidationException(['bookId' => ['Book not found']]);
                 $this->booksRepo->deleteSave($userId, $bookId);
+            });
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function rate(int $userId, int $bookId, RateForm $form) : void 
+    {
+        $bag = $this->rateValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        try{
+            $this->uow->transactional(function (PDO $pdo) use($userId, $bookId, $form) {
+                if (!$this->booksRepo->checkType($bookId))
+                    throw new ValidationException(['bookId' => ['Book not found']]);
+                $this->booksRepo->rate($userId, $bookId, $form->rating);
+            });
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function uprate(int $userId, int $bookId) : void 
+    {
+        try{
+            $this->uow->transactional(function (PDO $pdo) use($userId, $bookId) {
+                if (!$this->booksRepo->checkType($bookId))
+                    throw new ValidationException(['bookId' => ['Book not found']]);
+                $this->booksRepo->unrate($userId, $bookId);
             });
         }
         catch(\PDOException $e)
