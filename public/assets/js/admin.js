@@ -37,9 +37,9 @@
     var name = btn.getAttribute('data-user-name') || '';
 
     confirmModal({
-      title:       t('common.admin.block_title'),
-      text:        t('common.admin.block_text'),
-      confirmText: t('common.admin.block_confirm'),
+      title:       t('admin.block_title'),
+      text:        t('admin.block_text'),
+      confirmText: t('admin.block_confirm'),
       danger:      true,
     }).then(function (confirmed) {
       if (!confirmed) return;
@@ -56,11 +56,11 @@
       if (statusCell) {
         statusCell.innerHTML =
           '<span class="admin-badge admin-badge--danger">' +
-          t('common.admin.status_blocked') +
+          t('admin.status_blocked') +
           '</span>';
       }
       btn.disabled = true;
-      notify(t('common.admin.block_success'), 'success');
+      notify(t('admin.block_success'), 'success');
     });
   }
 
@@ -71,9 +71,9 @@
     var id = btn.getAttribute('data-comment-id') || '';
 
     confirmModal({
-      title:       t('common.admin.delete_title'),
-      text:        t('common.admin.delete_text'),
-      confirmText: t('common.admin.action_delete'),
+      title:       t('admin.delete_title'),
+      text:        t('admin.delete_text'),
+      confirmText: t('admin.action_delete'),
       danger:      true,
     }).then(function (confirmed) {
       if (!confirmed) return;
