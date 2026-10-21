@@ -58,4 +58,27 @@ final class ArticlesController extends Controller
         $this->articlesService->deleteSave($userId, $articleId);
         return $this->jsonEmpty(204);
     }
+
+    public function rate(HttpContext $context, string $articleId)
+    {
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $formData = $context->request->body();
+        $this->articlesService->rate($userId, $articleId, RateForm::fromInput($formData));
+        return $this->jsonEmpty(201);
+    }
+
+    public function unrate(HttpContext $context, string $articleId)
+    {
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $this->articlesService->unrate($userId, $articleId);
+        return $this->jsonEmpty(204);
+    }
 }

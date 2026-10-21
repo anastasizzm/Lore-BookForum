@@ -3,6 +3,7 @@
         "required": "The field is required",
         "not_found": "Not found",
         "not_exists": "Does not exists",
+        "not_allowed": "The value is not allowed",
         "format": "Invalid format",
         "csrf_fail": "CSRF token mismatch",
         "already_exists": "Already exists",
