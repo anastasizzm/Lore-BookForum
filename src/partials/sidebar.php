@@ -240,10 +240,14 @@
                 </button>
             </form>
 
-            <button type="button" class="settings-menu__item">
+            <!-- Помощь (задача 5): статическая страница src/views/pages/help.php.
+                 Роута help бэк ещё не завёл (config/routes.php заморожен) —
+                 ведём на существующий тест-роут /pages/test?page=help.
+                 Когда роут появится — заменить путь на $url('help'). -->
+            <a href="<?= $view->e($urlPath('/pages/test?page=help')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">?</span>
                 <span><?= $tr('common.sidebar.help') ?></span>
-            </button>
+            </a>
 
             <!-- Смена пароля (страница auth/change-password.php — копия
                  password-reset.php, тексты и ссылка «назад» свои, ключи

@@ -36,8 +36,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          authorNotes (string, required, 1..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
- *                       (UI — чипсы с одиночным выбором: бэк хранит ровно
- *                       один жанр и одну категорию, см. 11.1)
+ *                       (UI — выпадающие списки select, выбор один: бэк
+ *                       хранит ровно один жанр и одну категорию)
  *          publisher   (string, required, 1..255)
  *          pages       (int > 0, required)
  *          isbn        (string, optional, формат XXX-X-XXX-XXXXX-X —
@@ -73,11 +73,14 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
- *        ТОЛЬКО на book-details — из формы она убрана (F2-08), публикация
- *        из формы не поддерживается (см. ниже).
+ *        ТОЛЬКО на book-details; из формы (11.4) публикация идёт второй
+ *        фазой после создания черновика — POST /books/{id}/publish,
+ *        при неудаче редирект на страницу книги (права можно выставить
+ *        там). Права (rights-modal) из формы не выбираются.
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
- *        перезагрузка страницы (бейдж и кнопка исчезают)
+ *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
+ *        также кнопкой Publish в форме создания
  *
  *   ГЛАВЫ КНИГИ: UI-список есть (шаг 2), но input'ы БЕЗ name — в POST не
  *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
@@ -100,17 +103,22 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Шаг 1 «Данные книги» — формальности: название, жанр, категория,
  *                          издательство, страниц, ISBN, обложка.
  *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
- *                          файлы книги; временно здесь же списки
- *                          авторов/редакторов и кнопка отправки.
+ *                          файлы книги.
  *
- *   ПУБЛИКАЦИЯ ИЗ ФОРМЫ УБРАНА: POST /api/books/new создаёт только
- *   черновик (бэк не принимает status), кнопка «Опубликовать» живёт на
- *   book-details (плашка rights-modal).
+ *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
+ *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
+ *   внутри <form> (sticky, видна на всех шагах); «Назад» скрыта на
+ *   шаге 1. Publish: POST /api/books/new → 201 { createdId } →
+ *   POST /books/{id}/publish; при неудаче publish — черновик уже
+ *   создан, редирект на страницу книги (см. book-form.js).
  *
- *   ШАГ 3 «РОЛИ» (права, авторы/редакторы) СОЗДАВАТЬСЯ НЕ БУДЕТ —
- *   пропущен по решению команды, доделаем отдельно:
- *   тогда списки людей и блок .book-step__nav с кнопками переедут туда
- *   (разметка уже готова — нужен только перенос).
+ *   ОКНО ПУБЛИКАЦИИ (11.3): списки авторов/редакторов переехали из
+ *   шага 2 в модалку book-publish-dialog (partial, внутри <form>);
+ *   кнопка Publish [data-publish-open] открывает её (только когда
+ *   форма валидна), отправка — кнопкой внутри окна.
+ *
+ *   ШАГ 3 «РОЛИ» СОЗДАВАТЬСЯ НЕ БУДЕТ — пропущен по решению команды;
+ *   списки людей живут в окне публикации (11.3).
  *
  *   Переход «Далее» прогоняет валидацию полей своего шага
  *   (см. book-form.js, STEP_FIELDS): без валидных обязательных полей
@@ -355,42 +363,41 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <div class="form-row--two-cols">
 
-          <div class="form-field book-form__chips-field" data-chips-field>
-            <label for="bookGenre" id="bookGenreLabel"><?= $tr('common.bookform.field_genre') ?></label>
-            <!-- Чипсы жанров (11.1): список наполняет book-form.js из
-                 GET /api/additional/genres; выбор ОДИН — бэкенд хранит
-                 ровно один genreId (int > 0). Значение уносит hidden
-                 input; value — id из $form (после 422) или книги (edit). -->
-            <input type="hidden"
-                   id="bookGenre"
-                   name="genreId"
-                   value="<?= $view->e($genreValue) ?>"
-                   data-chips-value>
-            <div class="book-chips"
-                 data-book-chips="genres"
-                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
-                 role="radiogroup"
-                 aria-labelledby="bookGenreLabel">
-              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
-            </div>
+          <div class="form-field">
+            <label for="bookGenre"><?= $tr('common.bookform.field_genre') ?></label>
+            <!-- Выпадающий список жанров: справочник GET /api/additional/genres
+                 наполняет book-form.js (initCatalogSelect); выбор ОДИН — бэкенд
+                 хранит ровно один genreId (int > 0). Select сам несёт name и
+                 value (value — id из $form после 422 или книги при edit). -->
+            <select class="form-field__input book-form__select"
+                    id="bookGenre"
+                    name="genreId"
+                    data-catalog-select="genres"
+                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>">
+              <?php if ((string) $genreValue !== ''): ?>
+                <option value="<?= $view->e($genreValue) ?>" selected><?= $view->e($genreValue) ?></option>
+              <?php else: ?>
+                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
+              <?php endif; ?>
+            </select>
             <?= $errorBox('genreId') ?>
           </div>
 
-          <div class="form-field book-form__chips-field" data-chips-field>
-            <label for="bookCategory" id="bookCategoryLabel"><?= $tr('common.bookform.field_category') ?></label>
-            <!-- Чипсы категорий: GET /api/additional/categories, выбор один. -->
-            <input type="hidden"
-                   id="bookCategory"
-                   name="categoryId"
-                   value="<?= $view->e($categoryValue) ?>"
-                   data-chips-value>
-            <div class="book-chips"
-                 data-book-chips="categories"
-                 data-placeholder="<?= $tr('common.bookform.chips_placeholder') ?>"
-                 role="radiogroup"
-                 aria-labelledby="bookCategoryLabel">
-              <p class="book-chips__hint" data-chips-hint><?= $tr('common.bookform.chips_placeholder') ?></p>
-            </div>
+          <div class="form-field">
+            <label for="bookCategory"><?= $tr('common.bookform.field_category') ?></label>
+            <!-- Выпадающий список категорий: GET /api/additional/categories,
+                 выбор один (см. комментарий к жанру выше). -->
+            <select class="form-field__input book-form__select"
+                    id="bookCategory"
+                    name="categoryId"
+                    data-catalog-select="categories"
+                    data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>">
+              <?php if ((string) $categoryValue !== ''): ?>
+                <option value="<?= $view->e($categoryValue) ?>" selected><?= $view->e($categoryValue) ?></option>
+              <?php else: ?>
+                <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
+              <?php endif; ?>
+            </select>
             <?= $errorBox('categoryId') ?>
           </div>
 
@@ -522,7 +529,9 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
 
         <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/new. -->
+             имя уходит в POST /api/books/new. Обязательное (бэк требует
+             непустые 1..2000) — required + клиентская проверка на пустоту
+             и длину (11.2, см. RULES в book-form.js). -->
         <div class="form-field">
           <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
@@ -530,6 +539,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
                     name="authorNotes"
                     rows="4"
                     maxlength="2000"
+                    required
                     placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('authorNotes') ?>
         </div>
@@ -599,110 +609,79 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
 
         <!-- ============================================================
-             ВРЕМЕННО НА ШАГЕ 2: списки авторов/редакторов.
-             Шаг 3 «Роли» пропущен (см. договорённости в шапке файла) —
-             когда его будут делать, эти два блока просто переносятся
-             туда без изменений.
+             СПИСКИ АВТОРОВ/РЕДАКТОРОВ (11.3) переехали в окно
+             публикации — partial book-publish-dialog (ниже, внутри
+             <form>), открывается кнопкой Publish в нижней панели.
              ============================================================ -->
-        <h3 class="book-form__section-title"><?= $tr('common.bookform.section_roles') ?></h3>
 
-        <!-- АВТОРЫ: поиск людей по нику (заглушка /api/users/search),
-             список до 30 человек под поиском, у каждого кнопка
-             «сделать редактором» (переносит его же в список редакторов,
-             остаётся автором) и минус для удаления. -->
-        <div class="form-field" data-people-field="authors">
-          <label for="bookAuthorsSearch"><?= $tr('common.bookform.field_authors') ?></label>
-          <input class="form-field__input"
-                 type="text"
-                 id="bookAuthorsSearch"
-                 data-people-search
-                 maxlength="100"
-                 autocomplete="off"
-                 placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
-                 aria-describedby="bookAuthorsHint">
-          <ul class="people-search__results" data-people-results hidden></ul>
-          <ul class="people-list" data-people-list>
-            <?php foreach ($authors as $person): ?>
-              <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
-                <span class="people-list__name"><?= $view->e($person['username']) ?></span>
-                <button class="people-list__action" type="button" data-make-editor><?= $tr('common.bookform.make_editor') ?></button>
-                <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <!-- по одному hidden на человека: без JS POST унесёт authors[]=id,… -->
-          <?php foreach ($authors as $person): ?>
-            <input type="hidden" name="authors[]" data-people-value value="<?= $view->e($person['id']) ?>">
-          <?php endforeach; ?>
-          <p class="book-form__hint" id="bookAuthorsHint"><?= $tr('common.bookform.authors_hint') ?></p>
-          <?= $errorBox('authors') ?>
-        </div>
-
-        <!-- РЕДАКТОРЫ: тот же поиск, лимита нет; минус убирает из списка.
-             Создатель книги сюда не попадает — он редактор по умолчанию. -->
-        <div class="form-field" data-people-field="editors">
-          <label for="bookEditorsSearch"><?= $tr('common.bookform.field_editors') ?></label>
-          <input class="form-field__input"
-                 type="text"
-                 id="bookEditorsSearch"
-                 data-people-search
-                 maxlength="100"
-                 autocomplete="off"
-                 placeholder="<?= $tr('common.bookform.people_search_ph') ?>"
-                 aria-describedby="bookEditorsHint">
-          <ul class="people-search__results" data-people-results hidden></ul>
-          <ul class="people-list" data-people-list>
-            <?php foreach ($editors as $person): ?>
-              <li class="people-list__item" data-person-id="<?= $view->e($person['id']) ?>" data-person-name="<?= $view->e($person['username']) ?>">
-                <span class="people-list__name"><?= $view->e($person['username']) ?></span>
-                <button class="people-list__remove" type="button" data-remove-person aria-label="<?= $tr('common.bookform.remove_person') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <?php foreach ($editors as $person): ?>
-            <input type="hidden" name="editors[]" data-people-value value="<?= $view->e($person['id']) ?>">
-          <?php endforeach; ?>
-          <p class="book-form__hint" id="bookEditorsHint"><?= $tr('common.bookform.editors_hint') ?></p>
-          <?= $errorBox('editors') ?>
-        </div>
+        <!-- Кнопки действий ушли в общую нижнюю панель
+             .book-form__actions (11.4) — см. ниже, перед </form>. -->
 
         <!-- ============================================================
-             НАВИГАЦИЯ ПОСЛЕДНЕГО (пока) ШАГА — как в article-form.
-
-             СОЗДАНИЕ («Назад/Отмена» + ОДНА отправка):
-               Create draft → POST /api/books/new → 201 { createdId } →
-                            редирект на страницу книги: бэк создаёт
-                            только черновик, публикация идёт с её
-                            страницы (плашка rights-modal).
-
-             РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
-             блокируется в book-form.js — endpoint'а обновления нет,
-             а /api/books/new только создаёт.
-
              Невалидные данные (клиентские или 422 от бэка) возвращают
              пользователя на шаг с ошибкой: сначала первая страница
              (порядок полей в DOM), затем он сам перейдёт на вторую —
              см. focusFirstInvalid в book-form.js.
-             Когда появится шаг 3 «Роли», блок действий переедет туда.
              ============================================================ -->
-        <div class="book-step__nav">
-          <button type="button" class="btn btn--secondary" data-step-prev>
-            ← <?= $tr('common.bookform.back') ?>
-          </button>
+      </section>
+
+      <!-- ============================================================
+           НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ ФОРМЫ (11.4): sticky, видна на всех
+           шагах. «Назад» скрыта на шаге 1 (book-form.js, initSteps).
+
+           СОЗДАНИЕ («Отмена» + Create draft / Publish):
+             Create draft → POST /api/books/new → 201 { createdId } →
+                          редирект на страницу книги: бэк создаёт
+                          только черновик.
+             Publish → тот же POST /api/books/new (черновик), затем
+                       POST /books/{id}/publish (P0-маршрут, см.
+                       rights-modal.php). Если publish не прошёл —
+                       черновик уже создан, поэтому уводим на страницу
+                       книги с предупреждением (публикация возможна
+                       и с неё).
+
+           РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
+           блокируется в book-form.js — endpoint'а обновления нет,
+           а /api/books/new только создаёт.
+           ============================================================ -->
+      <div class="book-form__actions">
+        <button type="button" class="btn btn--secondary" data-step-prev hidden>
+          ← <?= $tr('common.bookform.back') ?>
+        </button>
+        <div class="book-form__actions-right">
           <?php if ($isEdit): ?>
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" data-submit-save>
+            <button class="btn btn--primary" type="submit" data-submit-save>
               <?= $tr('common.bookform.save') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--primary" type="submit" data-submit-draft>
+            <button class="btn btn--secondary" type="submit" data-submit-draft>
               <?= $tr('common.bookform.create_draft') ?>
+            </button>
+            <!-- Publish (11.3): открывает окно выбора авторов/редакторов
+                 (book-publish-dialog); отправка — кнопкой внутри окна. -->
+            <button class="btn btn--primary" type="button" data-publish-open>
+              <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>
         </div>
-      </section>
+      </div>
+
+      <!-- ============================================================
+           ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
+           в book-publish-dialog (partial). Publish в нижней панели —
+           кнопка-открыватель [data-publish-open]; отправка — кнопкой
+           внутри окна (data-submit-publish).
+           Окно лежит ВНУТРИ <form>: hidden inputs authors[]/editors[]
+           должны попадать в FormData.
+           ============================================================ -->
+      <?php $view->include('book-publish-dialog', [
+          'authors'    => $authors,
+          'editors'    => $editors,
+          'errorBoxFn' => $errorBox,
+      ]); ?>
 
     </form>
 

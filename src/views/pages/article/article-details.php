@@ -60,8 +60,12 @@ $str = static function ($v): string {
 
 /* ---------- Скалярные значения ---------- */
 
-$publicationId = (int)  ($article->id ?? 0);
-$articleId     = (int)  ($article->id ?? 0);
+// id статьи: и из объекта, и из массива (тест-роут /pages/test отдаёт
+// query-массивы — от этого зависит data-publication-id у комментариев
+// и data-rate-publication у звёзд оценки)
+$articleRawId  = is_array($article) ? ($article['id'] ?? null) : ($article->id ?? null);
+$publicationId = (int) $articleRawId;
+$articleId     = (int) $articleRawId;
 // isSaved живёт в контексте юзера (PublicationContext), а не в модели
 $isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
 $savesCount    = (int)  ($article->savedCount ?? 0);
@@ -253,7 +257,10 @@ if (!empty($iconId)) {
         </span>
       </div>
 
-      <div class="rate" data-rate role="radiogroup" aria-label="<?= $tr('common.article.rate_group') ?>">
+      <div class="rate" data-rate role="radiogroup"
+           data-rate-kind="articles"
+           data-rate-publication="<?= (int) $publicationId ?>"
+           aria-label="<?= $tr('common.article.rate_group') ?>">
         <span class="rate__label"><?= $tr('common.book.rate_label') ?></span>
         <div class="rate__stars">
           <?php for ($i = 1; $i <= 5; $i++): ?>

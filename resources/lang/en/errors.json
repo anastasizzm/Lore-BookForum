@@ -95,6 +95,7 @@
     },
     "comments": {
         "empty": "Comment cannot be empty",
+        "sent": "Comment sent.",
         "duplicate": "You have already sent this comment.",
         "id_missing": "Cannot send the reply: the comment id is missing.",
         "publication_id_missing": "Cannot send the reply: the publication id is missing on this page.",
