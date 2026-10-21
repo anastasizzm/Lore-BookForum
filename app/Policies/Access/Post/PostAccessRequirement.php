@@ -4,19 +4,18 @@ declare(strict_types=1);
 namespace App\Policies\Access\Post;
 
 use App\Policies\Access\AccessRequirement;
+use App\Models\Enums\ServiceType;
 use App\Models\Access\Operations\AccessOperation;
 
 final class PostAccessRequirement extends AccessRequirement
 {
-    public const CONTAINER_KEY = 'POST_ACCESS';
-
     public function __construct(
-        public readonly string $pathPattern,
-        public readonly AccessOperation $operation,
+        string $pathPattern,
+        AccessOperation $operation,
     ){
         parent::__construct($pathPattern, $operation);
     }
 
-    public function getTypeKey() : string { return self::CONTAINER_KEY; }
+    public function getTypeKey() : string { return ServiceType::Post; }
     public function describe() : string { return 'errors.policies.access.post'; }
 }

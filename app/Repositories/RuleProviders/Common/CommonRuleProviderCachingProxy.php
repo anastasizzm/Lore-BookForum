@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services\Access\RuleProviders\Common;
+namespace App\Repositories\RuleProviders\Common;
 
 use App\Models\Access\Rules\OperationChecker;
 use App\Cache\RuleProviders\RuleProviderCache;
@@ -16,7 +16,7 @@ final class CommonRuleProviderCachingProxy implements CommonRuleProvider
     ) {}
 
     public function getRule(int $userId): OperationChecker {
-        $key = $this->buildKey($userId, $entityId);
+        $key = $this->buildKey($userId);
 
         $cached = $this->cache->get($key);
 
@@ -31,7 +31,7 @@ final class CommonRuleProviderCachingProxy implements CommonRuleProvider
         return $checker;
     }
 
-    private function buildKey(int $userId, int|string|object $entityId): string
+    private function buildKey(int $userId): string
     {
         return "common_rule:{$this->type}:{$userId}";
     }

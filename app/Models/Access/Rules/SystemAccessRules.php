@@ -11,7 +11,7 @@ use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
 use App\Models\Dto;
 
-readonly class SystemAccessRules extends Dto
+readonly class SystemAccessRules extends Dto implements OperationChecker
 {
     public function __construct(
         public bool $manageAccounts,

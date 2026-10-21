@@ -30,7 +30,7 @@ final class RedisRuleProviderCache implements RuleProviderCache
         return is_array($data) ? $data : null;
     }
 
-    public function set(string $key, array $data, int $ttl): void
+    public function set(string $key, array $data, int $ttl = 300): void
     {
         $json = json_encode($data, JSON_THROW_ON_ERROR);
         $this->redis->setex($key, $ttl, $json);

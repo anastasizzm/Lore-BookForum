@@ -32,9 +32,10 @@ use App\Cache\Auth\RedisTokenResetTtlCache;
 use App\Cache\Auth\MailVerifyCache;
 use App\Cache\Auth\RedisMailVerifyCache;
 
-use App\Cache\Auth\RuleProviderCache;
-use App\Cache\Auth\RedisRuleProviderCache;
+use App\Cache\RuleProviders\RuleProviderCache;
+use App\Cache\RuleProviders\RedisRuleProviderCache;
 
+use App\Models\Enums\ServiceType;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\AuthorizationService;
 use App\Services\Auth\EmailVerificationService;
@@ -50,8 +51,8 @@ use App\Storage\LocalFileStorage;
 
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\Users\ProfilesRepository;
-use App\Services\Access\RuleProviders\Concrete\RuleProviderCachingProxy;
-use App\Services\Access\RuleProviders\Common\CommonRuleProviderCachingProxy;
+use App\Repositories\RuleProviders\Concrete\RuleProviderCachingProxy;
+use App\Repositories\RuleProviders\Common\CommonRuleProviderCachingProxy;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
 use App\Repositories\RuleProviders\Concrete\PublicationRuleProvider;
 use App\Repositories\RuleProviders\Concrete\PostRuleProvider;
@@ -106,42 +107,37 @@ $container->singleton(MailVerifyCache::class, fn(Container $c) => new RedisMailV
 $container->singleton(RuleProviderCache::class, fn(Container $c) => new RedisRuleProviderCache($c->get(RedisClient::class)));
 
 // Access
-$publicationAccessKey = App\Policies\Access\Publication\PublicationAccessRequirement::CONTAINER_KEY;
-$postAccessKey = App\Policies\Access\Post\PostAccessRequirement::CONTAINER_KEY;
-$systemAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
-$accountAccessKey = App\Policies\Access\Account\AccountAccessRequirement::CONTAINER_KEY;
-
 $ruleProvidersArray = [
     'concrete' => [
         'publication' => [
-            'accessKey' => $publicationAccessKey,
+            'accessKey' => ServiceType::Publication,
             'providerClass' => PublicationRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\PublicationAccessRules::class
         ],
         'post' => [
-            'accessKey' => $postAccessKey,
+            'accessKey' => ServiceType::Post,
             'providerClass' => PostRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\PostAccessRules::class
         ]
     ],
     'common' => [
         'publication' => [
-            'accessKey' => $publicationAccessKey,
+            'accessKey' => ServiceType::Publication,
             'providerClass' => CommonPublicationRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\PublicationAccessRules::class
         ],
         'post' => [
-            'accessKey' => $postAccessKey,
+            'accessKey' => ServiceType::Post,
             'providerClass' => CommonPostRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\PostAccessRules::class
         ],
         'system' => [
-            'accessKey' => $systemAccessKey,
+            'accessKey' => ServiceType::System,
             'providerClass' => SystemRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\SystemAccessRules::class
         ],
         'account' => [
-            'accessKey' => $accountAccessKey,
+            'accessKey' => ServiceType::Account,
             'providerClass' => AccountRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\AccountAccessRules::class
         ]
@@ -181,9 +177,9 @@ foreach($ruleProvidersArray as $type => $providers)
     }
 }
 
-foreach([$publicationAccessKey, $postAccessKey, $systemAccessKey, $accountAccessKey] as $key)
+foreach(ServiceType::cases() as $key)
 {
-    $container->singletonKeyed($key, AccessService::Class, function (Container $c) use ($key){
+    $container->singletonKeyed($key, AccessService::class, function (Container $c) use ($key){
         $rp = NULL;
         $crp = NULL;
         try{

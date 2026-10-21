@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Lib;
 
+use App\Attributes\Inject;
 use Closure;
 use ReflectionClass;
 use ReflectionNamedType;

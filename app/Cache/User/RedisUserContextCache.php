@@ -28,26 +28,12 @@ final class RedisUserContextCache implements UserContextCache
             return null;
         }
 
-        return new UserContext(
-            id:         (int) $data['id'],
-            username:   (string) $data['username'],
-            name:       (string) ($data['name'] ?? ''),
-            avatar:     (string) ($data['avatar'] ?? 'default'),
-            isAdmin:    (bool) ($data['is_admin'] ?? false),
-            isRedactor: (bool) ($data['is_redactor'] ?? false),
-        );
+        return UserContext::fromArray($data);
     }
 
     public function set(UserContext $user, int $ttl = 300): void
     {
-        $payload = json_encode([
-            'id'          => $user->id,
-            'username'    => $user->username,
-            'name'        => $user->name,
-            'avatar'      => $user->avatar,
-            'is_admin'    => $user->isAdmin,
-            'is_redactor' => $user->isRedactor,
-        ], JSON_THROW_ON_ERROR);
+        $payload = json_encode($user->toArray(), JSON_THROW_ON_ERROR);
 
         $this->redis->setex(self::PREFIX . $user->id, $ttl, $payload);
     }

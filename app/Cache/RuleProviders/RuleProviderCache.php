@@ -9,7 +9,7 @@ interface RuleProviderCache
     public function get(string $key): ?array;
 
     /** @param array<string, mixed> $data */
-    public function set(string $key, array $data, int $ttl): void;
+    public function set(string $key, array $data, int $ttl = 300): void;
 
     public function delete(string $key): void;
 

@@ -32,7 +32,7 @@ final class AccessHandler implements AuthorizationHandler
         if (empty($currentUserId))
             return Decision::unauthorized(ErrorCodes::UNAUTH_TRY);
 
-        $service = $container->getKeyed($requirement->getTypeKey(), AccessService::class);
+        $service = $this->container->getKeyed($requirement->getTypeKey(), AccessService::class);
 
         $pathMatch = preg_match($requirement->pathPattern, $ctx->request->path, $m);
         $entityId = count($m) > 1 ? $m[1] : NULL;

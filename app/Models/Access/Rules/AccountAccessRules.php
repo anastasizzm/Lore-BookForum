@@ -10,7 +10,7 @@ use App\Models\Access\Operations\Account\ManageAccountOperation;
 
 use App\Models\Dto;
 
-readonly class AccountAccessRules extends Dto
+readonly class AccountAccessRules extends Dto implements OperationChecker
 {
     public function __construct(
         public bool $manage,

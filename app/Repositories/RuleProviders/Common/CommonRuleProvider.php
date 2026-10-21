@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services\Access\RuleProviders\Common;
+namespace App\Repositories\RuleProviders\Common;
 use App\Models\Access\Rules\OperationChecker;
 
 interface CommonRuleProvider 

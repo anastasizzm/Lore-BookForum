@@ -11,6 +11,7 @@ use App\Attributes\Inject;
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\Users\ProfileFormValidator;
 
+use App\Models\Enums\ServiceType;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 use App\Repositories\Users\UsersRepository;
@@ -28,7 +29,7 @@ final class UsersService
         private readonly UserExceptionTranslator $translator,
         private readonly ProfileFormValidator $profileFormValidator,
 
-        #[Inject(key: App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY)]
+        #[Inject(key: ServiceType::System)]
         private readonly CommonRuleProvider $ruleProvider
     ){}
 

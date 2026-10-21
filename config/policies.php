@@ -57,7 +57,7 @@ foreach([
     {
         $registry->registerPolicy(
             $op, 
-            fn($ctx) => new $req($args['pattern'], $op),
+            fn($ctx) => new $req($args['pattern'], new $op()),
             AccessHandler::class);
     }
 }
@@ -72,11 +72,11 @@ use App\Models\Access\Operations\Posts\CreatePostOperation;
 
 $registry->registerPolicy(
     CreatePublicationOperation::class, 
-    fn($ctx) => new SystemAccessRequirement(PUB_PATTERN_COMMON, CreatePublicationOperation::class),
+    fn($ctx) => new SystemAccessRequirement(PUB_PATTERN_COMMON, new CreatePublicationOperation()),
     AccessHandler::class);
 $registry->registerPolicy(
     CreatePostOperation::class, 
-    fn($ctx) => new SystemAccessRequirement(POST_PATTERN_COMMON, CreatePostOperation::class),
+    fn($ctx) => new SystemAccessRequirement(POST_PATTERN_COMMON, new CreatePostOperation()),
     AccessHandler::class);
 
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
@@ -85,13 +85,13 @@ use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
 $registry->registerPolicy(
     ManageAdditionalsSystemOperation::class, 
-    fn($ctx) => new SystemAccessRequirement('#additionals\/#', ManageAdditionalsSystemOperation::class),
+    fn($ctx) => new SystemAccessRequirement('#additionals\/#', new ManageAdditionalsSystemOperation()),
     AccessHandler::class);
 $registry->registerPolicy(
     ManagePeopleSystemOperation::class, 
-    fn($ctx) => new SystemAccessRequirement('#system\/users\/#', ManagePeopleSystemOperation::class),
+    fn($ctx) => new SystemAccessRequirement('#system\/users\/#', new ManagePeopleSystemOperation()),
     AccessHandler::class);
 $registry->registerPolicy(
     ManageRolesSystemOperation::class, 
-    fn($ctx) => new SystemAccessRequirement('#system\/roles\/#', ManageRolesSystemOperation::class),
+    fn($ctx) => new SystemAccessRequirement('#system\/roles\/#', new ManageRolesSystemOperation()),
     AccessHandler::class);

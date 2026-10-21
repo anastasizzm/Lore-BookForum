@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services\Access\RuleProviders\Concrete;
+namespace App\Repositories\RuleProviders\Concrete;
 use App\Models\Access\Rules\OperationChecker;
 
 interface RuleProvider 

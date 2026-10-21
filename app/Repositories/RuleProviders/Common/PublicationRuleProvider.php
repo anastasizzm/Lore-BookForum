@@ -11,6 +11,7 @@ use App\Repositories\Repository;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
 
 use App\Lib\Data\Database;
+use PDO;
 
 final class PublicationRuleProvider extends Repository implements CommonRuleProvider 
 {

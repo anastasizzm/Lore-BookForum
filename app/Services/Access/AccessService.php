@@ -6,7 +6,7 @@ use App\Repositories\RuleProviders\Concrete\RuleProvider;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Models\Access\Operations\AccessOperation;
 
-final class EntityAccessService 
+final class AccessService 
 {
     public function __construct(
         private readonly ?RuleProvider $ruleProvider = NULL,
