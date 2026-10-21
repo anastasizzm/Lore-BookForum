@@ -32,6 +32,9 @@ use App\Cache\Auth\RedisTokenResetTtlCache;
 use App\Cache\Auth\MailVerifyCache;
 use App\Cache\Auth\RedisMailVerifyCache;
 
+use App\Cache\Auth\RuleProviderCache;
+use App\Cache\Auth\RedisRuleProviderCache;
+
 use App\Services\Auth\AuthService;
 use App\Services\Auth\AuthorizationService;
 use App\Services\Auth\EmailVerificationService;
@@ -47,6 +50,8 @@ use App\Storage\LocalFileStorage;
 
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\Users\ProfilesRepository;
+use App\Services\Access\RuleProviders\Concrete\RuleProviderCachingProxy;
+use App\Services\Access\RuleProviders\Common\CommonRuleProviderCachingProxy;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
 use App\Repositories\RuleProviders\Concrete\PublicationRuleProvider;
 use App\Repositories\RuleProviders\Concrete\PostRuleProvider;
@@ -54,6 +59,7 @@ use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Repositories\RuleProviders\Common\PostRuleProvider as CommonPostRuleProvider;
 use App\Repositories\RuleProviders\Common\PublicationRuleProvider as CommonPublicationRuleProvider;
 use App\Repositories\RuleProviders\Common\SystemRuleProvider;
+use App\Repositories\RuleProviders\Common\AccountRuleProvider;
 
 
 // Policies
@@ -97,38 +103,83 @@ $container->singleton(UserContextCache::class, fn(Container $c) => new RedisUser
 $container->singleton(PassResetCache::class, fn(Container $c) => new RedisPassResetCache($c->get(RedisClient::class)));
 $container->singleton(TokenResetTtlCache::class, fn(Container $c) => new RedisTokenResetTtlCache($c->get(RedisClient::class)));
 $container->singleton(MailVerifyCache::class, fn(Container $c) => new RedisMailVerifyCache($c->get(RedisClient::class)));
+$container->singleton(RuleProviderCache::class, fn(Container $c) => new RedisRuleProviderCache($c->get(RedisClient::class)));
 
 // Access
 $publicationAccessKey = App\Policies\Access\Publication\PublicationAccessRequirement::CONTAINER_KEY;
 $postAccessKey = App\Policies\Access\Post\PostAccessRequirement::CONTAINER_KEY;
 $systemAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
-$accountAccessKey = App\Policies\Access\System\SystemAccessRequirement::CONTAINER_KEY;
+$accountAccessKey = App\Policies\Access\Account\AccountAccessRequirement::CONTAINER_KEY;
 
-$container->singletonKeyed($publicationAccessKey, RuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new PublicationRuleProvider($db);
-});
-$container->singletonKeyed($postAccessKey, RuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new PostRuleProvider($db);
-});
+$ruleProvidersArray = [
+    'concrete' => [
+        'publication' => [
+            'accessKey' => $publicationAccessKey,
+            'providerClass' => PublicationRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\PublicationAccessRules::class
+        ],
+        'post' => [
+            'accessKey' => $postAccessKey,
+            'providerClass' => PostRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\PostAccessRules::class
+        ]
+    ],
+    'common' => [
+        'publication' => [
+            'accessKey' => $publicationAccessKey,
+            'providerClass' => CommonPublicationRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\PublicationAccessRules::class
+        ],
+        'post' => [
+            'accessKey' => $postAccessKey,
+            'providerClass' => CommonPostRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\PostAccessRules::class
+        ],
+        'system' => [
+            'accessKey' => $systemAccessKey,
+            'providerClass' => SystemRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\SystemAccessRules::class
+        ],
+        'account' => [
+            'accessKey' => $accountAccessKey,
+            'providerClass' => AccountRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\AccountAccessRules::class
+        ]
+    ],
+    
+];
 
-$container->singletonKeyed($postAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new CommonPostRuleProvider($db);
-});
-$container->singletonKeyed($publicationAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new CommonPublicationRuleProvider($db);
-});
-$container->singletonKeyed($systemAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new SystemRuleProvider($db);
-});
-$container->singletonKeyed($accountAccessKey, CommonRuleProvider::class, function (Container $c, string $key){
-    $db = $c->get(Database::class);
-    return new AccountRuleProvider($db);
-});
+foreach($ruleProvidersArray as $type => $providers) 
+{
+    $interfaceClass = NULL;
+    $cachingClass = NULL;
+
+    if ($type == 'concrete'){
+        $interfaceClass = RuleProvider::class;
+        $cachingClass = RuleProviderCachingProxy::class;
+    }
+    else {
+        $interfaceClass = CommonRuleProvider::class;
+        $cachingClass = CommonRuleProviderCachingProxy::class;
+    }
+
+    foreach($providers as $name => $args)
+    {
+        $container->singletonKeyed($args['accessKey'], $interfaceClass, function (Container $c, string $key) 
+            use ($name, $args, $interfaceClass, $cachingClass){
+
+            $db = $c->get(Database::class);
+            $cache = $c->get(RuleProviderCache::class);
+
+            return new $cachingClass(
+                new $args['providerClass']($db),
+                $cache,
+                $name,
+                $args['checkerClass']
+            );
+        });
+    }
+}
 
 foreach([$publicationAccessKey, $postAccessKey, $systemAccessKey, $accountAccessKey] as $key)
 {

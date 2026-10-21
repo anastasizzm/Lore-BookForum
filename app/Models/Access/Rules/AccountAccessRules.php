@@ -46,4 +46,20 @@ readonly class AccountAccessRules extends Dto
             block: self::bool($row, $prefix . 'block'),
         );
     }
+
+    public function toArray(): array
+    {
+        return [
+            'manage' => $this->manage,
+            'block' => $this->block
+        ];
+    }
+
+    public static function fromArray(array $data): static
+    {
+        return new self (
+            manage: (bool)($data['manage'] ?? false),
+            block: (bool)($data['block'] ?? false)
+        );
+    }
 }

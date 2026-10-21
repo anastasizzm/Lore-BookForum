@@ -69,4 +69,30 @@ class PublicationAccessRules extends Dto implements OperationChecker
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
         );
     }
+
+    public function toArray(): array
+    {
+        return [
+            'create' => $this->create,
+            'updateMeta' => $this->updateMeta,
+            'updateContent' => $this->updateContent,
+            'delete' => $this->delete,
+            'read' => $this->read,
+            'managePeople' => $this->managePeople,
+            'manageRoles' => $this->manageRoles
+        ];
+    }
+
+    public static function fromArray(array $data): static
+    {
+        return new self (
+            create: (bool)($data['create'] ?? false),
+            updateMeta: (bool)($data['updateMeta'] ?? false),
+            updateContent: (bool)($data['updateContent'] ?? false),
+            delete: (bool)($data['delete'] ?? false),
+            read: (bool)($data['read'] ?? false),
+            managePeople: (bool)($data['managePeople'] ?? false),
+            manageRoles: (bool)($data['manageRoles'] ?? false)
+        );
+    }
 }

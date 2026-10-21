@@ -52,4 +52,22 @@ readonly class SystemAccessRules extends Dto
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
         );
     }
+
+    public function toArray(): array
+    {
+        return [
+            'manageAdditionals' => $this->manageAdditionals,
+            'managePeople' => $this->managePeople,
+            'manageRoles' => $this->manageRoles
+        ];
+    }
+
+    public static function fromArray(array $data): static
+    {
+        return new self (
+            manageAdditionals: (bool)($data['manageAdditionals'] ?? false),
+            managePeople: (bool)($data['managePeople'] ?? false),
+            manageRoles: (bool)($data['manageRoles'] ?? false)
+        );
+    }
 }

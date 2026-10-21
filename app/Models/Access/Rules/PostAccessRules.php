@@ -50,4 +50,22 @@ class PostAccessRules extends Dto implements OperationChecker
             delete: self::bool($row, $prefix . 'delete'),
         );
     }
+
+    public function toArray(): array
+    {
+        return [
+            'create' => $this->create,
+            'update' => $this->update,
+            'delete' => $this->delete
+        ];
+    }
+
+    public static function fromArray(array $data): static
+    {
+        return new self (
+            create: (bool)($data['create'] ?? false),
+            update: (bool)($data['update'] ?? false),
+            delete: (bool)($data['delete'] ?? false)
+        );
+    }
 }
