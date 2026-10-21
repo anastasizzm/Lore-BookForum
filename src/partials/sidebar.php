@@ -22,6 +22,17 @@
       return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
   };
 
+  /**
+   * Обёртка для ссылок, которые бэк ещё не завёл как именованный роут
+   * (например, «Черновики» → /articles?status=draft). Принимает готовый путь
+   * и добавляет ?lang=. Когда роут появится — достаточно заменить путь на
+   * $view->url('drafts'), всё остальное уже готово.
+   */
+  $urlPath = static function (string $path) use ($langQuery): string {
+      if ($langQuery === null || $langQuery === '') return $path;
+      return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+  };
+
   // Переключатель языка: тот же адрес с ?lang=xx (остальные параметры сохраняются).
   // Выбор запоминает бэк (cookie preferred_language).
   $langUrl = static function (string $code): string {
@@ -68,6 +79,11 @@
   $canOpenAdmin = is_object($me ?? null) && !empty($me->isAdmin);
   $adminUrl     = '/admin'
       . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
+
+  // ВРЕМЕННО: роут 'drafts' бэк ещё не завёл. Ведём на существующий /articles
+  // с фильтром status=draft. Когда появится $view->url('drafts') — поменяем
+  // только эту строку.
+  $draftsUrl = $urlPath('/articles?status=draft');
 ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
@@ -113,6 +129,24 @@
                     </svg>
                 </span>
                 <span class="nav-text"><?= $tr('common.sidebar.library') ?></span>
+            </a>
+
+            <!-- Черновики: пока ведёт на /articles?status=draft (роут 'drafts' бэк ещё не завёл).
+                 Когда роут появится — заменить $draftsUrl на $url('drafts'), см. выше. -->
+            <a href="<?= $view->e($draftsUrl) ?>"
+               class="nav-item mobile-nav-btn <?= $selectedTab === 'drafts' ? 'active' : '' ?>"
+               title="<?= $tr('common.sidebar.drafts') ?>"
+               <?= $selectedTab === 'drafts' ? 'aria-current="page"' : '' ?>>
+                <span class="nav-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"
+                              stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M14 3v4h4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                        <path d="M8 12h8M8 15.5h8M8 19h5"
+                              stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </span>
+                <span class="nav-text"><?= $tr('common.sidebar.drafts') ?></span>
             </a>
 
             <!-- Сохранённые -->
@@ -206,10 +240,14 @@
                 </button>
             </form>
 
-            <button type="button" class="settings-menu__item">
+            <!-- Помощь (задача 5): статическая страница src/views/pages/help.php.
+                 Роута help бэк ещё не завёл (config/routes.php заморожен) —
+                 ведём на существующий тест-роут /pages/test?page=help.
+                 Когда роут появится — заменить путь на $url('help'). -->
+            <a href="<?= $view->e($urlPath('/pages/test?page=help')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">?</span>
                 <span><?= $tr('common.sidebar.help') ?></span>
-            </button>
+            </a>
 
             <!-- Смена пароля (страница auth/change-password.php — копия
                  password-reset.php, тексты и ссылка «назад» свои, ключи

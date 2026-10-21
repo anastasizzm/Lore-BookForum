@@ -1,0 +1,328 @@
+/* ============================================
+   ADMIN — стили админки (dashboard, таблицы, бейджи).
+   Подключается только страницами src/views/pages/admin/* через
+   блок head_extra (см. admin/dashboard.php и т.д.).
+
+   Всё на токенах из variable.css: отступы (--space-*), границы
+   (--color-border), поверхность (--color-surface), радиусы (--radius-*),
+   тени (--shadow-*), шрифты (--fs-*, --fw-medium).
+   Адаптив: сетка/таблицы перестраиваются на 480px (то, что нужно
+   для 375px-экрана) + общее правило для всех брейкпоинтов ниже.
+   ============================================ */
+
+/* Локальные токены статусов: в variable.css зелёного нет,
+   жёлтый/красный берём оттуда же (--color-warning / --color-error). */
+:root {
+  --admin-success: #2F9E44;
+  --admin-success-bg: #E7F5EC;
+  --admin-danger-bg: #FDECEC;
+  --admin-warning-bg: #FCF3E3;
+}
+
+/* ============================================
+   DASHBOARD — сетка карточек
+   ============================================ */
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.admin-card:hover,
+.admin-card:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.admin-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Карточка-заглушка (Reports — раздела пока нет) */
+.admin-card--soon {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.admin-card--soon:hover,
+.admin-card--soon:focus-visible {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+
+.admin-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.admin-card__title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.admin-card__hint {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
+  color: var(--color-text-muted);
+}
+
+.admin-card__count {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+/* ============================================
+   TOOLBAR — поиск, фильтры, счётчик над таблицей
+   ============================================ */
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  width: 100%;
+}
+
+.admin-toolbar__search {
+  flex: 1 1 220px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-toolbar__search::placeholder {
+  color: var(--color-text-muted);
+}
+
+.admin-toolbar__search:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.admin-toolbar__count {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ============================================
+   TABLE — таблицы админки
+   .admin-table-wrap даёт горизонтальный скролл на узких экранах,
+   чтобы на 375px ничего не выезжало за край контента.
+   ============================================ */
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+}
+
+.admin-table caption {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-table thead th {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.admin-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--color-bg-main);
+}
+
+.admin-table__id {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+/* Длинные тексты (email, текст комментария) не рвут таблицу */
+.admin-table__clip {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table__empty td {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   BADGE — роли, статусы, типы
+   ============================================ */
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.admin-badge--accent {
+  color: var(--color-primary);
+  background: var(--color-bg-secondary);
+}
+
+.admin-badge--success {
+  color: var(--admin-success);
+  background: var(--admin-success-bg);
+  border-color: var(--admin-success);
+}
+
+.admin-badge--warning {
+  color: var(--color-warning);
+  background: var(--admin-warning-bg);
+  border-color: var(--color-warning);
+}
+
+.admin-badge--danger {
+  color: var(--color-error);
+  background: var(--admin-danger-bg);
+  border-color: var(--color-error);
+}
+
+.admin-badge--muted {
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   ACTIONS — кнопки в колонке Actions
+   ============================================ */
+.admin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.admin-actions .btn {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+}
+
+/* ============================================
+   Заметка-заглушка под шапкой («API ещё нет»)
+   ============================================ */
+.admin-note {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* ============================================
+   RESPONSIVE — 480px покрывает целевой 375px-экран
+   ============================================ */
+@media (max-width: 480px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar__search {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .admin-toolbar__count {
+    margin-left: 0;
+  }
+
+  /* Таблица не сжимается в ноль: скролл внутри .admin-table-wrap,
+     внутри — плотнее, чтобы колонки помещались чаще. */
+  .admin-table {
+    min-width: 560px;
+    font-size: var(--fs-small);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: var(--space-2);
+  }
+
+  .admin-table__clip {
+    max-width: 180px;
+  }
+
+  .admin-actions {
+    flex-wrap: nowrap;
+  }
+}

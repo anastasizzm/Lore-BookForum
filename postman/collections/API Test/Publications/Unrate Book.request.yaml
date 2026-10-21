@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/books/{{bookId}}/rate"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+order: 15000

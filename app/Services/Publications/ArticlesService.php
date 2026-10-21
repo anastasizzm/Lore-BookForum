@@ -6,6 +6,9 @@ namespace App\Services\Publications;
 use App\Repositories\Publications\ArticlesRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 
+use App\Forms\Publications\RateForm;
+use App\Validators\Publications\RateFormValidator;
+
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Models\Queries\Publications\ArticlesListQuery;
@@ -33,6 +36,7 @@ final class ArticlesService
         private readonly ArticlesRepository $articlesRepo,
         private readonly ArticleExceptionTranslator $translator,
         private readonly PublicationContextEnricher $enricher,
+        private readonly RateFormValidator $rateValidator,
         private readonly UnitOfWork $uow
     ){}
 
@@ -138,6 +142,39 @@ final class ArticlesService
             });
         }
         catch(\PDOException $e){
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function rate(int $userId, int $articleId, RateForm $form) : void 
+    {
+        $bag = $this->rateValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        try{
+            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId, $form) {
+                if (!$this->articlesRepo->checkType($articleId))
+                    throw new ValidationException(['articleId' => ['Article not found']]);
+                $this->articlesRepo->rate($userId, $articleId, $form->rating);
+            });
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->translator->translate($e);
+        }
+    }
+
+    public function uprate(int $userId, int $articleId) : void 
+    {
+        try{
+            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
+                if (!$this->articlesRepo->checkType($articleId))
+                    throw new ValidationException(['articleId' => ['Article not found']]);
+                $this->articlesRepo->unrate($userId, $articleId);
+            });
+        }
+        catch(\PDOException $e)
+        {
             throw $this->translator->translate($e);
         }
     }

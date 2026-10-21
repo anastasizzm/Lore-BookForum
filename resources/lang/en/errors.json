@@ -3,6 +3,7 @@
         "required": "The field is required",
         "not_found": "Not found",
         "not_exists": "Does not exists",
+        "not_allowed": "The value is not allowed",
         "format": "Invalid format",
         "csrf_fail": "CSRF token mismatch",
         "already_exists": "Already exists",
@@ -32,7 +33,8 @@
         "publications_failed_short": "Failed to load.",
         "search_failed": "Search failed. Try again.",
         "search_failed_http": "Search failed (HTTP :status).",
-        "users_load_failed": "Could not load the list of users."
+        "users_load_failed": "Could not load the list of users.",
+        "delete_failed": "Could not delete (HTTP :status)."
     },
     "validation": {
         "invalid_login": "Invalid login or email",
@@ -65,8 +67,7 @@
     "books": {
         "pub_exists": "A book for this publication already exists",
         "isbn_exists": "A book with this ISBN already exists",
-        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X",
-        "format_exists": "This book already has the content with such format"
+        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
     },
     "account": {
         "credits_invalid": "Invalid login or password",
@@ -95,22 +96,9 @@
         "no_user_data": "No user data provided",
         "no_email_data": "No email data provided"
     },
-    "files": {
-        "ini_size": "File exceeds server limit",
-        "form_size": "File exceeds form limit",
-        "partial": "File was only partially uploaded",
-        "no_file": "No file was uploaded",
-        "no_tmp_dir": "Server has no temp directory",
-        "cant_write": "Server cannot write to disk",
-        "extension": "Upload stopped by extension",
-        "upload_fail": "Upload failed",
-        "file_empty": "File is empty",
-        "file_large": "File is too large (max :max MB)",
-        "invalid_upload": "Invalid upload",
-        "file_format": "Unsupported file format: :format"
-    },
     "comments": {
         "empty": "Comment cannot be empty",
+        "sent": "Comment sent.",
         "duplicate": "You have already sent this comment.",
         "id_missing": "Cannot send the reply: the comment id is missing.",
         "publication_id_missing": "Cannot send the reply: the publication id is missing on this page.",
