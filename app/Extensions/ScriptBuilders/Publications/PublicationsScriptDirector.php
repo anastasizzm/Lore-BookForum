@@ -129,9 +129,12 @@ abstract class PublicationsScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $filter = match($status){
+            PublicationStatus::Any => '',
             PublicationStatus::Public => "publications.status = 'public'",
             PublicationStatus::Draft => "publications.status = 'draft'"
         };
+        if (empty($filter)) return $this;
+
         $this->tempBuilder->addWhere($filter);
         return $this;
     }

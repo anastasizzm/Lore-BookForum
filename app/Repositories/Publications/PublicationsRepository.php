@@ -9,6 +9,8 @@ use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\PublicationStatus;
 use App\Models\Scripts\ScriptParam;
 use App\Models\Publications\PublicationShort;
+use App\Models\Publications\Publication;
+use App\Models\Publications\PublicationExtended;
 use App\Models\Uuid;
 
 use App\Extensions\ScriptBuilders\Publications\PublicationsScriptDirector;
@@ -123,13 +125,13 @@ abstract class PublicationsRepository extends Repository
     {
         switch($className)
         {
-            case App\Models\Publications\PublicationShort::class:
+            case PublicationShort::class:
                 $this->director->addPublicationShortSelectTemp();
                 break;
-            case App\Models\Publications\Publication::class;
+            case Publication::class;
                 $this->director->addPublicationSelectTemp();
                 break;
-            case App\Models\Publications\PublicationExtended::class:
+            case PublicationExtended::class:
                 $this->director->addPublicationExtendedSelectTemp();
                 break;
             default:
