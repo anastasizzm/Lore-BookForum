@@ -636,5 +636,33 @@
         "profile_1": "Your profile shows your publications and avatar; you can edit both from your own page.",
         "support_title": "Support",
         "support_text": "Something is not working, or you have an idea to make the app better? Reach out to the moderators — feedback is always welcome."
+    },
+    "privacy": {
+        "title": "Privacy Policy",
+        "subtitle": "What data we keep, how it is used and what you control",
+        "toc_title": "On this page",
+        "intro_title": "What this policy covers",
+        "intro_text": "This policy explains what data Book App stores when you use it, why it is needed and which of it you control. It applies to the whole app: the catalogue, the feed, reading, comments and your profile.",
+        "collect_title": "What we collect",
+        "collect_1": "Account data: username, email, name and surname. Your password is stored only as a hash and can never be read back.",
+        "collect_2": "Profile data: avatar, biography and the language you pick in the language switcher.",
+        "collect_3": "What you create: books, articles, drafts, comments, likes, saves and reading progress.",
+        "collect_4": "Files you upload: covers and book files, kept in the app's own storage.",
+        "use_title": "How we use it",
+        "use_1": "To sign you in and keep your session, so you do not have to enter your password on every page.",
+        "use_2": "To show your publications, comments and profile — to you and to other readers.",
+        "use_3": "To run the app in the language you chose and to remember your choices.",
+        "share_title": "Who can see it",
+        "share_1": "Everything you publish — books, articles, comments and your public profile — is visible to other people using the app. Your email is never shown publicly.",
+        "share_2": "We do not sell your data and do not pass it to advertising services.",
+        "cookies_title": "Cookies",
+        "cookies_1": "Only the cookies the app needs to keep you signed in, to protect forms against CSRF and to remember your language preference. No tracking or analytics cookies are set.",
+        "rights_title": "Your rights",
+        "rights_1": "You can edit your profile, biography and avatar at any time from your own page.",
+        "rights_2": "You can delete your comments and publications, and ask the moderators to block your account.",
+        "security_title": "Storage and security",
+        "security_text": "Passwords are stored hashed, uploaded files live in the app's own storage, and the admin panel is available to administrators only. If you think your data has been exposed, write to the moderators — we will look into it.",
+        "contact_title": "Contact",
+        "contact_text": "Questions about this policy? Reach out to the moderators — the answer will come from a real person."
     }
 }

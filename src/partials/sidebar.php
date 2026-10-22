@@ -268,10 +268,15 @@
                 <span>Change password</span>
             </a>
 
-            <button type="button" class="settings-menu__item">
+            <!-- Privacy Policy (задача 6): статическая страница
+                 src/views/pages/privacy.php, по аналогии с Help. Роута privacy
+                 бэк ещё не завёл (config/routes.php заморожен) — ведём на
+                 существующий тест-роут /pages/test?page=privacy.
+                 Когда роут появится — заменить путь на $url('privacy'). -->
+            <a href="<?= $view->e($urlPath('/pages/test?page=privacy')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">§</span>
                 <span><?= $tr('common.sidebar.privacy') ?></span>
-            </button>
+            </a>
         </div>
     </div>
 </aside>

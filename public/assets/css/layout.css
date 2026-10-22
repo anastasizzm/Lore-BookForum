@@ -58,10 +58,17 @@ body.is-sidebar-expanded {
   text-decoration: none;
   background: transparent;
   border: none !important;
-  outline: none !important;
+  outline: none;              /* кольцо — только с клавиатуры, см. :focus-visible ниже */
   box-shadow: none !important;
   transition: background 0.15s, color 0.15s;
   cursor: pointer;
+}
+
+/* a11y: при переходе Tab по навигации фокус должен быть виден —
+   иначе :focus-visible матчится, а кольца нет (outline был none). */
+.nav-item:focus-visible {
+  outline: 2px solid var(--color-primary, #1e293b);
+  outline-offset: 2px;
 }
 
 .nav-item:hover,

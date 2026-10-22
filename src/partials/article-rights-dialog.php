@@ -38,7 +38,7 @@ $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p));
     </div>
 
     <div class="article-rights__list" data-rights-list>
-      <p class="article-rights__empty" data-rights-status><?= $tr('common.loading') ?></p>
+      <p class="article-rights__empty" data-rights-status><?= $tr('common.common.loading') ?></p>
     </div>
 
     <footer class="article-rights__foot">
