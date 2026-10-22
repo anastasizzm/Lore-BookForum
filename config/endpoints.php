@@ -32,6 +32,7 @@ return function(Router $router)
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
+    $router->get('/api/books/rules', [App\Controllers\Api\Publications\BooksController::class, 'getCommonRules'], 'api.books.rules', AuthPolicy::Auth);
     $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
     $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
     $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
@@ -42,6 +43,7 @@ return function(Router $router)
 
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
+    $router->get('/api/articles/rules', [App\Controllers\Api\Publications\ArticlesController::class, 'getCommonRules'], 'api.articles.rules', AuthPolicy::Auth);
     $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
     $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
     $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
@@ -51,6 +53,7 @@ return function(Router $router)
     // Posts
     $router->get('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'list'], 'api.post', AuthPolicy::Auth);
     $router->post('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.add', CreatePostOperation::class);
+    $router->get('/api/posts/rules', [App\Controllers\Api\Publications\PostsController::class, 'getCommonRules'], 'api.post.rules', AuthPolicy::Auth);
     $router->post('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'addComment'], 'api.post.subAdd', CreatePostOperation::class);
     $router->delete('/api/posts/{postId}', [App\Controllers\Api\Publications\PostsController::class, 'removeComment'], 'api.post.remove', DeletePostOperation::class);
     
@@ -74,4 +77,6 @@ return function(Router $router)
     $router->post('/api/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);
     $router->get('/api/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
     $router->get('/api/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
+
+    $router->get('/api/system/rules', [App\Controllers\Api\System\SystemPermissionsController::class, 'getCommonRules'], 'api.system.rules', AuthPolicy::Auth);
 };

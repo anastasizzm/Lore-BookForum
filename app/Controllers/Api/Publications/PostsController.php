@@ -11,6 +11,9 @@ use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Error;
 use App\Exceptions\ValidationException;
 use App\Controllers\Controller;
+use App\Models\Enums\ServiceType;
+use App\Repositories\RuleProviders\Common\CommonRuleProvider;
+use App\Attributes\Inject;
 
 use App\Forms\Publications\PostForm;
 use App\Extensions\Parsers\RouteParamParser;
@@ -23,6 +26,8 @@ use App\Constants;
 final class PostsController extends Controller
 {
     public function __construct(
+        #[Inject(key: ServiceType::Post)]
+        private readonly CommonRuleProvider $ruleProvider,
         private readonly PostsService $postsService
     ){}
 
@@ -81,5 +86,15 @@ final class PostsController extends Controller
         $postId = RouteParamParser::positiveInt(['p' => $postId], 'p');
         $id = $this->postsService->removeComment($postId);
         return $this->jsonEmpty(204);
+    }
+
+    public function getCommonRules(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $rules = $this->ruleProvider->getRule($userId);
+        return $this->jsonObject($rules);
     }
 }
