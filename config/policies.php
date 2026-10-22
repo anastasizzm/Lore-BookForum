@@ -47,8 +47,8 @@ foreach([
     AccountAccessRequirement::class => [
         'pattern' => ACC_PATTERN_CONCRETE,
         'operations' => [
-            App\Models\Access\Operations\Accounts\BlockAccountOperation::class,
-            App\Models\Access\Operations\Accounts\ManageAccountOperation::class,
+            App\Models\Access\Operations\Account\BlockAccountOperation::class,
+            App\Models\Access\Operations\Account\ManageAccountOperation::class,
         ]
     ]
 ] as $req => $args)

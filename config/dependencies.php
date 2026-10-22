@@ -56,11 +56,11 @@ use App\Repositories\RuleProviders\Common\CommonRuleProviderCachingProxy;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
 use App\Repositories\RuleProviders\Concrete\PublicationRuleProvider;
 use App\Repositories\RuleProviders\Concrete\PostRuleProvider;
+use App\Repositories\RuleProviders\Concrete\AccountRuleProvider;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Repositories\RuleProviders\Common\PostRuleProvider as CommonPostRuleProvider;
 use App\Repositories\RuleProviders\Common\PublicationRuleProvider as CommonPublicationRuleProvider;
 use App\Repositories\RuleProviders\Common\SystemRuleProvider;
-use App\Repositories\RuleProviders\Common\AccountRuleProvider;
 
 
 // Policies
@@ -119,6 +119,11 @@ $ruleProvidersArray = [
             'accessKey' => ServiceType::Post,
             'providerClass' => PostRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\PostAccessRules::class
+        ],
+        'account' => [
+            'accessKey' => ServiceType::Account,
+            'providerClass' => AccountRuleProvider::class,
+            'checkerClass' => App\Models\Access\Rules\AccountAccessRules::class
         ]
     ],
     'common' => [
@@ -136,11 +141,6 @@ $ruleProvidersArray = [
             'accessKey' => ServiceType::System,
             'providerClass' => SystemRuleProvider::class,
             'checkerClass' => App\Models\Access\Rules\SystemAccessRules::class
-        ],
-        'account' => [
-            'accessKey' => ServiceType::Account,
-            'providerClass' => AccountRuleProvider::class,
-            'checkerClass' => App\Models\Access\Rules\AccountAccessRules::class
         ]
     ],
     

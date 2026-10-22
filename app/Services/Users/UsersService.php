@@ -80,8 +80,8 @@ final class UsersService
 
     public function editProfile(int $userId, ProfileForm $form)
     {
-        $errorBag = $profileFormValidator->validateOne($form);
-        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
+        $errorBag = $this->profileFormValidator->validateOne($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{
             $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);

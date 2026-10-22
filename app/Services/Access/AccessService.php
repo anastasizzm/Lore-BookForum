@@ -23,7 +23,7 @@ final class AccessService
         else {
             if ($this->ruleProvider !== NULL) $rules = $this->ruleProvider->getRule($userId, $entityId);
         }
-
+        
         return $rules?->allows($operation) ?? false;
     }
 }

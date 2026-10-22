@@ -35,7 +35,6 @@ final class PostContextEnricher
 
         $map = $this->contexts->loadMap($viewerId, $ids);
         $permissions = $this->ruleProvider->getRulesMany($viewerId, $ids);
-
         return array_map(
             fn(Post $item) => new WithContext(
                 $item,

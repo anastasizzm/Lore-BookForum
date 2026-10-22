@@ -8,6 +8,8 @@ use App\Cache\RuleProviders\RuleProviderCache;
 
 final class CommonRuleProviderCachingProxy implements CommonRuleProvider
 {
+    private const int TTL = 1;
+
     public function __construct(
         private readonly CommonRuleProvider $inner,
         private readonly RuleProviderCache $cache,
@@ -26,7 +28,7 @@ final class CommonRuleProviderCachingProxy implements CommonRuleProvider
 
         $checker = $this->inner->getRule($userId);
 
-        $this->cache->set($key, $checker->toArray());
+        $this->cache->set($key, $checker->toArray(), self::TTL);
 
         return $checker;
     }

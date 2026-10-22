@@ -49,11 +49,11 @@ final class RuleProviderCachingProxy implements RuleProvider
             );
 
         $checkers = $this->inner->getRulesMany($userId, $entities);
-        $checkers = array_map(
+        $checkersCache = array_map(
             fn(OperationChecker $checker) => $checker->toArray(),
             $checkers
         );
-        $this->cache->set($key, ['data' => $checkers], self::TTL);
+        $this->cache->set($key, ['data' => $checkersCache], self::TTL);
         return $checkers;
     }
 
