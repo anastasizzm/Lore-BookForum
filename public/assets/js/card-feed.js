@@ -355,12 +355,17 @@ function fcState(card) {
   return st;
 }
 
+/**
+ * Дата комментария в ленте — всегда dd.mm.yyyy, как на страницах книги и
+ * статьи (comments.js/formatDate) и как отдаёт сервер (d.m.Y). Локале-
+ * зависимый LoreI18n.formatDate здесь не годится: в en он даёт
+ * «Oct 21, 2026» и дата комментария меняла бы вид при смене языка.
+ */
 function fcFormatDate(value) {
-  if (window.LoreI18n && typeof LoreI18n.formatDate === 'function') {
-    return LoreI18n.formatDate(value);
-  }
-  const raw = value && typeof value === 'object' ? value.date : value;
-  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(raw || ''));
+  const raw = value && typeof value === 'object' && !(value instanceof Date)
+    ? value.date : value;
+  const iso = raw instanceof Date ? raw.toISOString() : String(raw || '');
+  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
 }
 

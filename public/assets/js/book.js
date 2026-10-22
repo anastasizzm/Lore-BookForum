@@ -12,15 +12,18 @@
   /* ============================================================
      ОЦЕНКА КНИГИ/СТАТЬИ: клик по звезде отправляет оценку на бэк.
 
-     Контракт (роут пока НЕ заведён — config/ заморожен, см. отчёт):
-       POST   /api/{books|articles}/{id}/rating  body: value=1..5
-       DELETE /api/{books|articles}/{id}/rating  — снять свою оценку
-     (таблица ratings в БД уже есть: PK (publication_id, user_id),
-     триггер bump_publication_rating() обновляет rating_avg).
+     Контракт (config/endpoints.php — rate/unrate, PR #73):
+       PUT    /api/{books|articles}/{id}/rate  body: rating=1..5
+       DELETE /api/{books|articles}/{id}/rate  — снять свою оценку
+     Тело — application/x-www-form-urlencoded (Request::body()
+     принимает его и JSON; сырой text/plain даёт пустой массив и 422),
+     CSRF уходит заголовком X-CSRF-Token (csrf.js). Ответ: 201 на
+     rate, 204 на unrate.
 
-     До появления роута ответ будет 404/405: UI откатывается к прежней
-     оценке и показывает предупреждение js.book_rate_failed — как в
-     publish-фазе формы (11.4).
+     Любая неудача (нет id публикации, 4xx/5xx, HTML-редирект на
+     логин): UI откатывается к прежней оценке и показывает
+     предупреждение js.book_rate_failed — как в publish-фазе
+     формы (11.4).
      ============================================================ */
   var rate = document.querySelector('[data-rate]');
   if (rate) {
@@ -31,7 +34,7 @@
     var rateUrl = (function () {
       var kind = rate.getAttribute('data-rate-kind') || 'books';
       var id = Number(rate.getAttribute('data-rate-publication') || 0);
-      return id ? '/api/' + kind + '/' + id + '/rating' : '';
+      return id ? '/api/' + kind + '/' + id + '/rate' : '';
     })();
 
     var paint = function (value) {
@@ -55,11 +58,14 @@
       rateSending = true;
 
       var opts = {
-        method: value ? 'POST' : 'DELETE',
+        method: value ? 'PUT' : 'DELETE',
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
       };
-      if (value) opts.body = 'value=' + value;
+      if (value) {
+        opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        opts.body = 'rating=' + value;
+      }
 
       var doFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
         ? LoreCsrf.fetch
