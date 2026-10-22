@@ -86,6 +86,68 @@
     });
   }
 
+  /* ============================================================
+     SEARCH — клиентский поиск в таблицах админки
+
+     Поле [data-admin-search] фильтрует строки таблицы по data-search
+     (у строки справочника это ВСЕ её переводы разом) и поддерживает
+     в актуальном состоянии счётчик [data-admin-count] и заглушку
+     [data-admin-empty]: данных нет — common.admin.empty, поиск пуст —
+     admin.no_results с запросом.
+     ============================================================ */
+  var searchState = null;
+
+  function initSearch() {
+    var input = document.querySelector('[data-admin-search]');
+    var table = document.querySelector('[data-admin-table]');
+    if (!input || !table) return;
+
+    var emptyRow = table.querySelector('[data-admin-empty]');
+    var emptyText = emptyRow ? (emptyRow.querySelector('td') || emptyRow).textContent.trim() : '';
+
+    searchState = {
+      input: input,
+      table: table,
+      count: document.querySelector('[data-admin-count]'),
+      emptyRow: emptyRow,
+      emptyText: emptyText,
+      apply: function () {
+        var q = (searchState.input.value || '').trim().toLowerCase();
+        var rows = searchState.table.querySelectorAll('tbody tr[data-search]');
+        var shown = 0;
+
+        Array.prototype.forEach.call(rows, function (row) {
+          var haystack = (row.getAttribute('data-search') || '').toLowerCase();
+          var hit = q === '' || haystack.indexOf(q) !== -1;
+          row.hidden = !hit;
+          if (hit) shown++;
+        });
+
+        if (searchState.count) searchState.count.textContent = String(shown);
+
+        if (searchState.emptyRow) {
+          if (shown > 0) {
+            searchState.emptyRow.hidden = true;
+          } else {
+            searchState.emptyRow.hidden = false;
+            var cell = searchState.emptyRow.querySelector('td') || searchState.emptyRow;
+            cell.textContent = q
+              ? t('admin.no_results', { query: (searchState.input.value || '').trim() })
+              : searchState.emptyText;
+          }
+        }
+      }
+    };
+
+    input.addEventListener('input', searchState.apply);
+    searchState.apply();
+  }
+
+  /** Повторный прогон поиска — вызывается после перерисовки строк. */
+  function applySearch() {
+    if (searchState) searchState.apply();
+  }
+
   document.addEventListener('click', function (e) {
     var blockBtn = e.target && e.target.closest ? e.target.closest('[data-admin-block]') : null;
     if (blockBtn && !blockBtn.disabled) { blockUser(blockBtn); return; }
@@ -93,4 +155,10 @@
     var deleteBtn = e.target && e.target.closest ? e.target.closest('[data-admin-delete]') : null;
     if (deleteBtn) deleteComment(deleteBtn);
   });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
 })();
