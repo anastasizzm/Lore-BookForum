@@ -45,7 +45,6 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
             ->setGroup("p.id, ru.user_id");
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
-        var_dump($builder->build());
         
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false 

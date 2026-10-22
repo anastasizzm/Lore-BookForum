@@ -21,7 +21,6 @@ final class RuleProviderCachingProxy implements RuleProvider
         int $userId,
         int|string $entityId,
     ): OperationChecker {
-        var_dump(1);
         $key = $this->buildKey($userId, $entityId);
 
         $cached = $this->cache->get($key);

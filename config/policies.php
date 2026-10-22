@@ -19,7 +19,7 @@ $registry->registerPolicy(AuthPolicy::Auth, fn($ctx) => new AuthenticatedRequire
 $registry->registerPolicy(AuthPolicy::Verified, fn($ctx) => new VerifiedRequirement(), VerifiedHandler::class);
 
 // Concrete Access
-define('PUB_PATTERN_CONCRETE', "#(books|articles)\/(\d+)#");
+define('PUB_PATTERN_CONCRETE', "#(?:books|articles)\/(\d+)#");
 define('POST_PATTERN_CONCRETE', "#posts\/(\d+)#");
 define('ACC_PATTERN_CONCRETE', "#users\/(\d+)#");
 

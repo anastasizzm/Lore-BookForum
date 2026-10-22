@@ -18,10 +18,10 @@ final class AccessService
         $rules = NULL;
 
         if ($entityId === NULL){
-            if ($this->commonRuleProvider !== NULL) $this->commonRuleProvider->getRule($userId);
+            if ($this->commonRuleProvider !== NULL) $rules = $this->commonRuleProvider->getRule($userId);
         }
         else {
-            if ($this->ruleProvider !== NULL) $this->ruleProvider->getRule($userId, $entityId);
+            if ($this->ruleProvider !== NULL) $rules = $this->ruleProvider->getRule($userId, $entityId);
         }
 
         return $rules?->allows($operation) ?? false;
