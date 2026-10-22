@@ -200,7 +200,7 @@ body.is-sidebar-expanded {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 19px;
+  margin-bottom: var(--space-4, 24px);   /* было 19px — шапке тесно до панели */
 }
 
 .page-header__titles {
