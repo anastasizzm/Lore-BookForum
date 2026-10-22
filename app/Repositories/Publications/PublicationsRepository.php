@@ -85,7 +85,7 @@ abstract class PublicationsRepository extends Repository
         );
         $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
     }  
-    
+
     protected function insertPublication(
         string $title, 
         string $description, 
@@ -119,6 +119,26 @@ abstract class PublicationsRepository extends Repository
         return (int)$id;
     }
 
+    protected function addSelect(string $className) : void
+    {
+        switch($className)
+        {
+            case App\Models\Publications\PublicationShort::class:
+                $this->director->addPublicationShortSelectTemp();
+                break;
+            case App\Models\Publications\Publication::class;
+                $this->director->addPublicationSelectTemp();
+                break;
+            case App\Models\Publications\PublicationExtended::class:
+                $this->director->addPublicationExtendedSelectTemp();
+                break;
+            default:
+                $this->addCustomSelect($className);
+                break;
+        }
+    }
+    protected abstract function addCustomSelect(string $className) : void;
+
     protected function applyFilters(PublicationsFilters $filters) : void 
     {
         if (!empty($filters->search))
@@ -129,6 +149,8 @@ abstract class PublicationsRepository extends Repository
 
         if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($filters->creatorId);
+
+        $this->director->addStatusTempFilter($filters->status);
     }
 
     protected function applyUserRelationCriteria(UserRelationCriteria $criteria) : void 

@@ -95,10 +95,21 @@ final class ArticlesRepository extends PublicationsRepository
         return $builder;
     }
 
+    protected function addCustomSelect(string $className) : void
+    {
+        switch($className)
+        {
+            case App\Models\Publications\Article::class:
+                $this->director->addArticleSelectTemp();
+                break;
+        }
+    }
+
     public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
-        $this->director->startTempFilter()->addPublicationSelectTemp();
-        
+        $this->director->startTempFilter()->addViewerTemp($criteria->viewerId);
+        $this->addSelect($criteria->classType);
+
         $filters = $criteria->filters;
         $this->applyFilters($filters);
 
@@ -121,7 +132,7 @@ final class ArticlesRepository extends PublicationsRepository
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $items = array_map(
-            static fn(array $row) => Publication::fromRow($row),
+            static fn(array $row) => $criteria->classType::fromRow($row),
             $stmt->fetchAll(),
         );
 
@@ -130,8 +141,10 @@ final class ArticlesRepository extends PublicationsRepository
 
     public function retrieve(int $articleId, array $includeObjects) : ?Article
     {
-        $this->director->startTempFilter()->addArticleSelectTemp()
+        $this->director->startTempFilter()
             ->addConcreteTempFilter($articleId)->setLimitTemp(1);
+        $this->addSelect(Article::class);
+        
 
         $filterBuilder = $this->director->getTempBuilder();
         $filterCteName = "filtered_article";

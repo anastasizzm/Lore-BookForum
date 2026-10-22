@@ -5,6 +5,7 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\ArticlesRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
+use App\Factories\CriteriasFactory;
 
 use App\Forms\Publications\RateForm;
 use App\Validators\Publications\RateFormValidator;
@@ -67,29 +68,9 @@ final class ArticlesService
         $isValid = $query->properties->validateForType(Publication::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
-        $sortEnum = $query->sort->hasData()
-            ? (EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString())
-                ?? PublicationsSortBy::Newest)
-            : PublicationsSortBy::Newest;
-        
-        $userCriteria = $query->userFilters == NULL || $query->userFilters->isEmpty()
-            ? NULL
-            : new UserRelationCriteria(
-                $query->userFilters->viewerId,
-                $query->userFilters->status->hasData() 
-                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->userFilters->status->status())
-                    : ReadingStatus::None,
-                $query->userFilters->savedOnly,
-            );
-        
+        $criteria = CriteriasFactory::buildArticleFromQuery($query, Publication::class);
         return $this->articlesRepo->getList(
-            new ArticlesCriteria(
-                $query->pagination->page(),
-                $query->pagination->pageSize(),
-                $sortEnum,
-                $query->filters,
-                $userCriteria
-            ),
+            $criteria,
             $query->properties->getProps()
         );
 

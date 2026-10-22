@@ -83,7 +83,7 @@
   // ВРЕМЕННО: роут 'drafts' бэк ещё не завёл. Ведём на существующий /articles
   // с фильтром status=draft. Когда появится $view->url('drafts') — поменяем
   // только эту строку.
-  $draftsUrl = $urlPath('/articles?status=draft');
+  $draftsUrl = $urlPath('/books?p_status=draft');
 ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">

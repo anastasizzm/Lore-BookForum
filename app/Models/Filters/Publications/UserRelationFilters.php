@@ -45,9 +45,4 @@ final readonly class UserRelationFilters
             savedOnly: true
         );
     }
-
-    public function isEmpty(): bool
-    {
-        return !$this->status->hasData() && !$this->savedOnly;
-    }
 }

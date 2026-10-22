@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models\Filters\Publications;
 
 use App\Extensions\Parsers\QueryParser;
+use App\Models\Enums\PublicationStatus;
 
 final readonly class ArticlesFilters extends PublicationsFilters
 {
@@ -11,11 +12,12 @@ final readonly class ArticlesFilters extends PublicationsFilters
         ?int $genreId = null,
         ?int $creatorId = null,
         ?string $search = null,
+        PublicationStatus $status = PublicationStatus::Public,
         public ?int $typeId = null,
         public ?int $bookId = null,
         public ?string $doi = null,
     ) {
-        parent::__construct($genreId, $creatorId, $search);
+        parent::__construct($genreId, $creatorId, $search, $status);
     }
 
     /** @param array<string, mixed> $q */
@@ -37,6 +39,7 @@ final readonly class ArticlesFilters extends PublicationsFilters
             genreId: $parent->genreId,
             creatorId: $parent->creatorId,
             search: $parent->search,
+            status: $parent->status,
             typeId: QueryParser::optionalPositiveInt($q, 'type'),
             bookId: QueryParser::optionalPositiveInt($q, 'book'),
             doi: QueryParser::optionalString($q, 'doi'),

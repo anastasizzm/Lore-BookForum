@@ -7,6 +7,7 @@ use App\Repositories\Publications\BooksRepository;
 use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 use App\Services\Storage\FileService;
+use App\Factories\CriteriasFactory;
 
 use App\Forms\Publications\BookForm;
 use App\Forms\Publications\RateForm;
@@ -82,28 +83,9 @@ final class BooksService
         $isValid = $query->properties->validateForType(Publication::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
-        $sortEnum = $query->sort->hasData() 
-            ? EnumExtensions::tryResolve(PublicationsSortBy::class, $query->sort->sortString()) 
-            : PublicationsSortBy::Newest;
-        
-        $userCriteria = $query->userFilters == NULL || $query->userFilters->isEmpty()
-            ? NULL
-            : new UserRelationCriteria(
-                $query->userFilters->viewerId,
-                $query->userFilters->status->hasData() 
-                    ? EnumExtensions::tryResolve(ReadingStatus::class, $query->userFilters->status->status())
-                    : ReadingStatus::None,
-                $query->userFilters->savedOnly,
-            );
-
+        $criteria = CriteriasFactory::buildBookFromQuery($query, Publication::class);
         return $this->booksRepo->getList(
-            new BooksCriteria(
-                $query->pagination->page(),
-                $query->pagination->pageSize(),
-                $sortEnum,
-                $query->filters,
-                $userCriteria
-            ),
+            $criteria,
             $query->properties->getProps()
         );
     }
