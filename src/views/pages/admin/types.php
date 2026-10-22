@@ -56,6 +56,11 @@ $types = [
     'addLabel' => $view->t('common.admin.action_add'),
 ]); ?>
 
+<?php $view->include('dictionary-form', [
+    'resource' => 'types',
+    'nameOne'  => $view->t('common.admin.type_one'),
+]); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>

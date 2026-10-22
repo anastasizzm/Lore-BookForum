@@ -60,6 +60,11 @@ $categories = [
     'addLabel' => $view->t('common.admin.action_add'),
 ]); ?>
 
+<?php $view->include('dictionary-form', [
+    'resource' => 'categories',
+    'nameOne'  => $view->t('common.admin.category_one'),
+]); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>

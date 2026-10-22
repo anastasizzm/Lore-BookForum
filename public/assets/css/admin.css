@@ -136,6 +136,14 @@
   white-space: nowrap;
 }
 
+/* Кнопка «+ Add» в тулбаре справочников */
+.admin-toolbar__add {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  white-space: nowrap;
+}
+
 /* ============================================
    TABLE — таблицы админки
    .admin-table-wrap даёт горизонтальный скролл на узких экранах,
@@ -283,6 +291,160 @@
 }
 
 /* ============================================
+   DICTIONARY — справочники: переводы в таблице + модалка формы
+   Страницы: admin/{genres,categories,types}.php
+   Разметка: partials/dictionary-table.php, dictionary-form.php
+   Логика:   public/assets/js/admin.js (dict)
+   ============================================ */
+
+/* Ячейка Translations: все переводы через « / », длинный список переносится */
+.admin-dict__translations {
+  display: inline-block;
+  max-width: 480px;
+  line-height: var(--lh-normal);
+}
+
+/* --- Модалка формы --- */
+.admin-dict__dialog {
+  max-width: 560px;
+}
+
+.admin-dict__hint {
+  margin-bottom: var(--space-3);
+}
+
+.admin-dict__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.admin-dict__section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.admin-dict__label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* --- Строки языков: [код] [input Title] [✕] --- */
+.admin-dict__langs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-dict__langs:empty + .admin-dict__langs-empty {
+  display: block;                 /* пустая подсказка видна только когда строк нет */
+}
+
+.admin-dict__lang-row {
+  display: grid;
+  grid-template-columns: minmax(40px, auto) 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+}
+
+.admin-dict__lang-code {
+  justify-content: center;
+  min-width: 40px;
+  text-transform: uppercase;
+}
+
+.admin-dict__lang-field {
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-dict__lang-remove {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.admin-dict__lang-remove:hover,
+.admin-dict__lang-remove:focus-visible {
+  color: var(--color-error);
+  background: var(--admin-danger-bg);
+  border-color: var(--color-error);
+}
+
+.admin-dict__lang-remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.admin-dict__langs-empty {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* --- Дропдаун «+ Add language»: меню раскрывается влево от кнопки --- */
+.admin-dict__lang .dropdown__menu {
+  right: auto;
+  left: 0;
+}
+
+/* Пункт — кнопка, а не ссылка: не должна вести на «#» */
+.admin-dict__lang-menu .dropdown__item {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-dict__menu-note {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.admin-dict__lang-status {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.admin-dict__lang-status[hidden],
+.admin-dict__error[hidden] {
+  display: none;
+}
+
+.admin-dict__error {
+  margin: 0;
+}
+
+/* ============================================
    RESPONSIVE — 480px покрывает целевой 375px-экран
    ============================================ */
 @media (max-width: 480px) {
@@ -295,6 +457,10 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2);
+  }
+
+  .admin-toolbar__add {
+    width: 100%;
   }
 
   .admin-toolbar__search {
@@ -324,5 +490,9 @@
 
   .admin-actions {
     flex-wrap: nowrap;
+  }
+
+  .admin-dict__translations {
+    max-width: 220px;
   }
 }

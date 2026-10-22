@@ -73,6 +73,11 @@ $genres = [
     'addLabel' => $view->t('common.admin.action_add'),
 ]); ?>
 
+<?php $view->include('dictionary-form', [
+    'resource' => 'genres',
+    'nameOne'  => $view->t('common.admin.genre_one'),
+]); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
