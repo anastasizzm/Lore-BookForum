@@ -7,6 +7,8 @@ return [
     
     'debug' => true,
 
+    'defaultRoleId'  => 0,
+
     'middleware' => [
         App\Middleware\ExceptionMiddleware::class,
         App\Middleware\LocaleMiddleware::class,

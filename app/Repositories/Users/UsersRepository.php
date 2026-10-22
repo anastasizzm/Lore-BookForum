@@ -9,13 +9,14 @@ use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 
 use App\Repositories\Repository;
+use App\Lib\Settings\Settings;
 use App\Lib\Data\Database;
 
 use PDO;
 
 final class UsersRepository extends Repository
 {
-    public function __construct(Database $db){
+    public function __construct(Database $db, private readonly Settings $settings){
         parent::__construct($db);
     }
 
@@ -89,6 +90,16 @@ final class UsersRepository extends Repository
         );
 
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);
+    }
+
+    public function initRules(int $userId) : void 
+    {
+        $stmt = $this->pdo()->prepare(
+            'INSERT INTO roles_users (user_id, role_id)
+            VALUES (:userId, :roleId)'
+        );
+
+        $stmt->execute([':userId' => $userId, ':roleId' => $this->settings->defaultRoleId]);
     }
 
     public function checkVerified(int $id) : bool 

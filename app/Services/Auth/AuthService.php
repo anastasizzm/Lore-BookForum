@@ -72,6 +72,7 @@ final class AuthService
             {
                 $userId = $this->usersRepo->create($form->username, $form->email, password_hash($form->password, PASSWORD_DEFAULT));
                 $this->usersRepo->createProfile($userId, $form->name, $form->surname, '');
+                $this->usersRepo->initRules($userId);
                 return $userId;
             });
 
