@@ -64,7 +64,7 @@ final class AuthService
     /** @throws ValidationException */
     public function register(RegisterForm $form) : string
     {
-        $errorBag = $this->loginFormValidator->validateOne($form);
+        $errorBag = $this->registerFormValidator->validateOne($form);
         if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{

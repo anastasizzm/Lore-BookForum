@@ -95,11 +95,11 @@ final class UsersRepository extends Repository
     public function initRules(int $userId) : void 
     {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO roles_users (user_id, role_id)
-            VALUES (:userId, :roleId)'
+            'INSERT INTO roles_users (user_id, role_id, granted_by_id)
+            VALUES (:userId, :roleId, :granter)'
         );
 
-        $stmt->execute([':userId' => $userId, ':roleId' => $this->settings->defaultRoleId]);
+        $stmt->execute([':userId' => $userId, ':roleId' => $this->settings->defaultRoleId, ':granter' => $userId]);
     }
 
     public function checkVerified(int $id) : bool 
