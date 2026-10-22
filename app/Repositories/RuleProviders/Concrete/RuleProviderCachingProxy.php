@@ -17,7 +17,7 @@ final class RuleProviderCachingProxy implements RuleProvider
 
     public function getRule(
         int $userId,
-        int|string|object $entityId,
+        int|string $entityId,
     ): OperationChecker {
         $key = $this->buildKey($userId, $entityId);
 
@@ -34,14 +34,45 @@ final class RuleProviderCachingProxy implements RuleProvider
         return $checker;
     }
 
-    private function buildKey(int $userId, int|string|object $entityId): string
+    public function getRulesMany(
+        int $userId,
+        array $entities
+    ) : array {
+        $key = $this->buildKeyMany($userId, $entities);
+
+        $cached = $this->cache->get($key);
+
+        if ($cached !== null)
+            return array_map(
+                fn(array $rawData) => $this->checkerClass::fromArray($rawData), 
+                $cached['data']
+            );
+
+        $checkers = $this->inner->getRulesMany($userId, $entities);
+        $checkers = array_map(
+            fn(OperationChecker $checker) => $checker->toArray(),
+            $checkers
+        );
+        $this->cache->set($key, ['data' => $checkers]);
+        return $checker;
+    }
+
+    /** @param array<int|string> $entities */
+    private function buildKeyMany(int $userId, array $entities) : string 
+    {
+        $normalized = array_map(fn(int|string $id) => $this->normalizeId($id), $entities);
+        $imploded = implode('-', $normalized);
+        return "concrete_rule_m:{$this->type}:{$userId}:{$imploded}";
+    }
+
+    private function buildKey(int $userId, int|string $entityId): string
     {
         $id = $this->normalizeId($entityId);
 
         return "concrete_rule:{$this->type}:{$userId}:{$id}";
     }
 
-    private function normalizeId(int|string|object $entityId): string
+    private function normalizeId(int|string $entityId): string
     {
         if (is_int($entityId)) {
             return (string) $entityId;
@@ -51,16 +82,8 @@ final class RuleProviderCachingProxy implements RuleProvider
             return $entityId;
         }
 
-        if (property_exists($entityId, 'id')) {
-            return (string) $entityId->id;
-        }
-
-        if (method_exists($entityId, '__toString')) {
-            return (string) $entityId;
-        }
-
         throw new \InvalidArgumentException(
-            'Entity must be int, string, or have id/__toString(): '
+            'Entity must be int or string: '
             . get_debug_type($entityId)
         );
     }

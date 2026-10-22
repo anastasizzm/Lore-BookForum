@@ -21,10 +21,8 @@ final class PostRuleProvider extends Repository implements CommonRuleProvider
         parent::__construct($db);
     }
 
-    public function getRule(int $userId, mixed $entityId) : OperationChecker 
+    public function getRule(int $userId) : OperationChecker 
     {
-        $entityId = (int)$entityId;
-
         $builder = ScriptBuilder::withTable("roles_users", "ru");
         $builder->addSelect("ru.user_id")
             ->addSelect("COALESCE(bool_or(rp.post_create), false) as create")

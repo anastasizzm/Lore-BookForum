@@ -21,7 +21,7 @@ final class PostRuleProvider extends Repository implements RuleProvider
         parent::__construct($db);
     }
 
-    public function getRule(int $userId, int|string|object $entityId) : OperationChecker 
+    public function getRule(int $userId, int|string $entityId) : OperationChecker 
     {
         $entityId = (int)$entityId;
 
@@ -45,5 +45,43 @@ final class PostRuleProvider extends Repository implements RuleProvider
         return $row === false 
             ? PostAccessRules::fromEmpty() 
             : PostAccessRules::fromRow($row);
+    }
+
+    public function getRulesMany(int $userId, array $entities) : array 
+    {
+        $ids = array_map('intval', $entities);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $builder = ScriptBuilder::withTable("comments", "p");
+        $builder->addSelect("p.id AS post_id,\nru.user_id")
+            ->addSelect("COALESCE(bool_or(rp.post_create), false) OR p.creator_id = ru.user_id AS create")
+            ->addSelect("COALESCE(bool_or(rp.post_update), false) OR p.creator_id = ru.user_id AS update")
+            ->addSelect("COALESCE(bool_or(rp.post_delete), false) OR p.creator_id = ru.user_id AS delete")
+            ->addJoin("INNER JOIN roles_users ru
+                        ON ru.user_id = :userId
+                        AND ru.is_valid
+                        AND ru.publication_id IS NULL", [":userId" => ScriptParam::asInt($userId)])
+            ->addJoin("INNER JOIN roles_permissions rp
+                        ON rp.role_id = ru.role_id
+                        AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
+            ->addWhere("p.id = ANY(:postIds::bigint[])", [':postIds' => ScriptParam::asStr('{' . implode(',', $ids) . '}')])
+            ->setGroup("p.id, ru.user_id");
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+
+        $byId = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $byId[(int) $row['post_id']] = PostAccessRules::fromRow($row);
+        }
+
+        $rules = [];
+        foreach ($ids as $id) {
+            $rules[$id] = $byId[$id] ?? PostAccessRules::fromEmpty();
+        }
+
+        return $rules;
     }
 }

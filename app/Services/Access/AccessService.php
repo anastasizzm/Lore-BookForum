@@ -13,7 +13,7 @@ final class AccessService
         private readonly ?CommonRuleProvider $commonRuleProvider = NULL
     ){}
 
-    public function hasAccess(int $userId, int|string|object|null $entityId, AccessOperation $operation) : bool 
+    public function hasAccess(int $userId, int|string|null $entityId, AccessOperation $operation) : bool 
     {
         $rules = NULL;
 
