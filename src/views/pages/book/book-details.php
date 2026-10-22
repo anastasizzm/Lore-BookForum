@@ -287,6 +287,7 @@ $isDraft   = $status === 'draft';
       <div class="book-rating">
         <div class="book-rating__group">
           <span class="book-rating__stars"
+                data-rating-stars
                 style="--rating-percent: <?= $view->e($percent) ?>%;"
                 role="img"
                 aria-label="<?= $hasRating
@@ -296,10 +297,10 @@ $isDraft   = $status === 'draft';
           </span>
           <?php if ($hasRating): ?>
             <!-- Дробный балл из rating_avg ×10: 46 -> 4.6, без округления -->
-            <span class="book-rating__value"><?= $view->e(number_format($rating, 1)) ?></span>
+            <span class="book-rating__value" data-rating-value><?= $view->e(number_format($rating, 1)) ?></span>
           <?php else: ?>
             <!-- Оценок нет — серая подпись вместо «0.0» -->
-            <span class="book-rating__value book-rating__value--none"><?= $tr('common.book.no_rating') ?></span>
+            <span class="book-rating__value book-rating__value--none" data-rating-value><?= $tr('common.book.no_rating') ?></span>
           <?php endif; ?>
         </div>
         <span class="book-rating__saves">
@@ -313,6 +314,8 @@ $isDraft   = $status === 'draft';
       <div class="rate" data-rate role="radiogroup"
            data-rate-kind="books"
            data-rate-publication="<?= (int) $publicationId ?>"
+           data-rate-title="<?= $view->e($book->title ?? '') ?>"
+           data-rate-current="<?= (int) ($readerCtx?->rating ?? 0) ?>"
            aria-label="<?= $tr('common.book.rate_group') ?>">
         <span class="rate__label"><?= $tr('common.book.rate_label') ?></span>
         <div class="rate__stars">
