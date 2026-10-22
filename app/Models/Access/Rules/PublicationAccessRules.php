@@ -15,7 +15,7 @@ use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 
 use App\Models\Dto;
 
-class PublicationAccessRules extends Dto implements OperationChecker
+readonly class PublicationAccessRules extends Dto implements OperationChecker
 {
     public function __construct(
         public bool $create,

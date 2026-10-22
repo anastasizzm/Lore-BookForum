@@ -11,7 +11,7 @@ use App\Models\Access\Operations\Posts\UpdatePostOperation;
 
 use App\Models\Dto;
 
-class PostAccessRules extends Dto implements OperationChecker
+readonly class PostAccessRules extends Dto implements OperationChecker
 {
     public function __construct(
         public bool $create,

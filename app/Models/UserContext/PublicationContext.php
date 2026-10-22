@@ -43,7 +43,9 @@ final readonly class PublicationContext extends Dto implements UserContextInterf
     public static function fromEmpty() : self 
     {
         return new self(
-            isLiked: false,
+            isSaved: false,
+            readingStatus: ReadingStatus::None,
+            rating: NULL,
             rules: PublicationAccessRules::fromEmpty()
         );
     }
@@ -52,7 +54,9 @@ final readonly class PublicationContext extends Dto implements UserContextInterf
     public function withRules(PublicationAccessRules $rules) : self 
     {
         return new self(
-            isLiked: $this->isLiked,
+            isSaved: $this->isSaved,
+            readingStatus: $this->readingStatus,
+            rating: $this->rating,
             rules: $rules
         );
     }

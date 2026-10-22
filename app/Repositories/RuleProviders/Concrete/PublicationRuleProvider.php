@@ -45,6 +45,7 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
             ->setGroup("p.id, ru.user_id");
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
+        var_dump($builder->build());
         
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false 
@@ -79,6 +80,8 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
                         AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
             ->addWhere("p.id = ANY(:pubIds::bigint[])", [':pubIds' => ScriptParam::asStr('{' . implode(',', $ids) . '}')])
             ->setGroup("p.id, ru.user_id");
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
 
         $byId = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

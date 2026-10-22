@@ -9,7 +9,7 @@ use UnitEnum;
 use App\Models\Uuid;
 use App\Extensions\EnumExtensions;
 
-abstract class Dto
+abstract readonly class Dto
 {
     /** @param array<string, mixed> $row */
     protected static function str(array $row, string $key): string

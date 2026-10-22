@@ -91,19 +91,6 @@ final class UsersRepository extends Repository
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);
     }
 
-    public function createRules(int $userId, bool $isAdmin, bool $isRedactor) 
-    {
-        $stmt = $this->pdo()->prepare(
-            'INSERT INTO users_rules (user_id, is_redactor, is_admin)
-            VALUES (:userId, :isRedactor, :isAdmin)'
-        );
-
-        $stmt->bindValue(':userId',     $userId,     PDO::PARAM_INT);
-        $stmt->bindValue(':isRedactor', $isRedactor, PDO::PARAM_BOOL);
-        $stmt->bindValue(':isAdmin',    $isAdmin,    PDO::PARAM_BOOL);
-        $stmt->execute();
-    }
-
     public function checkVerified(int $id) : bool 
     {
         $stmt = $this->pdo()->prepare(
@@ -136,12 +123,10 @@ final class UsersRepository extends Repository
                 u.username, 
                 p.name, 
                 p.surname, 
-                p.avatar, 
-                ur.is_admin IS NOT NULL AND ur.is_admin as is_admin, 
-                ur.is_redactor IS NOT NULL AND ur.is_redactor as is_redactor
-            FROM (SELECT u0.id, u0.username FROM users u0 WHERE u0.id = :userId) u
+                p.avatar
+            FROM users u
             INNER JOIN profiles p ON p.user_id = u.id
-            LEFT JOIN users_rules ur ON ur.user_id = u.id'
+            WHERE u.id = :userId'
         );
         $stmt->execute([':userId' => $userId]);
 

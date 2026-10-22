@@ -8,6 +8,8 @@ use App\Cache\RuleProviders\RuleProviderCache;
 
 final class RuleProviderCachingProxy implements RuleProvider
 {
+    private const int TTL = 1;
+
     public function __construct(
         private readonly RuleProvider $inner,
         private readonly RuleProviderCache $cache,
@@ -19,6 +21,7 @@ final class RuleProviderCachingProxy implements RuleProvider
         int $userId,
         int|string $entityId,
     ): OperationChecker {
+        var_dump(1);
         $key = $this->buildKey($userId, $entityId);
 
         $cached = $this->cache->get($key);
@@ -28,9 +31,7 @@ final class RuleProviderCachingProxy implements RuleProvider
         }
 
         $checker = $this->inner->getRule($userId, $entityId);
-
-        $this->cache->set($key, $checker->toArray());
-
+        $this->cache->set($key, $checker->toArray(), self::TTL);
         return $checker;
     }
 
@@ -53,8 +54,8 @@ final class RuleProviderCachingProxy implements RuleProvider
             fn(OperationChecker $checker) => $checker->toArray(),
             $checkers
         );
-        $this->cache->set($key, ['data' => $checkers]);
-        return $checker;
+        $this->cache->set($key, ['data' => $checkers], self::TTL);
+        return $checkers;
     }
 
     /** @param array<int|string> $entities */

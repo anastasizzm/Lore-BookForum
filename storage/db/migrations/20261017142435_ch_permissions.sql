@@ -18,8 +18,12 @@ CREATE TABLE IF NOT EXISTS roles_permissions(
     sys_manage_roles BOOLEAN NOT NULL DEFAULT FALSE,
     authority_rank INT NOT NULL DEFAULT 0,
 
-    UNIQUE (publication_id, authority_rank) DEFERRABLE INITIALLY DEFERRED,
-    PRIMARY KEY (role_id, publication_id)
+    CONSTRAINT roles_permissions_pub_role_uq
+        UNIQUE NULLS NOT DISTINCT (publication_id, role_id),
+
+    CONSTRAINT roles_permissions_pub_rank_uq
+        UNIQUE NULLS NOT DISTINCT (publication_id, authority_rank)
+        DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE IF NOT EXISTS roles_users(
@@ -33,10 +37,12 @@ CREATE TABLE IF NOT EXISTS roles_users(
     granted_by_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
 
     FOREIGN KEY (publication_id, role_id)
-        REFERENCES pub_roles_permissions(publication_id, role_id)
+        REFERENCES roles_permissions(publication_id, role_id)
         ON DELETE RESTRICT ON UPDATE CASCADE,
 
-    UNIQUE (user_id, publication_id, role_id, valid_from)
+    UNIQUE (user_id, publication_id, role_id, valid_from),
+    UNIQUE NULLS NOT DISTINCT (user_id, publication_id, role_id, valid_from)
 );
 -- migrate:down
-
+DROP TABLE IF EXISTS roles_users;
+DROP TABLE IF EXISTS roles_permissions;

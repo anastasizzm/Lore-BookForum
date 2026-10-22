@@ -28,11 +28,7 @@ final class PostsContextRepository extends Repository
         $placeholders = implode(',', array_fill(0, count($postIds), '?'));
 
         $sql = "
-            WITH viewer AS (
-                SELECT u.user_id, bool_or(ur.id IS NOT NULL AND ur.is_admin) as is_admin FROM (SELECT ?::bigint AS user_id) u
-                LEFT JOIN users_rules ur ON u.user_id = ur.user_id
-                GROUP BY u.user_id
-            )
+            WITH viewer AS ( SELECT ?::bigint as user_id )
 
             SELECT
                 p.id AS post_id,

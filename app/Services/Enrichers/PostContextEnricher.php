@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Enrichers;
 
+use App\Attributes\Inject;
 use App\Models\UserContext\PostContext;
 use App\Models\UserContext\WithContext;
 use App\Models\Posts\Post;
