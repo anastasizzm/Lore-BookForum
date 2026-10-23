@@ -56,17 +56,81 @@ async function init(root) {
   window.addEventListener('resize', syncDock);
   if (window.ResizeObserver) new ResizeObserver(syncDock).observe(stage);
 
-  /**
-   * saveProgress — сохранение прогресса чтения (JS-хук на смену страницы).
-   *
-   * Пока храним в localStorage (ключ book-{id}-page). Когда бэк даст
-   * API прогресса — заменить тело на fetch PATCH /api/books/{id}/progress
-   * с body { page: num } и заголовком X-CSRF-Token (LoreCsrf.token()).
-   */
+  /* ---------- Прогресс чтения (RD-01 / RD-02) ----------
+   *   POST /api/books/{id}/progress          — сохранить страницу (upsert)
+   *   POST /api/books/{id}/progress/finish   — книга дочитана (последняя страница)
+   * Тело upsert собирает progressBody(): если бэк ждёт другие имена полей —
+   * поменять ТОЛЬКО эту функцию. Запросы фоновые: ошибка пишется в консоль,
+   * читателя не отвлекаем; последняя страница дублируется в localStorage. */
+  const PROGRESS_URL = '/api/books/' + bookId + '/progress';
+  const SAVE_DELAY   = 1000;
+  // Контракт бэка (Api\BooksController::upsert/finish -> BookProgressForm, BookFormat):
+  // format обязателен (finish читает его через QueryParser::enum), позиция PDF —
+  // pageNumber (так её хранит и отдаёт read() в $initial). Имена полей —
+  // здесь и в finishBody(); сверить с BookProgressForm.
+  const FORMAT = root.dataset.format || 'pdf';
+  const progressBody = (page) =>
+    new URLSearchParams({ format: FORMAT, pageNumber: String(page) });
+  const finishBody = () => new URLSearchParams({ format: FORMAT });
+
+  let sentPage = 0;       // страница, о которой бэк уже знает
+  let finished = false;   // finish уже отправлен
+  let inflight = false;
+  let saveTimer = 0;
+
+  function sendProgress(num, keepalive) {
+    if (!Number(bookId) || inflight) return;
+    const total  = pdf ? pdf.numPages : 0;
+    const isLast = total > 0 && num >= total;
+    if (isLast ? finished : num === sentPage) return;
+
+    inflight = true;
+    const req = (window.LoreCsrf ? window.LoreCsrf.fetch : fetch)(
+      isLast ? PROGRESS_URL + '/finish' : PROGRESS_URL,
+      {
+        method: 'POST',
+        body: isLast ? finishBody() : progressBody(num),
+        keepalive: !!keepalive,
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      }
+    );
+    req.then(async (res) => {
+      const raw = await res.text();
+      // бэк иногда отвечает HTML-страницей ошибки с кодом 200 — это не успех
+      if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
+      if (isLast) finished = true; else { sentPage = num; finished = false; }
+    }).catch((e) => {
+      console.warn('[reader] progress not saved', e);
+    }).finally(() => {
+      inflight = false;
+      // пока шёл запрос, страница могла смениться — досылаем актуальную
+      if (!keepalive && pageNum !== num) scheduleSave(pageNum);
+    });
+  }
+
+  function scheduleSave(num) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { saveTimer = 0; sendProgress(num, false); }, SAVE_DELAY);
+  }
+
+  /** Хук на смену страницы: localStorage сразу, бэк — с задержкой (листают быстро). */
   function saveProgress(num) {
     try { localStorage.setItem(storeKey, String(num)); } catch (_) {}
-    // TODO(api): fetch('/api/books/' + bookId + '/progress', { method: 'PATCH', ... })
+    scheduleSave(num);
   }
+
+  // Закрыли вкладку / ушли со страницы — дослать, не дожидаясь таймера
+  const flushProgress = () => {
+    if (!saveTimer) return;
+    clearTimeout(saveTimer);
+    saveTimer = 0;
+    sendProgress(pageNum, true);
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushProgress();
+  });
+  window.addEventListener('pagehide', flushProgress);
 
   const toast = (text) => window.Messages?.show(text, { type: 'error' });
   const setStatus = (text) => {
@@ -122,14 +186,22 @@ async function init(root) {
   totalEl.textContent = pdf.numPages;
   pageIn.max = pdf.numPages;
 
-  const fromUrl = parseInt(new URLSearchParams(location.search).get('page'), 10);
+  // Откуда открывать: ?page= > страница с сервера (data-start-page) > localStorage > 1.
+  // Если сервер передал data-start-page (даже 0 = «не читал / сбросил»), он главнее
+  // localStorage — иначе после сброса прогресса вернулась бы старая страница.
+  const fromUrl    = parseInt(new URLSearchParams(location.search).get('page'), 10);
+  const hasServer  = root.hasAttribute('data-start-page');
+  const serverPage = parseInt(root.dataset.startPage, 10) || 0;
   let saved = 0;
-  try {
-    saved = parseInt(localStorage.getItem(storeKey), 10)
-         || parseInt(localStorage.getItem(legacyKey), 10)   // старый ключ reader:page:{id}
-         || 0;
-  } catch (_) {}
-  pageNum = clamp(fromUrl || saved || 1, 1, pdf.numPages);
+  if (!hasServer) {
+    try {
+      saved = parseInt(localStorage.getItem(storeKey), 10)
+           || parseInt(localStorage.getItem(legacyKey), 10)   // старый ключ reader:page:{id}
+           || 0;
+    } catch (_) {}
+  }
+  pageNum = clamp(fromUrl || serverPage || saved || 1, 1, pdf.numPages);
+  sentPage = clamp(serverPage, 0, pdf.numPages);   // эту страницу бэк уже знает
 
   setStatus('');
   render();

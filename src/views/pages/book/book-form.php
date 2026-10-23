@@ -1,4 +1,5 @@
 <?php $view->extends('main'); ?>
+<?php $view->setBlock('hideFab', '1'); /* правый нижний угол занят — плавающую «+» скрываем */ ?>
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php

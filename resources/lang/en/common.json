@@ -449,6 +449,11 @@
         "publish_submit": "Publish",
         "create_draft": "Create draft"
     },
+    "fab":{
+        "create": "Create",
+        "article": "Create article",
+        "book": "Create book"
+    },
     "js": {
         "toast_error": "Error",
         "toast_warning": "Warning",

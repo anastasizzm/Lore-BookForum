@@ -326,11 +326,15 @@
         credentials: 'same-origin',
       }).then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
+        return res.text().then(function (raw) {
+          try { return JSON.parse(raw); }
+          catch (_) { throw new Error('not JSON: ' + raw.slice(0, 120)); }
+        });
       }).then(function (data) {
         var list = Array.isArray(data)
           ? data
-          : (Array.isArray(data.items) ? data.items : []);
+          : (Array.isArray(data.items) ? data.items
+            : (Array.isArray(data.data) ? data.data : []));
         for (var i = 0; i < list.length; i++) {
           var item = list[i] || {};
           var id = String(item.id !== undefined ? item.id : (item.value !== undefined ? item.value : ''));
@@ -449,6 +453,7 @@
 
     function load() {
       var willLoad = !listCache[url];   // из кэша — мгновенно, без блокировки
+
       if (willLoad) {
         catalogsPending += 1;
         select.setAttribute('data-catalog-loading', '');

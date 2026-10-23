@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="<?= $view->asset('css/layout.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/component.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/fab.css') ?>">
 
   <?= $view->block('head_extra') ?>
 </head>

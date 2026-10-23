@@ -173,8 +173,9 @@ if (!isset($readingButtons[$readingStatus])) {
 }
 $readingBtn = $readingButtons[$readingStatus];
 
-// Читалка: GET /books/{id}/read. «Resume» продолжит с сохранённой страницы
-// (её помнит book-read.js), «Read again» открывает с первой.
+// Читалка: GET /books/{id}/read. «Resume» продолжит с сохранённой на бэке страницы
+// (контроллер read передаёт её в читалку как $startPage), «Read again» открывает с
+// первой; book.js перед этим сбрасывает прогресс (DELETE /api/books/{id}/progress).
 $readHref = '/books/' . $bookId . '/read' . ($readingStatus === 'finished' ? '?page=1' : '');
 
 /* ---------- Комментарии ---------- */
@@ -279,6 +280,7 @@ $isDraft   = $status === 'draft';
         <a href="<?= $view->e($readHref) ?>"
            class="btn btn--primary btn--pill btn--read btn--read-<?= $view->e($readingBtn['modifier']) ?>"
            data-start-reading
+           data-book-id="<?= $bookId ?>"
            data-reading-status="<?= $view->e($readingStatus) ?>"><?= $view->e($readingBtn['label']) ?></a>
         <!-- «Редактировать» переехало в меню «три точки» в шапке
              (details-menu.php) — здесь больше не рендерится. -->

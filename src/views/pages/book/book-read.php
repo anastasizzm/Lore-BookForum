@@ -8,8 +8,11 @@
  * Ожидаемые переменные (все опциональны, читаются через ??):
  *   $bookId — id книги (для ссылки «назад»),
  *   $book   — объект книги (title и т.п.), если контроллер его передаст,
- *   $pdfUrl — адрес PDF-файла; по умолчанию /api/books/{id}/file
- *             (маршрут должен появиться на бэке, см. задачу для бэка)
+ *   $fileId  — id файла книги (строка; Publications\BooksController::read);
+ *              читалка берёт PDF из GET /api/files/{fileId}/download
+ *   $initial — позиция чтения из read(): ['pageNumber' => N] (без прогресса — 1).
+ *              Уходит в data-start-page; $startPage — прямой запасной вариант
+ *   $pdfUrl  — можно задать адрес PDF напрямую (приоритетнее $fileId)
  *
  * Логика — public/assets/js/book-read.js (модуль, PDF.js лежит в js/pdfjs/).
  */
@@ -20,7 +23,14 @@ $title  = is_object($book)
     ? (string) ($book->title ?? '')
     : (string) ($book['title'] ?? '');
 
-$pdfUrl  = (string) ($pdfUrl ?? ($bookId ? '/api/books/' . $bookId . '/file' : ''));
+// id файла: из контроллера или из книги (объект/массив); Stringable-id приводим к строке
+$fileRaw = $fileId ?? (is_object($book) ? ($book->fileId ?? null) : ($book['fileId'] ?? null));
+$fileId  = ($fileRaw instanceof \Stringable || is_scalar($fileRaw)) ? (string) $fileRaw : '';
+
+$pdfUrl  = (string) ($pdfUrl ?? ($fileId !== '' ? '/api/files/' . rawurlencode($fileId) . '/download' : ''));
+$startPage = isset($startPage)
+    ? max(0, (int) $startPage)
+    : (is_array($initial ?? null) && isset($initial['pageNumber']) ? max(0, (int) $initial['pageNumber']) : null);
 $backUrl = $bookId ? '/books/' . $bookId : '/books';
 ?>
 
@@ -28,6 +38,7 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
+<?php $view->setBlock('hideFab', '1'); /* правый нижний угол занят — плавающую «+» скрываем */ ?>
 
 <?php $view->startBlock('title'); ?>
   <?= $title !== '' ? $view->e($title) . ' — ' : '' ?><?= $tr('common.reader.title') ?> — <?= $tr('common.common.app_name') ?>
@@ -42,7 +53,8 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <section class="reader"
          data-reader
          data-book-id="<?= $bookId ?>"
-         data-pdf-url="<?= $view->e($pdfUrl) ?>">
+         data-format="pdf"
+         data-pdf-url="<?= $view->e($pdfUrl) ?>"<?= $startPage !== null ? ' data-start-page="' . $startPage . '"' : '' ?>>
 
   <div class="reader__toolbar">
 

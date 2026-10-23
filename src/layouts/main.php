@@ -25,6 +25,9 @@
   <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
   <?php $view->include('confirm-modal'); ?>
 
+  <?php /* Плавающая «+» (создать статью / книгу). Скрыть на странице: $view->setBlock('hideFab', '1') */ ?>
+  <?php $view->include('fab'); ?>
+
   <main class="content">
     <div class="content__inner">
 
@@ -47,6 +50,7 @@
 
   <script src="<?= $view->asset('js/modal.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
+  <script src="<?= $view->asset('js/fab.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>
   <?= $view->block('scripts') ?>
 </body>
