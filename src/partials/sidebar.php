@@ -182,9 +182,21 @@
 
         <!-- Меню с настройками -->
         <div class="settings-menu" data-settings-menu hidden>
-            <?php if ($canOpenAdmin): ?>
-                <!-- Админ-панель: только для пользователей с правом is_admin -->
-                <a href="<?= $view->e($adminUrl) ?>" class="settings-menu__item settings-menu__item--admin">
+            <?php /* Админ-панель. Раньше ссылку рисовал флаг $me->isAdmin, но
+                 UserContext::fromRow подставляет SystemAccessRules::fromEmpty()
+                 — поле всегда false, и кнопка не показывалась никому.
+                 Теперь ссылка рендерится всегда, но скрыта, и app.js показывает
+                 её по правилу manageAccounts из GET /api/system/rules
+                 (window.LoreRules). $canOpenAdmin оставлен как серверный
+                 fast-path: если бэк когда-нибудь начнёт отдавать isAdmin —
+                 ссылка появится сразу, без ожидания ответа.
+                 Это ТОЛЬКО видимость: доступ на сам /admin проверяет бэк
+                 (политика роута), не эта вьюха. */ ?>
+            <div data-system-rules-wrap>
+                <a href="<?= $view->e($adminUrl) ?>"
+                   class="settings-menu__item settings-menu__item--admin"
+                   data-system-rule="manageAccounts"
+                   <?= $canOpenAdmin ? '' : 'hidden' ?>>
                     <span class="settings-menu__icon">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <path d="M8 1.5l5 1.8v4.2c0 3-2.1 5.4-5 6.5-2.9-1.1-5-3.5-5-6.5V3.3l5-1.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
@@ -193,7 +205,7 @@
                     </span>
                     <span><?= $tr('common.sidebar.admin') ?></span>
                 </a>
-            <?php endif; ?>
+            </div>
 
             <!-- Выбор языка: раскрывающийся список (<details>, без JS); язык запоминает бэк -->
             <details class="settings-menu__lang">
@@ -226,19 +238,7 @@
                 </ul>
             </details>
 
-            <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
-                <?= $view->csrfField() ?>
-                <!-- Подтверждение Log out — универсальная плашка confirm-modal (см. modal.js) -->
-                <button type="submit"
-                        class="settings-menu__item"
-                        data-confirm="<?= $tr('common.sidebar.logout_text') ?>"
-                        data-confirm-title="<?= $tr('common.sidebar.logout_title') ?>"
-                        data-confirm-ok="<?= $tr('common.sidebar.logout') ?>"
-                        data-confirm-danger>
-                    <span class="settings-menu__icon">↩</span>
-                    <span><?= $tr('common.sidebar.logout') ?></span>
-                </button>
-            </form>
+            <div class="settings-menu__divider" role="separator"></div>
 
             <!-- Помощь (задача 5): статическая страница src/views/pages/help.php.
                  Роута help бэк ещё не завёл (config/routes.php заморожен) —
@@ -247,25 +247,6 @@
             <a href="<?= $view->e($urlPath('/pages/test?page=help')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">?</span>
                 <span><?= $tr('common.sidebar.help') ?></span>
-            </a>
-
-            <!-- Смена пароля (страница auth/change-password.php — копия
-                 password-reset.php, тексты и ссылка «назад» свои, ключи
-                 changepass_* в lang/en, lang/ru). ПАРКОВАНА: роуты password.change
-                 нельзя добавить — config/routes.php заморожен (правки запрещены).
-                 Ссылка временно ведёт на сброс по почте. Чтобы фича заработала,
-                 команде бэка нужно добавить два замыкания (контракт — в шапке
-                 вида) и затем переключить эту ссылку на url('password.change'). -->
-            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
-                <span class="settings-menu__icon">
-                    <!-- Замочек — SVG в стиле остальных иконок сайдбара (fill: currentColor) -->
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        <rect x="2.75" y="7" width="10.5" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                        <circle cx="8" cy="10.5" r="1.1" fill="currentColor"/>
-                    </svg>
-                </span>
-                <span>Change password</span>
             </a>
 
             <!-- Privacy Policy (задача 6): статическая страница
@@ -277,6 +258,54 @@
                 <span class="settings-menu__icon">§</span>
                 <span><?= $tr('common.sidebar.privacy') ?></span>
             </a>
+
+            <div class="settings-menu__divider" role="separator"></div>
+
+            <!-- Смена пароля (страница auth/change-password.php — копия
+                 password-reset.php, тексты и ссылка «назад» свои, ключи
+                 changepass_* в lang/en, lang/ru). ПАРКОВАНА: роуты password.change
+                 нельзя добавить — config/routes.php заморожен (правки запрещены).
+                 Ссылка временно ведёт на сброс по почте. Чтобы фича заработала,
+                 команде бэка нужно добавить два замыкания (контракт — в шапке
+                 вида) и затем переключить эту ссылку на url('password.change'). -->
+            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
+                <span class="settings-menu__icon">
+                    <!-- Замочек — SVG в стиле остальных иконок сайдбара (stroke: currentColor) -->
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <rect x="2.75" y="7" width="10.5" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                        <circle cx="8" cy="10.5" r="1.1" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span><?= $tr('common.sidebar.changepass') ?></span>
+            </a>
+
+            <!-- Log out — ПОСЛЕДНИЙ пункт, отделён разделителем и покрашен
+                 в красный (.settings-menu__item--danger): фидбэк с превью —
+                 « Log out я жду внизу, выделенный, всё время тыкаю не туда».
+                 Подтверждение — та же плашка confirm-modal (data-confirm). -->
+            <div class="settings-menu__divider" role="separator"></div>
+
+            <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
+                <?= $view->csrfField() ?>
+                <button type="submit"
+                        class="settings-menu__item settings-menu__item--danger"
+                        data-confirm="<?= $tr('common.sidebar.logout_text') ?>"
+                        data-confirm-title="<?= $tr('common.sidebar.logout_title') ?>"
+                        data-confirm-ok="<?= $tr('common.sidebar.logout') ?>"
+                        data-confirm-danger>
+                    <span class="settings-menu__icon">
+                        <!-- «Выйти»: стрелка вправо из двери, в стиле остальных иконок -->
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M6.5 2.5H4a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 13.5h2.5"
+                                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M10.5 11 13.5 8l-3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M13.5 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span><?= $tr('common.sidebar.logout') ?></span>
+                </button>
+            </form>
         </div>
     </div>
 </aside>

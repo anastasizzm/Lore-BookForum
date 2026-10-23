@@ -338,11 +338,39 @@ a.settings-menu__item {
   flex-shrink: 0;
 }
 
-/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков */
+/* ---- Группировка пунктов меню (фидбэк с превью) --------------------
+   Порядок: Language | Help + Privacy Policy | Change password | Log out.
+   Группы разделены линией; Log out дополнительно отделён отступом и
+   покрашен в красный — его ждут в самом низу. */
+.settings-menu__divider {
+  height: 1px;
+  margin: var(--space-1, 4px) 0;
+  background: var(--color-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+/* Log out: акцентный «опасный» цвет, чтобы пункт не терялся среди остальных */
+.settings-menu__item--danger {
+  color: var(--color-error, #E5484D);
+  margin-top: var(--space-1, 4px);
+}
+
+.settings-menu__item--danger .settings-menu__icon {
+  color: var(--color-error, #E5484D);
+}
+
+.settings-menu__item--danger:hover,
+.settings-menu__item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error, #E5484D);
+}
+
+/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков.
+   Разделитель под блоком теперь рисует .settings-menu__divider (общий для
+   всех групп меню) — собственная border-bottom убрана, чтобы не было двух
+   линий подряд. */
 .settings-menu__lang {
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
   margin-bottom: var(--space-1, 4px);
-  padding-bottom: var(--space-1, 4px);
 }
 
 .settings-menu__lang-summary {
