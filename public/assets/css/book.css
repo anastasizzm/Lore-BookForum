@@ -623,34 +623,33 @@ html:has(.reader) body {
   color: var(--color-error, #EF4444);
 }
 
-/* СОСТОЯНИЯ ПО ПРАВАМ: book-rights.js подгружает права и вешает на пункт
-   «Редактировать» (data-edit-btn) классы book-actions__edit--*.
-   В контексте меню состояние показываем ЦВЕТОМ ТЕКСТА, а не фоном pill:
-     серый (--none, состояние по умолчанию) — прав нет;
-     синий (--edit)   — есть права на редактирование;
-     красный (--publish) — есть права на публикацию книги. */
-.book-page-header .details-menu__item.book-actions__edit--edit {
-  background: none;
-  color: var(--color-primary, #1A3760);
+/* СОСТОЯНИЯ ПО ПРАВАМ (Common Rules):
+   book-rights.js гасит элементы, у которых права нет, атрибутом
+   aria-disabled="true" + классом .is-disabled (см. partial details-menu.php
+   и вьюхи book/article details, book-form, article-form).
+   Стартовое состояние в разметке ТОЖЕ серое: правила подтверждаются
+   асинхронно, поэтому до ответа кнопка не должна выглядеть рабочей. */
+[data-rule].is-disabled,
+[data-rule][aria-disabled='true'] {
+  color: var(--color-text-muted, #6F84A5);
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
-.book-page-header .details-menu__item.book-actions__edit--publish {
-  background: none;
-  color: var(--color-error, #EF4444);
-}
-
-.book-page-header .details-menu__item.book-actions__edit--none {
+[data-rule].is-disabled:hover,
+[data-rule].is-disabled:focus-visible,
+[data-rule][aria-disabled='true']:hover,
+[data-rule][aria-disabled='true']:focus-visible {
   background: none;
   color: var(--color-text-muted, #6F84A5);
 }
 
-.book-page-header .details-menu__item.book-actions__edit--edit:hover,
-.book-page-header .details-menu__item.book-actions__edit--edit:focus-visible,
-.book-page-header .details-menu__item.book-actions__edit--publish:hover,
-.book-page-header .details-menu__item.book-actions__edit--publish:focus-visible,
-.book-page-header .details-menu__item.book-actions__edit--none:hover,
-.book-page-header .details-menu__item.book-actions__edit--none:focus-visible {
-  background: var(--color-bg-subtle, #F3F6FB);
+/* Кнопки (Delete / Publish / Create draft): клик дополнительно глушит
+   book-rights.js в фазе захвата — чтобы не сработали обработчики
+   details-menu.js / book-form.js / article-form.js. */
+button[data-rule][aria-disabled='true'],
+.btn[data-rule][aria-disabled='true'] {
+  pointer-events: none;
 }
 
 /* Панель публикации внизу страницы — видна, пока статус draft */

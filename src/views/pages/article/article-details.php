@@ -101,6 +101,16 @@ if (($article->creator ?? null) !== null) {
     }
 }
 
+/* ---------- Владелец публикации (для кнопок Edit/Delete) ----------
+ * Как в book-details: глобальные /api/articles/rules owner-override не
+ * отдают, поэтому «это моя статья» считаем по creator.id и отдаём в
+ * data-rules-owner — book-rights.js сложит признак с правилами.
+ */
+$creatorObj = is_object($article) ? ($article->creator ?? null) : null;
+$creatorId  = is_object($creatorObj) ? (int) ($creatorObj->id ?? 0) : 0;
+$viewerId   = (int) ($currentUserId ?? 0);
+$isOwnerPub = $viewerId > 0 && $creatorId > 0 && $viewerId === $creatorId;
+
 /* ---------- Жанр / DOI ---------- */
 
 $genreTitle = $str($article->genre ?? null);
@@ -189,8 +199,9 @@ if (!empty($iconId)) {
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
-         по образцу book-details. Контракт — в шапке partial. -->
-    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId]); ?>
+         по образцу book-details. Пункты гасятся по правилам
+         /api/articles/rules (book-rights.js), $isOwnerPub — owner-override. -->
+    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId, 'isOwner' => $isOwnerPub]); ?>
   </div>
 
   <div class="book-details">
@@ -643,8 +654,8 @@ if (!empty($iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав: цвет пункта
-       «Редактировать» в меню «три точки» (шапка) -->
+  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав: включает/гасит пункты
+       меню «три точки» (шапка) -->
   <script src="/assets/js/book-rights.js"></script>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->

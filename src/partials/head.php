@@ -17,6 +17,11 @@
   <script src="<?= $view->asset('js/i18n.js') ?>"></script>
   <script src="<?= $view->asset('js/messages.js') ?>"></script>
   <script src="<?= $view->asset('js/csrf.js') ?>"></script>
+  <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/books/rules,
+       /api/articles/rules, /api/posts/rules, /api/system/rules). Нужен везде:
+       sidebar гейтит по нему кнопку «Админ-панель», а book-rights.js —
+       кнопки Edit / Delete / Publish на страницах публикаций и формах. -->
+  <script src="<?= $view->asset('js/rules.js') ?>"></script>
 
   <link rel="stylesheet" href="<?= $view->asset('css/variable.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/base.css') ?>">

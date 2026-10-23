@@ -7,12 +7,23 @@
  * «Book/Article details»; кнопка «Редактировать» переехала сюда из
  * тела страницы.
  *
- * @param string $type - 'book' | 'article'
- * @param int    $id   - id публикации
+ * @param string $type    - 'book' | 'article'
+ * @param int    $id      - id публикации
+ * @param bool   $isOwner - текущий пользователь — автор/владелец публикации
  *
  * Три точки открываются на глобальных обработчиках details-menu.js
  * (тот же приём «открыть/закрыть/Escape/клик мимо», что у меню
  * комментариев в comments.js).
+ *
+ * ПРАВА (скрываем/показываем кнопки Edit и Delete):
+ *   book-rights.js (данные — window.LoreRules, public/assets/js/rules.js)
+ *   дёргает GET /api/books/rules или GET /api/articles/rules и включает
+ *   пункты, подтверждённые правилами updateMeta/updateContent (Edit)
+ *   и delete (Delete).
+ *   Глобальные правила НЕ знают про владельца, поэтому $isOwner кладётся
+ *   в data-rules-owner и складывается с правилами на фронте.
+ *   Пункты рендерятся СЕРЫМИ (aria-disabled=true); если права не пришли —
+ *   остаются серыми (не показываем кнопки, вернущие 403).
  *
  * КОНТРАКТ (бэк добавит роуты; config/ и app/ заморожены):
  *   GET    /books/{id}/edit, /articles/{id}/edit — страницы редактирования
@@ -20,11 +31,11 @@
  *   DELETE /api/books/{id}     → 204; 401 — нет сессии, 419 — CSRF,
  *          403/404 — нет прав или книга уже удалена
  *   DELETE /api/articles/{id}  → 204, та же семантика
- *   Права (book-details, book-rights.js): GET /api/publications/{id}/rights
  *   Удаление выполняет details-menu.js; ошибки показывает Messages.
  */
-$type = $type ?? 'book';
-$id   = (int) ($id ?? 0);
+$type    = $type ?? 'book';
+$id      = (int) ($id ?? 0);
+$isOwner = !empty($isOwner);
 
 $isBook    = $type === 'book';
 $editHref  = ($isBook ? '/books/' : '/articles/') . $id . '/edit';
@@ -32,7 +43,11 @@ $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
 ?>
-<div class="details-menu" data-details-menu-wrap data-pub-type="<?= $view->e($type) ?>">
+<div class="details-menu"
+     data-details-menu-wrap
+     data-pub-type="<?= $view->e($type) ?>"
+     data-rules-kind="<?= $isBook ? 'books' : 'articles' ?>"
+     data-rules-owner="<?= $isOwner ? '1' : '0' ?>">
   <button type="button"
           class="btn-icon details-menu__toggle"
           data-details-menu-toggle
@@ -47,22 +62,28 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
   </button>
 
   <div class="details-menu__popup" data-details-menu hidden>
-    <!-- Пункт «Редактировать»: data-edit-btn остаётся — book-rights.js
-         подгружает права и красит пункт (синий — canEdit, красный —
-         canPublish, серый — прав нет). -->
-    <a class="details-menu__item"
+    <!-- Пункт «Редактировать»: data-rule="edit" включает book-rights.js
+         по правилам updateMeta || updateContent (владелец — всегда). -->
+    <a class="details-menu__item is-disabled"
        href="<?= $view->e($editHref) ?>"
        data-edit-btn
+       data-rule="edit"
+       aria-disabled="true"
+       tabindex="-1"
        <?= $isBook
             ? 'data-book-id="' . $id . '"'
-            : 'data-pub-id="' . $id . '"' ?>
-       data-rights-state="none"><?= $view->e($view->t('common.book.edit')) ?></a>
+            : 'data-pub-id="' . $id . '"' ?>>
+      <?= $view->e($view->t('common.book.edit')) ?>
+    </a>
 
-    <!-- Пункт «Удалить»: details-menu.js → ConfirmModal → DELETE.
-         Права бэк проверит сам — до него фронт не дотягивается. -->
+    <!-- Пункт «Удалить»: data-rule="delete" (правило delete), дальше
+         details-menu.js → ConfirmModal → DELETE. -->
     <button type="button"
-            class="details-menu__item details-menu__item--danger"
+            class="details-menu__item details-menu__item--danger is-disabled"
             data-details-delete
+            data-rule="delete"
+            aria-disabled="true"
+            tabindex="-1"
             data-delete-url="<?= $view->e($deleteUrl) ?>"
             data-delete-redirect="<?= $view->e($listHref) ?>"
             data-delete-kind="<?= $view->e($type) ?>"><?= $view->e($view->t('common.js.delete')) ?></button>

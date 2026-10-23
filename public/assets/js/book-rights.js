@@ -1,75 +1,89 @@
 /**
- * book-rights.js — асинхронная подгрузка прав текущего пользователя
- * на публикацию (книжная страница book-details.php и article-details.php).
+ * book-rights.js — применение Common Rules к кнопкам страницы
+ * (меню «три точки» на book/article details, панель публикации,
+ * нижняя панель форм book-form / article-form).
  *
- * Пункт «Редактировать» (data-edit-btn, лежит в меню «три точки» в шапке
- * страницы — details-menu.php) рендерится вьюхой ВСЕГДА
- * в нейтральном (сером) состоянии; после загрузки прав получает цвет:
- *   canPublish → book-actions__edit--publish (красный — есть права
- *                на публикацию книги),
- *   canEdit    → book-actions__edit--edit    (синий — есть права
- *                на редактирование),
- *   иначе      → book-actions__edit--none    (серый — прав нет;
- *                состояние уже стоит в разметке, но на ошибке
- *                сети возвращаем его явно).
+ * Данные берутся из window.LoreRules (public/assets/js/rules.js), который
+ * делает ОДИН GET на вид прав и кеширует ответ:
+ *   книги    -> GET /api/books/rules
+ *   статьи   -> GET /api/articles/rules
+ *   система  -> GET /api/system/rules (см. sidebar.php, кнопка «Админ-панель»)
  *
- * КОНТРАКТ (бэк добавит роут; config/ и app/ заморожены):
- *   GET /api/publications/{id}/rights
- *   200 { data: { canEdit: bool, canPublish: bool } }
- *   401/403/404/5xx → кнопка остаётся серой, JS не падает.
+ * РАЗМЕТКА (контракт partial'ов и вьюх):
+ *   [data-rules-kind="books|articles|posts"]   — какой /api/.../rules дёргать
+ *   [data-rules-owner="1"]                     — текущий пользователь владелец
+ *   [data-rule="create|edit|publish|delete"]   — элемент, управляющийся правилом
  *
- * Публикация черновика — отдельная механика (rights-modal.js):
- * статус draft вьюха рисует по $status, кнопка внизу страницы есть
- * всегда, пока книга не опубликована.
+ * ПОВЕДЕНИЕ: все элементы рендерятся в СЕРОМ неактивном состоянии
+ * (aria-disabled=true + tabindex=-1) и включаются только после подтверждения
+ * права. Права не пришли? Элемент остаётся серым — permissions-UI не должен
+ * показывать кнопки, которые на клик вернут 403.
+ *
+ * Права владельца: глобальные /api/<kind>/rules НЕ знают про owner_id, поэтому
+ * признак data-rules-owner="1" складывается с правилами здесь.
  */
 (function () {
   'use strict';
 
-  function applyState(btn, state) {
-    btn.classList.remove(
-      'book-actions__edit--publish',
-      'book-actions__edit--edit',
-      'book-actions__edit--none'
+  function t(key, fallback) {
+    if (window.LoreI18n && typeof LoreI18n.tOr === 'function') return LoreI18n.tOr(key, fallback);
+    return (window.LoreI18n && LoreI18n.t) ? LoreI18n.t(key) : fallback;
+  }
+
+  var NO_RIGHTS_HINT = function () { return t('js.no_rights', 'No rights for this action'); };
+
+  function setDisabled(el, disabled) {
+    el.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    el.classList.toggle('is-disabled', !!disabled);
+    if (disabled) {
+      el.setAttribute('tabindex', '-1');
+      el.setAttribute('title', NO_RIGHTS_HINT());
+    } else {
+      el.removeAttribute('tabindex');
+      el.removeAttribute('title');
+    }
+  }
+
+  /** true | false | null(правила не пришли — состояние не трогаем). */
+  function apply(el, allowed) {
+    if (allowed === null || allowed === undefined) return;
+    setDisabled(el, !allowed);
+  }
+
+  function run(wrap) {
+    var kind    = wrap.getAttribute('data-rules-kind') || 'books';
+    var isOwner = wrap.getAttribute('data-rules-owner') === '1';
+    var items   = wrap.querySelectorAll('[data-rule]');
+    if (!items.length) return;
+
+    // Тумблер «⋮» остаётся на месте (решение: серые неактивные пункты вместо
+    // скрытия меню) — просто все пункты гаснут, если прав нет.
+    Array.prototype.forEach.call(items, function (el) {
+      window.LoreRules.canPublication(kind, el.getAttribute('data-rule'), isOwner)
+        .then(function (allowed) { apply(el, allowed); });
+    });
+  }
+
+  // Защита от клика по неактивному элементу: ловим в фазе захвата, чтобы
+  // сработать раньше обработчиков details-menu.js / book-form.js / навигации.
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-rule][aria-disabled="true"]') : null;
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+
+  function init() {
+    if (!window.LoreRules) {
+      console.warn('[book-rights] rules.js is not loaded');
+      return;
+    }
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-rules-kind]'),
+      run
     );
-    if (state === 'publish') btn.classList.add('book-actions__edit--publish');
-    else if (state === 'edit') btn.classList.add('book-actions__edit--edit');
-    else btn.classList.add('book-actions__edit--none');
-    btn.setAttribute('data-rights-state', state);
   }
 
-  function loadRights(btn) {
-    // data-book-id — книга (book-details), data-pub-id — статья
-    // (article-details): роут /api/publications/{id}/rights один на оба вида.
-    var id = parseInt(btn.getAttribute('data-book-id') || btn.getAttribute('data-pub-id'), 10) || 0;
-    if (!id) return;
-
-    fetch('/api/publications/' + id + '/rights', {
-      method: 'GET',
-      credentials: 'same-origin',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        var payload = (data && data.data) || data || {};
-        if (payload.canPublish) applyState(btn, 'publish');
-        else if (payload.canEdit) applyState(btn, 'edit');
-        else applyState(btn, 'none');
-      })
-      .catch(function (err) {
-        // Права не пришли (нет авторизации, роута ещё нет) — серая кнопка
-        console.warn('[book-rights] load failed', err);
-        applyState(btn, 'none');
-      });
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    var btn = document.querySelector('[data-edit-btn]');
-    if (btn) loadRights(btn);
-  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();

@@ -203,6 +203,28 @@ document.addEventListener('DOMContentLoaded', () => {
       el.addEventListener('click', closeSettings);
     });
   })();
+
+
+  // ===== 8. System rules: показ/скрытие элементов по GET /api/system/rules =====
+  // Пункты с data-system-rule="<flag>" рендерятся скрытыми и открываются,
+  // когда бэк подтверждает право. Ответ кеширует LoreRules (один GET на
+  // страницу). Права не пришли — элемент остаётся скрытым: это только
+  // видимость, реальный доступ всегда проверяет бэк (политика роута).
+  (function initSystemRules() {
+    var items = document.querySelectorAll('[data-system-rule]');
+    if (!items.length) return;
+    if (!window.LoreRules) {
+      console.warn('[app] rules.js is not loaded — system-rule items stay hidden');
+      return;
+    }
+
+    Array.prototype.forEach.call(items, function (el) {
+      LoreRules.canSystem(el.getAttribute('data-system-rule'), false)
+        .then(function (allowed) {
+          if (allowed) el.hidden = false;
+        });
+    });
+  })();
 });
 
 
