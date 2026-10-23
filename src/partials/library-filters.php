@@ -40,7 +40,7 @@ $link = static function (array $set = [], array $drop = []) use ($params, $baseP
 
 // When switching Books/Articles keep only shared params — ВАЖНО: lang тоже сохраняем,
 // иначе при переходе на /articles бэк сбросит локаль на фолбэк.
-$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'lang']));
+$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'p_status', 'lang']));
 $tabHref = static function (string $href) use ($keep): string {
     if (!$keep) return $href;
     return $href . (str_contains($href, '?') ? '&' : '?') . http_build_query($keep);
@@ -49,6 +49,23 @@ $tabHref = static function (string $href) use ($keep): string {
 $str = static fn(string $key): string => is_string($params[$key] ?? null) ? $params[$key] : '';
 
 $status = strtolower($str('status'));
+
+// Публикация (draft/public) — параметр БЭКА ?p_status= (PublicationStatus:
+// any | public | draft). НЕ путать со ?status= — это статус ЧТЕНИЯ
+// (ReadingStatus: reading | ended), он в табах ниже.
+// Пустой ?p_status= бэк трактует как public, поэтому «Все» шлём явно.
+$pStatus = strtolower($str('p_status'));
+if (!in_array($pStatus, ['any', 'public', 'draft'], true)) $pStatus = 'all';
+
+$pubStatusTabs = [
+    'type'    => 'tabs',
+    'variant' => 'segmented',
+    'items'   => [
+        ['label' => $view->t('common.filter.all'),      'href' => $link([], ['p_status']),                 'key' => 'p_status', 'value' => 'all',   'active' => $pStatus === 'all'],
+        ['label' => $view->t('common.filter.published'), 'href' => $link(['p_status' => 'public']),          'key' => 'p_status', 'value' => 'public', 'active' => $pStatus === 'public'],
+        ['label' => $view->t('common.filter.draft'),     'href' => $link(['p_status' => 'draft']),           'key' => 'p_status', 'value' => 'draft',  'active' => $pStatus === 'draft'],
+    ],
+];
 $genre  = $str('genre');
 $kind   = strtolower($str('kind'));
 $isbn   = $str('isbn');
@@ -82,7 +99,7 @@ $typeDropdown = [
 ];
 
 // Reset clears filters but keeps search (q), panel state (f) and locale (lang)
-$resetHref = $link([], ['genre', 'status', 'isbn', 'doi', 'series', 'kind', 'sort']);
+$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort']);
 
 $filter_rows = [
     [
@@ -90,6 +107,7 @@ $filter_rows = [
         'hidden' => $isArticles,
         'controls' => [
             $switcher,
+            $pubStatusTabs,
             $genreDropdown,
             [
                 'type'    => 'tabs',
@@ -117,6 +135,7 @@ $filter_rows = [
         'hidden' => !$isArticles,
         'controls' => [
             $switcher,
+            $pubStatusTabs,
             $genreDropdown,
             $typeDropdown,
             [

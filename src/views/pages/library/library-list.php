@@ -70,7 +70,7 @@ $current_label = $sort_options[$current_sort];
 // href — только страховка на случай, если JS не загрузился.
 // Сохраняем текущие параметры (включая lang), чтобы переход без JS
 // не терял язык.
-$preservedKeys = ['q', 'genre', 'status', 'isbn', 'doi', 'kind', 'f', 'lang'];
+$preservedKeys = ['q', 'genre', 'status', 'p_status', 'isbn', 'doi', 'kind', 'f', 'lang'];
 $preserved = array_filter(
     $_GET,
     static fn($k) => in_array($k, $preservedKeys, true),

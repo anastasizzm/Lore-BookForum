@@ -11,6 +11,9 @@
     doi:    'doi',
     sort:   'sort',
     status: 'status',
+    // Публикация (draft/public) — параметр бэка ?p_status=. НЕ путать со
+    // 'status' — это статус ЧТЕНИЯ (reading|ended).
+    pStatus:'p_status',
     type:   'type',
     props:  'include',
   };
@@ -20,6 +23,10 @@
   const SORT_VALUES   = { newest: 'newest', popularity: 'popularity', alpha: 'alpha' };
   // ReadingStatus: none|reading|ended. 'finished' оставлен для старых ссылок.
   const STATUS_VALUES = { reading: 'reading', finished: 'ended', ended: 'ended' };
+  // PublicationStatus: any|public|draft. В UI значение «all» (таб «Все»)
+  // маппится на enum-значение бэка 'any'; при отсутствии параметра бэк сам
+  // фильтрует по public, поэтому в API шлём статус ВСЕГДА.
+  const PSTATUS_VALUES = { all: 'any', public: 'public', draft: 'draft' };
 
   // Типы статей больше не маппятся — приходят из /api/additional/article-types
   // и уходят в ?type= как есть.
@@ -39,8 +46,8 @@
   // 'f' намеренно отсутствует: им управляет app.js
   // 'doi' обязателен: без него значение из ?doi= не восстанавливается
   // после перезагрузки, а поле стирается в syncUi()
-  const KEYS = ['genre', 'status', 'isbn', 'doi', 'sort', 'kind', 'q'];
-  const DEFAULTS = { sort: 'newest' }; // как на сервере по умолчанию
+  const KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'sort', 'kind', 'q'];
+  const DEFAULTS = { sort: 'newest', p_status: 'all' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
   let controller = null;
@@ -73,6 +80,8 @@
     if (state.q)      p.set(PARAM.q, state.q);
     if (state.genre)  p.set(PARAM.genre, state.genre);
     if (state.status) p.set(PARAM.status, STATUS_VALUES[state.status] ?? state.status);
+    // Публикация: шлём всегда, иначе «Все» (all) не доедет до бэка.
+    p.set(PARAM.pStatus, PSTATUS_VALUES[state.p_status ?? 'all'] ?? 'any');
     if (IS_ARTICLES) {
       // Вариант B: без маппинга, значение из state.kind уходит как есть
       if (state.kind) p.set(PARAM.type, state.kind);
@@ -290,7 +299,7 @@
     }
 
     if (e.target.closest('[data-filter-reset]')) {
-      ['genre', 'status', 'isbn', 'doi', 'kind'].forEach(k => delete state[k]);
+      ['genre', 'status', 'p_status', 'isbn', 'doi', 'kind'].forEach(k => delete state[k]);
       syncUi(); pushUrl(); load();
       return;
     }
