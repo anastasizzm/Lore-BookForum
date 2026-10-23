@@ -81,9 +81,11 @@
         "admin": "The user must be admin",
         "auth": "The user must be authenticated",
         "verify": "The user's email must be verified",
-        "owner": {
-            "post": "The user should be either post owner or admin",
-            "profile": "The user should be either profile owner or admin"
+        "access": {
+            "publication": "The user should have permissions to the publication",
+            "post": "The user should have permissions to the post",
+            "system": "The user should have permissions to the system",
+            "account": "The user should have permissions to the account"
         }
     },
     "mail": {

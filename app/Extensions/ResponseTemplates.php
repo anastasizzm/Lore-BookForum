@@ -22,7 +22,7 @@ final class ResponseTemplates
         ];
     }
 
-    public static function object(object $data)
+    public static function object(object|array $data)
     {
         return [
             'data' => $data,

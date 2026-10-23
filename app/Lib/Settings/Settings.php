@@ -14,6 +14,7 @@ final readonly class Settings
 
     public bool $debug;
     public array $middleware;
+    public int $defaultRoleId;
     
     public string $appUrl;
     public string $assetsUrl;
@@ -30,6 +31,7 @@ final readonly class Settings
         $this->storage = StorageSettings::fromData($data);
         
         $this->debug      = $data['debug'] ?? false;
+        $this->defaultRoleId = $data['defaultRoleId'] ?? 0;
         $this->middleware = $data['middleware'] ?? [];
         $this->appUrl     = $data['appUrl'] ?? 'http://localhost:8080';
         $this->assetsUrl  = rtrim($data['assets_url']  ?? '/assets', '/');

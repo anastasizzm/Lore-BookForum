@@ -10,7 +10,7 @@ readonly class PublicationPermissions extends Dto
     public function __construct(
         public int $publicationId,
         public int $roleId,
-        public PublicationAccessRules $rules,
+        public PublicationAccessRules $permissions,
     ){}
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -18,7 +18,7 @@ readonly class PublicationPermissions extends Dto
         return new self(
             publicationId: self::int($row, $prefix . 'publication_id'),
             roleId: self::int($row, $prefix . 'role_id'),
-            rules: PublicationAccessRules::fromRow($row, $prefix)
+            permissions: PublicationAccessRules::fromRow($row, $prefix)
         );
     }
 }

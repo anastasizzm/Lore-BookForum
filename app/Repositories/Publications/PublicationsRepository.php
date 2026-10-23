@@ -9,6 +9,8 @@ use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\PublicationStatus;
 use App\Models\Scripts\ScriptParam;
 use App\Models\Publications\PublicationShort;
+use App\Models\Publications\Publication;
+use App\Models\Publications\PublicationExtended;
 use App\Models\Uuid;
 
 use App\Extensions\ScriptBuilders\Publications\PublicationsScriptDirector;
@@ -85,7 +87,7 @@ abstract class PublicationsRepository extends Repository
         );
         $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
     }  
-    
+
     protected function insertPublication(
         string $title, 
         string $description, 
@@ -119,6 +121,26 @@ abstract class PublicationsRepository extends Repository
         return (int)$id;
     }
 
+    protected function addSelect(string $className) : void
+    {
+        switch($className)
+        {
+            case PublicationShort::class:
+                $this->director->addPublicationShortSelectTemp();
+                break;
+            case Publication::class;
+                $this->director->addPublicationSelectTemp();
+                break;
+            case PublicationExtended::class:
+                $this->director->addPublicationExtendedSelectTemp();
+                break;
+            default:
+                $this->addCustomSelect($className);
+                break;
+        }
+    }
+    protected abstract function addCustomSelect(string $className) : void;
+
     protected function applyFilters(PublicationsFilters $filters) : void 
     {
         if (!empty($filters->search))
@@ -129,6 +151,8 @@ abstract class PublicationsRepository extends Repository
 
         if ($filters->creatorId !== null)
             $this->director->addCreatorTempFilter($filters->creatorId);
+
+        $this->director->addStatusTempFilter($filters->status);
     }
 
     protected function applyUserRelationCriteria(UserRelationCriteria $criteria) : void 

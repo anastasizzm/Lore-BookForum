@@ -33,7 +33,6 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASS_HASH: ${ADMIN_PASS_HASH:-}
-      SEED_TEST_DATA: ${SEED_TEST_DATA:-false}
       DBMATE_MIGRATIONS_DIR: /storage/db/migrations
       DBMATE_SCHEMA_FILE: /storage/db/schema.sql
       DBMATE_NO_DUMP_SCHEMA: "true"

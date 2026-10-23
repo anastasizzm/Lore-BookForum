@@ -16,20 +16,20 @@ final readonly class ArticlesListQuery
         public SortQuery $sort,
         public PropertiesQuery $properties,
         public ArticlesFilters $filters,
-        public ?UserRelationFilters $userFilters
+        public UserRelationFilters $userFilters,
+        public int $viewerId
     ) {}
 
     /** @param array<string, mixed> $q */
-    public static function fromInput(array $q, ?int $viewerId): self
+    public static function fromInput(array $q, int $viewerId): self
     {
         return new self(
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromInput($q),
             filters: ArticlesFilters::fromInput($q),
-            userFilters: $viewerId !== null
-                ? UserRelationFilters::fromInput($q, $viewerId)
-                : null,
+            userFilters: UserRelationFilters::fromInput($q, $viewerId),
+            viewerId: $viewerId
         );
     }
 }

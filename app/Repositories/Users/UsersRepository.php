@@ -9,13 +9,14 @@ use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 
 use App\Repositories\Repository;
+use App\Lib\Settings\Settings;
 use App\Lib\Data\Database;
 
 use PDO;
 
 final class UsersRepository extends Repository
 {
-    public function __construct(Database $db){
+    public function __construct(Database $db, private readonly Settings $settings){
         parent::__construct($db);
     }
 
@@ -91,17 +92,14 @@ final class UsersRepository extends Repository
         $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio]);
     }
 
-    public function createRules(int $userId, bool $isAdmin, bool $isRedactor) 
+    public function initRules(int $userId) : void 
     {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO users_rules (user_id, is_redactor, is_admin)
-            VALUES (:userId, :isRedactor, :isAdmin)'
+            'INSERT INTO roles_users (user_id, role_id, granted_by_id)
+            VALUES (:userId, :roleId, :granter)'
         );
 
-        $stmt->bindValue(':userId',     $userId,     PDO::PARAM_INT);
-        $stmt->bindValue(':isRedactor', $isRedactor, PDO::PARAM_BOOL);
-        $stmt->bindValue(':isAdmin',    $isAdmin,    PDO::PARAM_BOOL);
-        $stmt->execute();
+        $stmt->execute([':userId' => $userId, ':roleId' => $this->settings->defaultRoleId, ':granter' => $userId]);
     }
 
     public function checkVerified(int $id) : bool 
@@ -136,12 +134,10 @@ final class UsersRepository extends Repository
                 u.username, 
                 p.name, 
                 p.surname, 
-                p.avatar, 
-                ur.is_admin IS NOT NULL AND ur.is_admin as is_admin, 
-                ur.is_redactor IS NOT NULL AND ur.is_redactor as is_redactor
-            FROM (SELECT u0.id, u0.username FROM users u0 WHERE u0.id = :userId) u
+                p.avatar
+            FROM users u
             INNER JOIN profiles p ON p.user_id = u.id
-            LEFT JOIN users_rules ur ON ur.user_id = u.id'
+            WHERE u.id = :userId'
         );
         $stmt->execute([':userId' => $userId]);
 

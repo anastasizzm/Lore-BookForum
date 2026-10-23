@@ -5,7 +5,7 @@ CREATE TABLE types (
     created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO types (title) VALUES ('Review');
+-- INSERT INTO types (title) VALUES ('Review');
 
 -- migrate:down
 DROP TABLE types;
