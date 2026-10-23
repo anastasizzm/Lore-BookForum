@@ -25,9 +25,12 @@
 (function () {
   'use strict';
 
+  // tOr возвращает fallback, если ключа нет в словаре (иначе в DOM упал бы
+  // сам ключ — ту же проблему чинил d744f47).
   function t(key, fallback) {
-    if (window.LoreI18n && typeof LoreI18n.tOr === 'function') return LoreI18n.tOr(key, fallback);
-    return (window.LoreI18n && LoreI18n.t) ? LoreI18n.t(key) : fallback;
+    return (window.LoreI18n && LoreI18n.tOr)
+      ? LoreI18n.tOr(key, fallback)
+      : fallback;
   }
 
   var NO_RIGHTS_HINT = function () { return t('js.no_rights', 'No rights for this action'); };
@@ -66,11 +69,45 @@
 
   // Защита от клика по неактивному элементу: ловим в фазе захвата, чтобы
   // сработать раньше обработчиков details-menu.js / book-form.js / навигации.
+  // Отдельная защита НЕ нужна от pointer-events — его мы сознательно не
+  // ставим, иначе не показывалась бы подсказка title «Нет прав...».
   document.addEventListener('click', function (e) {
     var el = e.target && e.target.closest ? e.target.closest('[data-rule][aria-disabled="true"]') : null;
     if (!el) return;
     e.preventDefault();
     e.stopPropagation();
+  }, true);
+
+  // Enter в поле формы уводит сабмит в submit, а не в click: ловим и его.
+  // Иначе неактивная «Publish» в book-form / article-form отправила бы
+  // форму, хотя клик по ней мы уже блокируем.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.querySelector) return;
+
+    var isBlocked = function (el) {
+      return !!el && !!el.getAttribute && el.getAttribute('aria-disabled') === 'true';
+    };
+
+    if (e.submitter) {
+      // Кнопка известна — решаем только по ней. Иначе неактивная «Publish»
+      // заблокировала бы рабочую «Create draft» в той же форме.
+      if (!isBlocked(e.submitter)) return;
+    } else {
+      // submitter неизвестен (старый браузер / сабмит по Enter): пропускаем,
+      // пока хотя бы ОДНА кнопка с data-rule активна; блокируем только когда
+      // в форме не осталось ни одной рабочей.
+      var rules = form.querySelectorAll('[data-rule]');
+      var anyActive = false;
+      for (var i = 0; i < rules.length; i++) {
+        if (!isBlocked(rules[i])) { anyActive = true; break; }
+      }
+      if (anyActive) return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
   }, true);
 
   function init() {

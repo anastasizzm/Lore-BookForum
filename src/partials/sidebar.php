@@ -24,7 +24,7 @@
 
   /**
    * Обёртка для ссылок, которые бэк ещё не завёл как именованный роут
-   * (например, «Черновики» → /articles?status=draft). Принимает готовый путь
+   * (например, «Черновики» → /books?p_status=draft). Принимает готовый путь
    * и добавляет ?lang=. Когда роут появится — достаточно заменить путь на
    * $view->url('drafts'), всё остальное уже готово.
    */
@@ -80,9 +80,10 @@
   $adminUrl     = '/admin'
       . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
 
-  // ВРЕМЕННО: роут 'drafts' бэк ещё не завёл. Ведём на существующий /articles
-  // с фильтром status=draft. Когда появится $view->url('drafts') — поменяем
-  // только эту строку.
+  // ВРЕМЕННО: роут 'drafts' бэк ещё не завёл. Ведём на существующий /books
+  // с фильтром публикаций ?p_status=draft (PublicationStatus, НЕ путать со
+  // ?status= — это статус чтения). Когда появится $view->url('drafts') —
+  // поменяем только эту строку.
   $draftsUrl = $urlPath('/books?p_status=draft');
 ?>
 <aside class="sidebar" data-sidebar>
@@ -131,8 +132,10 @@
                 <span class="nav-text"><?= $tr('common.sidebar.library') ?></span>
             </a>
 
-            <!-- Черновики: пока ведёт на /articles?status=draft (роут 'drafts' бэк ещё не завёл).
-                 Когда роут появится — заменить $draftsUrl на $url('drafts'), см. выше. -->
+            <!-- Черновики: пока ведёт на /books?p_status=draft — это сразу
+                 включает таб «Draft» на странице библиотеки.
+                 Роут 'drafts' бэк ещё не завёл; когда появится — заменить
+                 $draftsUrl на $url('drafts'), см. выше. -->
             <a href="<?= $view->e($draftsUrl) ?>"
                class="nav-item mobile-nav-btn <?= $selectedTab === 'drafts' ? 'active' : '' ?>"
                title="<?= $tr('common.sidebar.drafts') ?>"
@@ -192,20 +195,18 @@
                  ссылка появится сразу, без ожидания ответа.
                  Это ТОЛЬКО видимость: доступ на сам /admin проверяет бэк
                  (политика роута), не эта вьюха. */ ?>
-            <div data-system-rules-wrap>
-                <a href="<?= $view->e($adminUrl) ?>"
-                   class="settings-menu__item settings-menu__item--admin"
-                   data-system-rule="manageAccounts"
-                   <?= $canOpenAdmin ? '' : 'hidden' ?>>
-                    <span class="settings-menu__icon">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path d="M8 1.5l5 1.8v4.2c0 3-2.1 5.4-5 6.5-2.9-1.1-5-3.5-5-6.5V3.3l5-1.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                            <path d="M5.8 8l1.6 1.6L10.4 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </span>
-                    <span><?= $tr('common.sidebar.admin') ?></span>
-                </a>
-            </div>
+            <a href="<?= $view->e($adminUrl) ?>"
+               class="settings-menu__item settings-menu__item--admin"
+               data-system-rule="manageAccounts"
+               <?= $canOpenAdmin ? '' : 'hidden' ?>>
+                <span class="settings-menu__icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M8 1.5l5 1.8v4.2c0 3-2.1 5.4-5 6.5-2.9-1.1-5-3.5-5-6.5V3.3l5-1.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <path d="M5.8 8l1.6 1.6L10.4 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <span><?= $tr('common.sidebar.admin') ?></span>
+            </a>
 
             <!-- Выбор языка: раскрывающийся список (<details>, без JS); язык запоминает бэк -->
             <details class="settings-menu__lang">

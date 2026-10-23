@@ -262,7 +262,9 @@
         "no_bio": "No biography yet.",
         "publications": "Publications",
         "publications_of": "Publications of :name",
-        "user_fallback": "User #:id"
+        "user_fallback": "User #:id",
+        "no_edit": "You are not allowed to edit this profile.",
+        "back_to": "Back to profile"
     },
     "saved": {
         "title": "Saved",

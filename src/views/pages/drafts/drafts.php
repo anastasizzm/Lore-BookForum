@@ -32,7 +32,7 @@
  *          $meta  — ['page' => int, 'pageSize' => int, 'hasNext' => bool]
  *                   (как у BooksController::savedList — пагинация).
  *
- *        Сайдбар: ссылка «Черновики» пока ведёт на /articles?status=draft
+ *        Сайдбар: ссылка «Черновики» пока ведёт на /books?p_status=draft
  *        ($draftsUrl в sidebar.php); когда роут drafts появится — заменить
  *        на $url('drafts') (одна строка).
  *

@@ -297,6 +297,14 @@ body.is-sidebar-expanded .sidebar-overlay {
   display: none;
 }
 
+/* Пункт меню скрыт по правилу (app.js, data-system-rule).
+   Нужен ЯВНЫЙ [hidden]-селектор: .settings-menu__item задаёт display:flex
+   авторским правилом, оно перебивает UA-стиль [hidden] { display: none },
+   и без этого «скрытая» ссылка осталась бы на месте. */
+.settings-menu__item[hidden] {
+  display: none;
+}
+
 .settings-menu__form {
   margin: 0;
 }

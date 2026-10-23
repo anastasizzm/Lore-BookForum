@@ -919,6 +919,37 @@ textarea.form-field__input {
 }
 
 /* ============================================
+   ПРАВА (Common Rules) — состояние неактивного элемента
+   ============================================
+   Контракт разметки: [data-rules-kind] + [data-rule="create|edit|publish|
+   delete"]. Права подтверждает book-rights.js из window.LoreRules
+   (public/assets/js/rules.js). Пока/если правила не подтвердились,
+   элемент висит с aria-disabled="true" + .is-disabled.
+
+   Правило живёт ЗДЕСЬ, а не в book.css: оно общее для страниц
+   book/article details И для форм (book-form.css / article-form.css
+   book.css не подключают, и кнопки Publish/Save остались бы
+   неактивными, но выглядящими рабочими). */
+[data-rule].is-disabled,
+[data-rule][aria-disabled='true'] {
+  color: var(--color-text-muted, #6F84A5);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[data-rule].is-disabled:hover,
+[data-rule].is-disabled:focus-visible,
+[data-rule][aria-disabled='true']:hover,
+[data-rule][aria-disabled='true']:focus-visible {
+  background: none;
+  color: var(--color-text-muted, #6F84A5);
+}
+
+/* pointer-events: НЕ ставим — он бы убил подсказку title («Нет прав...»).
+   Клики, клавиатура и отправка формы глушатся в book-rights.js в фазе
+   захвата, до обработчиков details-menu.js / book-form.js / article-form.js. */
+
+/* ============================================
    FILTER PANEL — выравнивание всех контролов
    ============================================ */
 .filter-panel__row > * {
