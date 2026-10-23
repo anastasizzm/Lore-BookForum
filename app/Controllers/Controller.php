@@ -6,7 +6,8 @@ namespace App\Controllers;
 use App\Http\Response;
 use App\Lib\View;
 
-use App\Models\Error;
+use App\Models\Errors\Error;
+use JsonSerializable;
 
 use App\Extensions\ResponseTemplates;
 
@@ -81,4 +82,4 @@ abstract class Controller
     {
         return Response::json((object)[], $statusCode);
     }
-} 
+}
