@@ -34,7 +34,7 @@ final class ArticlesController extends Controller
         private readonly ArticlesService $articlesService
     ){}
 
-    public function list (HttpContext $context){
+    public function list(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
             return Response::redirect('login');
@@ -48,7 +48,8 @@ final class ArticlesController extends Controller
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
                 filters: ArticlesFilters::fromInput($q),
-                userFilters: UserRelationFilters::fromAll($q, $userId)
+                userFilters: UserRelationFilters::fromAll($q, $userId),
+                viewerId: $userId
             );
 
             $paginatedList = $this->articlesService->getListWithContext($query);
@@ -88,7 +89,8 @@ final class ArticlesController extends Controller
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
                 filters: ArticlesFilters::fromInput($q),
-                userFilters: UserRelationFilters::fromSaved($q, $userId)
+                userFilters: UserRelationFilters::fromSaved($q, $userId),
+                viewerId: $userId
             );
 
             $paginatedList = $this->articlesService->getListWithContext($query);

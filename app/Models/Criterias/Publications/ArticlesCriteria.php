@@ -12,8 +12,10 @@ final readonly class ArticlesCriteria
     public function __construct(
         public int $page,
         public int $pageSize,
+        public string $classType,
         public PublicationsSortBy $sortBy,
         public ArticlesFilters $filters,
-        public ?UserRelationCriteria $userCriteria = null,
+        public UserRelationCriteria $userCriteria,
+        public int $viewerId
     ) {}
 }

@@ -6,13 +6,16 @@ namespace App\Services\Users;
 use App\Cache\User\UserContextCache;
 
 use App\Forms\Users\ProfileForm;
+use App\Attributes\Inject;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\Users\ProfileFormValidator;
 
+use App\Models\Enums\ServiceType;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 use App\Repositories\Users\UsersRepository;
+use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Exceptions\Translators\UserExceptionTranslator;
 use Throwable;
 use PDO;
@@ -24,7 +27,10 @@ final class UsersService
         private readonly UnitOfWork $uow,
         private readonly UsersRepository  $usersRepo,
         private readonly UserExceptionTranslator $translator,
-        private readonly ProfileFormValidator $profileFormValidator
+        private readonly ProfileFormValidator $profileFormValidator,
+
+        #[Inject(key: ServiceType::System)]
+        private readonly CommonRuleProvider $ruleProvider
     ){}
 
     public function loadContext(int $userId): ?UserContext
@@ -36,16 +42,18 @@ final class UsersService
         } catch (Throwable $e) {
             error_log('[redis] user_ctx get failed: ' . $e->getMessage());
         }
-
         if ($user !== null) {
             return $user;
         }
 
         $user = $this->usersRepo->loadContext($userId);
-
         if ($user === null) {
             return null;
         }
+
+        $rules = $this->ruleProvider->getRule($userId);
+        if ($rules !== NULL)
+            $user = $user->withRules($rules);
 
         try {
             $this->cache->set($user, ttl: 300);
@@ -72,8 +80,8 @@ final class UsersService
 
     public function editProfile(int $userId, ProfileForm $form)
     {
-        $errorBag = $profileFormValidator->validateOne($form);
-        if (!$errorBag.isEmpty()) throw new ValidationException($errorBag->all());
+        $errorBag = $this->profileFormValidator->validateOne($form);
+        if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
 
         try{
             $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);

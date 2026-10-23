@@ -53,7 +53,7 @@ final class AccountController extends Controller
         catch(HttpException $e)
         {
             if ($e->getStatus() === 202)
-                return $this->jsonObjectFromArray(['message' => $e->getMessage(), 'code' => $e->getErrorCode()], 202);
+                return $this->jsonObject(['message' => $e->getMessage(), 'code' => $e->getErrorCode()], 202);
             
             return $this->jsonError($e->toError(), $e->getStatus());
         }

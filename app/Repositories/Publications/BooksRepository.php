@@ -88,9 +88,20 @@ final class BooksRepository extends PublicationsRepository
         return $builder;
     }
 
+    protected function addCustomSelect(string $className) : void
+    {
+        switch($className)
+        {
+            case Book::class:
+                $this->director->addBookSelectTemp();
+                break;
+        }
+    }
+
     public function getList(BooksCriteria $criteria, array $includeObjects = []) : array
     {
-        $this->director->startTempFilter()->addPublicationSelectTemp();
+        $this->director->startTempFilter()->addViewerTemp($criteria->viewerId);
+        $this->addSelect($criteria->classType);
         
         $filters = $criteria->filters;
         $this->applyFilters($filters);
@@ -114,7 +125,7 @@ final class BooksRepository extends PublicationsRepository
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $items = array_map(
-            static fn(array $row) => Publication::fromRow($row),
+            static fn(array $row) => $criteria->classType::fromRow($row),
             $stmt->fetchAll(),
         );
 
@@ -123,8 +134,9 @@ final class BooksRepository extends PublicationsRepository
 
     public function retrieve(int $bookId, array $includeObjects) : ?Book
     {
-        $this->director->startTempFilter()->addBookSelectTemp()
+        $this->director->startTempFilter()
             ->addConcreteTempFilter($bookId)->setLimitTemp(1);
+        $this->addSelect(Book::class);
 
         $filterBuilder = $this->director->getTempBuilder();
         $filterCteName = "filtered_book";

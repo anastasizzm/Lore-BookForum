@@ -7,7 +7,7 @@ ALTER TABLE users_read
     DROP COLUMN page_num,
     ADD COLUMN position JSONB NOT NULL DEFAULT '{"pageNumber": 1}',
     ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    DROP CONSTRAINT users_read_pkey;
+    DROP CONSTRAINT read_status_pk;
 
 ALTER TABLE users_read 
     ADD PRIMARY KEY (user_id, publication_id, format);

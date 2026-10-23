@@ -5,8 +5,7 @@
 #     1. load schema            storage/db/schema.sql
 #     2. dbmate up              (only if migration files exist)
 #     3. init.sql               admin user, genres, categories
-#     4. test_data.sql          (only if SEED_TEST_DATA=true)
-#     5. create the limited app role (SELECT/INSERT/UPDATE/DELETE only)
+#     4. create the limited app role (SELECT/INSERT/UPDATE/DELETE only)
 #   Every later start:
 #     dbmate up                 apply new migrations, if any
 set -eu
@@ -34,7 +33,7 @@ else
   log "No migration files in $DBMATE_MIGRATIONS_DIR - skipping dbmate up"
 fi
 
-# 3-5. First start only. Everything below runs in ONE transaction together with the
+# 3-4. First start only. Everything below runs in ONE transaction together with the
 #      marker table, so if any step fails nothing is kept and the next start retries.
 if [ "$(psql_q -c "SELECT to_regclass('public.app_bootstrap') IS NULL")" = "t" ]; then
   log "First start - seeding data and creating the application role"
@@ -51,17 +50,6 @@ if [ "$(psql_q -c "SELECT to_regclass('public.app_bootstrap') IS NULL")" = "t" ]
   if [ ! -f /storage/db/init.sql ]; then
     echo "[migrate] ERROR: /storage/db/init.sql not found" >&2
     exit 1
-  fi
-
-  # SQL files to run, in order
-  set -- -f /storage/db/init.sql
-  if [ "${SEED_TEST_DATA:-false}" = "true" ]; then
-    if [ -f /storage/db/test_data.sql ]; then
-      log "SEED_TEST_DATA=true - test data will be inserted"
-      set -- "$@" -f /storage/db/test_data.sql
-    else
-      log "WARNING: /storage/db/test_data.sql not found - skipping test data"
-    fi
   fi
 
   # Application role (runs last, after the marker table exists)
@@ -101,7 +89,7 @@ SQL
     -v app_user="$POSTGRES_APP_USER" \
     -v app_pass="$POSTGRES_APP_PASSWORD" \
     -v db_name="$POSTGRES_DB" \
-    "$@" \
+    -f /storage/db/init.sql \
     -c "CREATE TABLE public.app_bootstrap (initialized_at timestamptz NOT NULL DEFAULT now()); INSERT INTO public.app_bootstrap DEFAULT VALUES;" \
     -f /tmp/app_role.sql
 

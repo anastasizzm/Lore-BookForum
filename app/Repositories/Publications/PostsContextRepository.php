@@ -28,16 +28,11 @@ final class PostsContextRepository extends Repository
         $placeholders = implode(',', array_fill(0, count($postIds), '?'));
 
         $sql = "
-            WITH viewer AS (
-                SELECT u.user_id, bool_or(ur.id IS NOT NULL AND ur.is_admin) as is_admin FROM (SELECT ?::bigint AS user_id) u
-                LEFT JOIN users_rules ur ON u.user_id = ur.user_id
-                GROUP BY u.user_id
-            )
+            WITH viewer AS ( SELECT ?::bigint as user_id )
 
             SELECT
                 p.id AS post_id,
-                COALESCE(bool_or(likes.comment_id IS NOT NULL), false) as is_liked,
-                COALESCE(bool_or(v.is_admin OR p.creator_id = v.user_id), false) as is_editor
+                COALESCE(bool_or(likes.comment_id IS NOT NULL), false) as is_liked
             FROM comments p
             CROSS JOIN viewer v
             LEFT JOIN comments_likes likes ON likes.comment_id = p.id AND likes.user_id = v.user_id
