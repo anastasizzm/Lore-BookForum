@@ -4,12 +4,7 @@ declare(strict_types=1);
 namespace App\Repositories\Additional;
 
 use App\Repositories\Repository;
-use App\Extensions\ScriptBuilders\Additional\GenresScriptDirector;
-
-use PDO;
 use App\Lib\Data\Database;
-use App\Lib\I18n\Translator;
-
 use App\Models\Additional\Language;
 
 final class LanguagesRepository extends Repository
