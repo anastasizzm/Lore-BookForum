@@ -25,6 +25,11 @@ $cards = [
     ['href' => '/pages/test?page=admin/books',     'title' => $tr('common.admin.card_books'),     'hint' => $tr('common.admin.card_books_hint'),     'count' => '—'],
     ['href' => '/pages/test?page=admin/articles',  'title' => $tr('common.admin.card_articles'),  'hint' => $tr('common.admin.card_articles_hint'),  'count' => '—'],
     ['href' => '/pages/test?page=admin/comments',  'title' => $tr('common.admin.card_comments'),  'hint' => $tr('common.admin.card_comments_hint'),  'count' => '—'],
+    // Справочники (Genres / Categories / Types) — таблицы с мультиязычными
+    // переводами; ведут на dev-роут /pages/test, как и остальные карточки.
+    ['href' => '/pages/test?page=admin/genres',     'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint'),     'count' => '—'],
+    ['href' => '/pages/test?page=admin/categories', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint'), 'count' => '—'],
+    ['href' => '/pages/test?page=admin/types',      'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint'),      'count' => '—'],
     // Раздела «Reports» сегодня нет (роута и вида) — карточка-заглушка:
     // рисуем div, а не ссылку с «#»: клик не должен ничего делать.
     ['href' => null, 'title' => $tr('common.admin.card_reports'), 'hint' => $tr('common.admin.card_reports_hint'), 'count' => '—', 'soon' => true],

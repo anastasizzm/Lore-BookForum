@@ -1562,6 +1562,14 @@ a.user-mention:focus-visible {
   margin-bottom: 16px;
 }
 
+/* Карточки в списке (details-страницы, .stack) расстояние между собой
+   берут от gap контейнера (16px, как в ленте и в ответах) — своя margin
+   удваивала отступ (16 + 16 = 32px). У формы ввода margin остаётся:
+   она — прямой потомок .comments-section, вне списка. */
+[data-comment-list] .comment-card {
+  margin-bottom: 0;
+}
+
 .comment-card__inner {
   display: flex;
   gap: 16px;

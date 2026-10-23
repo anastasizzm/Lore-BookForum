@@ -48,6 +48,17 @@
      CSRF уходит заголовком X-CSRF-Token (csrf.js). Ответ: 201 на
      rate, 204 на unrate.
 
+     СВОЯ ОЦЕНКА: вьюха отдаёт её в data-rate-current
+     (PublicationContext::rating из контекста юзера) — звёзды сразу
+     отмечены, если пользователь уже оценивал; клик по той же звезде
+     снимает оценку, как и раньше.
+
+     СВОДКА РЕЙТИНГА (средний балл рядом со звёздами) обновляется
+     сразу после успешного rate/unrate: GET /api/{kind}?q=<title>
+     отдаёт свежий rating_avg (×10) по совпадению id — отдельного
+     эндпоинта «рейтинг публикации» нет. Не нашли/не удалось — сводку
+     не трогаем (никаких ложных цифр в UI).
+
      Любая неудача (нет id публикации, 4xx/5xx, HTML-редирект на
      логин): UI откатывается к прежней оценке и показывает
      предупреждение js.book_rate_failed — как в publish-фазе
@@ -56,19 +67,70 @@
   var rate = document.querySelector('[data-rate]');
   if (rate) {
     var stars = rate.querySelectorAll('[data-rate-value]');
-    var current = 0;
+    // Своя оценка приходит с сервера: 0 — не оценивал, 1..5 — уже оценил
+    var currentAttr = Number(rate.getAttribute('data-rate-current') || 0);
+    var current = (currentAttr >= 1 && currentAttr <= 5) ? Math.floor(currentAttr) : 0;
     var rateSending = false;
+    var rateKind = rate.getAttribute('data-rate-kind') || 'books';
 
     var rateUrl = (function () {
-      var kind = rate.getAttribute('data-rate-kind') || 'books';
       var id = Number(rate.getAttribute('data-rate-publication') || 0);
-      return id ? '/api/' + kind + '/' + id + '/rate' : '';
+      return id ? '/api/' + rateKind + '/' + id + '/rate' : '';
     })();
 
     var paint = function (value) {
       stars.forEach(function (star, i) {
         star.classList.toggle('is-filled', i < value);
         star.setAttribute('aria-checked', String(current > 0 && i + 1 === current));
+      });
+    };
+
+    /** Обновляет сводку (звёзды + дробный балл) по rating_avg ×10. */
+    var paintSummary = function (ratingRaw) {
+      var summaryStars = document.querySelector('[data-rating-stars]');
+      var summaryValue = document.querySelector('[data-rating-value]');
+      if (!summaryStars || !summaryValue) return;
+
+      var rating = Math.max(0, Math.min(50, Number(ratingRaw) || 0)) / 10;
+      var hasRating = Number(ratingRaw) > 0;
+      var text = rating.toFixed(1);
+
+      summaryStars.style.setProperty('--rating-percent', (rating / 5 * 100).toFixed(2) + '%');
+      summaryStars.setAttribute('aria-label', hasRating
+        ? t('book.rating_aria', { value: text })
+        : t('book.no_rating'));
+      summaryValue.textContent = hasRating ? text : t('book.no_rating');
+      summaryValue.classList.toggle('book-rating__value--none', !hasRating);
+    };
+
+    /** Свежий средний балл после оценки: список публикаций + совпадение id. */
+    var refreshSummary = function () {
+      var title = rate.getAttribute('data-rate-title') || '';
+      var id = Number(rate.getAttribute('data-rate-publication') || 0);
+      if (!title || !id) return;
+
+      var url = '/api/' + rateKind + '?page=1&ps=50&q=' + encodeURIComponent(title);
+      var doFetch = (window.LoreCsrf && typeof LoreCsrf.fetch === 'function')
+        ? LoreCsrf.fetch
+        : fetch;
+
+      doFetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      }).then(function (res) {
+        return res.text().then(function (raw) {
+          if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
+          return raw;
+        });
+      }).then(function (raw) {
+        var data = raw ? JSON.parse(raw) : null;
+        var items = Array.isArray(data) ? data
+                  : (data && Array.isArray(data.items) ? data.items : []);
+        for (var i = 0; i < items.length; i++) {
+          if (Number(items[i].id) === id) { paintSummary(items[i].rating); return; }
+        }
+      }).catch(function (err) {
+        console.warn('[rate] rating summary refresh failed', err);
       });
     };
 
@@ -107,6 +169,8 @@
         });
       }).then(function () {
         rateSending = false;
+        // Оценка принята — сразу показываем обновлённый средний балл
+        refreshSummary();
       }, function (err) {
         rateSending = false;
         console.warn('[rate] ' + (opts.method) + ' ' + rateUrl + ' failed', err);
@@ -127,6 +191,7 @@
     });
 
     rate.addEventListener('mouseleave', function () { paint(current); });
+    // data-rating-current — своя оценка с сервера: звёзды отмечены сразу
     paint(current);
   }
 
