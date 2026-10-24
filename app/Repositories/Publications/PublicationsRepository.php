@@ -128,7 +128,7 @@ abstract class PublicationsRepository extends Repository
             case PublicationShort::class:
                 $this->director->addPublicationShortSelectTemp();
                 break;
-            case Publication::class;
+            case Publication::class:
                 $this->director->addPublicationSelectTemp();
                 break;
             case PublicationExtended::class:
