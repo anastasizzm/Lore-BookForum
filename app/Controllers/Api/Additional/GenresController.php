@@ -5,18 +5,24 @@ namespace App\Controllers\Api\Additional;
 
 use App\Services\Additional\GenresService;
 use App\Models\Queries\Additional\BasicModelListQuery;
+use App\Forms\Translations\Additionals\GenreForm;
 
 use App\Controllers\Controller;
 
 use App\Http\HttpContext;
 
+use App\Lib\I18n\Translator;
+use App\Extensions\Parsers\RouteParamParser;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ConflictException;
+
 use App\ErrorCodes;
-use App\Constants;
 
 final class GenresController extends Controller
 {
     public function __construct(
-        private readonly GenresService $genresService
+        private readonly GenresService $genresService,
+        private readonly Translator $translator
     ){}
 
     public function list(HttpContext $context)
@@ -29,4 +35,48 @@ final class GenresController extends Controller
                 'hasNext' => $paginatedList->hasNext(),
             ]);
     }
+
+    public function create(HttpContext $context)
+    {
+        $form = GenreForm::fromInput($context->request->body());
+
+        $id = $this->genresService->create($form);
+        return $this->jsonCreatedId($id);
+    }
+
+    public function update(HttpContext $context, string $genreId)
+    {
+        $id = RouteParamParser::positiveInt(['id' => $genreId], 'id');
+        $form = GenreForm::fromInput($context->request->body());
+
+        $this->genresService->update($id, $form);
+
+        return $this->jsonEmpty();
+    }
+
+    /**public function delete(HttpContext $context, string $genreId)
+    {
+        $id = RouteParamParser::positiveInt(['id' => $genreId], 'id');
+
+        try {
+            $deleted = $this->genresService->delete($id);
+        } catch (ConflictException) {
+            return $this->jsonError(
+                new \App\Models\Errors\Error(
+                    $this->translator->t('errors.common.in_use'),
+                    ErrorCodes::CONFLICT,
+                ),
+                409
+            );
+        }
+
+        if (!$deleted) {
+            throw new NotFoundException(
+                $this->translator->t('errors.common.not_found'),
+                ErrorCodes::NOT_FOUND,
+            );
+        }
+
+        return $this->jsonEmpty();
+    }**/
 }
