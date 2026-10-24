@@ -9,7 +9,9 @@ use App\Exceptions\ConflictException;
 use App\Exceptions\Translator\PermissionExceptionTranslator;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
+use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
+use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\LexoRank\LexoRank;
@@ -41,9 +43,7 @@ final class PublicationPermissionsService
                     $permissions->roleId,
                     $publicationId,
                     $lexorank,
-                    $permissions->pubPermissions,
-                    $permissions->postPermissions,
-                    $permissions->systemPermissions,
+                    $permissions->pubPermissions
                 );
             });
         } catch (\PDOException $e) {
@@ -51,9 +51,32 @@ final class PublicationPermissionsService
         }
     }
 
-    /**
-     * @return int  Новая версия роли.
-     */
+    public function editRole(
+        int $publicationId,
+        int $roleId,
+        EditPermissionForm $form,
+        int $expectedVersion
+    ): int {
+        try {
+            return $this->uow->translactional(function () use ($publicationId, $roleId, $form, $expectedVersion) {
+                $newVersion = $this->repository->editRole(
+                    $roleId,
+                    $publicationId,
+                    $expectedVersion,
+                    $form->pubPermissions
+                );
+
+                if ($newVersion === null) {
+                    throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                }
+
+                return $newVersion;
+            });
+        } catch (\PDOException $e) {
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
     public function moveRole(
         int $publicationId,
         int $roleId,
@@ -114,11 +137,11 @@ final class PublicationPermissionsService
         }
     }
 
-    public function addUser(int $publicationId, RoleUserAssignmentForm $form, int $granterId): int
+    public function addUser(int $publicationId, int $userId, RoleToUserAssignmentForm $form, int $granterId): int
     {
         try {
             return $this->repository->addUser(
-                $form->userId,
+                $userId,
                 $form->roleId,
                 $publicationId,
                 $granterId

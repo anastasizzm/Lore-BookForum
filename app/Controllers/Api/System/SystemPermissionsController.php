@@ -19,7 +19,9 @@ use App\Constants;
 use App\ErrorCodes;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
+use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
+use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Services\Permissions\SystemPermissionsService;
 use App\Extensions\Parsers\RouteParamParser;
 
@@ -54,6 +56,23 @@ final class SystemPermissionsController extends Controller
 
         $version = $this->permissionsService->addRole($form);
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+    }
+
+    public function editRole(HttpContext $context, string $roleId) 
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $form = EditPermissionForm::fromInput($context->request->body());
+        $expectedVersion = $this->requireVersion($context);
+
+        if (!$this->permissionsService->canManageRole($userId, $roleId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+
+        $version = $this->permissionsService->moveRole($roleId, $form, $expectedVersion);
+        return $this->jsonEmpty()->withHeader('ETag', sprintf('"%d"', $version));
     }
 
     public function moveRole(HttpContext $context, string $roleId)
@@ -103,7 +122,24 @@ final class SystemPermissionsController extends Controller
         if (!$this->permissionsService->canManageRole($userId, $form->roleId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
 
-        $version = $this->permissionsService->addUser($form, $granterId);
+        $version = $this->permissionsService->addUser($form->userId, $form, $granterId);
+        return $this->jsomEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+    }
+
+    public function addRoleToUser(HttpContext $context, string $userId)
+    {
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+        $form = RoleToUserAssignmentForm::fromInput($context->request->body());
+
+        if (!$this->permissionsService->canManageUser($userId, $currentUserId)
+            || !$this->permissionsService->canManageRole($userId, $form->roleId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+
+        $version = $this->permissionsService->addUser($userId, $form, $granterId);
         return $this->jsomEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
     }
 

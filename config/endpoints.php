@@ -78,5 +78,14 @@ return function(Router $router)
     $router->get('/api/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
     $router->get('/api/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
 
+    // System
     $router->get('/api/system/rules', [App\Controllers\Api\System\SystemPermissionsController::class, 'getCommonRules'], 'api.system.rules', AuthPolicy::Auth);
+    $router->post('/api/system/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRole'], 'api.system.roles.add', ManageRolesSystemOperation::class);
+    $router->put('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'editRole'], 'api.system.roles.edit', ManageRolesSystemOperation::class);
+    $router->patch('/api/system/roles/{roleId}/position', [App\Controllers\Api\System\SystemPermissionsController::class, 'moveRole'], 'api.system.roles.move', ManageRolesSystemOperation::class);
+    $router->delete('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeRole'], 'api.system.roles.remove', ManageRolesSystemOperation::class);
+    $router->post('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'addUser'], 'api.system.users.add', ManagePeopleSystemOperation::class);
+    $router->post('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRoleToUser'], 'api.system.users.roles.add', ManagePeopleSystemOperation::class);
+    $router->delete('/api/system/users/{userId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUser'], 'api.system.users.remove', ManagePeopleSystemOperation::class);
+    $router->delete('/api/system/users/{userId}/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUserRole'], 'api.system.users.roles.remove', ManagePeopleSystemOperation::class);
 };

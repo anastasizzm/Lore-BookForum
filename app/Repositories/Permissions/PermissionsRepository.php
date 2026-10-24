@@ -61,14 +61,13 @@ class PermissionsRepository extends Repository
     public function editRole(
         int $roleId,
         ?int $publicationId,
+        int $expectedVersion,
         ?PublicationAccessRules $pubRules = null,
         ?PostAccessRules $postRules = null,
         ?SystemAccessRules $sysRules = null,
     ): ?int {
         if ($pubRules === null && $postRules === null && $sysRules === null) {
-            throw new \InvalidArgumentException(
-                'editRole requires at least one rules object; passing all null would wipe every permission bit'
-            );
+            throw new \InvalidArgumentException('editRole requires at least one rules object');
         }
 
         $sql = "
@@ -89,13 +88,15 @@ class PermissionsRepository extends Repository
                 sys_manage_roles       = :sysManageR,
                 version                = version + 1
             WHERE role_id = :roleId
-              AND publication_id IS NOT DISTINCT FROM :pubId
+            AND publication_id IS NOT DISTINCT FROM :pubId
+            AND version = :expectedVersion
             RETURNING version
         ";
 
         $stmt = $this->execute($sql, [
             ':roleId'           => ScriptParam::asInt($roleId),
             ':pubId'            => ScriptParam::asInt($publicationId),
+            ':expectedVersion'  => ScriptParam::asInt($expectedVersion),
             ':pubCreate'        => ScriptParam::asBool($pubRules?->create ?? false),
             ':pubUpdateMeta'    => ScriptParam::asBool($pubRules?->updateMeta ?? false),
             ':pubUpdateContent' => ScriptParam::asBool($pubRules?->updateContent ?? false),
@@ -205,9 +206,6 @@ class PermissionsRepository extends Repository
         return (int)$stmt->fetchColumn();
     }
 
-    /**
-     * @return array<int>  Версии всех отозванных записей. Пусто = ничего не нашли.
-     */
     public function removeUser(int $userId, ?int $roleId, ?int $publicationId): array
     {
         $sql = "UPDATE roles_users

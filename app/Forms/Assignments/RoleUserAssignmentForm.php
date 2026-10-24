@@ -3,20 +3,22 @@ declare(strict_types=1);
 
 namespace App\Forms\Assignments;
 use App\Extensions\Parsers\QueryParser;
-use App\Forms\Form;
 
-readonly class RoleUserAssignmentForm implements Form
+readonly class RoleUserAssignmentForm extends RoleToRoleUserAssignmentForm
 {
     public function __construct(
         public int $userId,
-        public inT $roleId
-    ){}
+        inT $roleId
+    ){
+        parent::__construct($roleId);
+    }
 
     public static function fromInput(array $form) : self 
     {
+        $parent = parent::fromInput($form);
         return new self(
             userId: QueryParser::positiveInt($form, 'userId'),
-            roleId: QueryParser::positiveInt($form, 'roleId')
+            roleId: $parent->roleId
         );
     }
 }

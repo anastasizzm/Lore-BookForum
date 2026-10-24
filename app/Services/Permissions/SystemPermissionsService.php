@@ -9,7 +9,9 @@ use App\Exceptions\ConflictException;
 use App\Exceptions\Translator\PermissionExceptionTranslator;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
+use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
+use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\LexoRank\LexoRank;
@@ -45,6 +47,30 @@ final class SystemPermissionsService
                     $permissions->postPermissions,
                     $permissions->systemPermissions,
                 );
+            });
+        } catch (\PDOException $e) {
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function editRole(int $roleId, EditPermissionForm $form, int $expectedVersion): int
+    {
+        try {
+            return $this->uow->translactional(function () use ($roleId, $form, $expectedVersion) {
+                $newVersion = $this->repository->editRole(
+                    $roleId,
+                    null,
+                    $expectedVersion,
+                    $form->pubPermissions,
+                    $form->postPermissions,
+                    $form->systemPermissions,
+                );
+
+                if ($newVersion === null) {
+                    throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                }
+
+                return $newVersion;
             });
         } catch (\PDOException $e) {
             throw $this->exceptionTranslator->translate($e);
@@ -112,11 +138,11 @@ final class SystemPermissionsService
         }
     }
 
-    public function addUser(RoleUserAssignmentForm $form, int $granterId): int
+    public function addUser(int $userId, RoleToRoleUserAssignmentForm $form, int $granterId): int
     {
         try {
             return $this->repository->addUser(
-                $form->userId,
+                $userId,
                 $form->roleId,
                 null,
                 $granterId
