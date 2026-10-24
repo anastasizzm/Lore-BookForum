@@ -25,21 +25,11 @@ final class TypeFormValidator extends Validator
 
     public function validate(mixed $item, ErrorBag $bag) : bool
     {
-        $defaultLang = $this->settings->i18n->default;
-        $ok = true;
-
-        if (isset($item->translations[$defaultLang]) && trim((string)$item->translations[$defaultLang]) === '') {
-            $bag->add('translations.' . $defaultLang, [$this->translator->t('errors.common.required')]);
-            $ok = false;
-        }
-
-        $translationOk = $this->translationsValidator->validateTranslations(
+        return $this->translationsValidator->validateTranslations(
             $item->translations,
             $this->limits,
             'translations',
             $bag
         );
-
-        return $ok && $translationOk;
     }
 }
