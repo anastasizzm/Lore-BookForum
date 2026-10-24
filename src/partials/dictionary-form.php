@@ -14,9 +14,10 @@
  *   (список — GET /api/additional/languages, fallback-мок в admin.js).
  *
  * Вся механика (префилл при Edit, добавление/удаление языка, валидация
- * «хотя бы один перевод», сохранение и удаление через ConfirmModal) —
- * public/assets/js/admin.js; сабмит/удаление работают по мок-массиву,
- * TODO(api) внутри.
+ * «хотя бы один перевод») — public/assets/js/admin.js; сохранение и
+ * удаление идут через fetch-слой dictApi (admin.js): если роут
+ * /api/admin/{resource} ещё не завезён, операция применяется локально
+ * (режим mock), если бэк ответил 403 — тост «Нет прав».
  *
  * Стили — public/assets/css/admin.css (.admin-dict__*, каркас .modal —
  * modal.css, поля — .form-field из component.css, выбор языка —

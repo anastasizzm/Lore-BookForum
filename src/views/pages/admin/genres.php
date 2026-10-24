@@ -2,9 +2,12 @@
 /**
  * admin/genres — таблица справочника «Жанры» (каркас, мок-данные).
  *
- * Статус: ЗАГЛУШКА без проверок прав и без запросов к API админки —
- * сущности лежат в локальном мок-массиве, add/edit/delete в admin.js
- * работают по нему же (TODO(api) внутри).
+ * Статус: каркас + fetch-слой. Строки пока мок-заглушки (список ниже),
+ * add/edit/delete идут через dictApi в admin.js: роут
+ * GET/POST/PATCH/DELETE /api/admin/genres ещё нет, поэтому слой сам
+ * падает в режим mock и правит локальный массив; как только бэк отдаст
+ * роут, тот же код уйдёт в сеть без правок этой страницы.
+ * Проверок прав здесь нет — их даст бэк (403) вместе с роутом.
  *
  * Структура записи — массив переводов, а не объект с фиксированными ключами,
  * поэтому новый язык не требует изменений схемы:
@@ -23,7 +26,7 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/genres ----
+// ---- МОК-строки: сюда придёт GET /api/admin/genres (dictApi в admin.js) ----
 $genres = [
     ['id' => 1, 'translations' => [
         ['langCode' => 'en', 'title' => 'Fantasy'],
@@ -64,7 +67,8 @@ $genres = [
     'subtitle' => $view->t('common.admin.genres_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<!-- Прячется admin.js, когда GET /api/admin/genres реально отвечает -->
+<p class="admin-note" data-dict-stub><?= $tr('common.admin.stub_note') ?></p>
 
 <?php $view->include('dictionary-table', [
     'resource' => 'genres',
