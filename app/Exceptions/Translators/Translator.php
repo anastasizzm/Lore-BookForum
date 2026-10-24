@@ -13,7 +13,7 @@ abstract class Translator
     private function raiseException(array $entry) : Throwable
     {
         [$field, $messageKey] = $entry;
-        $params = $entry[3] ?? [];
+        $params = $entry[2] ?? [];
 
         return new ValidationException([$field => [$this->translator->t($messageKey, $params)]]);
     }
