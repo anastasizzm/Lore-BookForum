@@ -604,4 +604,17 @@ a.settings-menu__item--admin:focus-visible {
     right: 16px;
     min-width: 0;
   }
+
+  /* Админ-панель в мобильном меню: подгоняем под размеры мобильных
+     nav-кнопок (52px высота, radius 20px, шрифт 16px — как
+     .mobile-nav-btn выше). Пастельно-синяя заливка и контур
+     --color-accent остаются: кнопка должна выделяться и в мобильном виде.
+     font-size 16px также защищает от автозума iOS Safari в полях/ссылках. */
+  .settings-menu .settings-menu__item--admin {
+    min-height: 52px;
+    padding: 0 20px;
+    gap: 16px;
+    border-radius: 20px;
+    font-size: 16px;
+  }
 }
