@@ -62,8 +62,62 @@ final class TypesRepository extends Repository
 
     public function update(int $id, array $translations) : bool
     {
-        $this->saveTranslations($id, $translations);
-        return true;
+        return $this->uow->transactional(function() use ($id, $translations) {
+            $params = [':id' => ScriptParam::asInt($id)];
+            $values = [];
+            $codes = [];
+            $i = 0;
+
+            foreach ($translations as $code => $title) {
+                $values[] = "(:id_{$i}, :code_{$i}, :title_{$i})";
+                $params[":id_{$i}"] = ScriptParam::asInt($id);
+                $params[":code_{$i}"] = ScriptParam::asStr((string)$code);
+                $params[":title_{$i}"] = ScriptParam::asStr($title);
+                $codes[] = ":code_{$i}";
+                $i++;
+            }
+
+            $valuesSql = implode(', ', $values);
+            $codesSql = empty($codes) ? 'NULL' : implode(', ', $codes);
+
+            // Формируем CTE-запрос с блокировкой и проверкой существования
+            $sql = "
+                WITH locked AS (
+                    SELECT id FROM types WHERE id = :id FOR UPDATE
+                )
+            ";
+
+            if (!empty($valuesSql)) {
+                $sql .= ",
+                    upserted AS (
+                    INSERT INTO types_translations (type_id, code, title) 
+                    SELECT v.type_id::int, v.code::varchar, v.title::varchar
+                    FROM (VALUES {$valuesSql}) AS v(type_id, code, title)
+                    WHERE EXISTS (SELECT 1 FROM locked)
+                    ON CONFLICT (type_id, code) DO UPDATE SET title = EXCLUDED.title
+                ),
+                deleted AS (
+                    DELETE FROM types_translations 
+                    WHERE type_id = :id AND code NOT IN ({$codesSql})
+                      AND EXISTS (SELECT 1 FROM locked)
+                )
+                ";
+            } else {
+                $sql .= ",
+                deleted AS (
+                    DELETE FROM types_translations 
+                    WHERE type_id = :id 
+                      AND EXISTS (SELECT 1 FROM locked)
+                )
+                ";
+            }
+
+            $sql .= " SELECT 1 FROM locked";
+
+            $exists = $this->execute($sql, $params)->fetchColumn();
+            
+            return $exists !== false;
+        });
     }
 
     private function saveTranslations(int $id, array $translations) : void
