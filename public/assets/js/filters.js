@@ -113,9 +113,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   async function fetchAll(url) {
     if (cache.has(url)) return cache.get(url);
 
+    const lang = document.documentElement.lang || (window.LoreI18n ? window.LoreI18n.locale() : 'en');
     const all = [];
     for (let p = 1; p <= 20; p++) {
-      const res = await fetch(url + '?page=' + p, {
+      const res = await fetch(url + `?lang=${lang}&page=` + p, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
