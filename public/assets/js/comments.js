@@ -558,6 +558,11 @@
         return;
       }
 
+      if (res.status === 403) {
+        if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
+        return;
+      }
+
       var msg = window.Messages
         ? await window.Messages.readError(res, t('errors.comments.delete_failed'))
         : t('errors.comments.delete_failed') + ' (HTTP ' + res.status + ').';
@@ -731,9 +736,6 @@
 
         var flatList = card.closest('[data-fc-list]');
         if (flatList) {
-          // dd.mm.yyyy — тот же формат, что у загруженных комментариев
-          // (loadComments/formatDate) и у ответа ниже: локале-зависимый
-          // LoreI18n.formatDate здесь давал бы «Oct 21, 2026» в en.
           payload.date = formatDate(new Date().toISOString());
           payload.replies = 0;
           var flatNode = commentNode(payload);
@@ -755,7 +757,11 @@
         return;
       }
 
-      setMsg(errEl, serverError || failureText(res, raw));
+      if (res.status === 403) {
+        if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
+      } else {
+        setMsg(errEl, serverError || failureText(res, raw));
+      }
     } catch (err2) {
       console.error('POST ' + API_POSTS + '/' + commentId + ' failed', err2);
       setMsg(errEl, t('errors.common.network_error'));

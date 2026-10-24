@@ -77,7 +77,12 @@ async function sendLike(id, liked) {
     });
 
     if (res.status === 204) return '';
+    
     if (!res.ok) {
+      if (res.status === 403) {
+        if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
+        return 'forbidden';
+      }
       return window.Messages
         ? await window.Messages.readError(res, t('errors.likes.update_failed'))
         : t('errors.likes.update_failed') + ' (HTTP ' + res.status + ').';
@@ -105,6 +110,11 @@ document.addEventListener('click', (e) => {
     if (countEl) countEl.textContent = Math.max(0, prev + (liked ? 1 : -1));
 
     sendLike(id, liked).then((err) => {
+      if (err === 'forbidden') {
+        setLikedUI(likeBtn, !liked);
+        if (countEl) countEl.textContent = String(prev);
+        return;
+      }
       if (!err) return;
       notify(err);
       setLikedUI(likeBtn, !liked);
@@ -245,6 +255,8 @@ document.addEventListener('submit', async (e) => {
           content: text,
         },
       }));
+    } else if (res.status === 403) {
+      if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
     } else {
       setFeedMsg(errEl, sendStatus(data, res, (s) => t('errors.comments.send_comment_failed', { status: s })));
     }
@@ -319,6 +331,8 @@ document.addEventListener('submit', async (e) => {
       if (card && data && data.createdId) {
         fcAppendOwn(card, data.createdId, text);
       }
+    } else if (res.status === 403) {
+      if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
     } else {
       setFeedMsg(errEl, sendStatus(data, res, (s) => t('errors.comments.send_reply_failed', { status: s })));
     }
@@ -355,12 +369,6 @@ function fcState(card) {
   return st;
 }
 
-/**
- * Дата комментария в ленте — всегда dd.mm.yyyy, как на страницах книги и
- * статьи (comments.js/formatDate) и как отдаёт сервер (d.m.Y). Локале-
- * зависимый LoreI18n.formatDate здесь не годится: в en он даёт
- * «Oct 21, 2026» и дата комментария меняла бы вид при смене языка.
- */
 function fcFormatDate(value) {
   const raw = value && typeof value === 'object' && !(value instanceof Date)
     ? value.date : value;

@@ -194,11 +194,12 @@
 
   function fetchAll(url) {
     if (listCache[url]) return Promise.resolve(listCache[url]);
+    const lang = document.documentElement.lang || (window.LoreI18n ? window.LoreI18n.locale() : 'en');
     var all = [];
     var page = 1;
 
     function next() {
-      return fetch(url + '?page=' + page, {
+      return fetch(url + `?lang=${lang}&page=` + page, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       }).then(function (res) {
@@ -515,6 +516,10 @@
         return res.text().then(function (raw) {
           var data = null;
           try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+          if (res.status === 403) {
+            if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
+            throw new Error('Forbidden');
+          }
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var payload = (data && data.data) || data || {};
           var src = payload.url || payload.src || '';
@@ -1425,6 +1430,11 @@
         var ok = response.ok && !/^\s*</.test(raw);
 
         if (ok) {
+          if (response.status === 403) {
+           if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
+           release();
+           return false;
+          }
           var payload = (data && data.data) || data || {};
           if (payload.id) {
             state.articleId = parseInt(payload.id, 10) || state.articleId;
