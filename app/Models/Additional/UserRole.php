@@ -5,7 +5,7 @@ namespace App\Models\Additional;
 
 use App\Models\BasicModel;
 
-final readonly class Language extends BasicModel
+final readonly class UserRole extends BasicModel
 {
     public function __construct(
         public string $color

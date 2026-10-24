@@ -7,6 +7,7 @@ use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\System\AdminAccessOperation;
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
@@ -37,6 +38,7 @@ readonly class SystemAccessRules extends Dto implements OperationChecker, Form
             $operation instanceof ManageAdditionalsSystemOperation => $this->manageAdditionals,
             $operation instanceof ManagePeopleSystemOperation => $this->managePeople,
             $operation instanceof ManageRolesSystemOperation => $this->manageRoles,
+            $operation instanceof AnySystemOperation => $this->hasAny(),
             default => false,
         };
     }

@@ -12,6 +12,8 @@ use App\Controllers\Controller;
 
 use App\Models\Error;
 use App\Models\Enums\ServiceType;
+use App\Models\Queries\Permissions\RolesUserListQuery;
+use App\Models\Queries\PaginationQuery;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Attributes\Inject;
 
@@ -42,6 +44,12 @@ final class SystemPermissionsController extends Controller
 
         $rules = $this->ruleProvider->getRule($userId);
         return $this->jsonObject($rules);
+    }
+
+    public function getRoles(HttpContext $context)
+    {
+        $items = $this->permissionsService->getRoles();
+        return $this->jsonList($items);
     }
 
     public function addRole(HttpContext $context)
@@ -111,6 +119,17 @@ final class SystemPermissionsController extends Controller
         return $this->jsonEmpty(204);
     }
 
+    public function getUsers(HttpContext $context)
+    {
+        $query = RolesUserListQuery::fromInput($context->request->query);
+        $list = $this->permissionsService->getUsers($query);
+        return $this->jsonList($list->getArray(), [
+            'page' => $list->getPage(),
+            'pageSize' => $list->getPageSize(),
+            'hasNext' => $list->hasNext()
+        ]);
+    }
+
     public function addUser(HttpContext $context)
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
@@ -124,6 +143,19 @@ final class SystemPermissionsController extends Controller
 
         $version = $this->permissionsService->addUser($form->userId, $form, $granterId);
         return $this->jsomEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+    }
+
+    public function getUserRoles(HttpContext $context, string $userId)
+    {
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+        $pageQ = PaginationQuery::fromInput($context->request->query);
+
+        $list = $this->permissionsService->getUserRoles($userId, $pageQ);
+        return $this->jsonList($list->getArray(), [
+            'page' => $list->getPage(),
+            'pageSize' => $list->getPageSize(),
+            'hasNext' => $list->hasNext()
+        ]);
     }
 
     public function addRoleToUser(HttpContext $context, string $userId)

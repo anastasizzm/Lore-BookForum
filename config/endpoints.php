@@ -13,6 +13,7 @@ use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
 use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Posts\CreatePostOperation;
 use App\Models\Access\Operations\Posts\DeletePostOperation;
 use App\Models\Access\Operations\Posts\UpdatePostOperation; 
@@ -21,6 +22,7 @@ use App\Models\Access\Operations\Account\ManageAccountOperation;
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 
 return function(Router $router)
 {
@@ -80,12 +82,16 @@ return function(Router $router)
 
     // System
     $router->get('/api/system/rules', [App\Controllers\Api\System\SystemPermissionsController::class, 'getCommonRules'], 'api.system.rules', AuthPolicy::Auth);
+    
+    $router->get('/api/system/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'getRoles'], 'api.system.roles', AnySystemOperation::class);
     $router->post('/api/system/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRole'], 'api.system.roles.add', ManageRolesSystemOperation::class);
     $router->put('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'editRole'], 'api.system.roles.edit', ManageRolesSystemOperation::class);
     $router->patch('/api/system/roles/{roleId}/position', [App\Controllers\Api\System\SystemPermissionsController::class, 'moveRole'], 'api.system.roles.move', ManageRolesSystemOperation::class);
     $router->delete('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeRole'], 'api.system.roles.remove', ManageRolesSystemOperation::class);
+    $router->get('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUsers'], 'api.system.users', AnySystemOperation::class);
     $router->post('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'addUser'], 'api.system.users.add', ManagePeopleSystemOperation::class);
-    $router->post('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRoleToUser'], 'api.system.users.roles.add', ManagePeopleSystemOperation::class);
     $router->delete('/api/system/users/{userId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUser'], 'api.system.users.remove', ManagePeopleSystemOperation::class);
+    $router->get('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUserRoles'], 'api.system.users.roles', AnySystemOperation::class);
+    $router->post('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRoleToUser'], 'api.system.users.roles.add', ManagePeopleSystemOperation::class);
     $router->delete('/api/system/users/{userId}/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUserRole'], 'api.system.users.roles.remove', ManagePeopleSystemOperation::class);
 };

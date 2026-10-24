@@ -5,6 +5,9 @@ namespace App\Repositories\Permissions;
 
 use App\Repositories\Repository;
 use App\Models\Scripts\ScriptParam;
+use App\Models\Users\UserShortData;
+use App\Models\Enums\UsersSortBy;
+use App\Models\Additional\UserRole;
 use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
@@ -190,6 +193,97 @@ class PermissionsRepository extends Repository
 
     // --- User
 
+    /** @return array<RolesUser> */
+    public function getUsers(
+        ?int $publicationId, 
+        UsersSortBy $sort,
+        int $page, 
+        int $pageSize,
+        array $includeObjects) : array 
+    {
+        $innerBuilder = ScriptBuilder::withTable("roles_users");
+        $innerBuilder>addSelect("user_id")
+            ->addWhere("is_valid")
+            ->setGroup("user_id");
+
+        if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
+        else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $builder = ScriptBuilder::withTable("users_ids", "ui");
+        $builder->addWithBuilder("users_ids", $innerBuilder)
+            ->addSelect("u.id,
+                \nu.username,
+                \np.name,
+                \np.surname,
+                \np.avatar")
+            ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
+            ->addJOin("INNER JOIN profiles p ON p.user_id = u.id")
+            ->setOrder(
+                match($sort)
+                {
+                    UsersSortBy::Username => 'u.username',
+                    UsersSortBy::Name => 'p.name, p.surname',
+                    default => 'u.id'
+                }
+            )
+            ->setLimit($pageSize+1, ($page-1)*$pageSize);
+
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $items = array_map(
+            static fn (array $row) => RolesUser::fromRow($row), 
+            $stmt->fetchAll()
+        );
+
+        if (!in_array('roles', $includeObjects)) return $items;
+
+        $ids = array_map(static fn(RolesUser $user) => $user->id, $items);
+        $roles = $this->acceptUsersRoles($ids, $publicationId);
+        
+        $result = [];
+        foreach($items as $user)
+            $result[] = $user->withRoles($roles[$user->id]);
+
+        return $result;
+    }
+
+    /** @return array<UserRole> */
+    private function acceptUsersRoles(array $usersIds, ?int $publicationId) : array 
+    {
+        $builder = ScriptBuilder::withTable("roles_users", "ru");
+        $builder->addSelect("ru.user_id,
+                \nur.id,
+                \nur.color,
+                \nur.is_system,
+                \nur.created_at")
+            ->addSelect("COALESCE(
+                        MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),
+                        MAX(CASE WHEN urt.code = :fallbackCulture THEN urt.title END)
+                    ) as title", [':currentCulture' => ScriptParam::asStr($this->translator->locale()), ':fallbackCulture' => ScriptParam::asStr($this->translator->fallback())])
+            ->addJoin("INNER JOIN user_roles ur ON ur.id = ru.role_id")
+            ->addJoin("INNER JOIN roles_permissions rp ON rp.role_id = ru.role_id AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
+            ->addJoin("INNER JOIN user_roles_translations urt ON ur.id = urt.role_id")
+            ->addJoin("INNER JOIN languages l ON l.code = urt.code AND l.is_active")
+            ->addWhere("ru.is_valid")
+            ->addWhere("ru.user_id = ANY(:userIds::bigint[])", [':userIds' => ScriptParam::asStr('{' . implode(', ', $usersIds) . '}')])
+            ->setGroup("ru.user_id, ur.id")
+            ->setOrder('ru.user_id, MAX(rp.lexorank) COLLATE "C" DESC');
+
+        if($publicationId === NULL) $builder->addWhere("ru.publication_id IS NULL");
+        else $builder->addWhere("ru.publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        
+        $result = [];
+        foreach($stmt->fetchAll() as $row)
+        {
+            $userId = (int)$row['user_id'];
+            $result[$userId][] = UserRole::fromRow($row);
+        }
+        
+        return $result;
+    }
+
     public function addUser(int $userId, int $roleId, ?int $publicationId, int $granterId): int
     {
         $sql = "INSERT INTO roles_users (user_id, publication_id, role_id, granted_by_id)
@@ -213,7 +307,7 @@ class PermissionsRepository extends Repository
                 WHERE user_id = :userId
                   AND (:roleIdCheck IS NULL OR role_id = :roleIdValue)
                   AND publication_id IS NOT DISTINCT FROM :pubId
-                  AND valid_to IS NULL
+                  AND is_valid
                 RETURNING version";
 
         $stmt = $this->execute($sql, [
@@ -224,6 +318,40 @@ class PermissionsRepository extends Repository
         ]);
 
         return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @return array<RolesUsersAssignment> */
+    public function getUserRoles(?int $publicationId, int $userId, int $page, int $pageSize) : array
+    {
+        $builder = ScriptBuilder::withTable("roles_permissions", "rp");
+        $builder->addSelect("ru.id,
+                \nru.role_id,
+                \nru.valid_from as created_at
+                \nur.color as color")
+            ->addSelect("COALESCE(
+                        MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),
+                        MAX(CASE WHEN urt.code = :fallbackCulture THEN urt.title END)
+                    ) as title", [':currentCulture' => ScriptParam::asStr($this->translator->locale()), ':fallbackCulture' => ScriptParam::asStr($this->translator->fallback())])
+            ->addJoin("INNER JOIN roles_users ru ON ru.role_id = rp.role_id AND ru.publication_id IS NOT DISTINCT FROM rp.publication_id")
+            ->addJoin("INNER JOIN user_roles ur ON ur.id = rp.role_id")
+            ->addJoin("INNER JOIN user_roles_translations urt ON urt.role_id = ur.id")
+            ->addJoin("INNER JOIN languages l ON l.code = urt.code AND l.is_active")
+            ->addWhere("ru.is_valid")
+            ->addWhere("ru.user_id = :userId", [':userId' => ScriptParam::asInt($userId)])
+            ->setGroup("ru.id, ur.id")
+            ->setOrder('MAX(rp.lexorank) COLLATE "C" DESC')
+            ->setLimit($pageSize+1, ($page-1)*$pageSize);
+
+        if($publicationId === NULL) $builder->addWhere("rp.publication_id IS NULL");
+        else $builder->addWhere("rp.publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $items = array_map(
+            static fn (array $row) => RolesUsersAssignment::fromRow($row), 
+            $stmt->fetchAll()
+        );
+
+        return $items;
     }
 
     // --- Rank / lexorank queries (все с NOT DISTINCT FROM)

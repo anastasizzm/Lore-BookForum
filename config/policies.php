@@ -33,6 +33,7 @@ foreach([
             App\Models\Access\Operations\Publications\ReadPublicationOperation::class,
             App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation::class,
             App\Models\Access\Operations\Publications\ManageRolesPublicationOperation::class,
+            App\Models\Access\Operations\Publications\AnyPublicationOperation::class,
         ]
     ],
 
@@ -82,6 +83,7 @@ $registry->registerPolicy(
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 
 $registry->registerPolicy(
     ManageAdditionalsSystemOperation::class, 
@@ -94,4 +96,8 @@ $registry->registerPolicy(
 $registry->registerPolicy(
     ManageRolesSystemOperation::class, 
     fn($ctx) => new SystemAccessRequirement('#system\/roles\/#', new ManageRolesSystemOperation()),
+    AccessHandler::class);
+$registry->registerPolicy(
+    ManageRolesSystemOperation::class, 
+    fn($ctx) => new SystemAccessRequirement('#system\/#', new AnySystemOperation()),
     AccessHandler::class);

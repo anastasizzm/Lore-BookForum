@@ -13,6 +13,7 @@ use App\Models\Access\Operations\Publications\DeletePublicationOperation;
 use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 
 use App\Forms\Form;
 use App\Models\Dto;
@@ -48,6 +49,7 @@ readonly class PublicationAccessRules extends Dto implements OperationChecker, F
             $operation instanceof ReadPublicationOperation => $this->read,
             $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
             $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
+            $operation instanceof AnyPublicationOperation => $this->hasAny(),
             default => false,
         };
     }
