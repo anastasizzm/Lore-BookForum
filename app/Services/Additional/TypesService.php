@@ -15,6 +15,7 @@ use App\Models\Enums\BasicModelSortBy;
 use App\Exceptions\Translators\TypeExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
+use App\Models\Errors\ErrorBag;
 use App\ErrorCodes;
 use PDOException;
 
@@ -49,15 +50,10 @@ final class TypesService
 
     public function create(TypeForm $form) : int
     {
-        $defaultLang = $this->settings->i18n->default;
-        
-        if (!isset($form->translations[$defaultLang])) {
-            throw new ValidationException([
-                'translations.' . $defaultLang => [$this->i18n->t('errors.common.required')]
-            ]);
-        }
+        $bag = new ErrorBag();
+        $this->requireDefaultLanguage($form->translations, $bag);
+        $this->validator->validate($form, $bag);
 
-        $bag = $this->validator->validateOne($form);
         if (!$bag->isEmpty()) {
             throw new ValidationException($bag->all());
         }
@@ -71,7 +67,10 @@ final class TypesService
 
     public function update(int $id, TypeForm $form) : void
     {
-        $bag = $this->validator->validateOne($form);
+        $bag = new ErrorBag();
+        $this->requireDefaultLanguage($form->translations, $bag);
+        $this->validator->validate($form, $bag);
+
         if (!$bag->isEmpty()) {
             throw new ValidationException($bag->all());
         }
@@ -96,6 +95,15 @@ final class TypesService
             return $this->typesRepo->delete($id);
         } catch (PDOException $e) {
             throw $this->translator->translate($e);
+        }
+    }
+
+    private function requireDefaultLanguage(array $translations, ErrorBag $bag) : void
+    {
+        $defaultLang = $this->settings->i18n->default;
+        
+        if (!isset($translations[$defaultLang])) {
+            $bag->add('translations.' . $defaultLang, [$this->i18n->t('errors.common.required')]);
         }
     }
 }
