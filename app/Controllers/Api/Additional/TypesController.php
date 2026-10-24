@@ -14,12 +14,9 @@ use App\Http\HttpContext;
 use App\Lib\I18n\Translator;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Exceptions\NotFoundException;
-use App\Models\Errors\ErrorBag;
-use App\Models\Errors\ValidationError;
+use App\Exceptions\ConflictException;
 
 use App\ErrorCodes;
-use App\Constants;
-use App\Exceptions\ConflictException;
 
 final class TypesController extends Controller
 {
@@ -42,13 +39,8 @@ final class TypesController extends Controller
     public function create(HttpContext $context)
     {
         $form = TypeForm::fromInput($context->request->body());
-        $bag = new ErrorBag();
 
-        $id = $this->typesService->create($form, $bag);
-        if ($id === null) {
-            return $this->jsonError(new ValidationError($bag->all()), 422);
-        }
-
+        $id = $this->typesService->create($form);
         return $this->jsonCreatedId($id);
     }
 
@@ -56,22 +48,12 @@ final class TypesController extends Controller
     {
         $id = RouteParamParser::positiveInt(['id' => $typeId], 'id');
         $form = TypeForm::fromInput($context->request->body());
-        $bag = new ErrorBag();
 
-        if (!$this->typesService->update($id, $form, $bag)) {
-            if (!$bag->isEmpty()) {
-                return $this->jsonError(new ValidationError($bag->all()), 422);
-            }
-            throw new NotFoundException(
-                $this->translator->t('errors.common.not_found'),
-                ErrorCodes::NOT_FOUND,
-            );
-        }
-
+        $this->typesService->update($id, $form);
         return $this->jsonEmpty();
     }
 
-    public function delete(HttpContext $context, string $typeId)
+    /**public function delete(HttpContext $context, string $typeId)
     {
         $id = RouteParamParser::positiveInt(['id' => $typeId], 'id');
 
@@ -95,5 +77,5 @@ final class TypesController extends Controller
         }
 
         return $this->jsonEmpty();
-    }
+    }**/
 }

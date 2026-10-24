@@ -14,12 +14,9 @@ use App\Http\HttpContext;
 use App\Lib\I18n\Translator;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Exceptions\NotFoundException;
-use App\Models\Errors\ErrorBag;
-use App\Models\Errors\ValidationError;
+use App\Exceptions\ConflictException;
 
 use App\ErrorCodes;
-use App\Constants;
-use App\Exceptions\ConflictException;
 
 final class CategoriesController extends Controller
 {
@@ -42,13 +39,8 @@ final class CategoriesController extends Controller
     public function create(HttpContext $context)
     {
         $form = CategoryForm::fromInput($context->request->body());
-        $bag = new ErrorBag();
 
-        $id = $this->categoriesService->create($form, $bag);
-        if ($id === null) {
-            return $this->jsonError(new ValidationError($bag->all()), 422);
-        }
-
+        $id = $this->categoriesService->create($form);
         return $this->jsonCreatedId($id);
     }
 
@@ -56,22 +48,13 @@ final class CategoriesController extends Controller
     {
         $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
         $form = CategoryForm::fromInput($context->request->body());
-        $bag = new ErrorBag();
 
-        if (!$this->categoriesService->update($id, $form, $bag)) {
-            if (!$bag->isEmpty()) {
-                return $this->jsonError(new ValidationError($bag->all()), 422);
-            }
-            throw new NotFoundException(
-                $this->translator->t('errors.common.not_found'),
-                ErrorCodes::NOT_FOUND,
-            );
-        }
+        $this->categoriesService->update($id, $form);
 
         return $this->jsonEmpty();
     }
 
-    public function delete(HttpContext $context, string $categoryId)
+    /**public function delete(HttpContext $context, string $categoryId)
     {
         $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
 
@@ -95,5 +78,5 @@ final class CategoriesController extends Controller
         }
 
         return $this->jsonEmpty();
-    }
+    }**/
 }
