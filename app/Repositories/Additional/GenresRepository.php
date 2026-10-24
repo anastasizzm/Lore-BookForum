@@ -9,6 +9,7 @@ use App\Lib\Data\Database;
 use App\Lib\I18n\Translator;
 use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
+use App\Models\Scripts\ScriptParam;
 use App\Services\Configuration\UnitOfWork;
 
 final class GenresRepository extends Repository
@@ -61,32 +62,38 @@ final class GenresRepository extends Repository
 
     public function update(int $id, array $translations) : bool
     {
-        return $this->uow->transactional(function() use ($id, $translations) {
-            $exists = $this->execute('SELECT 1 FROM genres WHERE id = :id', [':id' => $id])->fetchColumn();
-            if ($exists === false) {
-                return false;
-            }
-            $this->saveTranslations($id, $translations);
-            return true;
-        });
+        $this->saveTranslations($id, $translations);
+        return true;
     }
 
     private function saveTranslations(int $id, array $translations) : void
     {
-        foreach ($translations as $code => $title) {
-            $this->execute(
-                'INSERT INTO genres_translations (genre_id, code, title) VALUES (:id, :code, :title)
-                 ON CONFLICT (genre_id, code) DO UPDATE SET title = EXCLUDED.title',
-                [':id' => $id, ':code' => (string)$code, ':title' => $title]
-            );
+        if (empty($translations)) {
+            return;
         }
+
+        $values = [];
+        $params = [];
+        $i = 0;
+
+        foreach ($translations as $code => $title) {
+            $values[] = "(:id_{$i}, :code_{$i}, :title_{$i})";
+            $params[":id_{$i}"] = ScriptParam::asInt($id);
+            $params[":code_{$i}"] = ScriptParam::asStr((string)$code);
+            $params[":title_{$i}"] = ScriptParam::asStr($title);
+            $i++;
+        }
+
+        $sql = 'INSERT INTO genres_translations (genre_id, code, title) VALUES ' 
+             . implode(', ', $values) 
+             . ' ON CONFLICT (genre_id, code) DO UPDATE SET title = EXCLUDED.title';
+
+        $this->execute($sql, $params);
     }
 
     public function delete(int $id) : bool
     {
-        return $this->uow->transactional(function() use ($id) {
-            $stmt = $this->execute('DELETE FROM genres WHERE id = :id', [':id' => $id]);
-            return $stmt->rowCount() > 0;
-        });
+        $stmt = $this->execute('DELETE FROM genres WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
+        return $stmt->rowCount() > 0;
     }
 }
