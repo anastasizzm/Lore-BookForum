@@ -35,6 +35,22 @@
 
   var NO_RIGHTS_HINT = function () { return t('js.no_rights', 'No rights for this action'); };
 
+  // Тост при блокировке. LoreGuard (rights-guard.js) умеет троттлить повторы
+  // (удержание Enter не заспамит плашками) — используем его, если он есть,
+  // иначе показываем сами.
+  var lastToastAt = 0;
+  function toastNoRights() {
+    if (window.LoreGuard && LoreGuard.noRights) { LoreGuard.noRights(); return; }
+
+    var now = Date.now();
+    if (now - lastToastAt < 2500) return;
+    lastToastAt = now;
+
+    var text = NO_RIGHTS_HINT();
+    if (window.Messages) Messages.show(text, { type: 'error' });
+    else console.warn('[book-rights] ' + text);
+  }
+
   function setDisabled(el, disabled) {
     el.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     el.classList.toggle('is-disabled', !!disabled);
@@ -76,6 +92,7 @@
     if (!el) return;
     e.preventDefault();
     e.stopPropagation();
+    toastNoRights();
   }, true);
 
   // Enter в поле формы уводит сабмит в submit, а не в click: ловим и его.
@@ -108,6 +125,7 @@
     e.preventDefault();
     e.stopPropagation();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    toastNoRights();
   }, true);
 
   function init() {

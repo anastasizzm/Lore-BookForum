@@ -2032,3 +2032,14 @@ a.user-mention:focus-visible {
   padding: 10px 24px;
 }
 
+/* Права «create» на посты запрещены (rights-guard.js вешает атрибут при
+ * create:false из Common Rules). Гасим точки входа в комментирование —
+ * «Ответить» / «Комментировать». Правило живёт на <html>, поэтому действует
+ * и на карточки, клонированные из <template> после загрузки страницы.
+ * Сами формы не прячем: попытка отправить должна дать тост «Нет прав»,
+ * а не молчаливое «ничего не произошло». */
+html[data-comments-denied] [data-reply-toggle],
+html[data-comments-denied] [data-comment-toggle] {
+  display: none !important;
+}
+
