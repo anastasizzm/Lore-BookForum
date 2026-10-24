@@ -17,13 +17,16 @@ INSERT INTO languages (code, is_active) VALUES
 
 INSERT INTO user_roles (id, color, is_system) VALUES
     (0, '6B7280', true),
-    (1, 'B91C1C', true);
+    (1, 'B91C1C', true),
+    (2, '6E81D4', true);
 
 INSERT INTO user_roles_translations (role_id, code, title) VALUES
     (0, 'en', 'User'),
     (0, 'ru', 'Пользователь'),
     (1, 'en', 'Head Administrator'),
-    (1, 'ru', 'Главный администратор');
+    (1, 'ru', 'Главный администратор'),
+    (2, 'en', 'Author'),
+    (2, 'ru', 'Автор');
 
 INSERT INTO roles_permissions (role_id, publication_id, 
   pub_create, pub_update_meta, pub_update_content, pub_delete, pub_read, pub_manage_ppl, pub_manage_roles,
@@ -31,8 +34,8 @@ INSERT INTO roles_permissions (role_id, publication_id,
   sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles, 
   authority_rank
 ) VALUES 
-(0, NULL, true, false, false, false, false, false, false, true, false, false, false, false, false, false, 2),
-(1, NULL, true, true, true, true, true, true, true, true, true, true, true, true, true, true, 2000000);
+(0, NULL, true, false, false, false, false, false, false, true, false, false, false, false, false, false, "2"),
+(1, NULL, true, true, true, true, true, true, true, true, true, true, true, true, true, true, "y");
 
 INSERT INTO users (username, email, pass_hash, is_verified)
 VALUES (:'admin_username', :'admin_email', :'admin_pass_hash', true);

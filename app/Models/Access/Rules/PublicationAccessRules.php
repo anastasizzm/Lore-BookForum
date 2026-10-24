@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
 use App\Models\Access\Operations\AccessOperation;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\Publications\PublicationAccessOperation;
 use App\Models\Access\Operations\Publications\CreatePublicationOperation;
@@ -13,9 +14,10 @@ use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 
+use App\Forms\Form;
 use App\Models\Dto;
 
-readonly class PublicationAccessRules extends Dto implements OperationChecker
+readonly class PublicationAccessRules extends Dto implements OperationChecker, Form
 {
     public function __construct(
         public bool $create,
@@ -67,6 +69,19 @@ readonly class PublicationAccessRules extends Dto implements OperationChecker
             read: self::bool($row, $prefix . 'read'),
             managePeople: self::bool($row, $prefix . 'manage_ppl'),
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
+        );
+    }
+
+    public static function fromInput(array $form) : self 
+    {
+        return new self(
+            create: QueryParser::optionalBool($form, 'create') ?? false,
+            updateMeta: QueryParser::optionalBool($form, 'updateMeta') ?? false,
+            updateContent: QueryParser::optionalBool($form, 'updateContent') ?? false,
+            delete: QueryParser::optionalBool($form, 'delete') ?? false,
+            read: QueryParser::optionalBool($form, 'read') ?? false,
+            manageRoles: QueryParser::optionalBool($form, 'manageRoles') ?? false,
+            managePeople: QueryParser::optionalBool($form, 'managePeople') ?? false,
         );
     }
 
