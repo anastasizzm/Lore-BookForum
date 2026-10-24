@@ -373,22 +373,30 @@ a.settings-menu__item {
   color: var(--color-error, #E5484D);
 }
 
-/* ---- Кнопка «Админ-панель» (фидбэк: «выдели admin menu синим в цветах
-   сайта») ------------------------------------------------------------
-   Пункт заметно отличается от обычных: подложка --color-bg-secondary,
-   рамка в тон --color-border, текст --color-blue-dark полужирный,
-   щит-иконка на --color-accent. На ховере/фокусе — сплошной фирменный
-   синий с белым текстом, чтобы пункт читался как основное действие.
+/* ---- Кнопка «Админ-панель» (фидбэк: «бордер, пастельно-синий фон в
+   цветах сайта, выделение того же цвета, что и у остальных пунктов») ---
+   Спокойное состояние: заливка --button-color-dark (#D6E0EF) — тот же
+   пастельный синий, что и у карточек/кнопок палитры, плюс видимый
+   контур --color-accent (#5876A6 = --color-primary), полужирный текст
+   --color-blue-dark и щит-иконка на акценте.
+   Ховер/фокус — РОВНО тот же цвет, что у обычных пунктов меню
+   (.settings-menu__item:hover → --color-overlay). Фон при этом
+   осветляется с #D6E0EF до #E8EEF7, поэтому подсветка видна; цвет
+   текста и иконки, как и у остальных пунктов, не меняется.
+   Заливка намеренно --button-color-dark, а не --color-bg-secondary:
+   оба сходятся в #E8EEF7 и ховер стал бы незаметным.
    Селектор пишем С ТЕГОМ (a.settings-menu__item--admin): у базового
-   a.settings-menu__item специфика (0,1,1) выше, чем у одного класса,
-   и без тега цвет перекрывался бы и оставался бы общим серо-синим.
+   a.settings-menu__item специфика (0,1,1), а у одного класса лишь
+   (0,1,0) — без тега цвет перекрывался бы общим серо-синим. С тегом
+   специфика равна, и правило выигрывает позицией: оно объявлено в
+   файле ниже базового.
    Рамка безопасна — глобально задан * { box-sizing: border-box }. */
 a.settings-menu__item--admin {
   color: var(--color-blue-dark, #445B7B);
-  background: var(--color-bg-secondary, #E8EEF7);
-  border: 1px solid var(--color-border, #D6E0EF);
+  background: var(--button-color-dark, #D6E0EF);
+  border: 1px solid var(--color-accent, #5876A6);
   font-weight: 600;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 a.settings-menu__item--admin .settings-menu__icon {
@@ -397,14 +405,7 @@ a.settings-menu__item--admin .settings-menu__icon {
 
 a.settings-menu__item--admin:hover,
 a.settings-menu__item--admin:focus-visible {
-  background: var(--color-accent, #5876A6);
-  border-color: var(--color-blue-medium, #536D91);
-  color: var(--color-white, #FFFFFF);
-}
-
-a.settings-menu__item--admin:hover .settings-menu__icon,
-a.settings-menu__item--admin:focus-visible .settings-menu__icon {
-  color: var(--color-white, #FFFFFF);
+  background: var(--color-overlay, #E8EEF7);
 }
 
 /* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков.
