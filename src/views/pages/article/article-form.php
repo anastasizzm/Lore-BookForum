@@ -192,6 +192,7 @@ $richEditor = static function (
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/article-rights.css') ?>">
+  <script src="<?= $view->asset('js/book-rights.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
@@ -476,15 +477,21 @@ $richEditor = static function (
         <!-- Действия. «Create draft» сохраняет черновик и открывает страницу статьи;
              «Publish» сначала проверяет статью на бэке, затем открывает окно выбора прав
              (partial article-rights-dialog + article-publish.js). -->
-        <div class="article-form__actions">
+        <div class="article-form__actions"
+             data-rules-kind="articles"
+             data-rules-owner="<?= $isEdit ? '1' : '0' ?>">
           <p class="article-form__draft-status" data-draft-status aria-live="polite"></p>
           <div class="article-form__buttons">
             <button type="button" class="btn btn--secondary" data-step-prev>
               ← <?= $tr('common.articleform.back') ?>
             </button>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('articles'))) ?>"><?= $tr('common.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" name="status" value="draft" data-submit-draft><?= $tr('common.articleform.create_draft') ?></button>
-            <button class="btn btn--primary" type="submit" name="status" value="published" data-submit-publish><?= $tr('common.articleform.publish') ?></button>
+            <!-- data-rule="create"  -> правило create; data-rule="publish_new" -> тоже create
+                 (новая публикация из формы; у существующей — updateMeta || updateContent) -->
+            <button type="submit" class="btn btn--secondary is-disabled" name="status" value="draft"
+                    data-submit-draft data-rule="create" aria-disabled="true" tabindex="-1"><?= $tr('common.articleform.create_draft') ?></button>
+            <button type="submit" class="btn btn--primary is-disabled" name="status" value="published"
+                    data-submit-publish data-rule="publish_new" aria-disabled="true" tabindex="-1"><?= $tr('common.articleform.publish') ?></button>
           </div>
         </div>
       </section>

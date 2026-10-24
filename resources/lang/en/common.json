@@ -26,7 +26,8 @@
         "help": "Help",
         "privacy": "Privacy Policy",
         "admin": "Admin panel",
-        "drafts": "Drafts"
+        "drafts": "Drafts",
+        "changepass": "Change password"
     },
     "language": {
         "label": "Language",
@@ -42,7 +43,9 @@
         "finished": "Finished",
         "isbn": "ISBN",
         "doi": "DOI",
-        "reset": "Reset"
+        "reset": "Reset",
+        "draft": "Draft",
+        "published": "Public"
     },
     "book": {
         "page_title": "Book details",
@@ -259,7 +262,9 @@
         "no_bio": "No biography yet.",
         "publications": "Publications",
         "publications_of": "Publications of :name",
-        "user_fallback": "User #:id"
+        "user_fallback": "User #:id",
+        "no_edit": "You are not allowed to edit this profile.",
+        "back_to": "Back to profile"
     },
     "saved": {
         "title": "Saved",
@@ -449,7 +454,7 @@
         "publish_submit": "Publish",
         "create_draft": "Create draft"
     },
-    "fab":{
+    "fab": {
         "create": "Create",
         "article": "Create article",
         "book": "Create book"
@@ -547,7 +552,8 @@
         "delete_book_title": "Delete book?",
         "delete_book_text": "Are you sure you want to delete this book? This cannot be undone.",
         "delete_article_title": "Delete article?",
-        "delete_article_text": "Are you sure you want to delete this article? This cannot be undone."
+        "delete_article_text": "Are you sure you want to delete this article? This cannot be undone.",
+        "no_rights": "You have no rights for this action"
     },
     "admin": {
         "dashboard_title": "Admin panel",

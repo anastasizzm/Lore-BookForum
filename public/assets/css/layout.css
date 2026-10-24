@@ -297,6 +297,14 @@ body.is-sidebar-expanded .sidebar-overlay {
   display: none;
 }
 
+/* Пункт меню скрыт по правилу (app.js, data-system-rule).
+   Нужен ЯВНЫЙ [hidden]-селектор: .settings-menu__item задаёт display:flex
+   авторским правилом, оно перебивает UA-стиль [hidden] { display: none },
+   и без этого «скрытая» ссылка осталась бы на месте. */
+.settings-menu__item[hidden] {
+  display: none;
+}
+
 .settings-menu__form {
   margin: 0;
 }
@@ -338,11 +346,74 @@ a.settings-menu__item {
   flex-shrink: 0;
 }
 
-/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков */
+/* ---- Группировка пунктов меню (фидбэк с превью) --------------------
+   Порядок: Language | Help + Privacy Policy | Change password | Log out.
+   Группы разделены линией; Log out дополнительно отделён отступом и
+   покрашен в красный — его ждут в самом низу. */
+.settings-menu__divider {
+  height: 1px;
+  margin: var(--space-1, 4px) 0;
+  background: var(--color-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+/* Log out: акцентный «опасный» цвет, чтобы пункт не терялся среди остальных */
+.settings-menu__item--danger {
+  color: var(--color-error, #E5484D);
+  margin-top: var(--space-1, 4px);
+}
+
+.settings-menu__item--danger .settings-menu__icon {
+  color: var(--color-error, #E5484D);
+}
+
+.settings-menu__item--danger:hover,
+.settings-menu__item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error, #E5484D);
+}
+
+/* ---- Кнопка «Админ-панель» (фидбэк: «бордер, пастельно-синий фон в
+   цветах сайта, выделение того же цвета, что и у остальных пунктов») ---
+   Спокойное состояние: заливка --button-color-dark (#D6E0EF) — тот же
+   пастельный синий, что и у карточек/кнопок палитры, плюс видимый
+   контур --color-accent (#5876A6 = --color-primary), полужирный текст
+   --color-blue-dark и щит-иконка на акценте.
+   Ховер/фокус — РОВНО тот же цвет, что у обычных пунктов меню
+   (.settings-menu__item:hover → --color-overlay). Фон при этом
+   осветляется с #D6E0EF до #E8EEF7, поэтому подсветка видна; цвет
+   текста и иконки, как и у остальных пунктов, не меняется.
+   Заливка намеренно --button-color-dark, а не --color-bg-secondary:
+   оба сходятся в #E8EEF7 и ховер стал бы незаметным.
+   Селектор пишем С ТЕГОМ (a.settings-menu__item--admin): у базового
+   a.settings-menu__item специфика (0,1,1), а у одного класса лишь
+   (0,1,0) — без тега цвет перекрывался бы общим серо-синим. С тегом
+   специфика равна, и правило выигрывает позицией: оно объявлено в
+   файле ниже базового.
+   Рамка безопасна — глобально задан * { box-sizing: border-box }. */
+a.settings-menu__item--admin {
+  color: var(--color-blue-dark, #445B7B);
+  background: var(--button-color-dark, #D6E0EF);
+  border: 1px solid var(--color-accent, #5876A6);
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+a.settings-menu__item--admin .settings-menu__icon {
+  color: var(--color-accent, #5876A6);
+}
+
+a.settings-menu__item--admin:hover,
+a.settings-menu__item--admin:focus-visible {
+  background: var(--color-overlay, #E8EEF7);
+}
+
+/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков.
+   Разделитель под блоком теперь рисует .settings-menu__divider (общий для
+   всех групп меню) — собственная border-bottom убрана, чтобы не было двух
+   линий подряд. */
 .settings-menu__lang {
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
   margin-bottom: var(--space-1, 4px);
-  padding-bottom: var(--space-1, 4px);
 }
 
 .settings-menu__lang-summary {

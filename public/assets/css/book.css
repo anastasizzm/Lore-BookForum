@@ -623,36 +623,6 @@ html:has(.reader) body {
   color: var(--color-error, #EF4444);
 }
 
-/* СОСТОЯНИЯ ПО ПРАВАМ: book-rights.js подгружает права и вешает на пункт
-   «Редактировать» (data-edit-btn) классы book-actions__edit--*.
-   В контексте меню состояние показываем ЦВЕТОМ ТЕКСТА, а не фоном pill:
-     серый (--none, состояние по умолчанию) — прав нет;
-     синий (--edit)   — есть права на редактирование;
-     красный (--publish) — есть права на публикацию книги. */
-.book-page-header .details-menu__item.book-actions__edit--edit {
-  background: none;
-  color: var(--color-primary, #1A3760);
-}
-
-.book-page-header .details-menu__item.book-actions__edit--publish {
-  background: none;
-  color: var(--color-error, #EF4444);
-}
-
-.book-page-header .details-menu__item.book-actions__edit--none {
-  background: none;
-  color: var(--color-text-muted, #6F84A5);
-}
-
-.book-page-header .details-menu__item.book-actions__edit--edit:hover,
-.book-page-header .details-menu__item.book-actions__edit--edit:focus-visible,
-.book-page-header .details-menu__item.book-actions__edit--publish:hover,
-.book-page-header .details-menu__item.book-actions__edit--publish:focus-visible,
-.book-page-header .details-menu__item.book-actions__edit--none:hover,
-.book-page-header .details-menu__item.book-actions__edit--none:focus-visible {
-  background: var(--color-bg-subtle, #F3F6FB);
-}
-
 /* Панель публикации внизу страницы — видна, пока статус draft */
 .publish-bar {
   display: flex;

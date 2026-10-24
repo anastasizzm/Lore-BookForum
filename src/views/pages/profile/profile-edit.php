@@ -45,8 +45,8 @@ $canEdit     = $isOwnerEdit || (bool) ($user->isAdmin ?? false);
 <?php if (!$canEdit): ?>
   <div class="login-message" role="alert">
     <div class="login-message__status">403</div>
-    <p class="login-message__text">You are not allowed to edit this profile.</p>
-    <a class="btn btn--primary" href="<?= $view->e($withLang('/users/' . $editUserId)) ?>">Back to profile</a>
+    <p class="login-message__text"><?= $tr('common.profile.no_edit') ?></p>
+    <a class="btn btn--primary" href="<?= $view->e($withLang('/users/' . $editUserId)) ?>"><?= $tr('common.profile.back_to') ?></a>
   </div>
 <?php else: ?>
 

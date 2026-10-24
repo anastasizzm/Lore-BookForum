@@ -274,6 +274,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
+  <script src="<?= $view->asset('js/book-rights.js') ?>"></script>
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -645,7 +646,9 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            блокируется в book-form.js — endpoint'а обновления нет,
            а /api/books/new только создаёт.
            ============================================================ -->
-      <div class="book-form__actions">
+      <div class="book-form__actions"
+           data-rules-kind="books"
+           data-rules-owner="<?= $isEdit ? '1' : '0' ?>">
         <button type="button" class="btn btn--secondary" data-step-prev hidden>
           ← <?= $tr('common.bookform.back') ?>
         </button>
@@ -653,17 +656,22 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?php if ($isEdit): ?>
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--primary" type="submit" data-submit-save>
+            <!-- data-rule="edit" -> правила updateMeta || updateContent (или владелец) -->
+            <button class="btn btn--primary is-disabled" type="submit" data-submit-save
+                    data-rule="edit" aria-disabled="true" tabindex="-1">
               <?= $tr('common.bookform.save') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--secondary" type="submit" data-submit-draft>
+            <button class="btn btn--secondary is-disabled" type="submit" data-submit-draft
+                    data-rule="create" aria-disabled="true" tabindex="-1">
               <?= $tr('common.bookform.create_draft') ?>
             </button>
             <!-- Publish (11.3): открывает окно выбора авторов/редакторов
-                 (book-publish-dialog); отправка — кнопкой внутри окна. -->
-            <button class="btn btn--primary" type="button" data-publish-open>
+                 (book-publish-dialog); отправка — кнопкой внутри окна.
+                 data-rule="publish_new" -> правило create (новая публикация). -->
+            <button class="btn btn--primary is-disabled" type="button" data-publish-open
+                    data-rule="publish_new" aria-disabled="true" tabindex="-1">
               <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>
