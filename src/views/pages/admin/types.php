@@ -4,7 +4,8 @@
  *
  * Структура записи и поведение — как в admin/genres.php:
  * массив translations (расширяемый на любой язык), клиентский поиск по всем
- * переводам, add/edit/delete на мок-массиве (TODO(api) в admin.js).
+ * переводам, add/edit/delete — через fetch-слой dictApi в admin.js
+ * (пока роут /api/admin/types нет — режим mock, правки локальные).
  *
  * Тест: GET /pages/test?page=admin/types
  *
@@ -14,7 +15,7 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/types ----
+// ---- МОК-строки: сюда придёт GET /api/admin/types (dictApi в admin.js) ----
 $types = [
     ['id' => 1, 'translations' => [
         ['langCode' => 'en', 'title' => 'Book'],
@@ -47,7 +48,8 @@ $types = [
     'subtitle' => $view->t('common.admin.types_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<!-- Прячется admin.js, когда GET /api/admin/types реально отвечает -->
+<p class="admin-note" data-dict-stub><?= $tr('common.admin.stub_note') ?></p>
 
 <?php $view->include('dictionary-table', [
     'resource' => 'types',

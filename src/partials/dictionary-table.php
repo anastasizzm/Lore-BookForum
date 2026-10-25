@@ -7,7 +7,7 @@
  *
  * @param string $resource — ключ ресурса ('genres' | 'categories' | 'types').
  *                           Из него JS собирает контрактный путь
- *                           /api/admin/{resource} (см. TODO(api) в admin.js).
+ *                           /api/admin/{resource} (dictApi в admin.js).
  * @param array  $items     — строки: [['id' => int,
  *                            'translations' => [['langCode' => 'en', 'title' => '...'], ...]], ...]
  * @param string $searchPh  — плейсхолдер поиска (локализован на странице)
@@ -27,7 +27,8 @@ $addLabel = $addLabel ?? '';
 ?>
 
 <div class="admin-toolbar">
-  <!-- Открытие модалки «Добавить» — admin.js (ADM-UI-3); TODO(api) там же -->
+  <!-- Открытие модалки «Добавить» — admin.js (ADM-UI-3); сам fetch
+       (POST /api/admin/{resource}, при недоступности — мок) — dictApi там же -->
   <button type="button" class="btn btn--primary admin-toolbar__add" data-admin-dict-add>
     <?= $view->e($addLabel) ?>
   </button>
@@ -74,7 +75,7 @@ $addLabel = $addLabel ?? '';
           <td>
             <div class="admin-actions">
               <!-- Модалка «Редактировать» / удаление через ConfirmModal — admin.js.
-                   TODO(api): PATCH/DELETE /api/admin/{resource}/{id}. -->
+                   Запросы — dictApi: PATCH/DELETE /api/admin/{resource}/{id}. -->
               <button type="button"
                       class="btn btn--secondary"
                       data-admin-dict-edit
@@ -101,11 +102,11 @@ $addLabel = $addLabel ?? '';
   </table>
 </div>
 
-<!-- Мок-массив страницы: JS читает его при add/edit/delete и при первом
-     рендере строк (единый источник правды). TODO(api): GET /api/admin/{resource}
-     Без htmlspecialchars: <script> — raw-text-элемент, сущности в нём НЕ
-     декодируются. JSON_HEX_* вырезает < > & " ', поэтому </script> и разрыв
-     разметки внутри данных невозможны. -->
+<!-- Мок-массив страницы: JS читает его при первом рендере строк (единый
+     источник правды, пока GET /api/admin/{resource} не отвечает — dictApi
+     в admin.js). Без htmlspecialchars: <script> — raw-text-элемент, сущности
+     в нём НЕ декодируются. JSON_HEX_* вырезает < > & " ', поэтому </script>
+     и разрыв разметки внутри данных невозможны. -->
 <script type="application/json" data-dict-data><?= json_encode(
     ['resource' => $resource, 'items' => $items],
     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT

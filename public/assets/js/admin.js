@@ -5,12 +5,31 @@
  *   1. Пользователи/комментарии — ConfirmModal.confirm() перед действием,
  *      без запросов (реального API админки ещё нет, см. TODO(api)).
  *   2. Справочники (Genres / Categories / Types) — модалка
- *      «Добавить/Редактировать» + удаление через ConfirmModal, работа
- *      ведётся по мок-массиву страницы (script[type="application/json"]
- *      [data-dict-data], partial dictionary-table); список языков для
- *      блока Translations грузится из GET /api/additional/languages,
- *      при недоступности — встроенный мок.
- *   3. Клиентский поиск по таблице (data-search у строки — все переводы).
+ *      «Добавить/Редактировать» + удаление через ConfirmModal; все
+ *      операции идут через fetch-слой dictApi (раздел 2.1), который
+ *      работает и по API, и по мок-массиву страницы.
+ *   3. Список языков блока Translations — GET /api/additional/languages,
+ *      при недоступности встроенный мок.
+ *   4. Клиентский поиск по таблице (data-search у строки — все переводы).
+ *
+ * ─── FETCH-СЛОЙ СПРАВОЧНИКОВ (раздел 2.1) ───────────────────────────
+ * Контракт (предположительный — бэкенд ещё не отдал, меняется в одном
+ * месте — dictApi):
+ *   GET    /api/admin/{resource}?page=&ps=   -> { items: [ … ] } | [ … ]
+ *   POST   /api/admin/{resource}             -> { id, translations }
+ *   PATCH  /api/admin/{resource}/{id}        -> { id, translations }
+ *   DELETE /api/admin/{resource}/{id}        -> 204 | { ok: true }
+ *   тело мутаций: { translations: [{ lang_code, title }, …] }
+ *
+ * Три режима (apiStatus, видно в DOM как data-dict-api у таблицы):
+ *   unknown — ещё не пробовали;
+ *   live    — роут отвечает JSON'ом → все операции уходят в бэк;
+ *   mock    — роута нет (404/405/HTML/сеть) → операции применяются
+ *             локально по мок-массиву страницы (один console.warn).
+ *
+ * Разбор ответа: 2xx → ok; 404/405/HTML/сеть → mock (роут ещё не
+ * завезли); 403 → тост «Нет прав» (js.no_rights) и ничего не меняем;
+ * прочие 4xx/5xx → текст ошибки из payload (Messages.describe).
  *
  * ВАЖНО про API модалки (src/partials/confirm-modal.php + js/modal.js):
  *   ConfirmModal.confirm({ title, message (алиас text), confirmText,
@@ -18,7 +37,7 @@
  * колбэка onConfirm у неё НЕТ — действие выполняем в .then(confirmed).
  *
  * Проверок прав здесь нет намеренно: бэк ещё не назвал финальные имена
- * разрешений (canPublication, canManagePublication и т.п.).
+ * разрешений для справочников (manageAdditionals и т.п.).
  */
 (function () {
   'use strict';
@@ -97,19 +116,19 @@
      DICTIONARY — модалка «Добавить/Редактировать» и удаление записей
      справочников (Genres / Categories / Types).
 
-     Источник правды — мок-массив страницы ([data-dict-data]); строки
-     таблицы перерисовываются из него, поэтому add/edit/delete сразу
-     видны в UI (включая счётчик и пустое состояние поиска).
+     Источник правды для рендера — мок-массив страницы ([data-dict-data]),
+     но все три операции проходят через dictApi (раздел 2.1 файла): пока
+     роут /api/admin/{resource} не существует, слой сам падает в режим
+     mock и правит локальный массив; как только бэк завезёт роут, тот же
+     код начнёт ходить в сеть без правок UI.
 
      Структура записи:
        { id: 1, translations: [{ langCode: 'en', title: 'Fantasy' }, ...] }
      — массив переводов, а не объект с фиксированными ключами: новый
      язык не требует изменений ни на фронте, ни в схеме.
 
-     TODO(api): POST/PATCH/DELETE /api/admin/{resource}[/{id}], тело
-     { translations: [{ lang_code, title }, ...] } — роутов админки ещё
-     нет (config/routes.php и app/ заморожены), поэтому мутации идут по
-     мок-массиву.
+     Контракт тела к бэку — { translations: [{ lang_code, title }] }
+     (см. шапку admin.js).
      ============================================================ */
   var dict = {
     modal: null,
@@ -129,6 +148,7 @@
     languages: null,
     languagesLoading: null,
     submitting: false,
+    touched: false,
     lastFocus: null
   };
 
@@ -138,6 +158,171 @@
     { code: 'ru', name: 'Русский' },
     { code: 'es', name: 'Español' }
   ];
+
+  /* ============================================================
+     DICT API — fetch-слой CRUD справочников (раздел 2.1 шапки файла)
+
+     См. контракт в шапке admin.js. Все четыре метода возвращают
+     Promise, который НИКОГДА неreject'ится: сетевая ошибка — это тоже
+     ответ режима mock, а не исключение.
+
+     dictApi.list(resource)      -> Promise<items[] | null>
+         null — данных нет/роут не готов: вызывающий оставляет серверный
+                рендер как есть.
+     dictApi.mutate(m, res, id, body) -> Promise<result>
+         result = { mode: 'api'|'mock', item? }
+                | { mode: 'forbidden' }
+                | { mode: 'error', message, status }
+     ============================================================ */
+  var dictApi = (function () {
+    var BASE = '/api/admin/';
+    var status = 'unknown';        // 'unknown' | 'live' | 'mock'
+
+    function table() { return document.querySelector('[data-dict-table]'); }
+
+    function setStatus(next) {
+      if (status === next) return;
+      status = next;
+      var el = table();
+      if (el) el.setAttribute('data-dict-api', next);
+      if (next === 'mock') {
+        console.warn('[admin] dictionary API is not available yet — edits stay on page mocks');
+      }
+    }
+
+    /** Отметка «ещё не пробовали» на таблице — удобно смотреть в DOM. */
+    function markUnknown() {
+      var el = table();
+      if (el && status === 'unknown') el.setAttribute('data-dict-api', 'unknown');
+    }
+
+    /** fetch + разбор тела: JSON распознаём, HTML/пусто — нет. */
+    function request(method, path, body) {
+      var url = BASE + path;
+      var options = {
+        method: method,
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      };
+      if (body !== undefined && body !== null) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+
+      var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
+      var result = function (status, ok, raw) {
+        var data = null;
+        var isJson = false;
+        if (raw && /^[\s]*[\[{]/.test(raw)) {
+          try { data = JSON.parse(raw); isJson = true; } catch (_) { data = null; }
+        }
+        return { status: status, ok: ok, data: data, raw: raw || '', isJson: isJson };
+      };
+
+      return Promise.resolve()
+        .then(function () { return run(url, options); })
+        .then(function (res) {
+          return res.text().then(
+            function (raw) { return result(res.status, res.ok, raw); },
+            function () { return result(res.status, res.ok, ''); }
+          );
+        })
+        .catch(function (err) {
+          return { status: 0, ok: false, data: null, raw: '', isJson: false, networkError: err };
+        });
+    }
+
+    /** 'ok' | 'mock' | 'forbidden' | 'error' — см. шапку файла. */
+    function classify(r) {
+      if (r.networkError) return 'mock';
+      var looksHtml = /^\s*</.test(r.raw || '');
+      if (r.ok) return looksHtml ? 'mock' : 'ok';       // 2xx, в т.ч. 204 без тела
+      if (looksHtml || !r.isJson) return 'mock';        // редирект/страница/пусто
+      if (r.status === 404 || r.status === 405) return 'mock';  // роута ещё нет
+      if (r.status === 403) return 'forbidden';
+      return 'error';
+    }
+
+    /** { data: {...} } / { items: [...] } / массив → единый вид записи. */
+    function unwrap(payload) {
+      if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+        return payload.data;
+      }
+      return payload;
+    }
+
+    function normalizeItem(raw) {
+      if (!raw || typeof raw !== 'object') return null;
+      var id = Number(raw.id);
+      if (!id) return null;
+      var translations = Array.isArray(raw.translations) ? raw.translations : [];
+      var rows = [];
+      translations.forEach(function (row) {
+        if (!row || typeof row !== 'object') return;
+        // Бэк может отдать и lang_code, и langCode — нормализуем к langCode
+        var code = String(row.langCode || row.lang_code || row.lang || row.locale || '');
+        if (!code) return;
+        var title = row.title;
+        if (title == null) title = row.name;
+        rows.push({ langCode: code, title: String(title == null ? '' : title) });
+      });
+      return { id: id, translations: rows };
+    }
+
+    function itemsFrom(payload) {
+      var inner = unwrap(payload);
+      var list = null;
+      if (Array.isArray(inner)) list = inner;
+      else if (inner && Array.isArray(inner.items)) list = inner.items;
+      else if (inner && Array.isArray(inner.data)) list = inner.data;
+      if (!list || !list.length) return list ? [] : null;
+      var items = list.map(normalizeItem).filter(function (item) { return item !== null; });
+      // Формат не совпал (нет id у строк) — лучше не трогать рендер
+      return items.length ? items : null;
+    }
+
+    function errorText(r) {
+      var fallback = null;
+      if (window.LoreI18n) fallback = LoreI18n.t('errors.common.request_failed', { status: r.status });
+      if (window.Messages && Messages.describe) return Messages.describe(r.status, r.data, r.raw, fallback);
+      return fallback || ('HTTP ' + r.status);
+    }
+
+    return {
+      get status() { return status; },
+      markUnknown: markUnknown,
+
+      /** GET /api/admin/{resource} — или null, если роута ещё нет. */
+      list: function (resource) {
+        if (status === 'mock') return Promise.resolve(null);
+        return request('GET', resource).then(function (r) {
+          var kind = classify(r);
+          if (kind === 'ok') { setStatus('live'); return itemsFrom(r.data); }
+          if (kind === 'mock') { setStatus('mock'); return null; }
+          // 403/4xx с JSON: роут ЕСТЬ, доступа нет — правки уйдут в него же
+          setStatus('live');
+          console.warn('[admin] GET ' + BASE + resource + ' failed with HTTP ' + r.status);
+          return null;
+        });
+      },
+
+      /** POST / PATCH / DELETE. Никогда неreject'ится (см. шапку). */
+      mutate: function (method, resource, id, body) {
+        var path = resource + (id ? '/' + id : '');
+        return request(method, path, body).then(function (r) {
+          var kind = classify(r);
+          if (kind === 'ok') {
+            setStatus('live');
+            var item = normalizeItem(unwrap(r.data));
+            return { mode: 'api', item: item, status: r.status };
+          }
+          if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
+          if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+          return { mode: 'error', status: r.status, message: errorText(r) };
+        });
+      }
+    };
+  })();
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -403,7 +588,66 @@
 
   function isDictOpen() { return !!(dict.modal && !dict.modal.hidden); }
 
-  /* ---------- Сохранение и удаление (по мок-массиву) ---------- */
+  /* ---------- Сохранение и удаление (fetch-слой dictApi) ---------- */
+
+  function setSaveBusy(busy) {
+    if (dict.form) dict.form.classList.toggle('is-busy', busy);
+    var save = dict.modal && dict.modal.querySelector('[data-dict-save]');
+    if (save) save.disabled = busy;
+  }
+
+  function nextLocalId() {
+    return dict.items.reduce(function (max, row) {
+      return Math.max(max, Number(row.id) || 0);
+    }, 0) + 1;
+  }
+
+  /** Локальное применение результата — и для режима api, и для mock. */
+  function applyLocal(isEdit, filled, serverItem) {
+    // Ответ бэка главнее (там id и, возможно, нормализованные переводы)
+    var translations = (serverItem && serverItem.translations && serverItem.translations.length)
+      ? serverItem.translations
+      : filled;
+
+    if (isEdit) {
+      var item = findItem(dict.editId);
+      if (item) item.translations = translations;
+      else if (serverItem) dict.items.push(serverItem);
+    } else {
+      var id = (serverItem && serverItem.id) ? serverItem.id : nextLocalId();
+      dict.items.push({ id: id, translations: translations });
+    }
+    dict.touched = true;
+  }
+
+  /** API жив, но id/состав не пришёл — перечитываем список целиком. */
+  function syncFromApi() {
+    return dictApi.list(dict.resource).then(function (items) {
+      if (items === null) return false;
+      dict.items = items;
+      renderRows();
+      return true;
+    });
+  }
+
+  /**
+   * Первичная подгрузка списка с бэка. Нужна, чтобы:
+   *   - как только роут появился, таблица показывала БД, а не мок-заглушки;
+   *   - спрятать баннер «Данные-заглушки» (data-dict-stub) на странице.
+   * Пользователь уже что-то менял руками? Не затираем его правки.
+   */
+  function refreshFromApi() {
+    dictApi.markUnknown();
+    return dictApi.list(dict.resource).then(function (items) {
+      if (items === null) return false;
+      var note = document.querySelector('.admin-note[data-dict-stub]');
+      if (note) note.hidden = true;
+      if (dict.touched) return false;
+      dict.items = items;
+      renderRows();
+      return true;
+    });
+  }
 
   function saveDictForm() {
     // Пустые переводы не отправляем; валидация — хотя бы один заполненный
@@ -424,25 +668,44 @@
 
     if (dict.submitting) return;
     dict.submitting = true;
+    setSaveBusy(true);
 
-    // TODO(api): fetch('POST /api/admin/' + dict.resource
-    //           или 'PATCH /api/admin/' + dict.resource + '/' + dict.editId,
-    //           body: { translations: filled } — как { lang_code, title },
-    //           headers: { 'X-CSRF-Token': LoreCsrf.token(), Accept: 'application/json' })
-    if (dict.editId) {
-      var item = findItem(dict.editId);
-      if (item) item.translations = filled;
-    } else {
-      var nextId = dict.items.reduce(function (max, row) {
-        return Math.max(max, Number(row.id) || 0);
-      }, 0) + 1;
-      dict.items.push({ id: nextId, translations: filled });
-    }
+    var isEdit = !!dict.editId;
+    // Контракт тела — в шапке admin.js (lang_code, а не langCode)
+    var payload = {
+      translations: filled.map(function (row) {
+        return { lang_code: row.langCode, title: row.title };
+      })
+    };
 
-    dict.submitting = false;
-    renderRows();
-    closeDictForm();
-    notify(t('admin.dict_saved'), 'success');
+    dictApi.mutate(isEdit ? 'PATCH' : 'POST', dict.resource, isEdit ? dict.editId : null, payload)
+      .then(function (result) {
+        if (result.mode === 'forbidden') {
+          // Бэк уже отдаёт 403 — форма не «съедает» его молча
+          notify(t('js.no_rights'), 'error');
+          return;
+        }
+        if (result.mode === 'error') {
+          setError(result.message);
+          return;
+        }
+
+        applyLocal(isEdit, filled, result.item);
+        renderRows();
+        closeDictForm();
+        notify(t('admin.dict_saved'), 'success');
+        // 2xx без id в ответе: берём канонические строки у бэка
+        if (result.mode === 'api' && !isEdit && !(result.item && result.item.id)) syncFromApi();
+      })
+      .catch(function (err) {
+        // mutate() неreject'ится — это страховка от багов самого слоя
+        console.warn('[admin] dictionary save failed', err);
+        setError(t('errors.common.network_error'));
+      })
+      .then(function () {
+        dict.submitting = false;
+        setSaveBusy(false);
+      });
   }
 
   function deleteDictItem(btn) {
@@ -456,10 +719,24 @@
     }).then(function (confirmed) {
       if (!confirmed) return;
 
-      // TODO(api): fetch('DELETE /api/admin/' + dict.resource + '/' + id) — API ещё нет.
-      dict.items = dict.items.filter(function (item) { return Number(item.id) !== id; });
-      renderRows();
-      notify(t('admin.dict_deleted'), 'success');
+      btn.disabled = true;
+      return dictApi.mutate('DELETE', dict.resource, id, null).then(function (result) {
+        if (result.mode === 'forbidden') {
+          notify(t('js.no_rights'), 'error');
+          btn.disabled = false;
+          return;
+        }
+        if (result.mode === 'error') {
+          notify(result.message, 'error');
+          btn.disabled = false;
+          return;
+        }
+
+        dict.items = dict.items.filter(function (item) { return Number(item.id) !== id; });
+        dict.touched = true;
+        renderRows();
+        notify(t('admin.dict_deleted'), 'success');
+      });
     });
   }
 
@@ -493,6 +770,10 @@
     dict.items = Array.isArray(payload.items) ? payload.items : [];
 
     renderRows();
+
+    // Фоновая проверка, завёз ли бэк /api/admin/{resource}: при успехе
+    // таблица перерисовывается из БД и баннер-заглушка прячется
+    refreshFromApi();
 
     if (dict.form) {
       dict.form.addEventListener('submit', function (e) {

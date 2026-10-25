@@ -44,6 +44,13 @@ body {
   opacity: 0.7;
 }
 
+/* Busy-состояние: пока fetch не вернулся, кнопка гаснет и не принимает
+   клики (disabled ставит admin.js на Save/Delete, карусели и т.п.). */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .btn__icon {
   display: inline-flex;
 }
@@ -2023,5 +2030,16 @@ a.user-mention:focus-visible {
 .btn--pill {
   border-radius: 9999px;
   padding: 10px 24px;
+}
+
+/* Права «create» на посты запрещены (rights-guard.js вешает атрибут при
+ * create:false из Common Rules). Гасим точки входа в комментирование —
+ * «Ответить» / «Комментировать». Правило живёт на <html>, поэтому действует
+ * и на карточки, клонированные из <template> после загрузки страницы.
+ * Сами формы не прячем: попытка отправить должна дать тост «Нет прав»,
+ * а не молчаливое «ничего не произошло». */
+html[data-comments-denied] [data-reply-toggle],
+html[data-comments-denied] [data-comment-toggle] {
+  display: none !important;
 }
 
