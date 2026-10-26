@@ -165,6 +165,12 @@ $view->include('library-filters', [
               <?php if ($hasCover): ?>
                 <img src="<?= $view->e($coverUrl) ?>" alt="" loading="lazy">
               <?php endif; ?>
+              <?php /* Черновик статьи: бейдж «Draft», как в card-book.php.
+                       Данных о статусе в списке нет — идём по активному
+                       фильтру ?p_status=draft (вкладка показывает черновики) */ ?>
+              <?php if ($isArticles && strtolower((string) ($q['p_status'] ?? '')) === 'draft'): ?>
+                <span class="card-book__status card-book__status--draft"><?= $tr('common.drafts.badge') ?></span>
+              <?php endif; ?>
             </div>
             <h3 class="card-book__title"><?= $view->e($item->title) ?></h3>
           </a>
