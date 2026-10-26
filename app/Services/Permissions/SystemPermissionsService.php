@@ -12,7 +12,7 @@ use App\Models\Access\Assignment\RolesUser;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
-use App\Exceptions\Translator\PermissionExceptionTranslator;
+use App\Exceptions\Translators\PermissionExceptionTranslator;
 use App\Exceptions\EnumExtensions;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;

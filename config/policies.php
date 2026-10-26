@@ -98,6 +98,6 @@ $registry->registerPolicy(
     fn($ctx) => new SystemAccessRequirement('#system\/roles\/#', new ManageRolesSystemOperation()),
     AccessHandler::class);
 $registry->registerPolicy(
-    ManageRolesSystemOperation::class, 
+    AnySystemOperation::class, 
     fn($ctx) => new SystemAccessRequirement('#system\/#', new AnySystemOperation()),
     AccessHandler::class);

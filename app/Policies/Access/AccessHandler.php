@@ -30,7 +30,7 @@ final class AccessHandler implements AuthorizationHandler
 
         $currentUserId = $ctx->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Decision::unauthorized(ErrorCodes::UNAUTHORIZED);
+            return Decision::unauthorized(ErrorCodes::UNAUTHORIZED, 'errors.policies.auth');
 
         $service = $this->container->getKeyed($requirement->getTypeKey(), AccessService::class);
 

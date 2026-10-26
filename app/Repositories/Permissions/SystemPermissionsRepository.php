@@ -5,6 +5,7 @@ namespace App\Repositories\Permissions;
 
 use App\Repositories\Repository;
 use App\Models\Scripts\ScriptParam;
+use App\Models\Access\Permissions\SystemPermissions;
 use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
@@ -19,7 +20,7 @@ final class SystemPermissionsRepository extends PermissionsRepository
 {
     public function __construct(
         Database $db,
-        Translator $translator,
+        private readonly Translator $translator,
         private readonly RolesScriptDirector $director
     ){
         parent::__construct($db, $translator);
@@ -30,6 +31,7 @@ final class SystemPermissionsRepository extends PermissionsRepository
     {
         $builder = ScriptBuilder::withTable("roles_permissions", "rp");
         $builder->addSelect("ur.id as r_id,
+                \nur.id as role_id,
                 \nur.color as r_color,
                 \nur.is_system as r_is_system,
                 \nur.created_at as r_created_at")
@@ -38,8 +40,8 @@ final class SystemPermissionsRepository extends PermissionsRepository
                         MAX(CASE WHEN urt.code = :fallbackCulture THEN urt.title END)
                     ) as r_title", [':currentCulture' => ScriptParam::asStr($this->translator->locale()), ':fallbackCulture' => ScriptParam::asStr($this->translator->fallback())])
             ->addSelect("bool_or(rp.pub_create) as pub_create,
-                \nbool_or(rp.pub_updateMeta) as pub_updateMeta,
-                \nbool_or(rp.pub_updateContent) as pub_updateContent,
+                \nbool_or(rp.pub_update_meta) as pub_update_meta,
+                \nbool_or(rp.pub_update_content) as pub_update_content,
                 \nbool_or(rp.pub_delete) as pub_delete,
                 \nbool_or(rp.pub_read) as pub_read,
                 \nbool_or(rp.pub_manage_ppl) as pub_manage_ppl,

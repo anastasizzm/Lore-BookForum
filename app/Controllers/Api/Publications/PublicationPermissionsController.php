@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Controllers\Api\Publication;
+namespace App\Controllers\Api\Publications;
 
 use App\Http\HttpContext;
 use App\Http\HttpException;
@@ -10,6 +10,7 @@ use App\Lib\I18n\Translator;
 use App\Controllers\Controller;
 
 use App\Models\Error;
+use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Exceptions\ForbiddenException;
 use App\Attributes\Inject;
 
@@ -28,6 +29,14 @@ final class PublicationPermissionsController extends Controller
         private readonly PublicationPermissionsService $permissionsService,
         private readonly Translator $translator
     ){}
+
+    public function getRoles(HttpContext $context, string $publicationId)
+    {
+        $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
+
+        $items = $this->permissionsService->getRoles($publicationId);
+        return $this->jsonList($items);
+    }
 
     public function addRole(HttpContext $context, string $publicationId)
     {
@@ -104,6 +113,19 @@ final class PublicationPermissionsController extends Controller
         return $this->jsonEmpty(204);
     }
 
+    public function getUsers(HttpContext $context, string $publicationId)
+    {
+        $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
+
+        $query = RolesUserListQuery::fromInput($context->request->query);
+        $list = $this->permissionsService->getUsers($publicationId, $query);
+        return $this->jsonList($list->getArray(), [
+            'page' => $list->getPage(),
+            'pageSize' => $list->getPageSize(),
+            'hasNext' => $list->hasNext()
+        ]);
+    }
+
     public function addUser(HttpContext $context, string $publicationId)
     {
         $granterId = $context->attribute(Constants::USER_ID_ATTR);
@@ -118,6 +140,20 @@ final class PublicationPermissionsController extends Controller
 
         $version = $this->permissionsService->addUser($publicationId, $form->userId, $form, $granterId);
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+    }
+
+    public function getUserRoles(HttpContext $context, string $publicationId, string $userId)
+    {
+        $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+        $pageQ = PaginationQuery::fromInput($context->request->query);
+
+        $list = $this->permissionsService->getUserRoles($publicationId, $userId, $pageQ);
+        return $this->jsonList($list->getArray(), [
+            'page' => $list->getPage(),
+            'pageSize' => $list->getPageSize(),
+            'hasNext' => $list->hasNext()
+        ]);
     }
 
     public function addRoleToUser(HttpContext $context, string $publicationId, string $userId)

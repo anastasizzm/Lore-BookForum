@@ -47,8 +47,9 @@ WHERE lower(u.username) = lower(:'admin_username')
   AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.user_id = u.id);
 
 INSERT INTO roles_users (user_id, publication_id, role_id, granted_by_id)
-SELECT u.id, NULL, 1, u.id
+SELECT u.id, NULL, init_roles.role_id, u.id
 FROM users u
+CROSS JOIN unnest(ARRAY[0, 1]) as init_roles(role_id)
 WHERE lower(u.username) = lower(:'admin_username')
   AND NOT EXISTS (SELECT 1 FROM roles_users r WHERE r.user_id = u.id);
 

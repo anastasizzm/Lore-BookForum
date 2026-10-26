@@ -10,8 +10,8 @@ use App\Lib\I18n\Translator;
 use App\Lib\LexoRank;
 use App\Attributes\Inject;
 use App\Models\Enums\ServiceType;
-use App\Repositories\RoleProviders\Common\CommonRuleProvider;
-use App\Repositories\RoleProviders\Concrete\RuleProvider;
+use App\Repositories\RuleProviders\Common\CommonRuleProvider;
+use App\Repositories\RuleProviders\Concrete\RuleProvider;
 
 final class RoleRankService
 {

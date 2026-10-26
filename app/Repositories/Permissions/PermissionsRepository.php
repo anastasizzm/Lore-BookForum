@@ -11,8 +11,11 @@ use App\Models\Additional\UserRole;
 use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
+use App\Models\Access\Assignment\RolesUser;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
+use App\Extensions\ScriptBuilders\ScriptBuilder;
+use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
 use PDO;
 
 class PermissionsRepository extends Repository
@@ -202,7 +205,7 @@ class PermissionsRepository extends Repository
         array $includeObjects) : array 
     {
         $innerBuilder = ScriptBuilder::withTable("roles_users");
-        $innerBuilder>addSelect("user_id")
+        $innerBuilder->addSelect("user_id")
             ->addWhere("is_valid")
             ->setGroup("user_id");
 

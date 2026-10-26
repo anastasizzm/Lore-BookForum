@@ -3,10 +3,17 @@ declare(strict_types=1);
 
 namespace App\Services\Permissions;
 
-use App\Repositories\Permissions\PermissionsRepository;
+use App\Repositories\Permissions\PublicationPermissionsRepository;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\ConflictException;
-use App\Exceptions\Translator\PermissionExceptionTranslator;
+use App\Exceptions\ValidationException;
+use App\Models\PaginatedList;
+use App\Models\Access\Assignment\RolesUser;
+use App\Models\Queries\PaginationQuery;
+use App\Models\Enums\UsersSortBy;
+use App\Models\Queries\Permissions\RolesUserListQuery;
+use App\Exceptions\Translators\PermissionExceptionTranslator;
+use App\Exceptions\EnumExtensions;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
 use App\Forms\Permissions\EditPermissionForm;
@@ -24,10 +31,15 @@ final class PublicationPermissionsService
     public function __construct(
         private readonly RoleRankService $roleRankService,
         private readonly UnitOfWork $uow,
-        private readonly PermissionsRepository $repository,
+        private readonly PublicationPermissionsRepository $repository,
         private readonly PermissionExceptionTranslator $exceptionTranslator,
         private readonly Translator $translator
     ) {}
+
+    public function getRoles(int $publicationId) : array
+    {
+        return $this->repository->getRoles($publicationId);
+    }
 
     public function addRole(int $publicationId, PublicationPermissionForm $permissions): int
     {
@@ -137,6 +149,23 @@ final class PublicationPermissionsService
         }
     }
 
+    public function getUsers(int $publicationId, RolesUserListQuery $query) : PaginatedList 
+    {
+        $errors = [];
+        $isValid = $query->properties->validateForType(RolesUser::class, $errors);
+        if(!$isValid) throw new ValidationException($errors);
+
+        $sortEnum = $query->sort->hasData() 
+            ? EnumExtensions::tryResolve(UsersSortBy::class, $query->sort->sortString()) 
+            : UsersSortBy::Username;
+
+        $page = $query->pagination->page();
+        $pageSize = $query->pagination->pageSize();
+
+        $items = $this->repository->getUsers($publicationId, $sortEnum, $page, $pageSize, $query->properties->getProps());
+        return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
     public function addUser(int $publicationId, int $userId, RoleToUserAssignmentForm $form, int $granterId): int
     {
         try {
@@ -157,6 +186,15 @@ final class PublicationPermissionsService
         if ($versions === []) {
             throw new NotFoundException($this->translator->t('errors.common.not_found'));
         }
+    }
+
+    public function getUserRoles(int $publicationId, int $userId, PaginationQuery $pagination) : PaginatedList 
+    {
+        $page = $pagination->page();
+        $pageSize = $pagination->pageSize();
+        $items = $this->repository->getUserRoles($publicationId, $userId, $page, $pageSize);
+
+        return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
     public function removeUserRole(int $publicationId, int $userId, int $roleId): int
