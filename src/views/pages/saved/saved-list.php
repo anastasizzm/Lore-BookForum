@@ -74,12 +74,19 @@ if (!is_string($currentLang) || $currentLang === '') {
     $currentLang = method_exists($view, 'locale') ? $view->locale() : null;
 }
 
+// Состояние панели фильтров (?f=open|closed) переносим в ссылки страницы,
+// иначе сортировка и пагинация заново откроют закрытую панель.
+$filterFlag = isset($_GET['f']) && is_string($_GET['f']) && in_array(strtolower($_GET['f']), ['open', 'closed'], true)
+    ? strtolower($_GET['f'])
+    : null;
+
 $baseUrl = $view->url('books.saved');
-$link = static function (array $params) use ($baseUrl, $sort, $statusParam, $currentLang): string {
+$link = static function (array $params) use ($baseUrl, $sort, $statusParam, $currentLang, $filterFlag): string {
     $params += [
         'sort'   => $sort === 'newest' ? null : $sort,
         'status' => $statusParam,
         'lang'   => $currentLang,
+        'f'      => $filterFlag,
     ];
     $params = array_filter($params, static fn($v) => $v !== null && $v !== '');
     $qs = http_build_query($params);
@@ -114,7 +121,6 @@ $view->include('page-header', [
 ]);
 
 $view->include('library-filters', [
-    'filterState' => $filterState ?? 'closed',
     'bookHref'    => '/books/saved',
     'articleHref' => '/articles/saved',
 ]);

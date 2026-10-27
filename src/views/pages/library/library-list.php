@@ -52,9 +52,7 @@ $view->include('page-header', [
 ]);
 
 // ---- Панель фильтров ----
-$view->include('library-filters', [
-    'filterState' => $filterState ?? 'closed',
-]);
+$view->include('library-filters');
 
 // ---- Сортировка ----
 $sort_options = $sortOptions ?? [
