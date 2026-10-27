@@ -13,6 +13,7 @@ use App\Controllers\Controller;
 use App\Models\Error;
 use App\Models\Enums\ServiceType;
 use App\Models\Queries\PaginationQuery;
+use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Attributes\Inject;
 
@@ -30,6 +31,8 @@ use App\Exceptions\ForbiddenException;
 final class PublicationPermissionsController extends Controller
 {
     public function __construct(
+        #[Inject(key: ServiceType::Publication)]
+        private readonly CommonRuleProvider $ruleProvider,
         private readonly PublicationPermissionsService $permissionsService,
         private readonly Translator $translator
     ){}
@@ -231,5 +234,15 @@ final class PublicationPermissionsController extends Controller
             throw new HttpException(400, 'Invalid If-Match header');
         }
         return (int)$stripped;
+    }
+
+    public function getCommonRules(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $rules = $this->ruleProvider->getRule($userId);
+        return $this->jsonObject($rules);
     }
 }

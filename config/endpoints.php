@@ -34,7 +34,6 @@ return function(Router $router)
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
-    $router->get('/api/books/rules', [App\Controllers\Api\Publications\BooksController::class, 'getCommonRules'], 'api.books.rules', AuthPolicy::Auth);
     $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
     $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
     $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
@@ -45,12 +44,12 @@ return function(Router $router)
 
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
-    $router->get('/api/articles/rules', [App\Controllers\Api\Publications\ArticlesController::class, 'getCommonRules'], 'api.articles.rules', AuthPolicy::Auth);
     $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
     $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
     $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
     $router->delete('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
 
+    $router->get('/api/publications/rules', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getCommonRules'], 'api.publication.rules', AuthPolicy::Auth);
 
     $router->get('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getRoles'], 'api.publication.roles', AnyPublicationOperation::class);
     $router->post('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'addRole'], 'api.publication.roles.add', ManageRolesPublicationOperation::class);
