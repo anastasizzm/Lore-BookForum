@@ -20,15 +20,14 @@
  *               когда бэк введёт статусы публикации).
  *   КНОПКА «РЕДАКТИРОВАТЬ» — пункт меню «три точки» в шапке страницы
  *               (details-menu.php, рядом с заголовком «О книге»); пункт
- *               рендерится ВСЕГДА; цвет состояния подгружается
- *               АСИНХРОННО (book-rights.js):
- *                 красная  — есть права на публикацию книги (canPublish),
- *                 синяя    — есть права на редактирование (canEdit),
- *                 серая    — прав нет.
- *               КОНТРАКТ (роут добавит бэк; config/ и app/ заморожены):
- *                 GET /api/publications/{id}/rights
- *                 200 { data: { canEdit: bool, canPublish: bool } }
- *                 401/403/404/5xx → пункт остаётся серым.
+ *               рендерится СКРЫТЫМ (hidden) и показывается по правилам:
+ *               permissions.js (window.LorePermissions) проверяет
+ *               data-requires="publication.edit" с owner-override из
+ *               data-requires-owner. Права не пришли или права нет —
+ *               пункт остаётся скрытым. Цветовое кодирование состояния
+ *               (красный/синий/серый) больше не используется — ему на
+ *               смену пришло скрытие через permissions.js, см. шапку
+ *               details-menu.php.
  *   УДАЛЕНИЕ КНИГИ — второй пункт того же меню (details-menu.js):
  *               DELETE /api/books/{id} → 204;401 — нет сессии, 419 — CSRF,
  *               403/404 — нет прав или уже удалена; успех → редирект
@@ -130,8 +129,9 @@ if (($book->creator ?? null) !== null) {
 /* ---------- Владелец публикации (для кнопок Edit/Delete/Publish) ----------
  * Глобальные /api/books/rules НЕ содержат owner-override (он есть только в
  * per-publication правилах, у которых эндпоинта нет). Поэтому «это моя
- * книга» считаем здесь по creator.id и отдаём в data-rules-owner —
- * book-rights.js сложит этот признак с правилами.
+ * книга» считаем здесь по creator.id и отдаём в details-menu как $isOwner —
+ * там он рендерится в data-requires-owner, и permissions.js складывает
+ * этот признак с правилами.
  */
 $creatorObj = is_object($book) ? ($book->creator ?? null) : null;
 $creatorId  = is_object($creatorObj) ? (int) ($creatorObj->id ?? 0) : 0;
@@ -231,9 +231,8 @@ $statusRaw = $status ?? $get($book, 'status', '');
 $status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
 $isDraft   = $status === 'draft';
 
-// Пункт «Редактировать» в меню «три точки» (шапка) рендерится всегда;
-// цвет (красная/синяя/серая по правам) подгружает асинхронно
-// book-rights.js — см. шапку файла.
+// Пункт «Редактировать» в меню «три точки» (шапка) рендерится скрытым;
+// показывает его permissions.js по data-requires — см. шапку файла.
 ?>
 <?php $view->extends('main'); ?>
 
@@ -257,8 +256,9 @@ $isDraft   = $status === 'draft';
             title="<?= $tr('common.book.draft_hint') ?>"><?= $tr('common.book.draft_badge') ?></span>
     <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» (переехало из
-         .book-actions) и «Удалить». Пункты гасятся по правилам
-         /api/books/rules (book-rights.js), $isOwnerPub — owner-override. -->
+         .book-actions) и «Удалить». Пункты рендерятся скрытыми, показывает
+         permissions.js по правилам /api/books/rules, $isOwnerPub —
+         owner-override (data-requires-owner). -->
     <?php $view->include('details-menu', [
         'type'    => 'book',
         'id'      => $bookId,

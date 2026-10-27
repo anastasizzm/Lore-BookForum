@@ -3,9 +3,10 @@
  * article-details — страница статьи (по аналогии с book/book-details.php).
  *
  * Шапка страницы содержит меню «три точки» (details-menu.php): пункты
- * «Редактировать» (ссылка на /articles/{id}/edit, цвет по правам —
- * book-rights.js) и «Удалить» (DELETE /api/articles/{id}, details-menu.js);
- * контракт обоих роутов — в шапке partial (бэк добавит, config/ заморожен).
+ * «Редактировать» (ссылка на /articles/{id}/edit) и «Удалить»
+ * (DELETE /api/articles/{id}, details-menu.js) — оба рендерятся скрытыми
+ * (hidden) и показываются permissions.js по data-requires;
+ * контракт обоих роутов — в шапке partial.
  *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
@@ -104,7 +105,8 @@ if (($article->creator ?? null) !== null) {
 /* ---------- Владелец публикации (для кнопок Edit/Delete) ----------
  * Как в book-details: глобальные /api/articles/rules owner-override не
  * отдают, поэтому «это моя статья» считаем по creator.id и отдаём в
- * data-rules-owner — book-rights.js сложит признак с правилами.
+ * details-menu как $isOwner — там он рендерится в data-requires-owner,
+ * и permissions.js складывает признак с правилами.
  */
 $creatorObj = is_object($article) ? ($article->creator ?? null) : null;
 $creatorId  = is_object($creatorObj) ? (int) ($creatorObj->id ?? 0) : 0;
@@ -199,8 +201,9 @@ if (!empty($iconId)) {
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
-         по образцу book-details. Пункты гасятся по правилам
-         /api/articles/rules (book-rights.js), $isOwnerPub — owner-override. -->
+         по образцу book-details. Пункты рендерятся скрытыми, показывает
+         permissions.js по правилам /api/articles/rules, $isOwnerPub —
+         owner-override (data-requires-owner). -->
     <?php $view->include('details-menu', [
         'type'    => 'article',
         'id'      => $articleId,

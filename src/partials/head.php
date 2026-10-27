@@ -19,8 +19,9 @@
   <script src="<?= $view->asset('js/csrf.js') ?>"></script>
   <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/books/rules,
        /api/articles/rules, /api/posts/rules, /api/system/rules). Нужен везде:
-       sidebar гейтит по нему кнопку «Админ-панель», а book-rights.js —
-       кнопки Edit / Delete / Publish на страницах публикаций и формах. -->
+       permissions.js — надстройка над window.LoreRules (кнопки Edit / Delete /
+       Publish на страницах публикаций и формах, data-requires), а sidebar
+       гейтит по правилам кнопку «Админ-панель» (data-requires="admin.panel"). -->
   <script src="<?= $view->asset('js/rules.js') ?>"></script>
   <!-- rights-guard.js -> временная JS-страховка, пока бэк не отдаёт 403:
        при create:false в /api/posts/rules форма комментария/ответа физически

@@ -941,35 +941,36 @@ textarea.form-field__input {
 }
 
 /* ============================================
-   ПРАВА (Common Rules) — состояние неактивного элемента
+   ПРАВА (permissions.js / Common Rules) — состояние неактивного элемента
    ============================================
-   Контракт разметки: [data-rules-kind] + [data-rule="create|edit|publish|
-   delete"]. Права подтверждает book-rights.js из window.LoreRules
-   (public/assets/js/rules.js). Пока/если правила не подтвердились,
-   элемент висит с aria-disabled="true" + .is-disabled.
+   Контракт разметки: [data-requires] (+ data-requires-kind / -owner) с
+   data-requires-mode="disable": permissions.js (window.LorePermissions)
+   ставит aria-disabled="true" и .is-disabled, когда права нет.
+   Пока/если правила не подтвердились, элемент выглядит неактивным.
 
    Правило живёт ЗДЕСЬ, а не в book.css: оно общее для страниц
    book/article details И для форм (book-form.css / article-form.css
    book.css не подключают, и кнопки Publish/Save остались бы
    неактивными, но выглядящими рабочими). */
-[data-rule].is-disabled,
-[data-rule][aria-disabled='true'] {
+[data-requires].is-disabled,
+[data-requires][aria-disabled='true'] {
   color: var(--color-text-muted, #6F84A5);
   opacity: 0.65;
   cursor: not-allowed;
 }
 
-[data-rule].is-disabled:hover,
-[data-rule].is-disabled:focus-visible,
-[data-rule][aria-disabled='true']:hover,
-[data-rule][aria-disabled='true']:focus-visible {
+[data-requires].is-disabled:hover,
+[data-requires].is-disabled:focus-visible,
+[data-requires][aria-disabled='true']:hover,
+[data-requires][aria-disabled='true']:focus-visible {
   background: none;
   color: var(--color-text-muted, #6F84A5);
 }
 
 /* pointer-events: НЕ ставим — он бы убил подсказку title («Нет прав...»).
-   Клики, клавиатура и отправка формы глушатся в book-rights.js в фазе
-   захвата, до обработчиков details-menu.js / book-form.js / article-form.js. */
+   Нативные контролы глушит сам флаг disabled (permissions.js ставит его
+   в disable-режиме, браузер не даёт ни клика, ни submit); <a> остаются
+   кликабельными — итог всё равно проверяет бэкенд. */
 
 /* ============================================
    FILTER PANEL — выравнивание всех контролов
