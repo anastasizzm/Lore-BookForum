@@ -13,7 +13,6 @@ use App\Models\Access\Assignment\RolesUsersAssignment;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
-use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
 use PDO;
 
 final class SystemPermissionsRepository extends PermissionsRepository 
@@ -21,7 +20,6 @@ final class SystemPermissionsRepository extends PermissionsRepository
     public function __construct(
         Database $db,
         private readonly Translator $translator,
-        private readonly RolesScriptDirector $director
     ){
         parent::__construct($db, $translator);
     }

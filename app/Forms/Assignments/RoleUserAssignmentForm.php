@@ -8,7 +8,7 @@ readonly class RoleUserAssignmentForm extends RoleToUserAssignmentForm
 {
     public function __construct(
         public int $userId,
-        inT $roleId
+        int $roleId
     ){
         parent::__construct($roleId);
     }

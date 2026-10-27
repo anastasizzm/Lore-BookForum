@@ -191,7 +191,6 @@ final class SystemPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
-        $roleId = RouteParamParser::optionalPositiveInt(['r' => $roleId], 'r');
 
         if (!$this->permissionsService->canManageUser($currentUserId, $userId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);

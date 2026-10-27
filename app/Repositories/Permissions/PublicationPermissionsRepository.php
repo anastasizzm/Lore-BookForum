@@ -12,7 +12,6 @@ use App\Models\Access\Rules\SystemAccessRules;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
-use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
 use PDO;
 
 final class PublicationPermissionsRepository extends PermissionsRepository 

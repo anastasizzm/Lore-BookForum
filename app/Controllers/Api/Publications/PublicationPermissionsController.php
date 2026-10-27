@@ -60,7 +60,7 @@ final class PublicationPermissionsController extends Controller
 
         if ($form->belowId !== NULL
             && !$this->permissionsService->canManageRole($userId, $form->belowId, $publicationId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $version = $this->permissionsService->addRole($publicationId, $form);
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
@@ -227,11 +227,11 @@ final class PublicationPermissionsController extends Controller
     {
         $ifMatch = $context->header('If-Match');
         if ($ifMatch === null || $ifMatch === '') {
-            throw new HttpException(428, 'If-Match header is required');
+            throw new HttpException('If-Match header is required', 428, ErrorCodes::INVALID_HEADER);
         }
         $stripped = trim($ifMatch, '"');
         if (!ctype_digit($stripped)) {
-            throw new HttpException(400, 'Invalid If-Match header');
+            throw new HttpException('Invalid If-Match header', 400, ErrorCodes::INVALID_HEADER);
         }
         return (int)$stripped;
     }

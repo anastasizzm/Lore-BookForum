@@ -38,7 +38,7 @@ readonly class SystemPermissions extends Dto
     public function toArray() : array 
     {
         return [
-            'role' => $this->role->toArray(),
+            'role' => $this->role?->toArray(),
             'systemPermissions' => $this->systemPermissions->toArray(),
             'postPermissions' => $this->postPermissions->toArray(),
             'pubPermissions' => $this->pubPermissions->toArray(),

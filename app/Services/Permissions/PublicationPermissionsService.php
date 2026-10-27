@@ -13,18 +13,18 @@ use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Exceptions\Translators\PermissionExceptionTranslator;
-use App\Exceptions\EnumExtensions;
+use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
 use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
-use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
+use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Enrichers\RolesPermissionsContextEnricher;
 use App\Services\Enrichers\UsersPermissionsContextEnricher;
 use App\Services\Permissions\Ranks\PublicationRoleRankService;
-use App\Services\LexoRank\LexoRank;
+use App\Lib\LexoRank;
 use PDO;
 
 final class PublicationPermissionsService
@@ -89,6 +89,9 @@ final class PublicationPermissionsService
         EditPermissionForm $form,
         int $expectedVersion
     ): int {
+        if ($form->pubPermissions === NULL)
+            throw new ValidationException(['pubPermissions' => $this->translator->t("errors.common.required")]);
+
         try {
             return $this->uow->transactional(function () use ($publicationId, $roleId, $form, $expectedVersion) {
                 $newVersion = $this->repository->editRole(
@@ -134,7 +137,7 @@ final class PublicationPermissionsService
                             : null;
                         try {
                             $candidate = LexoRank::between($nudged, $aboveRank);
-                        } catch (\LogicException) {
+                        } catch (\RuntimeException) {
                             throw new ConflictException($this->translator->t('errors.roles.position_changed'));
                         }
                     }
@@ -199,9 +202,6 @@ final class PublicationPermissionsService
         try {
             return $this->uow->transactional(function () use ($publicationId, $userId, $form, $granterId) : int {
                 $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
-                if ($rolesCount === NULL)
-                    throw new NotFoundException($this->translator->t('errors.common.not_found'));
-
                 if ($rolesCount !== 0)
                     throw new ConflictException($this->translator->t('item_based.exists.m', [':item' => $this->translator->t('display_names.user')]));
 
@@ -252,9 +252,6 @@ final class PublicationPermissionsService
     {
         return $this->uow->transactional(function () use ($userId, $roleId, $publicationId) : int {
             $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
-            if ($rolesCount === NULL)
-                throw new NotFoundException($this->translator->t('errors.common.not_found'));
-
             if ($rolesCount < 2)
                 throw new ConflictException($this->translator->t('errors.roles.last_role'));
         

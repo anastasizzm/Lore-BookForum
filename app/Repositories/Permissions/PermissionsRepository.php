@@ -330,7 +330,7 @@ class PermissionsRepository extends Repository
         return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
 
-    public function countUserRoles(?int $publicationId, int $userId) : ?int 
+    public function countUserRoles(?int $publicationId, int $userId) : int 
     {
         $builder = ScriptBuilder::withTable("roles_users");
         $builder->addSelect("count(role_id)")
@@ -343,7 +343,7 @@ class PermissionsRepository extends Repository
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $counter = $stmt->fetchColumn();
 
-        return $counter === false ? NULL : (int)$counter;
+        return (int)$counter;
     }
 
     /** @return array<RolesUsersAssignment> */
@@ -591,5 +591,54 @@ class PermissionsRepository extends Repository
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
         return $stmt->fetchColumn() === false;
+    }
+
+    public function rebalanceRanks(?int $publicationId): void
+    {
+        // 1. Fetch all role_ids ordered by their current LexoRank
+        $stmt = $this->execute(
+            'SELECT role_id FROM roles_permissions
+             WHERE publication_id IS NOT DISTINCT FROM :pubId
+             ORDER BY lexorank COLLATE "C" ASC',
+            [':pubId' => ScriptParam::asInt($publicationId)]
+        );
+        $roleIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $n = count($roleIds);
+
+        if ($n === 0) {
+            return;
+        }
+
+        // 2. Calculate a safe string length to fit N items comfortably
+        $length = 1;
+        while (pow(36, $length) < $n * 10) {
+            $length++;
+        }
+        
+        $totalSpace = pow(36, $length);
+        $step = (int) floor($totalSpace / ($n + 1));
+
+        // 3. Generate new, evenly spaced ranks
+        $values = [];
+        $params = [':pubId' => ScriptParam::asInt($publicationId)];
+
+        foreach ($roleIds as $index => $roleId) {
+            $num = ($index + 1) * $step;
+            // Convert decimal to base-36 string, padded to $length
+            $newRank = str_pad(base_convert((string)$num, 10, 36), $length, '0', STR_PAD_LEFT);
+
+            $values[] = "(:roleId{$index}, :rank{$index})";
+            $params[":roleId{$index}"] = ScriptParam::asInt((int)$roleId);
+            $params[":rank{$index}"] = ScriptParam::asStr($newRank);
+        }
+
+        // 4. Perform a single bulk UPDATE using a VALUES list
+        $sql = "UPDATE roles_permissions AS rp
+                SET lexorank = v.rank
+                FROM (VALUES " . implode(', ', $values) . ") AS v(role_id, rank)
+                WHERE rp.role_id = v.role_id
+                  AND rp.publication_id IS NOT DISTINCT FROM :pubId";
+
+        $this->execute($sql, $params);
     }
 }

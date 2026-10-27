@@ -13,18 +13,19 @@ use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Exceptions\Translators\PermissionExceptionTranslator;
-use App\Exceptions\EnumExtensions;
+use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
 use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
+use App\Models\Errors\ErrorBag;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Permissions\Ranks\SystemRoleRankService;
 use App\Services\Enrichers\RolesPermissionsContextEnricher;
 use App\Services\Enrichers\UsersPermissionsContextEnricher;
-use App\Services\LexoRank\LexoRank;
+use App\Lib\LexoRank;
 use PDO;
 
 final class SystemPermissionsService
@@ -87,6 +88,19 @@ final class SystemPermissionsService
 
     public function editRole(int $roleId, EditPermissionForm $form, int $expectedVersion): int
     {
+        $bag = new ErrorBag();
+        if ($form->pubPermissions === NULL)
+            $bag->add('pubPermissions', [$this->translator->t("errors.common.required")]);
+           
+        if ($form->systemPermissions === NULL)
+            $bag->add('systemPermissions', [$this->translator->t("errors.common.required")]);
+
+        if ($form->postPermissions === NULL)
+            $bag->add('postPermissions', [$this->translator->t("errors.common.required")]);
+
+        if (!$bag->isEmpty())
+            throw new ValidationException($bag->all());
+
         try {
             return $this->uow->transactional(function () use ($roleId, $form, $expectedVersion) {
                 $newVersion = $this->repository->editRole(
@@ -200,9 +214,6 @@ final class SystemPermissionsService
         try {
             return $this->uow->transactional(function () use ($userId, $form, $granterId) : int {
                 $rolesCount = $this->repository->countUserRoles(null, $userId);
-                if ($rolesCount === NULL)
-                    throw new NotFoundException($this->translator->t('errors.common.not_found'));
-
                 if ($rolesCount !== 0)
                     throw new ConflictException($this->translator->t('item_based.exists.m', [':item' => $this->translator->t('display_names.user')]));
 
@@ -253,9 +264,6 @@ final class SystemPermissionsService
     {
         return $this->uow->transactional(function () use ($userId, $roleId) : int {
             $rolesCount = $this->repository->countUserRoles(NULL, $userId);
-            if ($rolesCount === NULL)
-                throw new NotFoundException($this->translator->t('errors.common.not_found'));
-
             if ($rolesCount < 2)
                 throw new ConflictException($this->translator->t('errors.roles.last_role'));
         

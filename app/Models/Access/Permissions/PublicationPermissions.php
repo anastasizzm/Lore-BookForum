@@ -32,7 +32,7 @@ readonly class PublicationPermissions extends Dto
     public function toArray() : array 
     {
         return [
-            'role' => $this->role->toArray(),
+            'role' => $this->role?->toArray(),
             'pubPermissions' => $this->pubPermissions->toArray(),
         ];
     }

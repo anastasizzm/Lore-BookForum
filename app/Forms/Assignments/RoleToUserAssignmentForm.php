@@ -8,7 +8,7 @@ use App\Forms\Form;
 readonly class RoleToUserAssignmentForm implements Form
 {
     public function __construct(
-        public inT $roleId
+        public int $roleId
     ){}
 
     public static function fromInput(array $form) : self 

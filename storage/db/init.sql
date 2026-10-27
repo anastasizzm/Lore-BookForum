@@ -32,7 +32,7 @@ INSERT INTO roles_permissions (role_id, publication_id,
   pub_create, pub_update_meta, pub_update_content, pub_delete, pub_read, pub_manage_ppl, pub_manage_roles,
   post_create, post_update, post_delete,
   sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles, 
-  authority_rank
+  lexorank
 ) VALUES 
 (0, NULL, true, false, false, false, false, false, false, true, false, false, false, false, false, false, "2"),
 (1, NULL, true, true, true, true, true, true, true, true, true, true, true, true, true, true, "y");
