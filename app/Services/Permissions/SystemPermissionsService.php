@@ -18,7 +18,7 @@ use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
 use App\Forms\Permissions\EditPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
-use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
+use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
 use App\Services\Permissions\Ranks\SystemRoleRankService;
@@ -99,7 +99,7 @@ final class SystemPermissionsService
                 );
 
                 if ($newVersion === null) {
-                    throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                    throw new ConflictException($this->translator->t('errors.common.version_invalid'));
                 }
 
                 return $newVersion;
@@ -145,7 +145,7 @@ final class SystemPermissionsService
                     );
 
                     if ($newVersion === null) {
-                        throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                        throw new ConflictException($this->translator->t('errors.common.version_invalid'));
                     }
 
                     return $newVersion;
@@ -195,15 +195,24 @@ final class SystemPermissionsService
         return PaginatedList::fromArray($enriched, $items->getPage(), $items->getPageSize());
     }
 
-    public function addUser(int $userId, RoleToRoleUserAssignmentForm $form, int $granterId): int
+    public function addUser(int $userId, RoleToUserAssignmentForm $form, int $granterId): int
     {
         try {
-            return $this->repository->addUser(
-                $userId,
-                $form->roleId,
-                null,
-                $granterId
-            );
+            return $this->uow->transactional(function () use ($userId, $form, $granterId) : int {
+                $rolesCount = $this->repository->countUserRoles(null, $userId);
+                if ($rolesCount === NULL)
+                    throw new NotFoundException($this->translator->t('errors.common.not_found'));
+
+                if ($rolesCount !== 0)
+                    throw new ConflictException($this->translator->t('item_based.exists.m', [':item' => $this->translator->t('display_names.user')]));
+
+                return $this->repository->addUser(
+                    $userId,
+                    $form->roleId,
+                    null,
+                    $granterId
+                );
+            });
         } catch (\PDOException $e) {
             throw $this->exceptionTranslator->translate($e);
         }
@@ -226,13 +235,36 @@ final class SystemPermissionsService
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
+    public function addRoleToUser(int $userId, RoleToUserAssignmentForm $form, int $granterId): int
+    {
+        try {
+            return $this->repository->addUser(
+                $userId,
+                $form->roleId,
+                null,
+                $granterId
+            );
+        } catch (\PDOException $e) {
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
     public function removeUserRole(int $userId, int $roleId): int
     {
-        $versions = $this->repository->removeUser($userId, $roleId, null);
-        if ($versions === []) {
-            throw new NotFoundException($this->translator->t('errors.common.not_found'));
-        }
-        return $versions[0];
+        return $this->uow->transactional(function () use ($userId, $roleId) : int {
+            $rolesCount = $this->repository->countUserRoles(NULL, $userId);
+            if ($rolesCount === NULL)
+                throw new NotFoundException($this->translator->t('errors.common.not_found'));
+
+            if ($rolesCount < 2)
+                throw new ConflictException($this->translator->t('errors.roles.last_role'));
+        
+            $versions = $this->repository->removeUser($userId, $roleId, null);
+            if ($versions === []) {
+                throw new NotFoundException($this->translator->t('errors.common.not_found'));
+            }
+            return $versions[0];
+        });
     }
 
     public function canManageUser(int $userId, int $targetUserId): bool

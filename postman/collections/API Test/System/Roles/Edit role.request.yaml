@@ -3,7 +3,7 @@ url: "{{base_url}}/api/system/roles/{{roleId}}"
 method: PUT
 headers:
   x-csrf-token: "{{csrf_token}}"
-  If-Match: ""
+  If-Match: "1"
 body:
   type: json
   content: "{\r

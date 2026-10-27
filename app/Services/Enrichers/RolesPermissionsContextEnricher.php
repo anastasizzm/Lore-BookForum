@@ -31,7 +31,7 @@ final class RolesPermissionsContextEnricher
         $map = $this->rankService->canManageRoleMany($viewerId, $ids, $publicationId);
         $versions = $this->repository->getRolesVersions($ids, $publicationId);
         return array_map(
-            function (Dto $item) 
+            function (Dto $item) use ($map, $versions)
             {
                 $mapped = $map[$item->id()] ?? NULL;
                 $version = $versions[$item->id()] ?? NULL;

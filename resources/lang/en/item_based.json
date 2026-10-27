@@ -8,5 +8,10 @@
         "n": ":item not exists",
         "m": ":item not exists",
         "f": ":item not exists"
+    },
+    "exists": {
+        "n": ":item already exists",
+        "m": ":item already exists",
+        "f": ":item already exists"
     }
 }

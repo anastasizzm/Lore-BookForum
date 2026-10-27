@@ -11,6 +11,7 @@ use App\Lib\LexoRank;
 use App\Attributes\Inject;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
+use App\Models\Access\Rules\HasRolesManage;
 
 class RoleRankService implements RankService
 {
@@ -87,7 +88,7 @@ class RoleRankService implements RankService
             ? $this->commonRuleProvider?->getRule($userId)
             : $this->ruleProvider?->getRule($userId, $publicationId);
 
-        return $accessRules?->hasAny() ?? false;
+        return $accessRules instanceof HasRolesManage ? $accessRules->hasManageRoles() : false;
     }
 
     /** @param array<int> $roleIds
@@ -104,8 +105,8 @@ class RoleRankService implements RankService
                 ? $this->commonRuleProvider?->getRule($userId)
                 : $this->ruleProvider?->getRule($userId, $publicationId);
 
-            return array_fill_keys($roleIds, $accessRules?->hasAny() ?? false);
-        }
+            return array_fill_keys($roleIds, $accessRules instanceof HasRolesManage ? $accessRules->hasManageRoles() : false);
+        } 
 
         $targetRanks = $this->repository->getRanksBatch($roleIds, $publicationId);
 
@@ -153,7 +154,7 @@ class RoleRankService implements RankService
             $accessRules = $publicationId === null
                 ? $this->commonRuleProvider?->getRule($userId)
                 : $this->ruleProvider?->getRule($userId, $publicationId);
-            $canManageAny = $accessRules?->hasAny() ?? false;
+            $canManageAny = $accessRules instanceof HasRolesManage ? $accessRules->hasManagePeople() : false;
 
             foreach ($toCheck as $targetUserId) {
                 $result[$targetUserId] = isset($targetRanks[$targetUserId]) && $canManageAny;

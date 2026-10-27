@@ -99,7 +99,7 @@ final class PublicationPermissionsService
                 );
 
                 if ($newVersion === null) {
-                    throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                    throw new ConflictException($this->translator->t('errors.common.version_invalid'));
                 }
 
                 return $newVersion;
@@ -145,7 +145,7 @@ final class PublicationPermissionsService
                     );
 
                     if ($newVersion === null) {
-                        throw new ConflictException($this->translator-t('errors.common.version_invalid'));
+                        throw new ConflictException($this->translator->t('errors.common.version_invalid'));
                     }
 
                     return $newVersion;
@@ -197,12 +197,21 @@ final class PublicationPermissionsService
     public function addUser(int $publicationId, int $userId, RoleToUserAssignmentForm $form, int $granterId): int
     {
         try {
-            return $this->repository->addUser(
-                $userId,
-                $form->roleId,
-                $publicationId,
-                $granterId
-            );
+            return $this->uow->transactional(function () use ($publicationId, $userId, $form, $granterId) : int {
+                $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
+                if ($rolesCount === NULL)
+                    throw new NotFoundException($this->translator->t('errors.common.not_found'));
+
+                if ($rolesCount !== 0)
+                    throw new ConflictException($this->translator->t('item_based.exists.m', [':item' => $this->translator->t('display_names.user')]));
+
+                return $this->repository->addUser(
+                    $userId,
+                    $form->roleId,
+                    $publicationId,
+                    $granterId
+                );
+            });
         } catch (\PDOException $e) {
             throw $this->exceptionTranslator->translate($e);
         }
@@ -225,13 +234,36 @@ final class PublicationPermissionsService
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
+    public function addRoleToUser(int $publicationId, int $userId, RoleToUserAssignmentForm $form, int $granterId): int
+    {
+        try {
+            return $this->repository->addUser(
+                $userId,
+                $form->roleId,
+                $publicationId,
+                $granterId
+            );
+        } catch (\PDOException $e) {
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
     public function removeUserRole(int $publicationId, int $userId, int $roleId): int
     {
-        $versions = $this->repository->removeUser($userId, $roleId, $publicationId);
-        if ($versions === []) {
-            throw new NotFoundException($this->translator->t('errors.common.not_found'));
-        }
-        return $versions[0];
+        return $this->uow->transactional(function () use ($userId, $roleId, $publicationId) : int {
+            $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
+            if ($rolesCount === NULL)
+                throw new NotFoundException($this->translator->t('errors.common.not_found'));
+
+            if ($rolesCount < 2)
+                throw new ConflictException($this->translator->t('errors.roles.last_role'));
+        
+            $versions = $this->repository->removeUser($userId, $roleId, $publicationId);
+            if ($versions === []) {
+                throw new NotFoundException($this->translator->t('errors.common.not_found'));
+            }
+            return $versions[0];
+        });
     }
 
     public function canManageUser(int $userId, int $targetUserId, int $publicationId): bool

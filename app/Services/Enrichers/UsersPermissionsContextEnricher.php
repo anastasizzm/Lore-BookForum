@@ -28,7 +28,7 @@ final class UsersPermissionsContextEnricher
 
         $map = $this->rankService->canManageUserMany($viewerId, $ids, $publicationId);
         return array_map(
-            function (Dto $item) 
+            function (Dto $item)  use ($map)
             {
                 $mapped = $map[$item->id()] ?? NULL;
                 return new WithContext(

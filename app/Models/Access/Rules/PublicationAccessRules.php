@@ -18,7 +18,7 @@ use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Forms\Form;
 use App\Models\RowModel;
 
-readonly class PublicationAccessRules extends RowModel implements OperationChecker, Form
+readonly class PublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
         public bool $create,
@@ -53,6 +53,9 @@ readonly class PublicationAccessRules extends RowModel implements OperationCheck
             default => false,
         };
     }
+
+    public function hasManagePeople() : bool { return $this->managePeople; }
+    public function hasManageRoles() : bool { return $this->manageRoles; }
 
     public static function fromEmpty() : self 
     {

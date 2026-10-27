@@ -14,7 +14,7 @@ use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 use App\Forms\Form;
 use App\Models\RowModel;
 
-readonly class SystemAccessRules extends RowModel implements OperationChecker, Form
+readonly class SystemAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
         public bool $manageAccounts,
@@ -42,6 +42,9 @@ readonly class SystemAccessRules extends RowModel implements OperationChecker, F
             default => false,
         };
     }
+
+    public function hasManagePeople() : bool { return $this->managePeople; }
+    public function hasManageRoles() : bool { return $this->manageRoles; }
 
     public static function fromEmpty() : self 
     {

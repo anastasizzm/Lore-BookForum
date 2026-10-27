@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/api/system/users"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \    \"userId\": 16,\r
+
+    \    \"roleId\": 0\r
+
+    }"
+order: 5000

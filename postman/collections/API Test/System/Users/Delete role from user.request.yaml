@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/system/users/{{userId}}/roles/{{roleId}}"
+method: DELETE
+headers:
+  x-csrf-token: "{{csrf_token}}"
+order: 4000

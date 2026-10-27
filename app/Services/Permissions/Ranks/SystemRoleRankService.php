@@ -37,7 +37,7 @@ final class SystemRoleRankService implements RankService
     }
     public function canManageRole(int $userId, int $roleId, ?int $publicationId = null): bool
     {
-        return $this->service->canManageRole($userid, $roleId, $publicationId);
+        return $this->service->canManageRole($userId, $roleId, $publicationId);
     }
 
     /** @param array<int> $roleIds
@@ -50,7 +50,7 @@ final class SystemRoleRankService implements RankService
 
     public function canManageUser(int $userId, int $targetUserId, ?int $publicationId = null): bool
     {
-        return $this->service->canManageUser($userid, $targetUserId, $publicationId);
+        return $this->service->canManageUser($userId, $targetUserId, $publicationId);
     }
 
     /** @param array<int> $targetUserIds

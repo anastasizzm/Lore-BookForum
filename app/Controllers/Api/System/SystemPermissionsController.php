@@ -26,6 +26,7 @@ use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Services\Permissions\SystemPermissionsService;
 use App\Extensions\Parsers\RouteParamParser;
+use App\Exceptions\ForbiddenException;
 
 final class SystemPermissionsController extends Controller
 {
@@ -64,7 +65,7 @@ final class SystemPermissionsController extends Controller
 
         $form = SystemPermissionForm::fromInput($context->request->body());
         if ($form->belowId !== NULL && !$this->permissionsService->canManageRole($userId, $form->belowId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $version = $this->permissionsService->addRole($form);
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
@@ -81,9 +82,9 @@ final class SystemPermissionsController extends Controller
         $expectedVersion = $this->requireVersion($context);
 
         if (!$this->permissionsService->canManageRole($userId, $roleId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
-        $version = $this->permissionsService->moveRole($roleId, $form, $expectedVersion);
+        $version = $this->permissionsService->editRole($roleId, $form, $expectedVersion);
         return $this->jsonEmpty()->withHeader('ETag', sprintf('"%d"', $version));
     }
 
@@ -98,7 +99,7 @@ final class SystemPermissionsController extends Controller
         $form = PositionForm::fromInput($context->request->body());
 
         if (!$this->permissionsService->canManageRole($userId, $roleId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $newVersion = $this->permissionsService->moveRole(
             roleId: $roleId,
@@ -117,7 +118,7 @@ final class SystemPermissionsController extends Controller
 
         $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
         if (!$this->permissionsService->canManageRole($userId, $roleId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $this->permissionsService->removeRole($roleId);
         return $this->jsonEmpty(204);
@@ -147,10 +148,10 @@ final class SystemPermissionsController extends Controller
         $form = RoleUserAssignmentForm::fromInput($context->request->body());
 
         if (!$this->permissionsService->canManageRole($userId, $form->roleId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
-        $version = $this->permissionsService->addUser($form->userId, $form, $granterId);
-        return $this->jsomEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+        $version = $this->permissionsService->addUser($form->userId, $form, $userId);
+        return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
     }
 
     public function getUserRoles(HttpContext $context, string $userId)
@@ -175,12 +176,12 @@ final class SystemPermissionsController extends Controller
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
         $form = RoleToUserAssignmentForm::fromInput($context->request->body());
 
-        if (!$this->permissionsService->canManageUser($userId, $currentUserId)
-            || !$this->permissionsService->canManageRole($userId, $form->roleId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+        if (!$this->permissionsService->canManageUser($currentUserId, $userId)
+            || !$this->permissionsService->canManageRole($currentUserId, $form->roleId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
-        $version = $this->permissionsService->addUser($userId, $form, $granterId);
-        return $this->jsomEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
+        $version = $this->permissionsService->addRoleToUser($userId, $form, $currentUserId);
+        return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
     }
 
     public function removeUser(HttpContext $context, string $userId)
@@ -192,8 +193,8 @@ final class SystemPermissionsController extends Controller
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
         $roleId = RouteParamParser::optionalPositiveInt(['r' => $roleId], 'r');
 
-        if (!$this->permissionsService->canManageUser($userId, $userId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+        if (!$this->permissionsService->canManageUser($currentUserId, $userId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $this->permissionsService->removeUser($userId);
         return $this->jsonEmpty(204);
@@ -208,8 +209,8 @@ final class SystemPermissionsController extends Controller
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
         $roleId = RouteParamParser::optionalPositiveInt(['r' => $roleId], 'r');
 
-        if (!$this->permissionsService->canManageUser($userId, $userId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role", ErrorCodes::FORBIDDEN));
+        if (!$this->permissionsService->canManageUser($currentUserId, $userId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
         $newVersion = $this->permissionsService->removeUserRole($userId, $roleId);
 

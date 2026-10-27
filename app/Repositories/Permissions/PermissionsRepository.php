@@ -38,7 +38,7 @@ class PermissionsRepository extends Repository
 
     public function getRolesVersions(array $roles, ?int $publicationId) : array
     {
-        if ($roles == []) return [];
+        if ($roles === []) return [];
 
         $builder = ScriptBuilder::withTable("roles_permissions");
         $builder->addSelect("role_id, version")
@@ -227,7 +227,7 @@ class PermissionsRepository extends Repository
                 \np.surname,
                 \np.avatar")
             ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
-            ->addJOin("INNER JOIN profiles p ON p.user_id = u.id")
+            ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
             ->setOrder(
                 match($sort)
                 {
@@ -252,7 +252,7 @@ class PermissionsRepository extends Repository
         
         $result = [];
         foreach($items as $user)
-            $result[] = $user->withRoles($roles[$user->id]);
+            $result[] = $user->withRoles($roles[$user->id] ?? []);
 
         return $result;
     }
@@ -275,7 +275,7 @@ class PermissionsRepository extends Repository
             ->addJoin("INNER JOIN user_roles_translations urt ON ur.id = urt.role_id")
             ->addJoin("INNER JOIN languages l ON l.code = urt.code AND l.is_active")
             ->addWhere("ru.is_valid")
-            ->addWhere("ru.user_id = ANY(:userIds::bigint[])", [':userIds' => ScriptParam::asStr('{' . implode(', ', $usersIds) . '}')])
+            ->addWhere("ru.user_id = ANY(:userIds::bigint[])", [':userIds' => ScriptParam::asStr('{' . implode(',', array_map('intval', $userIds)) . '}')])
             ->setGroup("ru.user_id, ur.id")
             ->setOrder('ru.user_id, MAX(rp.lexorank) COLLATE "C" DESC');
 
@@ -315,7 +315,7 @@ class PermissionsRepository extends Repository
         $sql = "UPDATE roles_users
                 SET valid_to = NOW(), version = version + 1
                 WHERE user_id = :userId
-                  AND (:roleIdCheck IS NULL OR role_id = :roleIdValue)
+                  AND (CAST(:roleIdCheck AS int) IS NULL OR role_id = :roleIdValue)
                   AND publication_id IS NOT DISTINCT FROM :pubId
                   AND is_valid
                 RETURNING version";
@@ -328,6 +328,22 @@ class PermissionsRepository extends Repository
         ]);
 
         return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    public function countUserRoles(?int $publicationId, int $userId) : ?int 
+    {
+        $builder = ScriptBuilder::withTable("roles_users");
+        $builder->addSelect("count(role_id)")
+            ->addWhere("user_id = :userId", [':userId' => ScriptParam::asInt($userId)])
+            ->addWhere("is_valid");
+
+        if($publicationId === NULL) $builder->addWhere("publication_id IS NULL");
+        else $builder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $counter = $stmt->fetchColumn();
+
+        return $counter === false ? NULL : (int)$counter;
     }
 
     /** @return array<RolesUsersAssignment> */
@@ -502,7 +518,7 @@ class PermissionsRepository extends Repository
 
         $stmt = $this->execute(
             'SELECT role_id, lexorank FROM roles_permissions
-            WHERE role_id = ANY(:roleIds::bigint[])
+            WHERE role_id = ANY(:roleIds::int[])
             AND publication_id IS NOT DISTINCT FROM :pubId',
             [
                 ':pubId'   => ScriptParam::asInt($publicationId),
@@ -570,7 +586,7 @@ class PermissionsRepository extends Repository
         }
 
         if ($excludeRoleId !== null) {
-            $builder->addWhere('role_id <> :excludeRoleId', [':excludeRoleId' => ScriptParam::asStr($excludeRoleId)]);
+            $builder->addWhere('role_id <> :excludeRoleId', [':excludeRoleId' => ScriptParam::asInt($excludeRoleId)]);
         }
 
         $stmt = $this->execute($builder->build(), $builder->getParams());

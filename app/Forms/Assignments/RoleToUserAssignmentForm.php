@@ -5,7 +5,7 @@ namespace App\Forms\Assignments;
 use App\Extensions\Parsers\QueryParser;
 use App\Forms\Form;
 
-readonly class RoleToRoleUserAssignmentForm implements Form
+readonly class RoleToUserAssignmentForm implements Form
 {
     public function __construct(
         public inT $roleId
@@ -14,7 +14,7 @@ readonly class RoleToRoleUserAssignmentForm implements Form
     public static function fromInput(array $form) : self 
     {
         return new self(
-            roleId: QueryParser::positiveInt($form, 'roleId')
+            roleId: QueryParser::nonNegInt($form, 'roleId')
         );
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Forms\Assignments;
 use App\Extensions\Parsers\QueryParser;
 
-readonly class RoleUserAssignmentForm extends RoleToRoleUserAssignmentForm
+readonly class RoleUserAssignmentForm extends RoleToUserAssignmentForm
 {
     public function __construct(
         public int $userId,

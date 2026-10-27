@@ -66,7 +66,8 @@
         "rank_far": "The neighbours are too far",
         "position_taken": "Could not find a free position",
         "position_changed": "Position changed while saving",
-        "insufficient_role": "Insufficient permissions"
+        "insufficient_role": "Insufficient permissions",
+        "last_role": "You can't delete the last role"
     },
     "articles": {
         "pub_exists": "An article for this publication already exists",
