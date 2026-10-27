@@ -37,7 +37,9 @@ if (isset($user) && is_object($user) && (int)($user->id ?? 0) === $userId) {
 }
 if ($userName === '') $userName = $view->t('common.profile.user_fallback', ['id' => $userId]);
 
-$filter_open = ($filterState ?? 'closed') === 'open';
+// По умолчанию открыта; закрыта только при ?f=closed (то же правило, что в library-filters)
+$fRaw        = $_GET['f'] ?? null;
+$filter_open = !(is_string($fRaw) && strtolower($fRaw) === 'closed');
 
 parse_str($_SERVER['QUERY_STRING'] ?? '', $q);
 $searchQuery = $q['q'] ?? '';
@@ -95,7 +97,6 @@ $view->include('page-header', [
 ]);
 
 $view->include('library-filters', [
-    'filterState' => $filterState ?? 'closed',
     'isArticles'  => $isArticles,
     'basePath'    => $path,
     'bookHref'    => $url('users.profile.books',    ['userId' => $userId]),
