@@ -107,7 +107,10 @@ final class ArticlesRepository extends PublicationsRepository
 
     public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
-        $this->director->startTempFilter()->addViewerTemp($criteria->viewerId);
+        $this->director->startTempFilter()
+            ->addViewerTemp($criteria->viewerId)
+            ->addActiveTempFilter();
+            
         $this->addSelect($criteria->classType);
 
         $filters = $criteria->filters;

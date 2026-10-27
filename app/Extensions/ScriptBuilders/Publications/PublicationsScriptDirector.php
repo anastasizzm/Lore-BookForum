@@ -29,7 +29,7 @@ abstract class PublicationsScriptDirector extends ScriptDirector
     public function addPublicationShortSelectTemp() : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.icon_id,\npublications.created_at");
+        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.icon_id,\npublications.created_at,\npublications.deleted_at");
         return $this;
     }
 
@@ -73,6 +73,13 @@ abstract class PublicationsScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("publications.creator_id = :creatorId", [':creatorId' => ScriptParam::asInt($creatorId)]);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->templateBuilder->addWhere("publications.is_active");
         return $this;
     }
 

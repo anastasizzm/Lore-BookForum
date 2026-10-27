@@ -19,6 +19,7 @@ final readonly class Post extends Dto
         private int $creatorId,
         private int $publicationId,
         public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $deletedAt,
         public ?UserShortData $creator = null,
         public ?PublicationShort $publication = null,
     ) {}
@@ -35,6 +36,7 @@ final readonly class Post extends Dto
             content: self::str($row, $prefix . 'content'),
             isActive: self::bool($row, $prefix . 'is_active'),
             createdAt: self::dt($row, $prefix . 'created_at'),
+            deletedAt: self::dtN($row, $prefix . 'deleted_at'),
             likesCount: self::int($row, $prefix . 'likes_count'),
             commentsCount: self::int($row, $prefix . 'comments_count'),
             publicationId: self::int($row, $prefix . 'publication_id'),
@@ -60,8 +62,11 @@ final readonly class Post extends Dto
             'creatorId' => $this->creatorId,
             'publicationId' => $this->publicationId,
             'createdAt' => $this->createdAt,
+            'deletedAt' => $this->deletedAt,
             'creator' => $this->creator,
             'publication' => $this->publication,
         ];
     }
+
+    public function isActive() : bool { return $this->deletedAt === NULL; }
 }

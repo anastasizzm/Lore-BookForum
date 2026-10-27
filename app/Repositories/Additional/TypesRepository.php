@@ -32,7 +32,9 @@ final class TypesRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback());
+        $this->director->startTempFilter()
+            ->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter();
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);

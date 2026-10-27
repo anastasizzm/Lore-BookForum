@@ -32,7 +32,9 @@ final class GenresRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback());
+        $this->director->startTempFilter()
+            ->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter();
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);

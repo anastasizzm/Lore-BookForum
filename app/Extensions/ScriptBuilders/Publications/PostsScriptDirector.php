@@ -30,15 +30,14 @@ final class PostsScriptDirector extends ScriptDirector
     public function startTempFilter() : self
     {
         $this->startTemp('comments');
-        $this->tempBuilder->addWhere('comments.is_active')
-            ->addJoin('INNER JOIN users ON users.id = comments.creator_id');
+        $this->tempBuilder->addJoin('INNER JOIN users ON users.id = comments.creator_id');
         return $this;
     }
 
     public function addPostSelectTemp() : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("comments.id,\ncomments.content,\ncomments.is_active,\ncomments.creator_id,\ncomments.publication_id,\ncomments.created_at,\ncomments.likes_count,\ncomments.comments_count");
+        $this->tempBuilder->addSelect("comments.id,\ncomments.content,\ncomments.creator_id,\ncomments.publication_id,\ncomments.created_at,\ncomments.deleted_at,\ncomments.likes_count,\ncomments.comments_count");
         return $this;
     }
 
@@ -75,6 +74,13 @@ final class PostsScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("comments.publication_id = :publicationId", [':publicationId' => ScriptParam::asInt($publicationId)]);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->templateBuilder->addWhere("comments.is_active");
         return $this;
     }
 

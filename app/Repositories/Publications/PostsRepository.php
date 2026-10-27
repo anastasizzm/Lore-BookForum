@@ -21,7 +21,10 @@ final class PostsRepository extends Repository
 
     public function getList(PostsCriteria $criteria, array $includeObjects = []) : array
     {
-        $this->director->startTempFilter()->addPostSelectTemp();
+        $this->director->startTempFilter()
+            ->addPostSelectTemp()
+            ->addActiveTempFilter();
+            
         $filters = $criteria->filters;
 
         if (!empty($filters->search))
