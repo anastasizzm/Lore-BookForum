@@ -44,6 +44,14 @@ body {
   opacity: 0.7;
 }
 
+/* Фокус с клавиатуры: браузерное кольцо слишком незаметно на pill-кнопках,
+   рисуем своё — как у .admin-toolbar__search/.admin-card (outline-offset 2,
+   :focus-visible, чтобы мышь кольцо не оставляла) */
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Busy-состояние: пока fetch не вернулся, кнопка гаснет и не принимает
    клики (disabled ставит admin.js на Save/Delete, карусели и т.п.). */
 .btn:disabled {
@@ -663,6 +671,13 @@ textarea.form-field__input {
   font-size: var(--fs-small);
   color: var(--color-text);
   cursor: pointer;
+}
+
+/* Клавиатурный фокус: триггеры дропдаунов (в т.ч. «+ Add language»
+   в форме справочника) иначе почти не видны на светлом фоне */
+.dropdown__trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .dropdown__arrow {

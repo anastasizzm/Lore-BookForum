@@ -302,6 +302,7 @@
   display: inline-block;
   max-width: 480px;
   line-height: var(--lh-normal);
+  overflow-wrap: anywhere;      /* одно длинное слово не рвёт узкую колонку на 375px */
 }
 
 /* --- Модалка формы --- */
@@ -421,6 +422,14 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
+}
+
+/* Фокус пункта в меню языков: подсветка как hover + кольцо внутри
+   узкого меню (inset, чтобы не обрезалось краем .dropdown__menu) */
+.admin-dict__lang-menu .dropdown__item:focus-visible {
+  background: var(--color-overlay);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .admin-dict__menu-note {
@@ -560,12 +569,19 @@
     max-width: 180px;
   }
 
-  .admin-actions {
-    flex-wrap: nowrap;
+  /* Справочники (Genres/Categories/Types): всего 3 колонки — таблица
+     ужимается под 375px вместо горизонтального скролла (общий min-width
+     560px оставляем широким таблицам Users/Comments/Reports) */
+  .admin-table[data-dict-table] {
+    min-width: 0;
   }
 
-  .admin-dict__translations {
-    max-width: 220px;
+  .admin-table[data-dict-table] .admin-dict__translations {
+    max-width: none;
+  }
+
+  .admin-actions {
+    flex-wrap: nowrap;
   }
 
   /* Модалка решения по жалобе: сводка в одну колонку (dt над dd), кнопки в столбик */
