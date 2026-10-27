@@ -17,28 +17,19 @@
  * (тот же приём «открыть/закрыть/Escape/клик мимо», что у меню
  * комментариев в comments.js).
  *
- * ПРАВА (скрываем/показываем кнопки Edit и Delete):
- *   book-rights.js (данные — window.LoreRules, public/assets/js/rules.js)
- *   дёргает GET /api/books/rules или GET /api/articles/rules и включает
- *   пункты, подтверждённые правилами updateMeta/updateContent (Edit)
- *   и delete (Delete).
- *   Глобальные правила НЕ знают про владельца, поэтому $isOwner кладётся
- *   в data-rules-owner и складывается с правилами на фронте.
- *   Пункты рендерятся СЕРЫМИ (aria-disabled=true); если права не пришли —
- *   остаются серыми (не показываем кнопки, вернущие 403).
+ * ПРАВА (управляются permissions.js, window.LorePermissions):
+ *   Пункты Edit и Delete рендерятся скрытыми (hidden).
+ *   permissions.js проверяет data-requires="publication.edit" / "publication.delete",
+ *   учитывая data-requires-kind (book/article) и data-requires-owner.
+ *   Если права нет — пункт остаётся скрытым. Если есть — показывается.
  *
- * КОНТРАКТ (бэк добавит роуты; config/ и app/ заморожены):
- *   GET    /books/{id}/edit, /articles/{id}/edit — страницы редактирования
- *          (формы book-form.php / article-form.php уже есть)
- *   DELETE /api/books/{id}     → 204; 401 — нет сессии, 419 — CSRF,
- *          403/404 — нет прав или книга уже удалена
- *   DELETE /api/articles/{id}  → 204, та же семантика
- *   Удаление выполняет details-menu.js; ошибки показывает Messages.
+ * Удаление выполняет details-menu.js (DELETE /api/books/{id},
+ * /api/articles/{id}); ошибки показывает Messages.
  *
  * ПУНКТ «Пожаловаться» — открывает общую плашку report-modal.php
- * (report-modal.js, window.ReportModal). Он НЕ имеет data-rule: жалобу
- * может оставить любой авторизованный пользователь, в том числе автор
- * публикации, поэтому book-rights.js его не гасит.
+ * (report-modal.js, window.ReportModal). Он НЕ имеет data-requires:
+ * жалобу может оставить любой авторизованный пользователь, в том числе
+ * автор публикации, поэтому permissions.js его не трогает.
  */
 $type     = $type ?? 'book';
 $id       = (int) ($id ?? 0);
@@ -53,9 +44,7 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
 ?>
 <div class="details-menu"
      data-details-menu-wrap
-     data-pub-type="<?= $view->e($type) ?>"
-     data-rules-kind="<?= $isBook ? 'books' : 'articles' ?>"
-     data-rules-owner="<?= $isOwner ? '1' : '0' ?>">
+     data-pub-type="<?= $view->e($type) ?>">
   <button type="button"
           class="btn-icon details-menu__toggle"
           data-details-menu-toggle
@@ -70,34 +59,38 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
   </button>
 
   <div class="details-menu__popup" data-details-menu hidden>
-    <!-- Пункт «Редактировать»: data-rule="edit" включает book-rights.js
-         по правилам updateMeta || updateContent (владелец — всегда). -->
-    <a class="details-menu__item is-disabled"
+    
+    <!-- Кнопка Edit -->
+    <a class="details-menu__item"
        href="<?= $view->e($editHref) ?>"
        data-edit-btn
-       data-rule="edit"
-       aria-disabled="true"
-       tabindex="-1"
+       data-requires="publication.edit"
+       data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+       data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+       hidden
        <?= $isBook
             ? 'data-book-id="' . $id . '"'
             : 'data-pub-id="' . $id . '"' ?>>
       <?= $view->e($view->t('common.book.edit')) ?>
     </a>
 
-    <!-- Пункт «Удалить»: data-rule="delete" (правило delete), дальше
-         details-menu.js → ConfirmModal → DELETE. -->
+    <!-- Кнопка Delete -->
     <button type="button"
-            class="details-menu__item details-menu__item--danger is-disabled"
+            class="details-menu__item details-menu__item--danger"
             data-details-delete
-            data-rule="delete"
-            aria-disabled="true"
-            tabindex="-1"
+            data-requires="publication.delete"
+            data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+            data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+            hidden
             data-delete-url="<?= $view->e($deleteUrl) ?>"
             data-delete-redirect="<?= $view->e($listHref) ?>"
-            data-delete-kind="<?= $view->e($type) ?>"><?= $view->e($view->t('common.js.delete')) ?></button>
+            data-delete-kind="<?= $view->e($type) ?>">
+      <?= $view->e($view->t('common.js.delete')) ?>
+    </button>
 
-    <!-- Пункт «Пожаловаться»: без data-rule (доступен всем, book-rights.js
-         его не трогает), открывает report-modal.php через report-modal.js. -->
+    <!-- Пункт «Пожаловаться»: без data-requires (доступен всем,
+         permissions.js его не трогает), открывает report-modal.php
+         через report-modal.js. -->
     <button type="button"
             class="details-menu__item"
             data-report-open

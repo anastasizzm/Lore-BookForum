@@ -13,6 +13,7 @@ use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
 use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Posts\CreatePostOperation;
 use App\Models\Access\Operations\Posts\DeletePostOperation;
 use App\Models\Access\Operations\Posts\UpdatePostOperation; 
@@ -21,6 +22,7 @@ use App\Models\Access\Operations\Account\ManageAccountOperation;
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 
 return function(Router $router)
 {
@@ -32,7 +34,6 @@ return function(Router $router)
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
-    $router->get('/api/books/rules', [App\Controllers\Api\Publications\BooksController::class, 'getCommonRules'], 'api.books.rules', AuthPolicy::Auth);
     $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
     $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
     $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
@@ -43,12 +44,24 @@ return function(Router $router)
 
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
-    $router->get('/api/articles/rules', [App\Controllers\Api\Publications\ArticlesController::class, 'getCommonRules'], 'api.articles.rules', AuthPolicy::Auth);
     $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
     $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
     $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
     $router->delete('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
 
+    $router->get('/api/publications/rules', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getCommonRules'], 'api.publication.rules', AuthPolicy::Auth);
+
+    $router->get('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getRoles'], 'api.publication.roles', AnyPublicationOperation::class);
+    $router->post('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'addRole'], 'api.publication.roles.add', ManageRolesPublicationOperation::class);
+    $router->put('/api/publications/{publicationId}/roles/{roleId}', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'editRole'], 'api.publication.roles.edit', ManageRolesPublicationOperation::class);
+    $router->patch('/api/publications/{publicationId}/roles/{roleId}/position', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'moveRole'], 'api.publication.roles.move', ManageRolesPublicationOperation::class);
+    $router->delete('/api/publications/{publicationId}/roles/{roleId}', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'removeRole'], 'api.publication.roles.remove', ManageRolesPublicationOperation::class);
+    $router->get('/api/publications/{publicationId}/users', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getUsers'], 'api.publication.users', AnyPublicationOperation::class);
+    $router->post('/api/publications/{publicationId}/users', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'addUser'], 'api.publication.users.add', ManagePeoplePublicationOperation::class);
+    $router->delete('/api/publications/{publicationId}/users/{userId}', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'removeUser'], 'api.publication.users.remove', ManagePeoplePublicationOperation::class);
+    $router->get('/api/publications/{publicationId}/users/{userId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getUserRoles'], 'api.publication.users.roles', AnyPublicationOperation::class);
+    $router->post('/api/publications/{publicationId}/users/{userId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'addRoleToUser'], 'api.publication.users.roles.add', ManagePeoplePublicationOperation::class);
+    $router->delete('/api/publications/{publicationId}/users/{userId}/roles/{roleId}', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'removeUserRole'], 'api.publication.users.roles.remove', ManagePeoplePublicationOperation::class);
 
     // Posts
     $router->get('/api/posts', [App\Controllers\Api\Publications\PostsController::class, 'list'], 'api.post', AuthPolicy::Auth);
@@ -87,5 +100,17 @@ return function(Router $router)
     $router->get('/api/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
     $router->get('/api/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
 
+    // System
     $router->get('/api/system/rules', [App\Controllers\Api\System\SystemPermissionsController::class, 'getCommonRules'], 'api.system.rules', AuthPolicy::Auth);
+    
+    $router->get('/api/system/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'getRoles'], 'api.system.roles', AnySystemOperation::class);
+    $router->post('/api/system/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRole'], 'api.system.roles.add', ManageRolesSystemOperation::class);
+    $router->put('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'editRole'], 'api.system.roles.edit', ManageRolesSystemOperation::class);
+    $router->patch('/api/system/roles/{roleId}/position', [App\Controllers\Api\System\SystemPermissionsController::class, 'moveRole'], 'api.system.roles.move', ManageRolesSystemOperation::class);
+    $router->delete('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeRole'], 'api.system.roles.remove', ManageRolesSystemOperation::class);
+    $router->get('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUsers'], 'api.system.users', AnySystemOperation::class);
+    $router->post('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'addUser'], 'api.system.users.add', ManagePeopleSystemOperation::class);
+    $router->get('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUserRoles'], 'api.system.users.roles', AnySystemOperation::class);
+    $router->post('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRoleToUser'], 'api.system.users.roles.add', ManagePeopleSystemOperation::class);
+    $router->delete('/api/system/users/{userId}/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUserRole'], 'api.system.users.roles.remove', ManagePeopleSystemOperation::class);
 };

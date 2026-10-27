@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/system/users/{{userId}}/roles"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r\n    \"roleId\": 0\r\n}"
+order: 3000

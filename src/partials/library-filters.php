@@ -1,10 +1,14 @@
 <?php
 /**
  * library-filters - filter panel (library + profile publications).
- * Optional vars: $isArticles, $basePath, $bookHref, $articleHref, $filterState
+ * Optional vars: $isArticles, $basePath, $bookHref, $articleHref
+ * Открыта ли панель - определяется по ?f= (по умолчанию открыта).
  */
-$filterState = $filterState ?? 'closed';
-$filter_open = $filterState === 'open';
+// Состояние панели задаёт только ?f=: f=closed - закрыта, всё остальное
+// (параметра нет, f=open) - открыта. $filterState из контроллера не используется.
+$fRaw        = $_GET['f'] ?? null;
+$filter_open = !(is_string($fRaw) && strtolower($fRaw) === 'closed');
+$filterState = $filter_open ? 'open' : 'closed';
 
 $bookIcon = '<svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h5v16H5a2 2 0 0 0-2 2V5z"/><path d="M21 5a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2V5z"/></svg>';
 $postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
@@ -24,11 +28,7 @@ $lang = isset($_GET['lang']) && is_string($_GET['lang'])
 // Current URL params
 parse_str($_SERVER['QUERY_STRING'] ?? '', $params);
 unset($params['page']);
-if ($filter_open) {
-    $params['f'] = 'open';
-} else {
-    unset($params['f']);
-}
+$params['f'] = $filter_open ? 'open' : 'closed';
 // Локаль всегда в params — дальше все ссылки её унаследуют.
 if ($lang) $params['lang'] = $lang;
 

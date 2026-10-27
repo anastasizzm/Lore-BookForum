@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
 use App\Models\Access\Operations\AccessOperation;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\Publications\PublicationAccessOperation;
 use App\Models\Access\Operations\Publications\CreatePublicationOperation;
@@ -12,10 +13,12 @@ use App\Models\Access\Operations\Publications\DeletePublicationOperation;
 use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 
-use App\Models\Dto;
+use App\Forms\Form;
+use App\Models\RowModel;
 
-readonly class PublicationAccessRules extends Dto implements OperationChecker
+readonly class PublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
         public bool $create,
@@ -46,9 +49,13 @@ readonly class PublicationAccessRules extends Dto implements OperationChecker
             $operation instanceof ReadPublicationOperation => $this->read,
             $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
             $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
+            $operation instanceof AnyPublicationOperation => $this->hasAny(),
             default => false,
         };
     }
+
+    public function hasManagePeople() : bool { return $this->managePeople; }
+    public function hasManageRoles() : bool { return $this->manageRoles; }
 
     public static function fromEmpty() : self 
     {
@@ -67,6 +74,19 @@ readonly class PublicationAccessRules extends Dto implements OperationChecker
             read: self::bool($row, $prefix . 'read'),
             managePeople: self::bool($row, $prefix . 'manage_ppl'),
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
+        );
+    }
+
+    public static function fromInput(array $form) : self 
+    {
+        return new self(
+            create: QueryParser::optionalBool($form, 'create') ?? false,
+            updateMeta: QueryParser::optionalBool($form, 'updateMeta') ?? false,
+            updateContent: QueryParser::optionalBool($form, 'updateContent') ?? false,
+            delete: QueryParser::optionalBool($form, 'delete') ?? false,
+            read: QueryParser::optionalBool($form, 'read') ?? false,
+            manageRoles: QueryParser::optionalBool($form, 'manageRoles') ?? false,
+            managePeople: QueryParser::optionalBool($form, 'managePeople') ?? false,
         );
     }
 

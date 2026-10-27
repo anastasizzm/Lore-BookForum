@@ -34,7 +34,9 @@
         "search_failed": "Search failed. Try again.",
         "search_failed_http": "Search failed (HTTP :status).",
         "users_load_failed": "Could not load the list of users.",
-        "delete_failed": "Could not delete (HTTP :status)."
+        "delete_failed": "Could not delete (HTTP :status).",
+        "in_use": "Already in use",
+        "version_invalid": "Invalid version"
     },
     "validation": {
         "invalid_login": "Invalid login or email",
@@ -58,6 +60,14 @@
         "doi_prefix_digits": "DOI prefix must be digits after \"10.\" — :hint",
         "doi_suffix_digits": "DOI suffix must be digits — :hint",
         "doi_missing_slash": "DOI is missing \"/\" after the prefix — :hint"
+    },
+    "roles": {
+        "rank_mismatch": "Above element must be above below element",
+        "rank_far": "The neighbours are too far",
+        "position_taken": "Could not find a free position",
+        "position_changed": "Position changed while saving",
+        "insufficient_role": "Insufficient permissions",
+        "last_role": "You can't delete the last role"
     },
     "articles": {
         "pub_exists": "An article for this publication already exists",

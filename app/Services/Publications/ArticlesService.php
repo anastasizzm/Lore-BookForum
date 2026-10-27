@@ -56,7 +56,7 @@ final class ArticlesService
         $pageSize = $query->pagination->pageSize();
         $enriched = $this->enricher->enrich(
             $items,
-            $query->userFilters?->viewerId
+            $query->viewerId
         );
 
         return PaginatedList::fromArray($enriched, $page, $pageSize);

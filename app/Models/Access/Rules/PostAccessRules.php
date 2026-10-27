@@ -3,15 +3,17 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
 use App\Models\Access\Operations\AccessOperation;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\Posts\PostAccessOperation;
 use App\Models\Access\Operations\Posts\CreatePostOperation;
 use App\Models\Access\Operations\Posts\DeletePostOperation;
 use App\Models\Access\Operations\Posts\UpdatePostOperation;
 
-use App\Models\Dto;
+use App\Forms\Form;
+use App\Models\RowModel;
 
-readonly class PostAccessRules extends Dto implements OperationChecker
+readonly class PostAccessRules extends RowModel implements OperationChecker, Form
 {
     public function __construct(
         public bool $create,
@@ -48,6 +50,15 @@ readonly class PostAccessRules extends Dto implements OperationChecker
             create: self::bool($row, $prefix . 'create'),
             update: self::bool($row, $prefix . 'update'),
             delete: self::bool($row, $prefix . 'delete'),
+        );
+    }
+
+    public static function fromInput(array $form) : self 
+    {
+        return new self(
+            create: QueryParser::optionalBool($form, 'create') ?? false,
+            update: QueryParser::optionalBool($form, 'update') ?? false,
+            delete: QueryParser::optionalBool($form, 'delete') ?? false,
         );
     }
 

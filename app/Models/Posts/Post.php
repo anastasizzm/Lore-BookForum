@@ -23,6 +23,8 @@ final readonly class Post extends Dto
         public ?PublicationShort $publication = null,
     ) {}
 
+    public function id() : mixed { return $this->id; }
+
     public static function fromRow(array $row, string $prefix = '') : self
     {
         $u = UserShortData::ROW_PREFIX;

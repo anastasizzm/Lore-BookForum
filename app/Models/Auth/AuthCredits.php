@@ -14,6 +14,8 @@ final readonly class AuthCredits extends Dto
         public bool $isVerified,
     ) {}
 
+    public function id() : mixed { return $this->id; }
+
     public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(

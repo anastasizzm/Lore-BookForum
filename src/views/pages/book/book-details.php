@@ -666,20 +666,19 @@ $isDraft   = $status === 'draft';
          (rights-modal.php): справочник грузится асинхронно, затем
          POST rights[] и POST /books/{id}/publish → перезагрузка.
          ============================================================ -->
-    <section class="publish-bar" data-publish-bar
-             data-rules-kind="books"
-             data-rules-owner="<?= $isOwnerPub ? '1' : '0' ?>">
+    <section class="publish-bar" data-publish-bar>
       <div class="publish-bar__text">
         <strong class="publish-bar__label"><?= $tr('common.book.draft_badge') ?></strong>
         <span class="publish-bar__hint"><?= $tr('common.book.publish_bar_text') ?></span>
       </div>
       <button type="button"
-              class="btn btn--primary publish-bar__cta is-disabled"
-              data-rights-open
-              data-rule="publish"
-              aria-disabled="true"
-              tabindex="-1"
-              data-book-id="<?= (int) $bookId ?>">
+        class="btn btn--primary publish-bar__cta"
+        data-rights-open
+        data-requires="publication.publish"
+        data-requires-kind="book"
+        data-requires-owner="<?= $isOwnerPub ? '1' : '0' ?>"
+        hidden
+        data-book-id="<?= (int) $bookId ?>">
         <?= $tr('common.book.publish_cta') ?>
       </button>
     </section>
@@ -691,9 +690,6 @@ $isDraft   = $status === 'draft';
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав пользователя на книгу:
-       включает/гасит пункты меню «три точки» и кнопку публикации -->
-  <script src="/assets/js/book-rights.js"></script>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление книги (DELETE /api/books/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>

@@ -8,9 +8,9 @@ use App\Models\Access\Operations\Account\AccountAccessOperation;
 use App\Models\Access\Operations\Account\BlockAccountOperation;
 use App\Models\Access\Operations\Account\ManageAccountOperation;
 
-use App\Models\Dto;
+use App\Models\RowModel;
 
-readonly class AccountAccessRules extends Dto implements OperationChecker
+readonly class AccountAccessRules extends RowModel implements OperationChecker
 {
     public function __construct(
         public bool $manage,

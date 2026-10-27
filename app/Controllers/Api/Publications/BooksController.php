@@ -143,14 +143,4 @@ final class BooksController extends Controller
         $this->booksService->resetProgress($userId, bookId, $format);
         return $this->jsonEmpty();
     }
-
-    public function getCommonRules(HttpContext $context)
-    {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-
-        $rules = $this->ruleProvider->getRule($userId);
-        return $this->jsonObject($rules);
-    }
 }
