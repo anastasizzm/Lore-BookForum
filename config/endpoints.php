@@ -101,7 +101,6 @@ return function(Router $router)
     $router->delete('/api/system/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeRole'], 'api.system.roles.remove', ManageRolesSystemOperation::class);
     $router->get('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUsers'], 'api.system.users', AnySystemOperation::class);
     $router->post('/api/system/users', [App\Controllers\Api\System\SystemPermissionsController::class, 'addUser'], 'api.system.users.add', ManagePeopleSystemOperation::class);
-    $router->delete('/api/system/users/{userId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUser'], 'api.system.users.remove', ManagePeopleSystemOperation::class);
     $router->get('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'getUserRoles'], 'api.system.users.roles', AnySystemOperation::class);
     $router->post('/api/system/users/{userId}/roles', [App\Controllers\Api\System\SystemPermissionsController::class, 'addRoleToUser'], 'api.system.users.roles.add', ManagePeopleSystemOperation::class);
     $router->delete('/api/system/users/{userId}/roles/{roleId}', [App\Controllers\Api\System\SystemPermissionsController::class, 'removeUserRole'], 'api.system.users.roles.remove', ManagePeopleSystemOperation::class);

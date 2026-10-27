@@ -184,21 +184,6 @@ final class SystemPermissionsController extends Controller
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
     }
 
-    public function removeUser(HttpContext $context, string $userId)
-    {
-        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($currentUserId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-
-        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
-
-        if (!$this->permissionsService->canManageUser($currentUserId, $userId))
-            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
-
-        $this->permissionsService->removeUser($userId);
-        return $this->jsonEmpty(204);
-    }
-
     public function removeUserRole(HttpContext $context, string $userId, string $roleId)
     {
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
