@@ -17,8 +17,8 @@
   <script src="<?= $view->asset('js/i18n.js') ?>"></script>
   <script src="<?= $view->asset('js/messages.js') ?>"></script>
   <script src="<?= $view->asset('js/csrf.js') ?>"></script>
-  <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/books/rules,
-       /api/articles/rules, /api/posts/rules, /api/system/rules). Нужен везде:
+  <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/publications/rules,
+       /api/posts/rules, /api/system/rules). Нужен везде:
        permissions.js — надстройка над window.LoreRules (кнопки Edit / Delete /
        Publish на страницах публикаций и формах, data-requires), а sidebar
        гейтит по правилам кнопку «Админ-панель» (data-requires="admin.panel"). -->

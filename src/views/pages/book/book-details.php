@@ -127,7 +127,7 @@ if (($book->creator ?? null) !== null) {
 }
 
 /* ---------- Владелец публикации (для кнопок Edit/Delete/Publish) ----------
- * Глобальные /api/books/rules НЕ содержат owner-override (он есть только в
+ * Глобальные /api/publications/rules НЕ содержат owner-override (он есть только в
  * per-publication правилах, у которых эндпоинта нет). Поэтому «это моя
  * книга» считаем здесь по creator.id и отдаём в details-menu как $isOwner —
  * там он рендерится в data-requires-owner, и permissions.js складывает
@@ -257,7 +257,7 @@ $isDraft   = $status === 'draft';
     <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» (переехало из
          .book-actions) и «Удалить». Пункты рендерятся скрытыми, показывает
-         permissions.js по правилам /api/books/rules, $isOwnerPub —
+         permissions.js по правилам /api/publications/rules, $isOwnerPub —
          owner-override (data-requires-owner). -->
     <?php $view->include('details-menu', [
         'type'    => 'book',
