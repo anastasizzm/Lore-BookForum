@@ -45,7 +45,7 @@ final class LanguagesRepository extends Repository
     public function create(string $code) : string 
     {
         $stmt = $this->pdo()->prepare('INSERT INTO languages (code) VALUES (:code) RETURNING code');
-        $stmt->execute([':code' => $code]);
+        $stmt->execute([':code' => strtolower($code)]);
 
         return (string)$stmt->fetchColumn();
     }
@@ -53,7 +53,7 @@ final class LanguagesRepository extends Repository
     public function update(string $code, string $newCode) : bool
     {
         $stmt = $this->pdo()->prepare('UPDATE languages SET code = :newCode WHERE code = :code');
-        $stmt->execute([':code' => $code, ':newCode' => $newCode]);
+        $stmt->execute([':code' => $code, ':newCode' => strtolower($newCode)]);
         return $stmt->rowCount() > 0;
     }
 

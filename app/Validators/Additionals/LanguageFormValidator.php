@@ -10,7 +10,7 @@ use App\Models\Errors\ErrorBag;
 
 final class LanguageFormValidator extends Validator
 {
-    private const string CODE_REGEX = "#[A-Z0-9]{6}#";
+    private const string CODE_REGEX = "#[A-Za-z]{2}#";
 
     public function __construct(
         Settings $settings,
