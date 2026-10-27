@@ -189,15 +189,16 @@
                  UserContext::fromRow подставляет SystemAccessRules::fromEmpty()
                  — поле всегда false, и кнопка не показывалась никому.
                  Теперь ссылка рендерится всегда, но скрыта, и app.js показывает
-                 её по правилу manageAccounts из GET /api/system/rules
-                 (window.LoreRules). $canOpenAdmin оставлен как серверный
+                 её по составному праву admin.panel (window.LorePermissions:
+                 manageAdditionals / managePeople / manageRoles из
+                 GET /api/system/rules). $canOpenAdmin оставлен как серверный
                  fast-path: если бэк когда-нибудь начнёт отдавать isAdmin —
                  ссылка появится сразу, без ожидания ответа.
                  Это ТОЛЬКО видимость: доступ на сам /admin проверяет бэк
                  (политика роута), не эта вьюха. */ ?>
             <a href="<?= $view->e($adminUrl) ?>"
                class="settings-menu__item settings-menu__item--admin"
-               data-system-rule="manageAccounts"
+               data-requires="admin.panel"
                <?= $canOpenAdmin ? '' : 'hidden' ?>>
                 <span class="settings-menu__icon">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
