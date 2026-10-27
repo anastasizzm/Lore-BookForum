@@ -8,6 +8,17 @@
  * (hidden) и показываются permissions.js по data-requires;
  * контракт обоих роутов — в шапке partial.
  *
+ * ЧЕРНОВИК / ПУБЛИКАЦИЯ (по образцу book-details):
+ *   $status   — контроллер может передать напрямую ('draft' | 'published');
+ *               иначе вьюха читает поле модели. Бэкенд статуса статьи
+ *               пока не отдаёт — до тех пор страница не считает статью
+ *               черновиком и publish-bar не показывает.
+ *   Статус draft: в шапке бейдж «Черновик», внизу страницы publish-bar
+ *               с кнопкой «Опубликовать статью» (hidden по умолчанию,
+ *               показывает permissions.js по data-requires="publication.publish");
+ *               кликом открывается article-rights-dialog (article-publish.js,
+ *               контракт POST /api/articles/{id}/publish — в partial).
+ *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
  *   $comments — массив постов (те же поля, что в feed-list.php);
@@ -102,8 +113,8 @@ if (($article->creator ?? null) !== null) {
     }
 }
 
-/* ---------- Владелец публикации (для кнопок Edit/Delete) ----------
- * Как в book-details: глобальные /api/articles/rules owner-override не
+/* ---------- Владелец публикации (для кнопок Edit/Delete/Publish) ----------
+ * Как в book-details: глобальные /api/publications/rules owner-override не
  * отдают, поэтому «это моя статья» считаем по creator.id и отдаём в
  * details-menu как $isOwner — там он рендерится в data-requires-owner,
  * и permissions.js складывает признак с правилами.
@@ -112,6 +123,17 @@ $creatorObj = is_object($article) ? ($article->creator ?? null) : null;
 $creatorId  = is_object($creatorObj) ? (int) ($creatorObj->id ?? 0) : 0;
 $viewerId   = (int) ($currentUserId ?? 0);
 $isOwnerPub = $viewerId > 0 && $creatorId > 0 && $viewerId === $creatorId;
+
+/* ---------- Статус публикации (бейдж «Черновик» + publish-bar) ----------
+ * Приоритет — явный $status от контроллера, иначе поле модели
+ * (как в book-details). Бэкенд статусы статей пока не отдаёт:
+ * до тех пор $isDraft = false и плашка публикации не показывается.
+ * Читаем и объект (прод), и query-массив (тест-роут /pages/test).
+ */
+$statusRaw = $status ?? (is_array($article) ? ($article['status'] ?? null)
+                                            : ($article->status ?? null));
+$status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
+$isDraft   = $status === 'draft';
 
 /* ---------- Жанр / DOI ---------- */
 
@@ -194,15 +216,23 @@ if (!empty($iconId)) {
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
+  <!-- publish-bar и бейдж черновика — стили book.css (подключён выше);
+       article-right.css — окно выбора прав при публикации статьи -->
+  <link rel="stylesheet" href="/assets/css/article-right.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
+    <?php if ($isDraft): ?>
+      <!-- Метка черновика: статья ещё не опубликована -->
+      <span class="book-page-header__badge"
+            title="<?= $tr('common.article.draft_hint') ?>"><?= $tr('common.article.draft_badge') ?></span>
+    <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
          по образцу book-details. Пункты рендерятся скрытыми, показывает
-         permissions.js по правилам /api/articles/rules, $isOwnerPub —
+         permissions.js по правилам /api/publications/rules, $isOwnerPub —
          owner-override (data-requires-owner). -->
     <?php $view->include('details-menu', [
         'type'    => 'article',
@@ -625,12 +655,46 @@ if (!empty($iconId)) {
     </div>
   </template>
 
+  <?php if ($isDraft): ?>
+    <!-- ============================================================
+         КНОПКА ПУБЛИКАЦИИ — внизу страницы, видна ВСЕГДА, пока у статьи
+         статус draft (по образцу book-details). Кликом открывается
+         article-rights-dialog (article-publish.js): выбор редакторов и
+         POST /api/articles/{id}/publish → перезагрузка.
+         Кнопка рендерится скрытой (hidden), показывает permissions.js
+         по data-requires="publication.publish" (+ owner-override из
+         data-requires-owner).
+         ============================================================ -->
+    <section class="publish-bar" data-publish-bar>
+      <div class="publish-bar__text">
+        <strong class="publish-bar__label"><?= $tr('common.article.draft_badge') ?></strong>
+        <span class="publish-bar__hint"><?= $tr('common.article.publish_bar_text') ?></span>
+      </div>
+      <button type="button"
+        class="btn btn--primary publish-bar__cta"
+        data-article-publish-open
+        data-requires="publication.publish"
+        data-requires-kind="article"
+        data-requires-owner="<?= $isOwnerPub ? '1' : '0' ?>"
+        hidden
+        data-article-id="<?= (int) $articleId ?>">
+        <?= $tr('common.article.publish_cta') ?>
+      </button>
+    </section>
+  <?php endif; ?>
+
+  <!-- Окно выбора прав при публикации статьи (article-publish.js) -->
+  <?php $view->include('article-rights-dialog'); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <!-- article-publish.js — окно выбора прав при публикации статьи
+       (кнопка publish-bar у черновика, data-article-publish-open) -->
+  <script src="/assets/js/article-publish.js"></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>

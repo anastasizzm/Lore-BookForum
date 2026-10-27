@@ -9,6 +9,10 @@
  *                        (значит, статья не прошла проверку как для публикации).
  *                        article-form.js в этом случае подсвечивает поля формы.
  *
+ * Открытие кнопкой: на странице статьи (article-details, publish-bar у
+ *   черновика) кнопка несёт data-article-publish-open + data-article-id —
+ *   открытие идёт делегированием на document, без участия формы.
+ *
  * Контракт с бэком:
  *   GET  /api/articles/{id}/rights   → { data: { editor_ids: [..] } }   (404 — ок)
  *   GET  /api/users?page=&q=         → { items: [{id, username, name, surname, email?}],
@@ -342,6 +346,18 @@ window.LoreArticlePublish = (function () {
     }
     state.lastFocus = null;
   }
+
+  // Кнопка «Опубликовать статью» на странице статьи (article-details,
+  // publish-bar у черновика): <button data-article-publish-open
+  // data-article-id="N">. Делегирование на document — кнопка может
+  // рендериться (и гаситься permissions.js) после загрузки скрипта.
+  document.addEventListener('click', function (e) {
+    var opener = e.target && e.target.closest && e.target.closest('[data-article-publish-open]');
+    if (!opener) return;
+    e.preventDefault();
+    var id = parseInt(opener.getAttribute('data-article-id'), 10) || 0;
+    if (id) open(id);
+  });
 
   return { open: open, close: close };
 })();

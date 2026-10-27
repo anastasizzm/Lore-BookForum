@@ -220,6 +220,10 @@
         "untitled": "Untitled",
         "go_to_book": "Go to the book",
         "no_text": "The article text is not available yet.",
+        "draft_badge": "Draft",
+        "draft_hint": "Only you can see this draft.",
+        "publish_bar_text": "The article has not been published yet — only you can see it.",
+        "publish_cta": "Publish article",
         "options": "Article options"
     },
     "feed": {
