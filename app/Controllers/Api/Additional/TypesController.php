@@ -53,29 +53,11 @@ final class TypesController extends Controller
         return $this->jsonEmpty();
     }
 
-    /**public function delete(HttpContext $context, string $typeId)
+    public function delete(HttpContext $context, string $typeId)
     {
         $id = RouteParamParser::positiveInt(['id' => $typeId], 'id');
 
-        try {
-            $deleted = $this->typesService->delete($id);
-        } catch (ConflictException) {
-            return $this->jsonError(
-                new \App\Models\Errors\Error(
-                    $this->translator->t('errors.common.in_use'),
-                    ErrorCodes::CONFLICT,
-                ),
-                409
-            );
-        }
-
-        if (!$deleted) {
-            throw new NotFoundException(
-                $this->translator->t('errors.common.not_found'),
-                ErrorCodes::NOT_FOUND,
-            );
-        }
-
-        return $this->jsonEmpty();
-    }**/
+        $this->typesService->delete($id);
+        return $this->jsonEmpty(204);
+    }
 }

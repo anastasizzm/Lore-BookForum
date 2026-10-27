@@ -89,10 +89,13 @@ final class GenresService
         }
     }
 
-    public function delete(int $id) : bool
+    public function delete(int $id) : void
     {
         try {
-            return $this->genresRepo->delete($id);
+            $exists = $this->genresRepo->delete($id);
+            if (!$exists) {
+                throw new NotFoundException($this->i18n->t('errors.common.not_found'),ErrorCodes::NOT_FOUND);
+            }
         } catch (PDOException $e) {
             throw $this->translator->translate($e);
         }

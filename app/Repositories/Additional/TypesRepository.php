@@ -149,7 +149,7 @@ final class TypesRepository extends Repository
 
     public function delete(int $id) : bool
     {
-        $stmt = $this->execute('DELETE FROM types WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
+        $stmt = $this->execute('UPDATE types SET deleted_at = NOW() WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
         return $stmt->rowCount() > 0;
     }
 }

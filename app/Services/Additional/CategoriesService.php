@@ -89,10 +89,13 @@ final class CategoriesService
         }
     }
 
-    public function delete(int $id) : bool
+    public function delete(int $id) : void
     {
         try {
-            return $this->categoriesRepo->delete($id);
+            $exists = $this->categoriesRepo->delete($id);
+            if (!$exists) {
+                throw new NotFoundException($this->i18n->t('errors.common.not_found'),ErrorCodes::NOT_FOUND);
+            }
         } catch (PDOException $e) {
             throw $this->translator->translate($e);
         }

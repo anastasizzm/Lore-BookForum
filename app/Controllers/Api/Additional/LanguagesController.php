@@ -10,7 +10,7 @@ use App\Models\Additional\Language;
 use App\Controllers\Controller;
 
 use App\Http\HttpContext;
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 
 use App\ErrorCodes;
 use App\Constants;

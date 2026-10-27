@@ -148,7 +148,7 @@ final class GenresRepository extends Repository
 
     public function delete(int $id) : bool
     {
-        $stmt = $this->execute('DELETE FROM genres WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
+        $stmt = $this->execute('UPDATE genres SET deleted_at = NOW() WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
         return $stmt->rowCount() > 0;
     }
 }
