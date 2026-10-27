@@ -63,6 +63,22 @@ abstract class BaseInputParser
     }
 
     /** @param array<string, mixed> $input */
+    public static function optionalNonNegInt(array $input, string $key): ?int
+    {
+        $value = self::optionalInt($input, $key);
+
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value < 0) {
+            static::fail($key, "'{$key}' must be a non negative integer");
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
     public static function optionalBool(array $input, string $key): ?bool
     {
         if (!array_key_exists($key, $input) || $input[$key] === null) {
@@ -200,6 +216,18 @@ abstract class BaseInputParser
 
         if ($value <= 0) {
             static::fail($key, "'{$key}' must be a positive integer");
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $input */
+    public static function nonNegInt(array $input, string $key): int
+    {
+        $value = self::int($input, $key);
+
+        if ($value < 0) {
+            static::fail($key, "'{$key}' must be a non negative integer");
         }
 
         return $value;

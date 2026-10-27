@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{base_url}}/api/system/roles"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \    \"roleId\": 2,\r
+
+    \    \"belowId\": 0,\r
+
+    \    \"aboveId\": 1,\r
+
+    \    \"pubPermissions\": {\r
+
+    \        \"create\": true,\r
+
+    \        \"updateMeta\": false,\r
+
+    \        \"updateContent\": true,\r
+
+    \        \"delete\": false,\r
+
+    \        \"read\": true,\r
+
+    \        \"managePeople\": false,\r
+
+    \        \"manageRoles\": false\r
+
+    \    }\r
+
+    }"
+order: 2000

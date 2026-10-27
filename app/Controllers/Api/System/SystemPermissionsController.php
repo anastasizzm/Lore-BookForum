@@ -48,7 +48,7 @@ final class SystemPermissionsController extends Controller
 
     public function getRoles(HttpContext $context)
     {
-        $items = $this->permissionsService->getRoles();
+        $items = $this->permissionsService->getRolesWithContext();
         return $this->jsonList($items);
     }
 
@@ -122,7 +122,7 @@ final class SystemPermissionsController extends Controller
     public function getUsers(HttpContext $context)
     {
         $query = RolesUserListQuery::fromInput($context->request->query);
-        $list = $this->permissionsService->getUsers($query);
+        $list = $this->permissionsService->getUsersWithContext($query);
         return $this->jsonList($list->getArray(), [
             'page' => $list->getPage(),
             'pageSize' => $list->getPageSize(),
@@ -217,11 +217,11 @@ final class SystemPermissionsController extends Controller
     {
         $ifMatch = $context->header('If-Match');
         if ($ifMatch === null || $ifMatch === '') {
-            throw new HttpException(428, 'If-Match header is required');
+            throw new HttpException('If-Match header is required', 428, ErrorCodes::INVALID_HEADER);
         }
         $stripped = trim($ifMatch, '"');
         if (!ctype_digit($stripped)) {
-            throw new HttpException(400, 'Invalid If-Match header');
+            throw new HttpException('Invalid If-Match header', 400, ErrorCodes::INVALID_HEADER);
         }
         return (int)$stripped;
     }

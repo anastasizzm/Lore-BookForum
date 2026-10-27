@@ -34,7 +34,7 @@ final class PublicationPermissionsController extends Controller
     {
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
 
-        $items = $this->permissionsService->getRoles($publicationId);
+        $items = $this->permissionsService->getRolesWithContext($publicationId);
         return $this->jsonList($items);
     }
 
@@ -118,7 +118,7 @@ final class PublicationPermissionsController extends Controller
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
 
         $query = RolesUserListQuery::fromInput($context->request->query);
-        $list = $this->permissionsService->getUsers($publicationId, $query);
+        $list = $this->permissionsService->getUsersWithContext($publicationId, $query);
         return $this->jsonList($list->getArray(), [
             'page' => $list->getPage(),
             'pageSize' => $list->getPageSize(),

@@ -21,6 +21,9 @@ use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
+use App\Services\Permissions\Ranks\SystemRoleRankService;
+use App\Services\Enrichers\RolesPermissionsContextEnricher;
+use App\Services\Enrichers\UsersPermissionsContextEnricher;
 use App\Services\LexoRank\LexoRank;
 use PDO;
 
@@ -29,10 +32,12 @@ final class SystemPermissionsService
     private const MOVE_MAX_ATTEMPTS = 3;
 
     public function __construct(
-        private readonly RoleRankService $roleRankService,
         private readonly UnitOfWork $uow,
+        private readonly SystemRoleRankService $roleRankService,
         private readonly SystemPermissionsRepository $repository,
         private readonly PermissionExceptionTranslator $exceptionTranslator,
+        private readonly UsersPermissionsContextEnricher $usersContextEnricher,
+        private readonly RolesPermissionsContextEnricher $rolesContextEnricher,
         private readonly Translator $translator
     ) {}
 
@@ -41,10 +46,16 @@ final class SystemPermissionsService
         return $this->repository->getRoles();
     }
 
+    public function getRolesWithContext(int $viewerId) : array 
+    {
+        $items = $this->getRoles();
+        return $this->rolesContextEnricher->enrich($items, $viewerId);
+    }
+
     public function addRole(SystemPermissionForm $permissions): int
     {
         try {
-            return $this->uow->translactional(function (PDO $pdo) use ($permissions) {
+            return $this->uow->transactional(function (PDO $pdo) use ($permissions) {
                 $lexorank = $this->roleRankService->computeInsertRank(
                     null,
                     $permissions->aboveId,
@@ -68,7 +79,7 @@ final class SystemPermissionsService
     public function editRole(int $roleId, EditPermissionForm $form, int $expectedVersion): int
     {
         try {
-            return $this->uow->translactional(function () use ($roleId, $form, $expectedVersion) {
+            return $this->uow->transactional(function () use ($roleId, $form, $expectedVersion) {
                 $newVersion = $this->repository->editRole(
                     $roleId,
                     null,
@@ -101,7 +112,7 @@ final class SystemPermissionsService
 
         for ($attempt = 1; $attempt <= self::MOVE_MAX_ATTEMPTS; $attempt++) {
             try {
-                return $this->uow->translactional(function () use (
+                return $this->uow->transactional(function () use (
                     &$nudged, $roleId, $aboveId, $belowId, $expectedVersion
                 ) {
                     if ($nudged === null) {
@@ -165,6 +176,14 @@ final class SystemPermissionsService
 
         $items = $this->repository->getUsers(NULL, $sortEnum, $page, $pageSize, $query->properties->getProps());
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function getUsersWithContext(RolesUserListQuery $query, int $viewerId) : PagiantedList 
+    {
+        $items = $this->getUsers($query);
+        $enriched = $this->usersContextEnricher->enrich($items->getArray(), $viewerId);
+
+        return PaginatedList::fromArray($enriched, $items->getPage(), $items->getPageSize());
     }
 
     public function addUser(int $userId, RoleToRoleUserAssignmentForm $form, int $granterId): int

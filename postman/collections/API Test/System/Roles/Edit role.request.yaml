@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{base_url}}/api/system/roles/{{roleId}}"
+method: PUT
+headers:
+  x-csrf-token: "{{csrf_token}}"
+  If-Match: ""
+body:
+  type: json
+  content: "{\r
+
+    \    \"pubPermissions\": {\r
+
+    \        \"create\": true,\r
+
+    \        \"updateMeta\": true,\r
+
+    \        \"updateContent\": true,\r
+
+    \        \"delete\": false,\r
+
+    \        \"read\": true,\r
+
+    \        \"managePeople\": false,\r
+
+    \        \"manageRoles\": false\r
+
+    \    }\r
+
+    }"
+order: 3000

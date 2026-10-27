@@ -11,9 +11,9 @@ use App\Models\Access\Operations\Posts\DeletePostOperation;
 use App\Models\Access\Operations\Posts\UpdatePostOperation;
 
 use App\Forms\Form;
-use App\Models\Dto;
+use App\Models\RowModel;
 
-readonly class PostAccessRules extends Dto implements OperationChecker, Form
+readonly class PostAccessRules extends RowModel implements OperationChecker, Form
 {
     public function __construct(
         public bool $create,

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Services\Permissions;
+namespace App\Services\Permissions\Ranks;
 
 use App\Exceptions\ConflictException;
 use App\Exceptions\ValidationException;
@@ -9,21 +9,18 @@ use App\Repositories\Permissions\PermissionsRepository;
 use App\Lib\I18n\Translator;
 use App\Lib\LexoRank;
 use App\Attributes\Inject;
-use App\Models\Enums\ServiceType;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
 
-final class RoleRankService
+class RoleRankService implements RankService
 {
     private const MAX_RANK_LENGTH = 100;
 
     public function __construct(
-        #[Inject(key: ServiceType::Publication)]
-        private readonly RuleProvider $ruleProvider,
-        #[Inject(key: ServiceType::Publication)]
-        private readonly CommonRuleProvider $commonRuleProvider,
         private readonly PermissionsRepository $repository,
-        private readonly Translator $translator
+        private readonly Translator $translator,
+        private readonly ?RuleProvider $ruleProvider = NULL,
+        private readonly ?CommonRuleProvider $commonRuleProvider = NULL,
     ) {}
 
     /**
@@ -78,7 +75,7 @@ final class RoleRankService
         return $newRank;
     }
 
-    public function canManageRole(int $userId, int $roleId, ?int $publicationId): bool
+    public function canManageRole(int $userId, int $roleId, ?int $publicationId = null): bool
     {
         $localRank = $this->repository->getUserHighestRank($userId, $publicationId);
         if ($localRank !== null) {
@@ -87,13 +84,40 @@ final class RoleRankService
         }
 
         $accessRules = $publicationId === null
-            ? $this->commonRuleProvider->getRule($userId)
-            : $this->ruleProvider->getRule($userId, $publicationId);
+            ? $this->commonRuleProvider?->getRule($userId)
+            : $this->ruleProvider?->getRule($userId, $publicationId);
 
-        return $accessRules->hasAny();
+        return $accessRules?->hasAny() ?? false;
     }
 
-    public function canManageUser(int $userId, int $targetUserId, ?int $publicationId): bool
+    /** @param array<int> $roleIds
+     * @return array<int, bool>
+     */
+    public function canManageRoleMany(int $userId, array $roleIds, ?int $publicationId = null) : array
+    {
+        if ($roleIds === []) return [];
+
+        $localRank = $this->repository->getUserHighestRank($userId, $publicationId);
+
+        if ($localRank === null) {
+            $accessRules = $publicationId === null
+                ? $this->commonRuleProvider?->getRule($userId)
+                : $this->ruleProvider?->getRule($userId, $publicationId);
+
+            return array_fill_keys($roleIds, $accessRules?->hasAny() ?? false);
+        }
+
+        $targetRanks = $this->repository->getRanksBatch($roleIds, $publicationId);
+
+        $result = [];
+        foreach ($roleIds as $roleId) {
+            $targetRank = $targetRanks[$roleId] ?? null;
+            $result[$roleId] = $targetRank !== null && strcmp($localRank, $targetRank) >= 0;
+        }
+        return $result;
+    }
+
+    public function canManageUser(int $userId, int $targetUserId, ?int $publicationId = null): bool
     {
         if ($userId === $targetUserId) return false;
 
@@ -101,6 +125,47 @@ final class RoleRankService
         if ($highestRole === null) return false;
 
         return $this->canManageRole($userId, $highestRole, $publicationId);
+    }
+
+    /** @param array<int> $targetUserIds
+     * @return array<int, bool>
+     */
+    public function canManageUserMany(int $userId, array $targetUserIds, ?int $publicationId = null) : array
+    {
+        if ($targetUserIds === []) return [];
+
+        $result = [];
+        $toCheck = [];
+        foreach ($targetUserIds as $targetUserId) {
+            if ($targetUserId === $userId) {
+                $result[$targetUserId] = false;
+            } else {
+                $toCheck[] = $targetUserId;
+            }
+        }
+
+        if ($toCheck === []) return $result;
+
+        $localRank   = $this->repository->getUserHighestRank($userId, $publicationId);
+        $targetRanks = $this->repository->getUsersHighestRanksBatch($toCheck, $publicationId);
+
+        if ($localRank === null) {
+            $accessRules = $publicationId === null
+                ? $this->commonRuleProvider?->getRule($userId)
+                : $this->ruleProvider?->getRule($userId, $publicationId);
+            $canManageAny = $accessRules?->hasAny() ?? false;
+
+            foreach ($toCheck as $targetUserId) {
+                $result[$targetUserId] = isset($targetRanks[$targetUserId]) && $canManageAny;
+            }
+            return $result;
+        }
+
+        foreach ($toCheck as $targetUserId) {
+            $targetRank = $targetRanks[$targetUserId] ?? null;
+            $result[$targetUserId] = $targetRank !== null && strcmp($localRank, $targetRank) >= 0;
+        }
+        return $result;
     }
 
     public function rebalance(?int $publicationId = null): void

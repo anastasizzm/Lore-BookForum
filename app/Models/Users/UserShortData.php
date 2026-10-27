@@ -17,6 +17,8 @@ readonly class UserShortData extends Dto
         public string  $avatar,
     ) {}
 
+    public function id() : mixed { return $this->id; }
+
     public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(

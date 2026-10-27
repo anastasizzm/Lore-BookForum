@@ -21,18 +21,23 @@ use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToRoleUserAssignmentForm;
 use App\Lib\I18n\Translator;
 use App\Services\Configuration\UnitOfWork;
+use App\Services\Enrichers\RolesPermissionsContextEnricher;
+use App\Services\Enrichers\UsersPermissionsContextEnricher;
+use App\Services\Permissions\Ranks\PublicationRoleRankService;
 use App\Services\LexoRank\LexoRank;
 use PDO;
 
 final class PublicationPermissionsService
 {
     private const MOVE_MAX_ATTEMPTS = 3;
-
+    
     public function __construct(
-        private readonly RoleRankService $roleRankService,
         private readonly UnitOfWork $uow,
+        private readonly PublicationRoleRankService $roleRankService,
         private readonly PublicationPermissionsRepository $repository,
         private readonly PermissionExceptionTranslator $exceptionTranslator,
+        private readonly UsersPermissionsContextEnricher $usersContextEnricher,
+        private readonly RolesPermissionsContextEnricher $rolesContextEnricher,
         private readonly Translator $translator
     ) {}
 
@@ -41,10 +46,16 @@ final class PublicationPermissionsService
         return $this->repository->getRoles($publicationId);
     }
 
+    public function getRolesWithContext(int $publicationId, int $viewerId) : array 
+    {
+        $items = $this->getRoles($publicationId);
+        return $this->rolesContextEnricher->enrich($items, $viewerId, $publicationId);
+    }
+
     public function addRole(int $publicationId, PublicationPermissionForm $permissions): int
     {
         try {
-            return $this->uow->translactional(function () use ($permissions, $publicationId) {
+            return $this->uow->transactional(function () use ($permissions, $publicationId) {
                 $lexorank = $this->roleRankService->computeInsertRank(
                     $publicationId,
                     $permissions->aboveId,
@@ -70,7 +81,7 @@ final class PublicationPermissionsService
         int $expectedVersion
     ): int {
         try {
-            return $this->uow->translactional(function () use ($publicationId, $roleId, $form, $expectedVersion) {
+            return $this->uow->transactional(function () use ($publicationId, $roleId, $form, $expectedVersion) {
                 $newVersion = $this->repository->editRole(
                     $roleId,
                     $publicationId,
@@ -101,7 +112,7 @@ final class PublicationPermissionsService
 
         for ($attempt = 1; $attempt <= self::MOVE_MAX_ATTEMPTS; $attempt++) {
             try {
-                return $this->uow->translactional(function () use (
+                return $this->uow->transactional(function () use (
                     &$nudged, $publicationId, $roleId, $aboveId, $belowId, $expectedVersion
                 ) {
                     if ($nudged === null) {
@@ -164,6 +175,14 @@ final class PublicationPermissionsService
 
         $items = $this->repository->getUsers($publicationId, $sortEnum, $page, $pageSize, $query->properties->getProps());
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function getUsersWithContext(int $publicationId, RolesUserListQuery $query, int $viewerId) : PagiantedList 
+    {
+        $items = $this->getUsers($publicationId, $query);
+        $enriched = $this->usersContextEnricher->enrich($items->getArray(), $viewerId, $publicationId);
+
+        return PaginatedList::fromArray($enriched, $items->getPage(), $items->getPageSize());
     }
 
     public function addUser(int $publicationId, int $userId, RoleToUserAssignmentForm $form, int $granterId): int

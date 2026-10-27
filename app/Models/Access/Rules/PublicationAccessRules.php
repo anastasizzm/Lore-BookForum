@@ -16,9 +16,9 @@ use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 
 use App\Forms\Form;
-use App\Models\Dto;
+use App\Models\RowModel;
 
-readonly class PublicationAccessRules extends Dto implements OperationChecker, Form
+readonly class PublicationAccessRules extends RowModel implements OperationChecker, Form
 {
     public function __construct(
         public bool $create,

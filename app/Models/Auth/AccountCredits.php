@@ -13,6 +13,8 @@ final readonly class AccountCredits extends Dto
         public string $email,
     ) {}
 
+    public function id() { return $this->id; }
+
     public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(

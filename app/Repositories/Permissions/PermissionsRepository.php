@@ -12,6 +12,7 @@ use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Assignment\RolesUser;
+use App\Models\Access\Assignment\RolesUsersAssignment;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
@@ -35,6 +36,24 @@ class PermissionsRepository extends Repository
 
     // --- Role
 
+    public function getRolesVersions(array $roles, ?int $publicationId) : array
+    {
+        if ($roles == []) return [];
+
+        $builder = ScriptBuilder::withTable("roles_permissions");
+        $builder->addSelect("role_id, version")
+            ->addWhere("role_id = ANY(:roleIds::int[])", [':roleIds' => ScriptParam::asStr('{' . implode(', ', $roles) . '}')]);
+        
+        if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
+        else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[(int)$row['role_id']] = (int)$row['version'];
+        }
+        return $result;
+    }
+
     public function addRole(
         int $roleId,
         ?int $publicationId,
@@ -57,10 +76,27 @@ class PermissionsRepository extends Repository
                 :lexorank)
                 RETURNING version";
 
-        $stmt = $this->execute($sql, $this->roleParams(
-            ':r', $roleId, $publicationId, $lexorank, $pubRules, $postRules, $sysRules
-        ));
+        $params = [
+            ":roleId"           => ScriptParam::asInt($roleId),
+            ":pubId"            => ScriptParam::asInt($publicationId),
+            ":pubCreate"        => ScriptParam::asBool($pubRules?->create ?? false),
+            ":pubUpdateMeta"    => ScriptParam::asBool($pubRules?->updateMeta ?? false),
+            ":pubUpdateContent" => ScriptParam::asBool($pubRules?->updateContent ?? false),
+            ":pubDelete"        => ScriptParam::asBool($pubRules?->delete ?? false),
+            ":pubRead"          => ScriptParam::asBool($pubRules?->read ?? false),
+            ":pubManageP"       => ScriptParam::asBool($pubRules?->managePeople ?? false),
+            ":pubManageR"       => ScriptParam::asBool($pubRules?->manageRoles ?? false),
+            ":postCreate"       => ScriptParam::asBool($postRules?->create ?? false),
+            ":postUpdate"       => ScriptParam::asBool($postRules?->update ?? false),
+            ":postDelete"       => ScriptParam::asBool($postRules?->delete ?? false),
+            ":sysManageAcc"     => ScriptParam::asBool($sysRules?->manageAccounts ?? false),
+            ":sysManageAdd"     => ScriptParam::asBool($sysRules?->manageAdditionals ?? false),
+            ":sysManageP"       => ScriptParam::asBool($sysRules?->managePeople ?? false),
+            ":sysManageR"       => ScriptParam::asBool($sysRules?->manageRoles ?? false),
+            ":lexorank"         => ScriptParam::asStr($lexorank),
+        ];
 
+        $stmt = $this->execute($sql, $params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -123,37 +159,6 @@ class PermissionsRepository extends Repository
         return $row === false ? null : (int)$row;
     }
 
-    /** @return array<string, ScriptParam> */
-    private function roleParams(
-        string $p,
-        int $roleId,
-        ?int $publicationId,
-        string $lexorank,
-        ?PublicationAccessRules $pubRules,
-        ?PostAccessRules $postRules,
-        ?SystemAccessRules $sysRules,
-    ): array {
-        return [
-            "{$p}roleId"           => ScriptParam::asInt($roleId),
-            "{$p}pubId"            => ScriptParam::asInt($publicationId),
-            "{$p}pubCreate"        => ScriptParam::asBool($pubRules?->create ?? false),
-            "{$p}pubUpdateMeta"    => ScriptParam::asBool($pubRules?->updateMeta ?? false),
-            "{$p}pubUpdateContent" => ScriptParam::asBool($pubRules?->updateContent ?? false),
-            "{$p}pubDelete"        => ScriptParam::asBool($pubRules?->delete ?? false),
-            "{$p}pubRead"          => ScriptParam::asBool($pubRules?->read ?? false),
-            "{$p}pubManageP"       => ScriptParam::asBool($pubRules?->managePeople ?? false),
-            "{$p}pubManageR"       => ScriptParam::asBool($pubRules?->manageRoles ?? false),
-            "{$p}postCreate"       => ScriptParam::asBool($postRules?->create ?? false),
-            "{$p}postUpdate"       => ScriptParam::asBool($postRules?->update ?? false),
-            "{$p}postDelete"       => ScriptParam::asBool($postRules?->delete ?? false),
-            "{$p}sysManageAcc"     => ScriptParam::asBool($sysRules?->manageAccounts ?? false),
-            "{$p}sysManageAdd"     => ScriptParam::asBool($sysRules?->manageAdditionals ?? false),
-            "{$p}sysManageP"       => ScriptParam::asBool($sysRules?->managePeople ?? false),
-            "{$p}sysManageR"       => ScriptParam::asBool($sysRules?->manageRoles ?? false),
-            "{$p}lexorank"         => ScriptParam::asString($lexorank),
-        ];
-    }
-
     /**
      * @return int|null
      */
@@ -174,7 +179,7 @@ class PermissionsRepository extends Repository
         $stmt = $this->execute($sql, [
             ':roleId'          => ScriptParam::asInt($roleId),
             ':pubId'           => ScriptParam::asInt($publicationId),
-            ':lexorank'        => ScriptParam::asString($lexorank),
+            ':lexorank'        => ScriptParam::asStr($lexorank),
             ':expectedVersion' => ScriptParam::asInt($expectedVersion),
         ]);
 
@@ -329,7 +334,7 @@ class PermissionsRepository extends Repository
         $builder = ScriptBuilder::withTable("roles_permissions", "rp");
         $builder->addSelect("ru.id,
                 \nru.role_id,
-                \nru.valid_from as created_at
+                \nru.valid_from as created_at,
                 \nur.color as color")
             ->addSelect("COALESCE(
                         MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),
@@ -369,7 +374,7 @@ class PermissionsRepository extends Repository
              LIMIT 1',
             [
                 ':pubId'    => ScriptParam::asInt($publicationId),
-                ':lexorank' => ScriptParam::asString($lexorank),
+                ':lexorank' => ScriptParam::asStr($lexorank),
             ]
         );
         $row = $stmt->fetchColumn();
@@ -386,7 +391,7 @@ class PermissionsRepository extends Repository
              LIMIT 1',
             [
                 ':pubId'    => ScriptParam::asInt($publicationId),
-                ':lexorank' => ScriptParam::asString($lexorank),
+                ':lexorank' => ScriptParam::asStr($lexorank),
             ]
         );
         $row = $stmt->fetchColumn();
@@ -481,5 +486,92 @@ class PermissionsRepository extends Repository
         );
         $row = $stmt->fetch(PDO::FETCH_NUM);
         return $row === false ? null : [(int)$row[0], (string)$row[1]];
+    }
+
+    /**
+     * @param int[] $roleIds
+     * @return array<int, string>  role_id => lexorank. Отсутствующие в результате id не имеют роли.
+     */
+    public function getRanksBatch(array $roleIds, ?int $publicationId): array
+    {
+        if ($roleIds === []) return [];
+
+        $ids = implode(',', array_map('intval', $roleIds));
+
+        $stmt = $this->execute(
+            'SELECT role_id, lexorank FROM roles_permissions
+            WHERE role_id = ANY(:roleIds::bigint[])
+            AND publication_id IS NOT DISTINCT FROM :pubId',
+            [
+                ':pubId'   => ScriptParam::asInt($publicationId),
+                ':roleIds' => ScriptParam::asStr('{' . $ids . '}'),
+            ]
+        );
+
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[(int)$row['role_id']] = (string)$row['lexorank'];
+        }
+        return $result;
+    }
+
+    /**
+     * @param int[] $userIds
+     * @return array<int, string>  user_id => lexorank
+     */
+    public function getUsersHighestRanksBatch(array $userIds, ?int $publicationId): array
+    {
+        if ($userIds === []) return [];
+
+        $ids = implode(',', array_map('intval', $userIds));
+
+        $stmt = $this->execute(
+            'SELECT DISTINCT ON (ru.user_id) ru.user_id, rp.lexorank
+            FROM roles_users ru
+            INNER JOIN roles_permissions rp
+                ON rp.role_id = ru.role_id
+                AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id
+            WHERE ru.user_id = ANY(:userIds::bigint[])
+            AND ru.publication_id IS NOT DISTINCT FROM :pubId
+            AND ru.is_valid
+            ORDER BY ru.user_id, rp.lexorank COLLATE "C" DESC',
+            [
+                ':pubId'   => ScriptParam::asInt($publicationId),
+                ':userIds' => ScriptParam::asStr('{' . $ids . '}'),
+            ]
+        );
+
+        $result = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $result[(int)$row['user_id']] = (string)$row['lexorank'];
+        }
+        return $result;
+    }
+
+    public function areAdjacent(
+        ?string $aboveLexorank,
+        ?string $belowLexorank,
+        ?int $publicationId,
+        ?int $excludeRoleId = null
+    ): bool {
+        $builder = ScriptBuilder::withTable("roles_permissions");
+        $builder->addSelect("1")
+            ->addWhere("publication_id IS NOT DISTINCT FROM :pubId", [':pubId' => ScriptParam::asInt($publicationId)])
+            ->setLimit(1);
+
+        if ($aboveLexorank !== null) {
+            $builder->addWhere('lexorank < :aboveLexorank COLLATE "C"', [':aboveLexorank' => ScriptParam::asStr($aboveLexorank)]);
+        }
+
+        if ($belowLexorank !== null) {
+            $builder->addWhere('lexorank > :belowLexorank COLLATE "C"', [':belowLexorank' => ScriptParam::asStr($belowLexorank)]);
+        }
+
+        if ($excludeRoleId !== null) {
+            $builder->addWhere('role_id <> :excludeRoleId', [':excludeRoleId' => ScriptParam::asStr($excludeRoleId)]);
+        }
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        return $stmt->fetchColumn() === false;
     }
 }

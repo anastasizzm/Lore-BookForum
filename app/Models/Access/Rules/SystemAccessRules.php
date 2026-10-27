@@ -12,9 +12,9 @@ use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
 use App\Forms\Form;
-use App\Models\Dto;
+use App\Models\RowModel;
 
-readonly class SystemAccessRules extends Dto implements OperationChecker, Form
+readonly class SystemAccessRules extends RowModel implements OperationChecker, Form
 {
     public function __construct(
         public bool $manageAccounts,

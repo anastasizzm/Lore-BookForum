@@ -14,6 +14,8 @@ readonly class PublicationPermissions extends Dto
         public PublicationAccessRules $pubPermissions,
     ){}
 
+    public function id() { return $this->role_id; }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $r = 'r_';

@@ -15,8 +15,8 @@ readonly class PositionForm implements Form
     public static function fromInput(array $form) : self 
     {
         return new self(
-            belowId: QueryParser::optionalPositiveInt($form, 'belowId'),
-            aboveId: QueryParser::optionalPositiveInt($form, 'aboveId')
+            belowId: QueryParser::optionalNonNegInt($form, 'belowId'),
+            aboveId: QueryParser::optionalNonNegInt($form, 'aboveId')
         );
     }
 }
