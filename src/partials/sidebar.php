@@ -1,40 +1,24 @@
 <?php $selectedTab = $view->block('selectedTab'); ?>
 <?php
-  // Короткий помощник: перевод + экранирование (ключи — resources/lang/*/common.json)
   $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-  // Текущая локаль: бэк определяет её по ?lang= (см. LocaleMiddleware),
-  // затем cookie, затем Accept-Language. Чтобы при переходах внутри сайта
-  // язык не слетал, во ВСЕ ссылки сайдбара добавляем ?lang=<текущая>.
   $curLocale = $view->locale();
 
   $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
       ? $_GET['lang']
       : (method_exists($view, 'locale') ? $view->locale() : null);
 
-  /**
-   * Обёртка над $view->url() — сохраняет ?lang= во всех ссылках сайдбара.
-   * Использование: $url('home'), $url('books'), $url('books.saved').
-   */
   $url = static function (string $name, array $params = []) use ($view, $langQuery): string {
       $base = $view->url($name, $params);
       if ($langQuery === null || $langQuery === '') return $base;
       return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
   };
 
-  /**
-   * Обёртка для ссылок, которые бэк ещё не завёл как именованный роут
-   * (например, «Черновики» → /books?p_status=draft). Принимает готовый путь
-   * и добавляет ?lang=. Когда роут появится — достаточно заменить путь на
-   * $view->url('drafts'), всё остальное уже готово.
-   */
   $urlPath = static function (string $path) use ($langQuery): string {
       if ($langQuery === null || $langQuery === '') return $path;
       return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
   };
 
-  // Переключатель языка: тот же адрес с ?lang=xx (остальные параметры сохраняются).
-  // Выбор запоминает бэк (cookie preferred_language).
   $langUrl = static function (string $code): string {
       $uri  = $_SERVER['REQUEST_URI'] ?? '/';
       $path = parse_url($uri, PHP_URL_PATH) ?: '/';
@@ -43,15 +27,10 @@
       return $path . '?' . http_build_query($q);
   };
 
-  // Доступные языки: код => название на самом языке. Новый язык = одна строка здесь
-  // + папка resources/lang/<код>/ + код в i18n.available (config).
   $languages = ['en' => 'English', 'ru' => 'Русский'];
   $curLangName = $languages[$curLocale] ?? strtoupper($curLocale);
 ?>
 <?php
-  // P1-5: без id (гость / шаринг не отработал) ссылка вела на /users/0 -> 404.
-  // Профиль — единственная ссылка, которая строится не через $view->url(),
-  // поэтому ?lang= добавляем в неё вручную через тот же $langQuery.
   $profileId  = (int) ($currentUserId ?? 0);
 
   if ($profileId > 0) {
@@ -65,30 +44,18 @@
           ? (str_contains($profileBase, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery)
           : '');
 
-  // Аватар вместо «фигурки человечка»: main.php отдаёт $me (текущий
-  // пользователь, UserContext). 'default'/гость — остаётся прежняя иконка.
   $avatarPresets = require __DIR__ . '/avatar-presets.php';
   $meAvatar      = is_object($me ?? null) ? (string) ($me->avatar ?? '') : '';
-  $mePreset      = $avatarPresets[$meAvatar] ?? null;   // ['icon' => ..., 'bg' => ...] | null
+  $mePreset      = $avatarPresets[$meAvatar] ?? null;
 
-  // Кнопка «Админ-панель» в меню «More». Права читаем из UserContext ($me):
-  // users_rules.is_admin -> $me->isAdmin (UserContext::fromRow). Если бэк ещё не
-  // отдаёт поле, ссылка просто не показывается. Это ТОЛЬКО видимость кнопки:
-  // доступ на сам /admin обязан проверять бэк (политика роута), а не эта вьюха.
-  // Редакторам тоже открыть панель — добавить `|| !empty($me->isRedactor)`.
   $canOpenAdmin = is_object($me ?? null) && !empty($me->isAdmin);
   $adminUrl     = '/admin'
       . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
 
-  // ВРЕМЕННО: роут 'drafts' бэк ещё не завёл. Ведём на существующий /books
-  // с фильтром публикаций ?p_status=draft (PublicationStatus, НЕ путать со
-  // ?status= — это статус чтения). Когда появится $view->url('drafts') —
-  // поменяем только эту строку.
   $draftsUrl = $urlPath('/books?p_status=draft');
 ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
-        <!-- Профиль -->
         <a href="<?= $view->e($profileUrl) ?>"
            class="nav-item mobile-nav-btn nav-profile <?= $selectedTab === 'profile' ? 'active' : '' ?>"
            title="<?= $tr('common.sidebar.profile') ?>"
@@ -106,9 +73,7 @@
             <span class="nav-text"><?= $tr('common.sidebar.profile') ?></span>
         </a>
 
-        <!-- Добавлен блок sidebar-nav-group для отступа и увеличенного расстояния -->
         <div class="sidebar-nav-group">
-            <!-- Лента -->
             <a href="<?= $view->e($url('home')) ?>"
                class="nav-item mobile-nav-btn <?= $selectedTab === 'for-you' ? 'active' : '' ?>"
                title="<?= $tr('common.sidebar.feed') ?>">
@@ -120,7 +85,6 @@
                 <span class="nav-text"><?= $tr('common.sidebar.feed') ?></span>
             </a>
 
-            <!-- Библиотека -->
             <a href="<?= $view->e($url('books')) ?>"
                class="nav-item mobile-nav-btn <?= in_array($selectedTab, ['library', 'articles'], true) ? 'active' : '' ?>"
                title="<?= $tr('common.sidebar.library') ?>">
@@ -132,10 +96,6 @@
                 <span class="nav-text"><?= $tr('common.sidebar.library') ?></span>
             </a>
 
-            <!-- Черновики: пока ведёт на /books?p_status=draft — это сразу
-                 включает таб «Draft» на странице библиотеки.
-                 Роут 'drafts' бэк ещё не завёл; когда появится — заменить
-                 $draftsUrl на $url('drafts'), см. выше. -->
             <a href="<?= $view->e($draftsUrl) ?>"
                class="nav-item mobile-nav-btn <?= $selectedTab === 'drafts' ? 'active' : '' ?>"
                title="<?= $tr('common.sidebar.drafts') ?>"
@@ -152,7 +112,6 @@
                 <span class="nav-text"><?= $tr('common.sidebar.drafts') ?></span>
             </a>
 
-            <!-- Сохранённые -->
             <a href="<?= $view->e($url('books.saved')) ?>"
                class="nav-item mobile-nav-btn <?= $selectedTab === 'saved' ? 'active' : '' ?>"
                title="<?= $tr('common.sidebar.saved') ?>">
@@ -166,7 +125,6 @@
         </div>
     </nav>
 
-    <!-- Кнопка вызова меню настроек -->
     <div class="sidebar-bottom">
         <button type="button"
                 class="nav-item mobile-nav-btn"
@@ -183,19 +141,7 @@
             <span class="nav-text"><?= $tr('common.sidebar.more') ?></span>
         </button>
 
-        <!-- Меню с настройками -->
         <div class="settings-menu" data-settings-menu hidden>
-            <?php /* Админ-панель. Раньше ссылку рисовал флаг $me->isAdmin, но
-                 UserContext::fromRow подставляет SystemAccessRules::fromEmpty()
-                 — поле всегда false, и кнопка не показывалась никому.
-                 Теперь ссылка рендерится всегда, но скрыта, и app.js показывает
-                 её по составному праву admin.panel (window.LorePermissions:
-                 manageAdditionals / managePeople / manageRoles из
-                 GET /api/system/rules). $canOpenAdmin оставлен как серверный
-                 fast-path: если бэк когда-нибудь начнёт отдавать isAdmin —
-                 ссылка появится сразу, без ожидания ответа.
-                 Это ТОЛЬКО видимость: доступ на сам /admin проверяет бэк
-                 (политика роута), не эта вьюха. */ ?>
             <a href="<?= $view->e($adminUrl) ?>"
                class="settings-menu__item settings-menu__item--admin"
                data-requires="admin.panel"
@@ -209,7 +155,6 @@
                 <span><?= $tr('common.sidebar.admin') ?></span>
             </a>
 
-            <!-- Выбор языка: раскрывающийся список (<details>, без JS); язык запоминает бэк -->
             <details class="settings-menu__lang">
                 <summary class="settings-menu__item settings-menu__lang-summary"
                          aria-label="<?= $tr('common.language.switch') ?>">
@@ -242,37 +187,20 @@
 
             <div class="settings-menu__divider" role="separator"></div>
 
-            <!-- Помощь (задача 5): статическая страница src/views/pages/help.php.
-                 Роута help бэк ещё не завёл (config/routes.php заморожен) —
-                 ведём на существующий тест-роут /pages/test?page=help.
-                 Когда роут появится — заменить путь на $url('help'). -->
-            <a href="<?= $view->e($urlPath('/pages/test?page=help')) ?>" class="settings-menu__item">
+            <a href="<?= $view->e($url('help')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">?</span>
                 <span><?= $tr('common.sidebar.help') ?></span>
             </a>
 
-            <!-- Privacy Policy (задача 6): статическая страница
-                 src/views/pages/privacy.php, по аналогии с Help. Роута privacy
-                 бэк ещё не завёл (config/routes.php заморожен) — ведём на
-                 существующий тест-роут /pages/test?page=privacy.
-                 Когда роут появится — заменить путь на $url('privacy'). -->
-            <a href="<?= $view->e($urlPath('/pages/test?page=privacy')) ?>" class="settings-menu__item">
+            <a href="<?= $view->e($url('privacy')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">§</span>
                 <span><?= $tr('common.sidebar.privacy') ?></span>
             </a>
 
             <div class="settings-menu__divider" role="separator"></div>
 
-            <!-- Смена пароля (страница auth/change-password.php — копия
-                 password-reset.php, тексты и ссылка «назад» свои, ключи
-                 changepass_* в lang/en, lang/ru). ПАРКОВАНА: роуты password.change
-                 нельзя добавить — config/routes.php заморожен (правки запрещены).
-                 Ссылка временно ведёт на сброс по почте. Чтобы фича заработала,
-                 команде бэка нужно добавить два замыкания (контракт — в шапке
-                 вида) и затем переключить эту ссылку на url('password.change'). -->
             <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">
-                    <!-- Замочек — SVG в стиле остальных иконок сайдбара (stroke: currentColor) -->
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                         <rect x="2.75" y="7" width="10.5" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
@@ -282,10 +210,6 @@
                 <span><?= $tr('common.sidebar.changepass') ?></span>
             </a>
 
-            <!-- Log out — ПОСЛЕДНИЙ пункт, отделён разделителем и покрашен
-                 в красный (.settings-menu__item--danger): фидбэк с превью —
-                 « Log out я жду внизу, выделенный, всё время тыкаю не туда».
-                 Подтверждение — та же плашка confirm-modal (data-confirm). -->
             <div class="settings-menu__divider" role="separator"></div>
 
             <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
@@ -297,7 +221,6 @@
                         data-confirm-ok="<?= $tr('common.sidebar.logout') ?>"
                         data-confirm-danger>
                     <span class="settings-menu__icon">
-                        <!-- «Выйти»: стрелка вправо из двери, в стиле остальных иконок -->
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                             <path d="M6.5 2.5H4a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 4 13.5h2.5"
                                   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
