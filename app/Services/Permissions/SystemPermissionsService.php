@@ -31,15 +31,24 @@ final class SystemPermissionsService
 {
     private const MOVE_MAX_ATTEMPTS = 3;
 
+    private readonly UsersPermissionsContextEnricher $usersContextEnricher;
+    private readonly RolesPermissionsContextEnricher $rolesContextEnricher;
+
     public function __construct(
         private readonly UnitOfWork $uow,
         private readonly SystemRoleRankService $roleRankService,
         private readonly SystemPermissionsRepository $repository,
         private readonly PermissionExceptionTranslator $exceptionTranslator,
-        private readonly UsersPermissionsContextEnricher $usersContextEnricher,
-        private readonly RolesPermissionsContextEnricher $rolesContextEnricher,
         private readonly Translator $translator
-    ) {}
+    ) {
+        $this->rolesContextEnricher = new RolesPermissionsContextEnricher(
+            $roleRankService,
+            $repository
+        );
+        $this->usersContextEnricher = new UsersPermissionsContextEnricher(
+            $roleRankService
+        );
+    }
 
     public function getRoles() : array
     {
@@ -178,7 +187,7 @@ final class SystemPermissionsService
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
-    public function getUsersWithContext(RolesUserListQuery $query, int $viewerId) : PagiantedList 
+    public function getUsersWithContext(RolesUserListQuery $query, int $viewerId) : PaginatedList 
     {
         $items = $this->getUsers($query);
         $enriched = $this->usersContextEnricher->enrich($items->getArray(), $viewerId);

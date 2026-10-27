@@ -36,4 +36,14 @@ readonly class UserData extends UserShortData
             createdAt: self::dt($row, $prefix . 'created_at')
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'email' => $this->email,
+            'bio' => $this->bio,
+            'createdAt' => $this->createdAt
+        ];
+    }
 }

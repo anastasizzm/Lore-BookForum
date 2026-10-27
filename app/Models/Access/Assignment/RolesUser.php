@@ -44,4 +44,12 @@ readonly class RolesUser extends UserShortData
             roles: $roles
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'roles' => $this->roles
+        ];
+    }
 }

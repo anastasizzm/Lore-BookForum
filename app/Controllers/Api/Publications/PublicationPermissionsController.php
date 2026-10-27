@@ -32,9 +32,13 @@ final class PublicationPermissionsController extends Controller
 
     public function getRoles(HttpContext $context, string $publicationId)
     {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
 
-        $items = $this->permissionsService->getRolesWithContext($publicationId);
+        $items = $this->permissionsService->getRolesWithContext($publicationId, $userId);
         return $this->jsonList($items);
     }
 
@@ -115,10 +119,14 @@ final class PublicationPermissionsController extends Controller
 
     public function getUsers(HttpContext $context, string $publicationId)
     {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
 
         $query = RolesUserListQuery::fromInput($context->request->query);
-        $list = $this->permissionsService->getUsersWithContext($publicationId, $query);
+        $list = $this->permissionsService->getUsersWithContext($publicationId, $query, $userId);
         return $this->jsonList($list->getArray(), [
             'page' => $list->getPage(),
             'pageSize' => $list->getPageSize(),

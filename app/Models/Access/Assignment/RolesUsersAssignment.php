@@ -29,4 +29,13 @@ readonly class RolesUsersAssignment extends BasicModel
             color: self::str($row, $prefix . 'color')
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'roleId' => $this->roleId,
+            'color' => $this->color
+        ];
+    }
 }

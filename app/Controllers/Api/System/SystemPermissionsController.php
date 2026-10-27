@@ -48,7 +48,11 @@ final class SystemPermissionsController extends Controller
 
     public function getRoles(HttpContext $context)
     {
-        $items = $this->permissionsService->getRolesWithContext();
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $items = $this->permissionsService->getRolesWithContext($userId);
         return $this->jsonList($items);
     }
 
@@ -121,8 +125,12 @@ final class SystemPermissionsController extends Controller
 
     public function getUsers(HttpContext $context)
     {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
         $query = RolesUserListQuery::fromInput($context->request->query);
-        $list = $this->permissionsService->getUsersWithContext($query);
+        $list = $this->permissionsService->getUsersWithContext($query, $userId);
         return $this->jsonList($list->getArray(), [
             'page' => $list->getPage(),
             'pageSize' => $list->getPageSize(),

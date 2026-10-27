@@ -18,7 +18,7 @@ readonly class SystemPermissions extends Dto
         public PublicationAccessRules $pubPermissions
     ){}
 
-    public function id() { return $this->role_id; }
+    public function id() : mixed { return $this->roleId; }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
@@ -34,4 +34,14 @@ readonly class SystemPermissions extends Dto
     }
 
     public function getRoleId() : int { return $this->roleId; }
+
+    public function toArray() : array 
+    {
+        return [
+            'role' => $this->role->toArray(),
+            'systemPermissions' => $this->systemPermissions->toArray(),
+            'postPermissions' => $this->postPermissions->toArray(),
+            'pubPermissions' => $this->pubPermissions->toArray(),
+        ];
+    }
 }

@@ -27,4 +27,12 @@ final readonly class UserRole extends BasicModel
             color: self::str($row, $prefix . 'color')
         );
     }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'color' => $this->color
+        ];
+    }
 }

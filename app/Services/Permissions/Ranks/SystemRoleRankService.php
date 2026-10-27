@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Permissions\Ranks;
 use App\Models\Enums\ServiceType;
+use App\Attributes\Inject;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Repositories\RuleProviders\Concrete\RuleProvider;
 use App\Repositories\Permissions\SystemPermissionsRepository;

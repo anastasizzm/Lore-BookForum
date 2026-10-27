@@ -28,13 +28,20 @@ final class RolesPermissionsContextEnricher
         }
         $ids = $this->ids($items);
 
-        $map = $this->rankService->canManageRoleMany($ids, $viewerId, $publicationId);
+        $map = $this->rankService->canManageRoleMany($viewerId, $ids, $publicationId);
         $versions = $this->repository->getRolesVersions($ids, $publicationId);
         return array_map(
-            fn(Dto $item) => new WithContext(
-                $item,
-                ($map[$item->id] ?? VersionedPermissionsContext::fromEmpty()),
-            ),
+            function (Dto $item) 
+            {
+                $mapped = $map[$item->id()] ?? NULL;
+                $version = $versions[$item->id()] ?? NULL;
+                return new WithContext(
+                    $item,
+                    $mapped === NULL || $version === NULL 
+                        ? VersionedPermissionsContext::fromEmpty() 
+                        : new VersionedPermissionsContext($mapped, $version)
+                );
+            },
             $items,
         );
     }

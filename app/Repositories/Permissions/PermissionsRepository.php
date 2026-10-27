@@ -44,8 +44,10 @@ class PermissionsRepository extends Repository
         $builder->addSelect("role_id, version")
             ->addWhere("role_id = ANY(:roleIds::int[])", [':roleIds' => ScriptParam::asStr('{' . implode(', ', $roles) . '}')]);
         
-        if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
-        else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+        if($publicationId === NULL) $builder->addWhere("publication_id IS NULL");
+        else $builder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
 
         $result = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

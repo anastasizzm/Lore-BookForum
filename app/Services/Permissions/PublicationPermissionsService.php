@@ -30,16 +30,25 @@ use PDO;
 final class PublicationPermissionsService
 {
     private const MOVE_MAX_ATTEMPTS = 3;
+
+    private readonly UsersPermissionsContextEnricher $usersContextEnricher;
+    private readonly RolesPermissionsContextEnricher $rolesContextEnricher;
     
     public function __construct(
         private readonly UnitOfWork $uow,
         private readonly PublicationRoleRankService $roleRankService,
         private readonly PublicationPermissionsRepository $repository,
         private readonly PermissionExceptionTranslator $exceptionTranslator,
-        private readonly UsersPermissionsContextEnricher $usersContextEnricher,
-        private readonly RolesPermissionsContextEnricher $rolesContextEnricher,
         private readonly Translator $translator
-    ) {}
+    ) {
+        $this->rolesContextEnricher = new RolesPermissionsContextEnricher(
+            $roleRankService,
+            $repository
+        );
+        $this->usersContextEnricher = new UsersPermissionsContextEnricher(
+            $roleRankService
+        );
+    }
 
     public function getRoles(int $publicationId) : array
     {
@@ -177,7 +186,7 @@ final class PublicationPermissionsService
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
-    public function getUsersWithContext(int $publicationId, RolesUserListQuery $query, int $viewerId) : PagiantedList 
+    public function getUsersWithContext(int $publicationId, RolesUserListQuery $query, int $viewerId) : PaginatedList 
     {
         $items = $this->getUsers($publicationId, $query);
         $enriched = $this->usersContextEnricher->enrich($items->getArray(), $viewerId, $publicationId);

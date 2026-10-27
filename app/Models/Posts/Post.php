@@ -23,7 +23,7 @@ final readonly class Post extends Dto
         public ?PublicationShort $publication = null,
     ) {}
 
-    public function id() { return $this->id; }
+    public function id() : mixed { return $this->id; }
 
     public static function fromRow(array $row, string $prefix = '') : self
     {

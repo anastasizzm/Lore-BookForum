@@ -19,19 +19,23 @@ final class UsersPermissionsContextEnricher
      * @param TItem[] $items
      * @return WithContext<TItem, PermissionsContext>[]
      */
-    public function enrichUsers(array $items, int $viewerId, ?int $publicationId = NULL): array
+    public function enrich(array $items, int $viewerId, ?int $publicationId = NULL): array
     {
         if ($items === []) {
             return [];
         }
         $ids = $this->ids($items);
 
-        $map = $this->rankService->canManageUserMany($ids, $viewerId, $publicationId);
+        $map = $this->rankService->canManageUserMany($viewerId, $ids, $publicationId);
         return array_map(
-            fn(Dto $item) => new WithContext(
-                $item,
-                ($map[$item->id] ?? PermissionsContext::fromEmpty()),
-            ),
+            function (Dto $item) 
+            {
+                $mapped = $map[$item->id()] ?? NULL;
+                return new WithContext(
+                    $item,
+                    $mapped === NULL ? PermissionsContext::fromEmpty() : new PermissionsContext($mapped)
+                );
+            },
             $items,
         );
     }

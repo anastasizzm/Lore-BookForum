@@ -29,4 +29,15 @@ readonly class UserShortData extends Dto
             avatar: self::str($row, $prefix . 'avatar'),
         );
     }
+
+    public function toArray() : array 
+    {
+        return [
+            'id' => $this->id,
+            'username' => $this->username,
+            'name' => $this->name,
+            'surname' => $this->surname,
+            'avatar' => $this->avatar
+        ];
+    }
 }
