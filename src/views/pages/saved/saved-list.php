@@ -32,6 +32,12 @@ $q = is_string($q) ? trim($q) : '';
 $statusParam = strtolower((string) ($_GET['status'] ?? ''));
 if (!in_array($statusParam, ['reading', 'ended'], true)) $statusParam = null;
 
+// Фильтр публикации ?p_status= (вкладки All/Public/Draft из library-filters).
+// Данных о статусе у элементов списка нет — бейдж «Draft» на карточках
+// статей рисуем, когда активна вкладка Draft (см. card-book.php).
+$pStatusParam = strtolower((string) ($_GET['p_status'] ?? ''));
+$draftFilter  = $isArticles && $pStatusParam === 'draft';
+
 $f = match ($statusParam) {
     'reading' => 'to-read',
     'ended'   => 'finished',
@@ -64,6 +70,10 @@ foreach ($items as $p) {
         'title'    => (string) $p->title,
         'authorId' => (int) ($creator->id ?? $p->getCreatorId()),
         'author'   => $author,
+        // Бейдж «Draft» — по активному фильтру страницы (не по полю модели:
+        // API статус не отдаёт). 'draft'/'': card-book рисует бейдж только
+        // для статей (гейт по $isArticle внутри partial).
+        'pubStatus' => $draftFilter ? 'draft' : '',
     ];
 }
 

@@ -17,6 +17,8 @@ readonly class UserShortData extends Dto
         public string  $avatar,
     ) {}
 
+    public function id() : mixed { return $this->id; }
+
     public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(
@@ -26,5 +28,16 @@ readonly class UserShortData extends Dto
             surname: self::str($row, $prefix . 'surname'),
             avatar: self::str($row, $prefix . 'avatar'),
         );
+    }
+
+    public function toArray() : array 
+    {
+        return [
+            'id' => $this->id,
+            'username' => $this->username,
+            'name' => $this->name,
+            'surname' => $this->surname,
+            'avatar' => $this->avatar
+        ];
     }
 }

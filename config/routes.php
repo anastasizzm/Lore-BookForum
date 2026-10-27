@@ -84,4 +84,9 @@ return function(Router $router)
 
     $router->get('/users/{userId}/books', [App\Controllers\Users\UsersController::class, 'getBooks'], 'users.profile.books', AuthPolicy::Auth);
     $router->get('/users/{userId}/articles', [App\Controllers\Users\UsersController::class, 'getArticles'], 'users.profile.articles', AuthPolicy::Auth);
+
+
+    // Additional
+    $router->get('/help', [App\Controllers\Additional\HelpController::class, 'getHelp'], 'help', AuthPolicy::Public);
+    $router->get('/privacy', [App\Controllers\Additional\HelpController::class, 'getPrivacy'], 'privacy', AuthPolicy::Public);
 };

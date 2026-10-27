@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/api/system/roles/{{roleId}}/position"
+method: PATCH
+headers:
+  x-csrf-token: "{{csrf_token}}"
+  If-Match: "2"
+body:
+  type: json
+  content: "{\r
+
+    \    \"aboveId\": 1,\r
+
+    \    \"belowId\": 0\r
+
+    }"
+order: 4000

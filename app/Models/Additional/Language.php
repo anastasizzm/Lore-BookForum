@@ -12,6 +12,8 @@ final readonly class Language extends Dto
         public bool $isActive
     ){}
 
+    public function id() : mixed { return $this->code; }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(

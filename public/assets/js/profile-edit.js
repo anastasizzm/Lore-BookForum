@@ -5,6 +5,14 @@
     return window.LoreI18n ? LoreI18n.t(key, params) : key;
   };
 
+  // Редирект без ?lang= терял выбранный язык: бэк читает локаль из query,
+  // поэтому адрес перехода прогоняем через LoreI18n.withLang.
+  var withLang = function (url) {
+    return window.LoreI18n && typeof LoreI18n.withLang === 'function'
+      ? LoreI18n.withLang(url)
+      : url;
+  };
+
   function initAvatarPicker() {
     document.querySelectorAll('.avatar-picker').forEach(function (picker) {
       var options = picker.querySelectorAll('.avatar-picker__option');
@@ -221,10 +229,10 @@
                 var notice = (data && data.data && data.data.message)
                   || 'Please verify your new email.';
                 if (window.Messages) window.Messages.show(notice, { type: 'success' });
-                setTimeout(function () { window.location.href = '/users/' + userId; }, 2200);
+                setTimeout(function () { window.location.href = withLang('/users/' + userId); }, 2200);
                 return;
               }
-              window.location.href = '/users/' + userId;
+              window.location.href = withLang('/users/' + userId);
               return;
             }
 

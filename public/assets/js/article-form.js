@@ -46,6 +46,14 @@
     return window.LoreI18n ? window.LoreI18n.t(key, params) : key;
   }
 
+  // Переход после сохранения без ?lang= сбрасывал язык — бэк определяет
+  // локаль по query, поэтому адрес прогоняем через LoreI18n.withLang.
+  function withLang(url) {
+    return window.LoreI18n && typeof window.LoreI18n.withLang === 'function'
+      ? window.LoreI18n.withLang(url)
+      : url;
+  }
+
   function escapeHtml(s) { return Text ? Text.escapeHtml(s) : String(s); }
   function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
   function debounce(fn, ms) {
@@ -1448,7 +1456,7 @@
 
           // адрес страницы редактирования: если окно прав закроют, перезагрузка вернёт в форму
           if (payload.edit_url && window.history && history.replaceState) {
-            history.replaceState(null, '', payload.edit_url);
+            history.replaceState(null, '', withLang(payload.edit_url));
           }
 
           if (silent) {
@@ -1466,8 +1474,8 @@
 
           // «Create draft»: открываем страницу статьи (там пометка «Черновик» и кнопка «Publish»)
           notify(t('js.article_draft_saved'), 'success');
-          window.location.href = payload.redirect
-            || (state.articleId ? '/articles/' + state.articleId : (response.headers.get('Location') || '/articles'));
+          window.location.href = withLang(payload.redirect
+            || (state.articleId ? '/articles/' + state.articleId : (response.headers.get('Location') || '/articles')));
           return true;
         }
 

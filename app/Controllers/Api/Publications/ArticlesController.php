@@ -86,14 +86,4 @@ final class ArticlesController extends Controller
         $this->articlesService->unrate($userId, $articleId);
         return $this->jsonEmpty(204);
     }
-
-    public function getCommonRules(HttpContext $context)
-    {
-        $userId = $context->attribute(Constants::USER_ID_ATTR);
-        if (empty($userId))
-            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
-
-        $rules = $this->ruleProvider->getRule($userId);
-        return $this->jsonObject($rules);
-    }
 }
