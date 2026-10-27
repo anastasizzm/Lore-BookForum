@@ -274,7 +274,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
-  <script src="<?= $view->asset('js/book-rights.js') ?>"></script>
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -332,7 +331,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            ============================================================ -->
       <section class="book-step" data-step="1">
         <header class="book-step__header">
-          <!-- Когда появится шаг 3 «Роли» — заменить на 1 / 3 -->
           <span class="book-step__num">1 / 2</span>
           <h2 class="book-step__title"><?= $tr('common.bookform.step1_title') ?></h2>
         </header>
@@ -512,7 +510,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            ============================================================ -->
       <section class="book-step" data-step="2" hidden>
         <header class="book-step__header">
-          <!-- Когда появится шаг 3 «Роли» — заменить на 2 / 3 -->
           <span class="book-step__num">2 / 2</span>
           <h2 class="book-step__title"><?= $tr('common.bookform.step2_title') ?></h2>
         </header>
@@ -610,21 +607,6 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?= $errorBox('files') ?>
         </div>
 
-        <!-- ============================================================
-             СПИСКИ АВТОРОВ/РЕДАКТОРОВ (11.3) переехали в окно
-             публикации — partial book-publish-dialog (ниже, внутри
-             <form>), открывается кнопкой Publish в нижней панели.
-             ============================================================ -->
-
-        <!-- Кнопки действий ушли в общую нижнюю панель
-             .book-form__actions (11.4) — см. ниже, перед </form>. -->
-
-        <!-- ============================================================
-             Невалидные данные (клиентские или 422 от бэка) возвращают
-             пользователя на шаг с ошибкой: сначала первая страница
-             (порядок полей в DOM), затем он сам перейдёт на вторую —
-             см. focusFirstInvalid в book-form.js.
-             ============================================================ -->
       </section>
 
       <!-- ============================================================
@@ -646,9 +628,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            блокируется в book-form.js — endpoint'а обновления нет,
            а /api/books/new только создаёт.
            ============================================================ -->
-      <div class="book-form__actions"
-           data-rules-kind="books"
-           data-rules-owner="<?= $isEdit ? '1' : '0' ?>">
+      <div class="book-form__actions">
         <button type="button" class="btn btn--secondary" data-step-prev hidden>
           ← <?= $tr('common.bookform.back') ?>
         </button>
@@ -656,22 +636,28 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?php if ($isEdit): ?>
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <!-- data-rule="edit" -> правила updateMeta || updateContent (или владелец) -->
-            <button class="btn btn--primary is-disabled" type="submit" data-submit-save
-                    data-rule="edit" aria-disabled="true" tabindex="-1">
+            
+            <button class="btn btn--primary" type="submit" data-submit-save
+                    data-requires="publication.edit"
+                    data-requires-kind="book"
+                    data-requires-owner="1"
+                    hidden>
               <?= $tr('common.bookform.save') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            <button class="btn btn--secondary is-disabled" type="submit" data-submit-draft
-                    data-rule="create" aria-disabled="true" tabindex="-1">
+            
+            <button class="btn btn--secondary" type="submit" data-submit-draft
+                    data-requires="publication.create"
+                    data-requires-kind="book"
+                    hidden>
               <?= $tr('common.bookform.create_draft') ?>
             </button>
-            <!-- Publish (11.3): открывает окно выбора авторов/редакторов
-                 (book-publish-dialog); отправка — кнопкой внутри окна.
-                 data-rule="publish_new" -> правило create (новая публикация). -->
-            <button class="btn btn--primary is-disabled" type="button" data-publish-open
-                    data-rule="publish_new" aria-disabled="true" tabindex="-1">
+            
+            <button class="btn btn--primary" type="button" data-publish-open
+                    data-requires="publication.publishNew"
+                    data-requires-kind="book"
+                    hidden>
               <?= $tr('common.bookform.publish') ?>
             </button>
           <?php endif; ?>

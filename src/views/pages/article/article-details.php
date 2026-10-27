@@ -654,9 +654,6 @@ if (!empty($iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-  <!-- book-rights.js — АСИНХРОННАЯ подгрузка прав: включает/гасит пункты
-       меню «три точки» (шапка) -->
-  <script src="/assets/js/book-rights.js"></script>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
