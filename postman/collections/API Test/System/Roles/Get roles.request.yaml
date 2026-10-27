@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{base_url}}/api/system/roles"
+method: GET
+order: 1000

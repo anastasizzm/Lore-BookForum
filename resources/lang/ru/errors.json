@@ -34,7 +34,8 @@
         "search_failed": "Поиск не удался. Попробуйте ещё раз.",
         "search_failed_http": "Поиск не выполнен (HTTP :status).",
         "users_load_failed": "Не удалось загрузить список пользователей.",
-        "delete_failed": "Не удалось удалить (HTTP :status)."
+        "delete_failed": "Не удалось удалить (HTTP :status).",
+        "in_use": "Ещё используется"
     },
     "validation": {
         "invalid_login": "Неверный логин или email",
@@ -57,7 +58,16 @@
         "doi_start": "DOI должен начинаться с «10.» — :hint",
         "doi_prefix_digits": "После «10.» в префиксе DOI должны идти цифры — :hint",
         "doi_suffix_digits": "Суффикс DOI должен состоять из цифр — :hint",
-        "doi_missing_slash": "В DOI после префикса пропущен «/» — :hint"
+        "doi_missing_slash": "В DOI после префикса пропущен «/» — :hint",
+        "version_invalid": "Неверная версия"
+    },
+    "roles": {
+        "rank_mismatch": "Верхний элемент должен находиться выше нижнего",
+        "rank_far": "Соседи слишком далеко друг от друга",
+        "position_taken": "Не получилось найти пустую позицию",
+        "position_changed": "Позиция изменена во время сохранения",
+        "insufficient_role": "Недостаточно прав",
+        "last_role": "Нельзя удалить последнюю роль"
     },
     "articles": {
         "pub_exists": "Статья для этой публикации уже существует",

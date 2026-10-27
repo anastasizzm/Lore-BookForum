@@ -48,7 +48,7 @@ final class Container
     public function getKeyed(mixed $key, string $id): object
     {
         $savedId = $this->generateKey($key, $id);
-
+        
         if (isset($this->instances[$savedId])) {
             return $this->instances[$savedId];
         }

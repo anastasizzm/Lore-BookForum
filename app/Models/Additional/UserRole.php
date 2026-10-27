@@ -4,12 +4,18 @@ declare(strict_types=1);
 namespace App\Models\Additional;
 
 use App\Models\BasicModel;
+use DateTimeImmutable;
 
-final readonly class Language extends BasicModel
+final readonly class UserRole extends BasicModel
 {
     public function __construct(
+        int $id, 
+        string $title,
+        DateTimeImmutable $createdAt,
         public string $color
-    ){}
+    ){
+        parent::__construct($id, $title, $createdAt);
+    }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
@@ -20,5 +26,13 @@ final readonly class Language extends BasicModel
             createdAt: $parent->createdAt,
             color: self::str($row, $prefix . 'color')
         );
+    }
+
+    public function toArray() : array 
+    {
+        $parent = parent::toArray();
+        return $parent + [
+            'color' => $this->color
+        ];
     }
 }

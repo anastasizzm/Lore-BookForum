@@ -17,6 +17,9 @@ final readonly class UserRead extends Dto
         public bool               $isFinished,
         public DateTimeImmutable  $lastReadAt,
     ) {}
+    
+    /** @return [int, int] */
+    public function id() : mixed { return [$this->userId, $this->publicationId]; }
 
     /** @param array<string, mixed> $row */
     public static function fromRow(array $row, string $prefix = ''): self

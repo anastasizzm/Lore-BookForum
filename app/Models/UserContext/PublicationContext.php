@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace App\Models\UserContext;
 
 use App\Models\Enums\ReadingStatus;
-use App\Models\Dto;
+use App\Models\RowModel;
 use App\Models\Access\Rules\PublicationAccessRules;
 
-final readonly class PublicationContext extends Dto implements UserContextInterface
+final readonly class PublicationContext extends RowModel implements UserContextInterface
 {
     public function __construct(
         public bool $isSaved,

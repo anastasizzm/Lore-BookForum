@@ -23,6 +23,7 @@ final class ErrorCodes
     public const INSUFFICIENT_PERMS = 'insufficient_permissions';
 
     public const INVALID_ENCTYPTION = 'invalid_encryption';
+    public const INVALID_HEADER = 'invalid_header';
     
     public const UNHANDLED_EX = 'unhandled';
     public const ALREADY_DONE = 'already_done';

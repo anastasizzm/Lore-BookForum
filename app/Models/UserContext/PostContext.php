@@ -2,10 +2,10 @@
 declare(strict_types=1);
 
 namespace App\Models\UserContext;
-use App\Models\Dto;
+use App\Models\RowModel;
 use App\Models\Access\Rules\PostAccessRules;
 
-final readonly class PostContext extends Dto implements UserContextInterface
+final readonly class PostContext extends RowModel implements UserContextInterface
 {
     public function __construct(
         public bool $isLiked,

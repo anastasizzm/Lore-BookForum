@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/system/users?include=roles"
+method: GET
+queryParams:
+  - key: include
+    value: roles
+    disabled: false
+    description: ""
+order: 1000

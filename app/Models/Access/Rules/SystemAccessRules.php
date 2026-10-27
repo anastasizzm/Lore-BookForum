@@ -3,15 +3,18 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
 use App\Models\Access\Operations\AccessOperation;
+use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\System\AdminAccessOperation;
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
-use App\Models\Dto;
+use App\Forms\Form;
+use App\Models\RowModel;
 
-readonly class SystemAccessRules extends Dto implements OperationChecker
+readonly class SystemAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
         public bool $manageAccounts,
@@ -35,9 +38,13 @@ readonly class SystemAccessRules extends Dto implements OperationChecker
             $operation instanceof ManageAdditionalsSystemOperation => $this->manageAdditionals,
             $operation instanceof ManagePeopleSystemOperation => $this->managePeople,
             $operation instanceof ManageRolesSystemOperation => $this->manageRoles,
+            $operation instanceof AnySystemOperation => $this->hasAny(),
             default => false,
         };
     }
+
+    public function hasManagePeople() : bool { return $this->managePeople; }
+    public function hasManageRoles() : bool { return $this->manageRoles; }
 
     public static function fromEmpty() : self 
     {
@@ -53,6 +60,16 @@ readonly class SystemAccessRules extends Dto implements OperationChecker
             manageAdditionals: self::bool($row, $prefix . 'manage_additionals'),
             managePeople: self::bool($row, $prefix . 'manage_ppl'),
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
+        );
+    }
+
+    public static function fromInput(array $form) : self 
+    {
+        return new self(
+            manageAccounts: QueryParser::optionalBool($form, 'manageAccounts') ?? false,
+            manageAdditionals: QueryParser::optionalBool($form, 'manageAdditionals') ?? false,
+            managePeople: QueryParser::optionalBool($form, 'managePeople') ?? false,
+            manageRoles: QueryParser::optionalBool($form, 'manageRoles') ?? false,
         );
     }
 
