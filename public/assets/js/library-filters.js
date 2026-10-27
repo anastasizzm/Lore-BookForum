@@ -197,11 +197,20 @@
       ? `<span class="card-book__status card-book__status--${rsKey}">${esc(rsLabel)}</span>`
       : '';
 
+    // Черновик статьи — бейдж «Draft». Статус публикации API не отдаёт,
+    // поэтому бейдж идёт по активному фильтру списка: на вкладке Draft
+    // (state.p_status === 'draft') показывается целиком из черновиков.
+    // Текст — drafts.badge («Draft»/«Черновик»), тот же ключ, что у
+    // .card-draft__badge на странице черновиков.
+    const draftBadge = IS_ARTICLES && state.p_status === 'draft'
+      ? `<span class="card-book__status card-book__status--draft">${esc(tr('drafts.badge', 'Draft'))}</span>`
+      : '';
+
     return `
 <article class="card-base card-book">
   <div class="card-book__cover${cover ? '' : ' cover--empty'}">${cover
     ? `<img src="${esc(cover)}" alt="${esc(b.title)}" loading="lazy">`
-    : ''}${statusBadge}</div>
+    : ''}${statusBadge}${draftBadge}</div>
   <button type="button" class="btn-icon btn-icon--circle card-book__save${isSaved ? ' is-active' : ''}"
           ${saveAttr}="${id}"
           data-save-url="${esc(API + '/' + id + '/save')}"

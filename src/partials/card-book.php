@@ -5,6 +5,9 @@
  * @param string $saveType - 'book' | 'article' — куда уходит Save (/api/books|articles/{id}/save)
  * @param string $readingStatus - 'none' | 'reading' | 'ended' (ReadingStatus из контекста юзера);
  *                   бейдж на обложке только у книг, 'none' — без бейджа
+ * @param string $pubStatus - 'draft' | '' — значение фильтра ?p_status= активной
+ *                   вкладки (All/Public/Draft), а не поле модели: API статус
+ *                   не отдаёт. Бейдж «Draft» рисуется только у статей.
  */
 $id       = (int)($id       ?? 0);
 $cover    = (string)($cover    ?? '');
@@ -38,6 +41,11 @@ $statusLabel   = match ($readingStatus) {
     'ended'   => $view->t('common.filter.finished'),
     default   => '',
 };
+
+// Черновик статьи: бейдж «Draft» — светлая плашка, как на странице Drafts
+// (src/partials/card-draft.php / drafts.css .card-draft__badge).
+// $pubStatus приходит из вида-вызывающего = активный фильтр ?p_status=.
+$isDraft = $isArticle && (string) ($pubStatus ?? '') === 'draft';
 ?>
 <article class="card-base card-book">
 
@@ -50,6 +58,9 @@ $statusLabel   = match ($readingStatus) {
     <?php endif; ?>
     <?php if ($statusLabel !== ''): ?>
       <span class="card-book__status card-book__status--<?= $view->e($readingStatus) ?>"><?= $view->e($statusLabel) ?></span>
+    <?php endif; ?>
+    <?php if ($isDraft): ?>
+      <span class="card-book__status card-book__status--draft"><?= $view->e($view->t('common.drafts.badge')) ?></span>
     <?php endif; ?>
   </div>
 
