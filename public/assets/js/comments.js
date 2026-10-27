@@ -240,9 +240,24 @@
     return card ? (Number(card.dataset.cuId || 0) || 0) : 0;
   }
 
+  /**
+   * Меню «три точки» у комментария/ответа/поста (partial comment-menu.php).
+   * Видно ВСЕМ: внутри есть «Пожаловаться». Пункт «Удалить» — только автору
+   * (id автора лежит в data-author-id корня; без него — не показываем,
+   * чтобы не отдавать кнопку, которая ответит 403).
+   */
+  function syncMenu(wrap, authorId) {
+    if (!wrap) return;
+    var own = !!(Number(authorId) && Number(authorId) === myId());
+    var del = one('[data-c-delete]', wrap);
+    if (del) del.hidden = !own;
+    // Удалённый комментарий (markDeleted) врап прячет сам — его не трогаем
+    var node = wrap.closest('[data-deleted]');
+    wrap.hidden = !!node;
+  }
+
   function syncOwnMenu(node, authorId) {
-    var wrap = one('[data-c-menu-wrap]', node);
-    if (wrap) wrap.hidden = !(Number(authorId) && Number(authorId) === myId());
+    syncMenu(one('[data-c-menu-wrap]', node), authorId);
   }
 
   function syncPostMenu(card) {
@@ -253,8 +268,21 @@
       if (!wraps[i].closest('[data-feed-comments]')) { wrap = wraps[i]; break; }
     }
     if (!wrap) return;
-    var authorId = Number((card.dataset && card.dataset.authorId) || 0);
-    wrap.hidden = !(authorId && authorId === myId());
+    syncMenu(wrap, (card.dataset && card.dataset.authorId) || 0);
+  }
+
+  /**
+   * Прогон по уже отрисованному DOM: серверные комментарии/ответы и посты
+   * (partials + card-feed.php) иначе останутся со скрытым врапом — раньше
+   * меню показывалось только «своим», теперь в нём есть «Пожаловаться».
+   */
+  function initMenus() {
+    each(document.querySelectorAll('[data-c-menu-wrap]'), function (wrap) {
+      // Порядок важен: ответ живёт ВНУТРИ карточки комментария, но автор у
+      // него свой — сначала ищем ближайший .comment-reply / [data-comment-id]
+      var node = wrap.closest('.comment-reply, [data-comment-id], .card-feed, .comment-card');
+      syncMenu(wrap, node ? (node.dataset && node.dataset.authorId) || 0 : 0);
+    });
   }
 
   function repliesCountOf(card, list) {
@@ -772,6 +800,14 @@
     }
   });
 
+  // Серверную разметку (списки в book/article details, лента, профиль)
+  // никто не синхронизирует — гоним меню по ней один раз на старте
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMenus);
+  } else {
+    initMenus();
+  }
+
   window.LoreComments = {
     API_POSTS: API_POSTS,
     COMMENT_MAX: COMMENT_MAX,
@@ -790,6 +826,7 @@
     myId: myId,
     syncOwnMenu: syncOwnMenu,
     syncPostMenu: syncPostMenu,
+    initMenus: initMenus,
     markDeleted: markDeleted,
     bumpCommentCount: bumpCommentCount,
     pagerState: pagerState,

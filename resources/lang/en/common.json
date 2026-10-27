@@ -316,6 +316,30 @@
         "publish_confirm": "Publish",
         "save_failed": "Could not save rights (HTTP :status)."
     },
+    "report": {
+        "title": "Report",
+        "menu": "Report",
+        "hint": "Tell us what is wrong — a moderator will review your report.",
+        "kind_book": "Book",
+        "kind_article": "Article",
+        "kind_post": "Post",
+        "kind_comment": "Comment",
+        "kind_reply": "Reply",
+        "reasons_legend": "Reason",
+        "reason_spam": "Spam or advertising",
+        "reason_abuse": "Offence or harassment",
+        "reason_nudity": "Adult content",
+        "reason_plagiarism": "Plagiarism / stolen content",
+        "reason_spoiler": "Spoilers without a warning",
+        "reason_other": "Something else",
+        "comment_label": "Details (optional)",
+        "comment_ph": "A few words to help the moderator…",
+        "no_reason": "Choose a reason first.",
+        "send": "Send report",
+        "sending": "Sending…",
+        "sent": "Report sent. Thanks!",
+        "failed": "Could not send the report. Try again."
+    },
     "message": {
         "title": "Message — Lore"
     },

@@ -10,6 +10,8 @@
  * @param string $type    - 'book' | 'article'
  * @param int    $id      - id публикации
  * @param bool   $isOwner - текущий пользователь — автор/владелец публикации
+ * @param string $title   - название публикации (подпись цели жалобы в
+ *                          плашке «Пожаловаться»; необязательно)
  *
  * Три точки открываются на глобальных обработчиках details-menu.js
  * (тот же приём «открыть/закрыть/Escape/клик мимо», что у меню
@@ -32,10 +34,16 @@
  *          403/404 — нет прав или книга уже удалена
  *   DELETE /api/articles/{id}  → 204, та же семантика
  *   Удаление выполняет details-menu.js; ошибки показывает Messages.
+ *
+ * ПУНКТ «Пожаловаться» — открывает общую плашку report-modal.php
+ * (report-modal.js, window.ReportModal). Он НЕ имеет data-rule: жалобу
+ * может оставить любой авторизованный пользователь, в том числе автор
+ * публикации, поэтому book-rights.js его не гасит.
  */
-$type    = $type ?? 'book';
-$id      = (int) ($id ?? 0);
-$isOwner = !empty($isOwner);
+$type     = $type ?? 'book';
+$id       = (int) ($id ?? 0);
+$isOwner  = !empty($isOwner);
+$title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
 $editHref  = ($isBook ? '/books/' : '/articles/') . $id . '/edit';
@@ -87,5 +95,16 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
             data-delete-url="<?= $view->e($deleteUrl) ?>"
             data-delete-redirect="<?= $view->e($listHref) ?>"
             data-delete-kind="<?= $view->e($type) ?>"><?= $view->e($view->t('common.js.delete')) ?></button>
+
+    <!-- Пункт «Пожаловаться»: без data-rule (доступен всем, book-rights.js
+         его не трогает), открывает report-modal.php через report-modal.js. -->
+    <button type="button"
+            class="details-menu__item"
+            data-report-open
+            data-report-kind="<?= $view->e($type) ?>"
+            data-report-id="<?= $id ?>"
+            <?= $title !== '' ? 'data-report-label="' . $view->e($title) . '"' : '' ?>>
+      <?= $view->e($view->t('common.report.menu')) ?>
+    </button>
   </div>
 </div>

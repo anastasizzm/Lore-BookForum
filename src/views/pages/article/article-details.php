@@ -201,7 +201,13 @@ if (!empty($iconId)) {
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
          по образцу book-details. Пункты гасятся по правилам
          /api/articles/rules (book-rights.js), $isOwnerPub — owner-override. -->
-    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId, 'isOwner' => $isOwnerPub]); ?>
+    <?php $view->include('details-menu', [
+        'type'    => 'article',
+        'id'      => $articleId,
+        'isOwner' => $isOwnerPub,
+        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
+        'title'   => (string) ($article->title ?? ''),
+    ]); ?>
   </div>
 
   <div class="book-details">
@@ -437,11 +443,15 @@ if (!empty($iconId)) {
     <div class="stack" data-comment-list>
       <?php foreach ($comments as $comment): ?>
         <?php
-          $cId    = (int) ($comment['id'] ?? 0);
-          $cLikes = (int) ($comment['likes'] ?? 0);
-          $cLiked = (bool) ($comment['liked'] ?? false);
+          $cId       = (int) ($comment['id'] ?? 0);
+          $cLikes    = (int) ($comment['likes'] ?? 0);
+          $cLiked    = (bool) ($comment['liked'] ?? false);
+          // Автор — нужен comments.js, чтобы «Удалить» в меню «три точки»
+          // показывало только автору (само меню видно всем: там есть «Пожаловаться»)
+          $cAuthorId = (int) ($comment['userId'] ?? 0);
         ?>
-        <div class="comment-card" data-page="1"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
+        <div class="comment-card" data-page="1"
+             data-author-id="<?= $cAuthorId ?>"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
             <?php
             $cAvatar = (string) ($comment['userAvatar'] ?? '');
@@ -463,21 +473,8 @@ if (!empty($iconId)) {
                 </div>
 
                 <!-- Лайк уходит вниз (рядом с Reply); здесь — «три точки»:
-                     меню удаления, раскрывается НАД кнопкой; только для автора -->
-                <div class="comment-card__actions" data-c-menu-wrap hidden>
-                  <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                          aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <circle cx="8" cy="3" r="1.5"/>
-                      <circle cx="8" cy="8" r="1.5"/>
-                      <circle cx="8" cy="13" r="1.5"/>
-                    </svg>
-                  </button>
-                  <div class="comment-card__menu" data-c-menu hidden>
-                    <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                            data-c-delete><?= $tr('common.js.delete') ?></button>
-                  </div>
-                </div>
+                     удаление (только автор) + «Пожаловаться» (всем) -->
+                <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
               </div>
 
               <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
@@ -536,22 +533,9 @@ if (!empty($iconId)) {
               <div class="comment-card__text" data-c-text></div>
             </div>
 
-            <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
-                 (comments.js скрывает врап, если authorId != мой id) -->
-            <div class="comment-card__actions" data-c-menu-wrap hidden>
-              <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                      aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <circle cx="8" cy="3" r="1.5"/>
-                  <circle cx="8" cy="8" r="1.5"/>
-                  <circle cx="8" cy="13" r="1.5"/>
-                </svg>
-              </button>
-              <div class="comment-card__menu" data-c-menu hidden>
-                <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                        data-c-delete><?= $tr('common.js.delete') ?></button>
-              </div>
-            </div>
+            <!-- Меню «три точки»: удаление (только автор) + «Пожаловаться»
+                 (всем). Видимость пунктов гонит comments.js -->
+            <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
           </div>
 
           <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
@@ -610,22 +594,9 @@ if (!empty($iconId)) {
             <div class="comment-reply__author"></div>
             <div class="comment-reply__text"></div>
           </div>
-          <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
-               (comments.js скрывает врап, если authorId != мой id) -->
-          <div class="comment-card__actions comment-reply__actions" data-c-menu-wrap hidden>
-            <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                    aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="8" cy="3" r="1.5"/>
-                <circle cx="8" cy="8" r="1.5"/>
-                <circle cx="8" cy="13" r="1.5"/>
-              </svg>
-            </button>
-            <div class="comment-card__menu" data-c-menu hidden>
-              <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                      data-c-delete><?= $tr('common.js.delete') ?></button>
-            </div>
-          </div>
+          <!-- Меню ответа «три точки»: удаление (только автор) + «Пожаловаться»
+               (всем). Видимость пунктов гонит comments.js -->
+          <?php $view->include('comment-menu', ['variant' => 'reply']); ?>
         </div>
         <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
         <div class="comment-card__footer comment-reply__footer">

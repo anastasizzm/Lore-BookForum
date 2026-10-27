@@ -1757,7 +1757,8 @@ a.user-mention:focus-visible {
   min-width: 0;
 }
 
-/* ---------- Меню «три точки» (только автор комментария/ответа) ---------- */
+/* ---------- Меню «три точки» (пост/комментарий/ответ: удаление — автору,
+   «Пожаловаться» — всем; разметка — partials/comment-menu.php) ---------- */
 
 /* Контейнер относительно — меню позиционируется НАД кнопкой */
 .comment-card__actions {
@@ -1808,6 +1809,13 @@ a.user-mention:focus-visible {
 .comment-card__menu-item:hover,
 .comment-card__menu-item:focus-visible {
   background: var(--color-bg-subtle, #F3F6FB);
+}
+
+/* [hidden] обязан побеждать author-правило display:block выше
+   (base.css глушит hidden только на >=1024px): так у не-автора
+   исчезает пункт «Удалить», а «Пожаловаться» остаётся. */
+.comment-card__menu-item[hidden] {
+  display: none;
 }
 
 .comment-card__menu-item--danger {
