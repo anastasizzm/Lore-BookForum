@@ -11,6 +11,7 @@ use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 use App\Models\Scripts\ScriptParam;
 use App\Services\Configuration\UnitOfWork;
+use PDO;
 
 final class GenresRepository extends Repository
 {
@@ -51,6 +52,19 @@ final class GenresRepository extends Repository
         );
 
         return $items;
+    }
+
+    public function retrieve(int $genreId) : ?BasicModel 
+    {
+        $this->director->startTempFilter()
+            ->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addConcreteTempFilter($genreId)->setLimitTemp(1);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? NULL : BasicModel::fromRow($row);
     }
 
     public function create(array $translations) : int

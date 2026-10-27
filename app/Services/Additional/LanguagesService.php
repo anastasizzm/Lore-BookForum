@@ -11,6 +11,7 @@ use App\Forms\Additionals\LanguageForm;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
 use App\Lib\I18n\Translator;
+use App\Models\Additional\Language;
 use App\Exceptions\Translators\LanguageExceptionTranslator;
 use App\ErrorCodes;
 
@@ -41,6 +42,7 @@ final class LanguagesService
         $model = $this->langRepo->retrieve($code);
         if ($model === NULL)
             throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+        return $model;
     }
 
     public function create(LanguageForm $form) : string 

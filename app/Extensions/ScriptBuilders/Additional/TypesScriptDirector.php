@@ -35,6 +35,13 @@ final class TypesScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("types.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function addTypeSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();

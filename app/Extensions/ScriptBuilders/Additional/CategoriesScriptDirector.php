@@ -55,6 +55,13 @@ final class CategoriesScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("categories.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function addOrderTemp(BasicModelSortBy $sort)
     {
         if (!$this->isTempStarted()) $this->startTempFilter();

@@ -36,6 +36,13 @@ final class GenresController extends Controller
             ]);
     }
 
+    public function retrieve(HttpContext $context, string $genreId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $genreId], 'id');
+        $model = $this->genresService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function create(HttpContext $context)
     {
         $form = GenreForm::fromInput($context->request->body());

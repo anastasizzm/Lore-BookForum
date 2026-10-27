@@ -11,6 +11,7 @@ use App\Models\Additional\UserRole;
 use App\Models\Enums\BasicModelSortBy;
 use App\Models\Scripts\ScriptParam;
 use App\Services\Configuration\UnitOfWork;
+use PDO;
 
 final class RolesRepository extends Repository
 {
@@ -33,7 +34,7 @@ final class RolesRepository extends Repository
     ) : array
     {
         $this->director->startTempFilter()
-            ->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addRoleSelectTemp($this->translator->locale(), $this->translator->fallback())
             ->addActiveTempFilter();
 
         if (!empty($search))
@@ -51,6 +52,19 @@ final class RolesRepository extends Repository
         );
 
         return $items;
+    }
+
+    public function retrieve(int $roleId) : ?UserRole 
+    {
+        $this->director->startTempFilter()
+            ->addRoleSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addConcreteTempFilter($roleId)->setLimitTemp(1);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? NULL : UserRole::fromRow($row);
     }
 
     public function checkSystem(int $id) : ?bool 

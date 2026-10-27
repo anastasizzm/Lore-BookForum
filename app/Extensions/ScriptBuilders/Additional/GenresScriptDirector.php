@@ -72,6 +72,13 @@ final class GenresScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("genres.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function buildTempFilter() : ScriptData
     {
         return $this->buildTemp();

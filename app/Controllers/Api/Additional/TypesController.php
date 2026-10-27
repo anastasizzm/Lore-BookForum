@@ -44,6 +44,13 @@ final class TypesController extends Controller
         return $this->jsonCreatedId($id);
     }
 
+     public function retrieve(HttpContext $context, string $typeId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $typeId], 'id');
+        $model = $this->typesService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function update(HttpContext $context, string $typeId)
     {
         $id = RouteParamParser::positiveInt(['id' => $typeId], 'id');

@@ -44,6 +44,13 @@ final class CategoriesController extends Controller
         return $this->jsonCreatedId($id);
     }
 
+    public function retrieve(HttpContext $context, string $categoryId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
+        $model = $this->categoriesService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function update(HttpContext $context, string $categoryId)
     {
         $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');

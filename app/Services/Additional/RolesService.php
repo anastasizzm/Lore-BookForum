@@ -6,6 +6,7 @@ namespace App\Services\Additional;
 use App\Repositories\Additional\RolesRepository;
 use App\Models\Queries\Additional\BasicModelListQuery;
 use App\Forms\Translations\Additionals\UserRoleForm;
+use App\Models\Additional\UserRole;
 use App\Validators\Additionals\UserRoleFormValidator;
 use App\Lib\Settings\Settings;
 use App\Lib\I18n\Translator;
@@ -48,6 +49,13 @@ final class RolesService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $roleId) : UserRole 
+    {
+        $model = $this->rolesRepo->retrieve($roleId);
+        if ($model === NULL) throw new NotFoundException($this->i18n->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+        return $model;
     }
 
     public function create(UserRoleForm $form) : int

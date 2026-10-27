@@ -36,6 +36,13 @@ final class RolesController extends Controller
             ]);
     }
 
+    public function retrieve(HttpContext $context, string $roleId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $roleId], 'id');
+        $model = $this->rolesService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function create(HttpContext $context)
     {
         $form = UserRoleForm::fromInput($context->request->body());

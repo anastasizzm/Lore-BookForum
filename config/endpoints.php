@@ -76,27 +76,32 @@ return function(Router $router)
 
     // Additional
     $router->get('/api/additional/genres', [App\Controllers\Api\Additional\GenresController::class, 'list'], 'api.genres', AuthPolicy::Auth);
+    $router->get('/api/additional/genres/{genreId}', [App\Controllers\Api\Additional\GenresController::class, 'retrieve'], 'api.genres.retrieve', AuthPolicy::Auth);
     $router->post('/api/additional/genres', [App\Controllers\Api\Additional\GenresController::class, 'create'], 'api.genres.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/genres/{genreId}', [App\Controllers\Api\Additional\GenresController::class, 'update'], 'api.genres.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/genres/{genreId}', [App\Controllers\Api\Additional\GenresController::class, 'delete'], 'api.genres.delete', ManageAdditionalsSystemOperation::class);
     
     $router->get('/api/additional/categories', [App\Controllers\Api\Additional\CategoriesController::class, 'list'], 'api.categories', AuthPolicy::Auth);
+    $router->get('/api/additional/categories/{categoryId}', [App\Controllers\Api\Additional\CategoriesController::class, 'retrieve'], 'api.categories.retrieve', AuthPolicy::Auth);
     $router->post('/api/additional/categories', [App\Controllers\Api\Additional\CategoriesController::class, 'create'], 'api.categories.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/categories/{categoryId}', [App\Controllers\Api\Additional\CategoriesController::class, 'update'], 'api.categories.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/categories/{categoryId}', [App\Controllers\Api\Additional\CategoriesController::class, 'delete'], 'api.categories.delete', ManageAdditionalsSystemOperation::class);
     
     $router->get('/api/additional/types', [App\Controllers\Api\Additional\TypesController::class, 'list'], 'api.types', AuthPolicy::Auth);
+    $router->get('/api/additional/types/{typeId}', [App\Controllers\Api\Additional\TypesController::class, 'retrieve'], 'api.types.retrieve', AuthPolicy::Auth);
     $router->post('/api/additional/types', [App\Controllers\Api\Additional\TypesController::class, 'create'], 'api.types.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/types/{typeId}', [App\Controllers\Api\Additional\TypesController::class, 'update'], 'api.types.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/types/{typeId}', [App\Controllers\Api\Additional\TypesController::class, 'delete'], 'api.types.delete', ManageAdditionalsSystemOperation::class);
     
     $router->get('/api/additional/languages', [App\Controllers\Api\Additional\LanguagesController::class, 'list'], 'api.languages', AuthPolicy::Auth);
+    $router->get('/api/additional/languages/{code}', [App\Controllers\Api\Additional\LanguagesController::class, 'retrieve'], 'api.languages.retrieve', AuthPolicy::Auth);
     $router->get('/api/additional/languages/fallback', [App\Controllers\Api\Additional\LanguagesController::class, 'fallback'], 'api.languages.fallback', AuthPolicy::Auth);
     $router->post('/api/additional/languages',  [App\Controllers\Api\Additional\LanguagesController::class, 'create'], 'api.languages.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/languages/{code}',  [App\Controllers\Api\Additional\LanguagesController::class, 'update'], 'api.languages.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/languages/{code}',  [App\Controllers\Api\Additional\LanguagesController::class, 'delete'], 'api.languages.delete', ManageAdditionalsSystemOperation::class);
 
     $router->get('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'list'], 'api.roles', AuthPolicy::Auth);
+    $router->get('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'retrieve'], 'api.roles.retrieve', AuthPolicy::Auth);
     $router->post('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'create'], 'api.roles.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'update'], 'api.roles.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageAdditionalsSystemOperation::class);

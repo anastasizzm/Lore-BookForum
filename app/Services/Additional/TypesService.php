@@ -11,6 +11,7 @@ use App\Lib\Settings\Settings;
 use App\Lib\I18n\Translator as I18nTranslator;
 use App\Extensions\EnumExtensions;
 use App\Models\PaginatedList;
+use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 use App\Exceptions\Translators\TypeExceptionTranslator;
 use App\Exceptions\ValidationException;
@@ -46,6 +47,13 @@ final class TypesService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $typeId) : BasicModel 
+    {
+        $model = $this->typesRepo->retrieve($typeId);
+        if ($model === NULL) throw new NotFoundException($this->i18n->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+        return $model;
     }
 
     public function create(TypeForm $form) : int

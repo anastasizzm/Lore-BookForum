@@ -48,6 +48,13 @@ final class RolesScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("user_roles.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();

@@ -35,6 +35,13 @@ final class LanguagesController extends Controller
             ]);
     }
 
+    public function retrieve(HttpContext $context, string $code) 
+    {
+        $code = RouteParamParser::positiveInt(['c' => $code], 'c');
+        $model = $this->languagesService->retrieve($code);
+        return $this->jsonObject($model);
+    }
+
     public function fallback(HttpContext $context)
     {
         $code = $this->settings->i18n->default;

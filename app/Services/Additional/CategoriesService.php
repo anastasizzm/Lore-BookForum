@@ -11,6 +11,7 @@ use App\Lib\Settings\Settings;
 use App\Lib\I18n\Translator as I18nTranslator;
 use App\Extensions\EnumExtensions;
 use App\Models\PaginatedList;
+use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 use App\Exceptions\Translators\CategoryExceptionTranslator;
 use App\Exceptions\ValidationException;
@@ -46,6 +47,13 @@ final class CategoriesService
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function retrieve(int $categoryId) : BasicModel 
+    {
+        $model = $this->categoriesRepo->retrieve($categoryId);
+        if ($model === NULL) throw new NotFoundException($this->i18n->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+        return $model;
     }
 
     public function create(CategoryForm $form) : int
