@@ -95,6 +95,9 @@ final class BooksRepository extends PublicationsRepository
             case Book::class:
                 $this->director->addBookSelectTemp();
                 break;
+            default:
+                throw new \RuntimeException("Invalid class provided");
+                break;
         }
     }
 

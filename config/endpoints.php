@@ -107,6 +107,7 @@ return function(Router $router)
     $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageAdditionalsSystemOperation::class);
 
     // Users
+    $router->get('/api/users', [App\Controllers\Api\Users\UsersController::class, 'list'], 'api.users', AuthPolicy::Auth);
     $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', ManageAccountOperation::class);
     
 

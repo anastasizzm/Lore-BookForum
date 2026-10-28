@@ -7,6 +7,8 @@ use App\Models\Auth\AuthCredits;
 use App\Models\Auth\AccountCredits;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
+use App\Models\Users\UserShortData;
+use App\Extensions\ScriptBuilders\Users\UsersScriptDirector;
 
 use App\Repositories\Repository;
 use App\Lib\Settings\Settings;
@@ -16,8 +18,47 @@ use PDO;
 
 final class UsersRepository extends Repository
 {
-    public function __construct(Database $db, private readonly Settings $settings){
+    public function __construct(
+        Database $db, 
+        private readonly Settings $settings,
+        private readonly UsersScriptDirector $director){
         parent::__construct($db);
+    }
+
+    public function getList(UsersCriteria $criteria) : array 
+    {
+        $this->director->startTempFilter()
+            ->addActiveTempFilter();
+        $this->addSelect($criteria->classType);
+
+        if (!empty($criteria->search))
+            $this->director->addSearchTempFilter($criteria->search);
+
+        $this->director->addOrderTemp($criteria->sortBy)
+            ->setExtraPaginationTemp($criteria->page, $criteria->pageSize);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+
+        $items = array_map(
+            static fn(array $row) => $criteria->classType::fromRow($row),
+            $stmt->fetchAll(),
+        );
+
+        return $items;
+    }
+
+    protected function addSelect(string $className) : void
+    {
+        switch($className)
+        {
+            case UserShortData::class:
+                $this->director->addUserShortSelectTemp();
+                break;
+            case UserData::class:
+                $this->director->addUserSelectTemp();
+                break;
+        }
     }
 
     public function getAuthCredits(string $login) : ?AuthCredits

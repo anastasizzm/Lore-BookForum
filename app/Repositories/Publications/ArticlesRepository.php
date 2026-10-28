@@ -102,6 +102,9 @@ final class ArticlesRepository extends PublicationsRepository
             case App\Models\Publications\Article::class:
                 $this->director->addArticleSelectTemp();
                 break;
+            default:
+                throw new \RuntimeException("Invalid class provided");
+                break;
         }
     }
 

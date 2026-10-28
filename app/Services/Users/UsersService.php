@@ -11,12 +11,16 @@ use App\Attributes\Inject;
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\Users\ProfileFormValidator;
 
+use App\Models\PaginatedList;
+use App\Models\Queries\Users\UsersListQuery;
 use App\Models\Enums\ServiceType;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
+use App\Models\Users\UserShortData;
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Exceptions\Translators\UserExceptionTranslator;
+use App\Factories\CriteriasFactory;
 use Throwable;
 use PDO;
 
@@ -32,6 +36,12 @@ final class UsersService
         #[Inject(key: ServiceType::System)]
         private readonly CommonRuleProvider $ruleProvider
     ){}
+
+    public function getList(UsersListQuery $query) : PaginatedList 
+    {
+        $criteria = CriteriasFactory::buildUserFromQuery($query, UserShortData::class);
+        return $this->usersRepo->getList($criteria,);
+    }
 
     public function loadContext(int $userId): ?UserContext
     {
