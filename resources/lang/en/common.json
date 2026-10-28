@@ -5,7 +5,7 @@
     "common": {
         "loading": "Loading…",
         "back": "Back",
-        "app_name": "Book App",
+        "app_name": "Lore Book",
         "cancel": "Cancel",
         "filters": "Filters",
         "items": "items",
@@ -696,10 +696,10 @@
     },
     "help": {
         "title": "Help",
-        "subtitle": "How the Book App works — quick answers to common questions",
+        "subtitle": "How the Lore Book Forum works — quick answers to common questions",
         "toc_title": "On this page",
         "about_title": "About the app",
-        "about_text": "Book App is a community for readers and authors: publish books and articles, keep drafts, build a personal library and discuss what you read.",
+        "about_text": "Lore Book Forum is a community for readers and authors: publish books and articles, keep drafts, build a personal library and discuss what you read.",
         "start_title": "Getting started",
         "start_1": "Register or sign in — the menu at the bottom of the sidebar (⋯ More) holds the language switch and your settings.",
         "start_2": "The Feed shows fresh books and articles from the community; the Library lists everything published in the app.",
