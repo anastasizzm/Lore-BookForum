@@ -14,6 +14,10 @@
  *   5. Жалобы (admin/reports) — модалка «Отклонить/Удалить»: сводка из
  *      data-атрибутов строки, решение применяется локально (мок, см.
  *      TODO(api) в разделе REPORTS).
+ *   6. Системные роли (admin/roles) — модалка прав: три группы чекбоксов
+ *      (system/posts/pubs) из JSON-подложки страницы, сохранение через
+ *      fetch-слой rolesApi (раздел 6.1) — PUT /api/system/roles/{id} c
+ *      If-Match, при недоступности роута правки применяются локально.
  *
  * ─── FETCH-СЛОЙ СПРАВОЧНИКОВ (раздел 2.1) ───────────────────────────
  * Контракт (предположительный — бэкенд ещё не отдал, меняется в одном
@@ -229,6 +233,400 @@
     var toast = action === 'delete' ? 'admin.delete_report_success' : 'admin.reject_success';
     closeReportModal();
     notify(toast, 'success');
+  }
+
+  /* ============================================================
+     ROLES — модалка прав системной роли (admin/roles)
+
+     Разметка: src/views/pages/admin/roles.php (строки таблицы +
+     JSON-подложка [data-roles-data] с полными копиями ролей) +
+     partials/admin-role-modal.php (три группы чекбоксов).
+
+     Права приходят из JSON-подложки, но сохранение идёт через
+     rolesApi (раздел 6.1 файла): PUT /api/system/roles/{roleId}
+     с заголовком If-Match: "<version>". Пока роута нет, слой сам
+     падает в режим mock и правит локальный массив ролей.
+
+     Группы прав (ключи бэка — SystemAccessRules / PostAccessRules /
+     PublicationAccessRules::toArray):
+       system: manageAccounts, manageAdditionals, managePeople, manageRoles
+       posts:  create, update, delete
+       pubs:   create, updateMeta, updateContent, delete, read,
+               managePeople, manageRoles
+     ============================================================ */
+  var ROLE_GROUPS = {
+    system: ['manageAccounts', 'manageAdditionals', 'managePeople', 'manageRoles'],
+    posts:  ['create', 'update', 'delete'],
+    pubs:   ['create', 'updateMeta', 'updateContent', 'delete', 'read', 'managePeople', 'manageRoles']
+  };
+
+  var roleState = {
+    modal: null,
+    titleEl: null,
+    loading: null,
+    save: null,
+    items: [],
+    current: null,   // редактируемая роль (копия из items)
+    draft: null,     // { system: {...}, posts: {...}, pubs: {...} } — источник чекбоксов
+    submitting: false,
+    lastFocus: null
+  };
+
+  /** Единый вид роли из JSON-подложки страницы или ответа API. */
+  function normalizeRole(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var role = (raw.role && typeof raw.role === 'object') ? raw.role : raw;
+    var id = Number(role.id);
+    if (!id && id !== 0) return null;
+    return {
+      id: id,
+      title: String(role.title || ''),
+      color: String(role.color || ''),
+      createdAt: String(role.createdAt || ''),
+      canManage: !!raw.canManage,
+      version: raw.version != null ? raw.version : 1,
+      systemPermissions: Object.assign({}, raw.systemPermissions || {}),
+      postPermissions: Object.assign({}, raw.postPermissions || {}),
+      pubPermissions: Object.assign({}, raw.pubPermissions || {})
+    };
+  }
+
+  /** { items: [...] } / { data: { items } } / массив → список нормализованных ролей. */
+  function rolesFrom(payload) {
+    var inner = payload;
+    if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+      inner = payload.data;
+    }
+    var list = null;
+    if (Array.isArray(inner)) list = inner;
+    else if (inner && Array.isArray(inner.items)) list = inner.items;
+    else if (inner && Array.isArray(inner.data)) list = inner.data;
+    if (!list || !list.length) return list ? [] : null;
+    var items = list.map(normalizeRole).filter(function (item) { return item !== null; });
+    return items.length ? items : null;
+  }
+
+  /* ============================================================
+     ROLES API — fetch-слой ролей (раздел 6.1 шапки файла)
+
+     Контракт:
+       GET  /api/system/roles          -> { items: [ … ] }
+       PUT  /api/system/roles/{roleId} -> 200, ETag: "newVersion"
+              headers: If-Match: "<version>"
+              body: { systemPermissions, postPermissions, pubPermissions }
+
+     Оба метода возвращают Promise, который НИКОГДА неreject'ится
+     (сетевая ошибка — тоже ответ режима mock, а не исключение).
+     ============================================================ */
+  var rolesApi = (function () {
+    var BASE = '/api/system/roles';
+    var status = 'unknown';        // 'unknown' | 'live' | 'mock'
+
+    function table() { return document.querySelector('[data-roles-table]'); }
+
+    function setStatus(next) {
+      if (status === next) return;
+      status = next;
+      var el = table();
+      if (el) el.setAttribute('data-roles-api', next);
+      if (next === 'mock') {
+        console.warn('[admin] system roles API is not available yet — edits stay on page mocks');
+      }
+    }
+
+    function request(method, path, body, headers) {
+      var url = BASE + (path || '');
+      var options = {
+        method: method,
+        credentials: 'same-origin',
+        headers: Object.assign(
+          { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          headers || {}
+        )
+      };
+      if (body !== undefined && body !== null) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+
+      var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
+      var result = function (status, ok, raw, hdrs) {
+        var data = null;
+        var isJson = false;
+        if (raw && /^[\s]*[\[{]/.test(raw)) {
+          try { data = JSON.parse(raw); isJson = true; } catch (_) { data = null; }
+        }
+        return { status: status, ok: ok, data: data, raw: raw || '', isJson: isJson, headers: hdrs || null };
+      };
+
+      return Promise.resolve()
+        .then(function () { return run(url, options); })
+        .then(function (res) {
+          return res.text().then(
+            function (raw) { return result(res.status, res.ok, raw, res.headers); },
+            function () { return result(res.status, res.ok, '', res.headers); }
+          );
+        })
+        .catch(function (err) {
+          return { status: 0, ok: false, data: null, raw: '', isJson: false, headers: null, networkError: err };
+        });
+    }
+
+    function classify(r) {
+      if (r.networkError) return 'mock';
+      var looksHtml = /^\s*</.test(r.raw || '');
+      if (r.ok) return looksHtml ? 'mock' : 'ok';
+      if (looksHtml || !r.isJson) return 'mock';
+      if (r.status === 404 || r.status === 405) return 'mock';
+      if (r.status === 403) return 'forbidden';
+      return 'error';
+    }
+
+    function errorText(r) {
+      var fallback = null;
+      if (window.LoreI18n) fallback = LoreI18n.t('errors.common.request_failed', { status: r.status });
+      if (window.Messages && Messages.describe) return Messages.describe(r.status, r.data, r.raw, fallback);
+      return fallback || ('HTTP ' + r.status);
+    }
+
+    return {
+      get status() { return status; },
+
+      /** GET /api/system/roles — или null, если роута ещё нет. */
+      list: function () {
+        if (status === 'mock') return Promise.resolve(null);
+        return request('GET', '').then(function (r) {
+          var kind = classify(r);
+          if (kind === 'ok') { setStatus('live'); return rolesFrom(r.data); }
+          if (kind === 'mock') { setStatus('mock'); return null; }
+          setStatus('live');
+          console.warn('[admin] GET ' + BASE + ' failed with HTTP ' + r.status);
+          return null;
+        });
+      },
+
+      /** PUT /api/system/roles/{id} с If-Match. Никогда неreject'ится. */
+      save: function (id, version, body) {
+        return request('PUT', '/' + id, body, { 'If-Match': '"' + String(version) + '"' })
+          .then(function (r) {
+            var kind = classify(r);
+            if (kind === 'ok') {
+              setStatus('live');
+              var etag = r.headers && r.headers.get ? r.headers.get('ETag') : null;
+              return { mode: 'api', etag: etag, status: r.status };
+            }
+            if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
+            if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+            if (r.status === 412) return { mode: 'conflict', status: r.status };  // If-Match не совпал
+            return { mode: 'error', status: r.status, message: errorText(r) };
+          });
+      }
+    };
+  })();
+
+  function roleRoot() { return roleState.modal; }
+  function isRoleOpen() { return !!(roleState.modal && !roleState.modal.hidden); }
+  function rr(sel) { var m = roleRoot(); return m ? m.querySelector(sel) : null; }
+
+  function findRole(id) {
+    for (var i = 0; i < roleState.items.length; i++) {
+      if (Number(roleState.items[i].id) === Number(id)) return roleState.items[i];
+    }
+    return null;
+  }
+
+  function countPerms(obj, keys) {
+    var n = 0;
+    keys.forEach(function (k) { if (obj && obj[k]) n++; });
+    return n;
+  }
+
+  function setRoleLoading(on) {
+    var el = rr('[data-role-loading]');
+    if (el) el.hidden = !on;
+    Object.keys(ROLE_GROUPS).forEach(function (g) {
+      var wrap = rr('[data-role-group="' + g + '"]');
+      if (wrap) wrap.hidden = on;
+    });
+  }
+
+  function setRoleSaveEnabled(enabled) {
+    var btn = rr('[data-role-save]');
+    if (btn) btn.disabled = !enabled;
+  }
+
+  /** Рендер чекбоксов трёх групп из roleState.draft. */
+  function renderRoleLists() {
+    Object.keys(ROLE_GROUPS).forEach(function (group) {
+      var list = rr('[data-role-list="' + group + '"]');
+      if (!list) return;
+      var draftGroup = (roleState.draft && roleState.draft[group]) || {};
+      list.innerHTML = ROLE_GROUPS[group].map(function (key) {
+        var id = 'role_' + group + '_' + key;
+        return '<label class="admin-role__perm" for="' + id + '">' +
+            '<input type="checkbox" id="' + id + '"' +
+              ' data-role-perm' +
+              ' data-role-group="' + group + '"' +
+              ' data-role-key="' + key + '"' +
+              (draftGroup[key] ? ' checked' : '') + '>' +
+            '<span>' + esc(t('admin.perm_' + key)) + '</span>' +
+          '</label>';
+      }).join('');
+    });
+    setRoleLoading(false);
+  }
+
+  /** Обновить бейдж «N прав» у строки роли после сохранения. */
+  function updateRoleRow(item) {
+    var row = document.querySelector('[data-roles-rows] [data-role-row-id="' + item.id + '"]');
+    if (!row) return;
+    var badge = row.querySelector('[data-role-syscount]');
+    if (badge) badge.textContent = t('admin.role_sys_perms', { n: countPerms(item.systemPermissions, ROLE_GROUPS.system) });
+  }
+
+  /** Полная перерисовка строк таблицы ролей (после загрузки с бэка). */
+  function renderRoleRows() {
+    var tbody = document.querySelector('[data-roles-rows]');
+    if (!tbody) return;
+    var emptyRow = tbody.querySelector('[data-admin-empty]');
+
+    tbody.innerHTML = roleState.items.map(function (item) {
+      var id = Number(item.id) || 0;
+      var search = String(item.title || '').toLowerCase();
+      return '<tr data-role-row-id="' + id + '" data-search="' + esc(search) + '">' +
+          '<td class="admin-table__id">' + id + '</td>' +
+          '<td><span class="admin-role__title">' +
+            (item.color ? '<span class="admin-role__dot" style="background:' + esc(item.color) + '"></span>' : '') +
+            esc(item.title) +
+          '</span></td>' +
+          '<td><span class="admin-badge admin-badge--accent" data-role-syscount>' +
+            esc(t('admin.role_sys_perms', { n: countPerms(item.systemPermissions, ROLE_GROUPS.system) })) +
+          '</span></td>' +
+          '<td><div class="admin-actions">' +
+            '<button type="button" class="btn btn--secondary" data-role-edit data-role-id="' + id + '">' +
+              esc(t('admin.action_permissions')) +
+            '</button>' +
+          '</div></td>' +
+        '</tr>';
+    }).join('');
+
+    if (emptyRow) tbody.appendChild(emptyRow);
+    applySearch();
+  }
+
+  function openRoleModal(id) {
+    if (!roleState.modal) return;
+    var item = findRole(id);
+    if (!item) return;
+
+    roleState.current = item;
+    roleState.draft = {
+      system: Object.assign({}, item.systemPermissions),
+      posts:  Object.assign({}, item.postPermissions),
+      pubs:   Object.assign({}, item.pubPermissions)
+    };
+
+    if (roleState.titleEl) {
+      roleState.titleEl.textContent = t('admin.role_modal_title') + ' — ' + item.title;
+    }
+
+    setRoleLoading(true);
+    renderRoleLists();
+    setRoleSaveEnabled(true);
+
+    roleState.lastFocus = document.activeElement;
+    roleState.modal.hidden = false;
+    roleState.modal.setAttribute('data-role-id', String(item.id));
+    document.body.classList.add('is-modal-open');
+
+    var first = rr('[data-role-perm]');
+    if (first) first.focus();
+  }
+
+  function closeRoleModal() {
+    if (!roleState.modal || roleState.modal.hidden) return;
+    roleState.modal.hidden = true;
+    roleState.modal.setAttribute('data-role-id', '');
+    document.body.classList.remove('is-modal-open');
+    roleState.current = null;
+    roleState.draft = null;
+    roleState.submitting = false;
+    setRoleSaveEnabled(true);
+
+    var target = roleState.lastFocus;
+    roleState.lastFocus = null;
+    if (target && target.isConnected && target.offsetParent !== null) {
+      try { target.focus(); } catch (_) {}
+    }
+  }
+
+  /** Сохранение: PUT /api/system/roles/{id} c If-Match, иначе локальный мок. */
+  function saveRole() {
+    var item = roleState.current;
+    if (!item || roleState.submitting) return;
+    roleState.submitting = true;
+    setRoleSaveEnabled(false);
+
+    var body = {
+      systemPermissions: Object.assign({}, roleState.draft.system),
+      postPermissions:   Object.assign({}, roleState.draft.posts),
+      pubPermissions:    Object.assign({}, roleState.draft.pubs)
+    };
+
+    rolesApi.save(item.id, item.version, body).then(function (result) {
+      if (result.mode === 'forbidden') { notify(t('js.no_rights'), 'error'); return; }
+      if (result.mode === 'conflict')  { notify(t('admin.role_conflict'), 'error'); return; }
+      if (result.mode === 'error')     { notify(result.message, 'error'); return; }
+
+      // Применяем локально — и в режиме api, и в mock
+      item.systemPermissions = body.systemPermissions;
+      item.postPermissions   = body.postPermissions;
+      item.pubPermissions    = body.pubPermissions;
+      // Новую версию берём из ETag; если его нет — инкрементируем сами
+      var parsed = result.etag ? parseInt(String(result.etag).replace(/[^0-9]/g, ''), 10) : NaN;
+      item.version = isNaN(parsed) ? (Number(item.version) + 1) : parsed;
+
+      updateRoleRow(item);
+      closeRoleModal();
+      notify(t('admin.role_saved'), 'success');
+    })
+    .catch(function (err) {
+      console.warn('[admin] role save failed', err);
+      notify(t('errors.common.network_error'), 'error');
+    })
+    .then(function () {
+      roleState.submitting = false;
+      setRoleSaveEnabled(true);
+    });
+  }
+
+  /** Фоновая проверка /api/system/roles: при успехе перерисовываем таблицу. */
+  function refreshRolesFromApi() {
+    rolesApi.list().then(function (items) {
+      if (!items) return;
+      roleState.items = items;
+      var note = document.querySelector('[data-roles-stub]');
+      if (note) note.hidden = true;
+      renderRoleRows();
+    });
+  }
+
+  function initRoles() {
+    var dataEl = document.querySelector('[data-roles-data]');
+    var modal  = document.querySelector('[data-role-modal]');
+    if (!dataEl || !modal) return;
+
+    var payload = null;
+    try {
+      payload = JSON.parse(dataEl.textContent || '[]');
+    } catch (err) {
+      console.warn('[admin] roles payload is not valid JSON', err);
+    }
+    roleState.items = rolesFrom(payload) || [];
+    roleState.modal = modal;
+    roleState.titleEl = modal.querySelector('[data-role-title]');
+
+    refreshRolesFromApi();
   }
 
   /* ============================================================
@@ -1016,6 +1414,15 @@
     if (e.target.closest('[data-admin-report-reject]')) { decideReport('reject'); return; }
     if (e.target.closest('[data-admin-report-delete]')) { decideReport('delete'); return; }
 
+    // --- Системные роли (ROLES) ---
+    var roleEdit = e.target.closest('[data-role-edit]');
+    if (roleEdit) { openRoleModal(roleEdit.getAttribute('data-role-id')); return; }
+
+    if (e.target.closest('[data-role-close]')) { closeRoleModal(); return; }
+
+    var roleSave = e.target.closest('[data-role-save]');
+    if (roleSave && !roleSave.disabled) { saveRole(); return; }
+
     // --- Пользователи / комментарии ---
     var blockBtn = e.target.closest('[data-admin-block]');
     if (blockBtn && !blockBtn.disabled) { blockUser(blockBtn); return; }
@@ -1024,22 +1431,36 @@
     if (deleteBtn) deleteComment(deleteBtn);
   });
 
-  // Esc — закрыть модалку справочника или решение по жалобе; Tab — фокус зациклен внутри открытой
+  // Чекбоксы прав роли: обновляем черновик (источник правды — roleState.draft)
+  document.addEventListener('change', function (e) {
+    if (!e.target || !e.target.closest) return;
+    var cb = e.target.closest('[data-role-perm]');
+    if (!cb || !roleState.draft) return;
+    var group = cb.getAttribute('data-role-group');
+    var key = cb.getAttribute('data-role-key');
+    if (roleState.draft[group]) roleState.draft[group][key] = cb.checked;
+  });
+
+  // Esc — закрыть модалку справочника, жалобы или роли; Tab — фокус зациклен внутри открытой
   document.addEventListener('keydown', function (e) {
     var dictOpen = isDictOpen();
     var reportOpen = isReportOpen();
-    if (!dictOpen && !reportOpen) return;
+    var roleOpen = isRoleOpen();
+    if (!dictOpen && !reportOpen && !roleOpen) return;
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (dictOpen) closeDictForm(); else closeReportModal();
+      if (dictOpen) closeDictForm();
+      else if (reportOpen) closeReportModal();
+      else closeRoleModal();
       return;
     }
     if (e.key !== 'Tab') return;
 
-    var dialog = dictOpen
-      ? dict.modal.querySelector('.modal__dialog')
-      : reportState.modal.querySelector('.modal__dialog');
+    var dialog;
+    if (dictOpen) dialog = dict.modal.querySelector('.modal__dialog');
+    else if (reportOpen) dialog = reportState.modal.querySelector('.modal__dialog');
+    else dialog = roleState.modal.querySelector('.modal__dialog');
     if (!dialog) return;
     var items = Array.prototype.filter.call(
       dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]'),
@@ -1056,6 +1477,7 @@
   function initAdmin() {
     initSearch();
     initDictionary();
+    initRoles();
   }
 
   if (document.readyState === 'loading') {

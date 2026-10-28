@@ -526,6 +526,87 @@
 }
 
 /* ============================================
+   ROLES — страница системных ролей и модалка прав
+   Страница: admin/roles.php
+   Разметка: partials/admin-role-modal.php
+   Логика:   public/assets/js/admin.js (ROLES)
+   ============================================ */
+
+.admin-role__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fw-medium);
+}
+
+/* Цветная точка роли: цвет приходит из role.color */
+.admin-role__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+
+.admin-role__dialog {
+  max-width: 520px;
+}
+
+.admin-role__loading {
+  margin: var(--space-3) 0;
+  color: var(--color-text-muted);
+}
+
+.admin-role__group {
+  margin-bottom: var(--space-3);
+}
+
+.admin-role__group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* Список чекбоксов: в две колонки, на узком экране — в одну */
+.admin-role__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+
+.admin-role__perm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.admin-role__perm input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent, currentColor);
+  cursor: pointer;
+}
+
+.admin-role__perm span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-role__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* ============================================
    RESPONSIVE — 480px покрывает целевой 375px-экран
    ============================================ */
 @media (max-width: 480px) {
@@ -604,6 +685,24 @@
   }
 
   .admin-report__actions .btn {
+    width: 100%;
+  }
+
+  /* Системные роли: таблица ужимается под 375px (4 колонки), чекбоксы в одну колонку */
+  .admin-table[data-roles-table] {
+    min-width: 0;
+  }
+
+  .admin-role__list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-role__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-role__actions .btn {
     width: 100%;
   }
 }
