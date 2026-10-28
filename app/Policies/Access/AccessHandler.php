@@ -32,6 +32,9 @@ final class AccessHandler implements AuthorizationHandler
         if (empty($currentUserId))
             return Decision::unauthorized(ErrorCodes::UNAUTHORIZED, 'errors.policies.auth');
 
+        if(!$ctx->attribute(Constants::VERIFIED_ATTR))
+            return Decision::forbidden(ErrorCodes::FORBIDDEN, $requirement->describe());
+
         $service = $this->container->getKeyed($requirement->getTypeKey(), AccessService::class);
 
         $pathMatch = preg_match($requirement->pathPattern, $ctx->request->path, $m);
