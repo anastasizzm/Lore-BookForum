@@ -458,6 +458,14 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;      /* длинное название языка не вылезает за узкое меню на 375px */
+}
+
+/* Меню языков: при большом списке прокручивается, а не вылезает за экран */
+.admin-dict__lang-menu {
+  max-height: 240px;
+  overflow-y: auto;
 }
 
 /* Фокус пункта в меню языков: подсветка как hover + кольцо внутри
@@ -706,6 +714,22 @@
 
   .admin-table[data-dict-table] .admin-dict__translations {
     max-width: none;
+  }
+
+  /* Кнопки Edit/Delete в узкой таблице справочника переносятся, а не вылезают */
+  .admin-table[data-dict-table] .admin-actions {
+    flex-wrap: wrap;
+  }
+
+  /* Строка перевода в модалке: кнопка ✕ не сжимается (touch-таргет 44px),
+     поле остаётся читаемым на 375px */
+  .admin-dict__lang-row {
+    grid-template-columns: minmax(36px, auto) minmax(0, 1fr) 44px;
+  }
+
+  .admin-dict__lang-remove {
+    width: 44px;
+    height: 44px;
   }
 
   .admin-actions {
