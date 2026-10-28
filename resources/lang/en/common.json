@@ -320,6 +320,15 @@
         "publish_confirm": "Publish",
         "save_failed": "Could not save rights (HTTP :status)."
     },
+    "pubroles": {
+        "title": "Roles and people",
+        "roles": "Roles",
+        "people": "People",
+        "loading": "Loading roles…",
+        "retry": "Retry",
+        "empty": "No roles or people assigned yet.",
+        "mock_note": "Demo data — the roles API is not available yet."
+    },
     "report": {
         "title": "Report",
         "menu": "Report",
