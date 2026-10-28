@@ -1,0 +1,178 @@
+/* ============================================
+   REPORT MODAL — плашка «Пожаловаться»
+   Разметка: src/partials/report-modal.php (подключается в layouts/main.php)
+   Логика:   public/assets/js/report-modal.js (window.ReportModal)
+   Каркас .modal/.modal__* — modal.css, кнопки — component.css.
+   ============================================ */
+
+.report-modal__dialog {
+  max-width: 440px;
+}
+
+/* На что жалуемся: «Книга» + подпись названия/текста */
+.report-modal__target {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.report-modal__target[hidden] {
+  display: none;
+}
+
+.report-modal__target-kind {
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.report-modal__target-title {
+  min-width: 0;
+  color: var(--color-text);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* --- Список причин (radio) --- */
+.report-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.report-reasons__legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.report-reason {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;            /* пальцевая зона на 375px */
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.report-reason:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* Фокус виден сразу на всей строке (радио получает фокус и с клавиатуры,
+   и кликом — :focus-within работает везде, в отличие от :has). */
+.report-reason:focus-within {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.report-reason:has(.report-reason__input:checked) {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+}
+
+.report-reason__input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.report-reason__label {
+  min-width: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+}
+
+/* --- Необязательные подробности --- */
+.report-modal__field-label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.report-modal__comment {
+  width: 100%;
+  min-height: 84px;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+
+.report-modal__comment::placeholder {
+  color: var(--color-text-muted);
+}
+
+.report-modal__comment:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.report-modal__error {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-error);
+}
+
+.report-modal__error[hidden] {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  /* На 375px плейсхолдеры длинных причин не должны жать строку */
+  .report-reason {
+    align-items: flex-start;
+  }
+
+  .report-reason__label {
+    white-space: normal;
+  }
+
+  .report-modal__target {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .report-modal__target-title {
+    white-space: normal;
+  }
+}

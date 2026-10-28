@@ -17,10 +17,11 @@
   <script src="<?= $view->asset('js/i18n.js') ?>"></script>
   <script src="<?= $view->asset('js/messages.js') ?>"></script>
   <script src="<?= $view->asset('js/csrf.js') ?>"></script>
-  <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/books/rules,
-       /api/articles/rules, /api/posts/rules, /api/system/rules). Нужен везде:
-       sidebar гейтит по нему кнопку «Админ-панель», а book-rights.js —
-       кнопки Edit / Delete / Publish на страницах публикаций и формах. -->
+  <!-- rules.js -> window.LoreRules: Common Rules бэка (/api/publications/rules,
+       /api/posts/rules, /api/system/rules). Нужен везде:
+       permissions.js — надстройка над window.LoreRules (кнопки Edit / Delete /
+       Publish на страницах публикаций и формах, data-requires), а sidebar
+       гейтит по правилам кнопку «Админ-панель» (data-requires="admin.panel"). -->
   <script src="<?= $view->asset('js/rules.js') ?>"></script>
   <!-- rights-guard.js -> временная JS-страховка, пока бэк не отдаёт 403:
        при create:false в /api/posts/rules форма комментария/ответа физически
@@ -33,6 +34,8 @@
   <link rel="stylesheet" href="<?= $view->asset('css/layout.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/component.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modal.css') ?>">
+  <!-- Плашка «Пожаловаться» (report-modal.php подключается в layouts/main.php) -->
+  <link rel="stylesheet" href="<?= $view->asset('css/report-modal.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/fab.css') ?>">
 
   <?= $view->block('head_extra') ?>

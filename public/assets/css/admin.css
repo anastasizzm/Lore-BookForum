@@ -302,6 +302,7 @@
   display: inline-block;
   max-width: 480px;
   line-height: var(--lh-normal);
+  overflow-wrap: anywhere;      /* одно длинное слово не рвёт узкую колонку на 375px */
 }
 
 /* --- Модалка формы --- */
@@ -423,6 +424,14 @@
   white-space: nowrap;
 }
 
+/* Фокус пункта в меню языков: подсветка как hover + кольцо внутри
+   узкого меню (inset, чтобы не обрезалось краем .dropdown__menu) */
+.admin-dict__lang-menu .dropdown__item:focus-visible {
+  background: var(--color-overlay);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
 .admin-dict__menu-note {
   padding: var(--space-2) var(--space-3);
   font-size: var(--fs-small);
@@ -442,6 +451,78 @@
 
 .admin-dict__error {
   margin: 0;
+}
+
+/* ============================================
+   REPORTS — модалка решения по жалобе
+   Страница: admin/reports.php
+   Разметка: partials/admin-report-modal.php
+   Логика:   public/assets/js/admin.js (REPORTS)
+   ============================================ */
+
+.admin-report__dialog {
+  max-width: 560px;
+}
+
+/* Сводка: dt-подписи слева, значения справа; на узком экране сворачивается в колонку */
+.admin-report__facts {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.admin-report__fact {
+  display: contents;
+}
+
+.admin-report__fact dt {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.admin-report__fact dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-report__fact dd:has(.admin-badge) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+/* Название цели (книга/статья/комментарий) — длинный текст переносится */
+.admin-report__target {
+  overflow-wrap: anywhere;
+}
+
+.admin-report__label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.admin-report__note {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Кнопки: Отмена слева, «Отклонить» и «Удалить» справа; на 480px — в столбик */
+.admin-report__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
 }
 
 /* ============================================
@@ -488,11 +569,41 @@
     max-width: 180px;
   }
 
+  /* Справочники (Genres/Categories/Types): всего 3 колонки — таблица
+     ужимается под 375px вместо горизонтального скролла (общий min-width
+     560px оставляем широким таблицам Users/Comments/Reports) */
+  .admin-table[data-dict-table] {
+    min-width: 0;
+  }
+
+  .admin-table[data-dict-table] .admin-dict__translations {
+    max-width: none;
+  }
+
   .admin-actions {
     flex-wrap: nowrap;
   }
 
-  .admin-dict__translations {
-    max-width: 220px;
+  /* Модалка решения по жалобе: сводка в одну колонку (dt над dd), кнопки в столбик */
+  .admin-report__facts {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .admin-report__fact {
+    display: block;
+  }
+
+  .admin-report__fact dt {
+    margin-bottom: var(--space-1);
+  }
+
+  .admin-report__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-report__actions .btn {
+    width: 100%;
   }
 }

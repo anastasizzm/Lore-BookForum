@@ -30,9 +30,8 @@ $cards = [
     ['href' => '/pages/test?page=admin/genres',     'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint'),     'count' => '—'],
     ['href' => '/pages/test?page=admin/categories', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint'), 'count' => '—'],
     ['href' => '/pages/test?page=admin/types',      'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint'),      'count' => '—'],
-    // Раздела «Reports» сегодня нет (роута и вида) — карточка-заглушка:
-    // рисуем div, а не ссылку с «#»: клик не должен ничего делать.
-    ['href' => null, 'title' => $tr('common.admin.card_reports'), 'hint' => $tr('common.admin.card_reports_hint'), 'count' => '—', 'soon' => true],
+    // Жалобы: таблица + модалка «Отклонить/Удалить» на моках
+    ['href' => '/pages/test?page=admin/reports',    'title' => $tr('common.admin.card_reports'),    'hint' => $tr('common.admin.card_reports_hint'),    'count' => '—'],
 ];
 ?>
 

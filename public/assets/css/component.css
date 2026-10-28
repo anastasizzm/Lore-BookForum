@@ -44,6 +44,14 @@ body {
   opacity: 0.7;
 }
 
+/* Фокус с клавиатуры: браузерное кольцо слишком незаметно на pill-кнопках,
+   рисуем своё — как у .admin-toolbar__search/.admin-card (outline-offset 2,
+   :focus-visible, чтобы мышь кольцо не оставляла) */
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Busy-состояние: пока fetch не вернулся, кнопка гаснет и не принимает
    клики (disabled ставит admin.js на Save/Delete, карусели и т.п.). */
 .btn:disabled {
@@ -665,6 +673,13 @@ textarea.form-field__input {
   cursor: pointer;
 }
 
+/* Клавиатурный фокус: триггеры дропдаунов (в т.ч. «+ Add language»
+   в форме справочника) иначе почти не видны на светлом фоне */
+.dropdown__trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .dropdown__arrow {
   font-size: 10px;
   color: var(--color-text-muted);
@@ -926,35 +941,36 @@ textarea.form-field__input {
 }
 
 /* ============================================
-   ПРАВА (Common Rules) — состояние неактивного элемента
+   ПРАВА (permissions.js / Common Rules) — состояние неактивного элемента
    ============================================
-   Контракт разметки: [data-rules-kind] + [data-rule="create|edit|publish|
-   delete"]. Права подтверждает book-rights.js из window.LoreRules
-   (public/assets/js/rules.js). Пока/если правила не подтвердились,
-   элемент висит с aria-disabled="true" + .is-disabled.
+   Контракт разметки: [data-requires] (+ data-requires-kind / -owner) с
+   data-requires-mode="disable": permissions.js (window.LorePermissions)
+   ставит aria-disabled="true" и .is-disabled, когда права нет.
+   Пока/если правила не подтвердились, элемент выглядит неактивным.
 
    Правило живёт ЗДЕСЬ, а не в book.css: оно общее для страниц
    book/article details И для форм (book-form.css / article-form.css
    book.css не подключают, и кнопки Publish/Save остались бы
    неактивными, но выглядящими рабочими). */
-[data-rule].is-disabled,
-[data-rule][aria-disabled='true'] {
+[data-requires].is-disabled,
+[data-requires][aria-disabled='true'] {
   color: var(--color-text-muted, #6F84A5);
   opacity: 0.65;
   cursor: not-allowed;
 }
 
-[data-rule].is-disabled:hover,
-[data-rule].is-disabled:focus-visible,
-[data-rule][aria-disabled='true']:hover,
-[data-rule][aria-disabled='true']:focus-visible {
+[data-requires].is-disabled:hover,
+[data-requires].is-disabled:focus-visible,
+[data-requires][aria-disabled='true']:hover,
+[data-requires][aria-disabled='true']:focus-visible {
   background: none;
   color: var(--color-text-muted, #6F84A5);
 }
 
 /* pointer-events: НЕ ставим — он бы убил подсказку title («Нет прав...»).
-   Клики, клавиатура и отправка формы глушатся в book-rights.js в фазе
-   захвата, до обработчиков details-menu.js / book-form.js / article-form.js. */
+   Нативные контролы глушит сам флаг disabled (permissions.js ставит его
+   в disable-режиме, браузер не даёт ни клика, ни submit); <a> остаются
+   кликабельными — итог всё равно проверяет бэкенд. */
 
 /* ============================================
    FILTER PANEL — выравнивание всех контролов
@@ -1757,7 +1773,8 @@ a.user-mention:focus-visible {
   min-width: 0;
 }
 
-/* ---------- Меню «три точки» (только автор комментария/ответа) ---------- */
+/* ---------- Меню «три точки» (пост/комментарий/ответ: удаление — автору,
+   «Пожаловаться» — всем; разметка — partials/comment-menu.php) ---------- */
 
 /* Контейнер относительно — меню позиционируется НАД кнопкой */
 .comment-card__actions {
@@ -1808,6 +1825,13 @@ a.user-mention:focus-visible {
 .comment-card__menu-item:hover,
 .comment-card__menu-item:focus-visible {
   background: var(--color-bg-subtle, #F3F6FB);
+}
+
+/* [hidden] обязан побеждать author-правило display:block выше
+   (base.css глушит hidden только на >=1024px): так у не-автора
+   исчезает пункт «Удалить», а «Пожаловаться» остаётся. */
+.comment-card__menu-item[hidden] {
+  display: none;
 }
 
 .comment-card__menu-item--danger {

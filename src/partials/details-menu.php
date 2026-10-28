@@ -3,15 +3,38 @@
  * details-menu — меню «три точки» в шапке страницы публикации
  * (book-details / article-details): редактирование и удаление.
  *
- * ПРАВА (управляются permissions.js):
+ * Три точки стоят СПРАВА В ШАПКЕ, на одной линии с заголовком
+ * «Book/Article details»; кнопка «Редактировать» переехала сюда из
+ * тела страницы.
+ *
+ * @param string $type    - 'book' | 'article'
+ * @param int    $id      - id публикации
+ * @param bool   $isOwner - текущий пользователь — автор/владелец публикации
+ * @param string $title   - название публикации (подпись цели жалобы в
+ *                          плашке «Пожаловаться»; необязательно)
+ *
+ * Три точки открываются на глобальных обработчиках details-menu.js
+ * (тот же приём «открыть/закрыть/Escape/клик мимо», что у меню
+ * комментариев в comments.js).
+ *
+ * ПРАВА (управляются permissions.js, window.LorePermissions):
  *   Пункты Edit и Delete рендерятся скрытыми (hidden).
  *   permissions.js проверяет data-requires="publication.edit" / "publication.delete",
  *   учитывая data-requires-kind (book/article) и data-requires-owner.
- *   Если права нет — пункт остается скрытым. Если есть — показывается.
+ *   Если права нет — пункт остаётся скрытым. Если есть — показывается.
+ *
+ * Удаление выполняет details-menu.js (DELETE /api/books/{id},
+ * /api/articles/{id}); ошибки показывает Messages.
+ *
+ * ПУНКТ «Пожаловаться» — открывает общую плашку report-modal.php
+ * (report-modal.js, window.ReportModal). Он НЕ имеет data-requires:
+ * жалобу может оставить любой авторизованный пользователь, в том числе
+ * автор публикации, поэтому permissions.js его не трогает.
  */
-$type    = $type ?? 'book';
-$id      = (int) ($id ?? 0);
-$isOwner = !empty($isOwner);
+$type     = $type ?? 'book';
+$id       = (int) ($id ?? 0);
+$isOwner  = !empty($isOwner);
+$title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
 $editHref  = ($isBook ? '/books/' : '/articles/') . $id . '/edit';
@@ -63,6 +86,18 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
             data-delete-redirect="<?= $view->e($listHref) ?>"
             data-delete-kind="<?= $view->e($type) ?>">
       <?= $view->e($view->t('common.js.delete')) ?>
+    </button>
+
+    <!-- Пункт «Пожаловаться»: без data-requires (доступен всем,
+         permissions.js его не трогает), открывает report-modal.php
+         через report-modal.js. -->
+    <button type="button"
+            class="details-menu__item"
+            data-report-open
+            data-report-kind="<?= $view->e($type) ?>"
+            data-report-id="<?= $id ?>"
+            <?= $title !== '' ? 'data-report-label="' . $view->e($title) . '"' : '' ?>>
+      <?= $view->e($view->t('common.report.menu')) ?>
     </button>
   </div>
 </div>

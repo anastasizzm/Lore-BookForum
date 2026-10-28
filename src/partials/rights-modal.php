@@ -40,9 +40,9 @@
  * Статус черновика и права доступа (для book-details):
  *   черновик виден только создателю — политику держит бэк ( BooksController );
  *   статус $status ('draft'|'published') контроллер передаёт в вьюху
- *   напрямую; цвета кнопки «Редактировать» (красная/синяя/серая) вьюха
- *   НЕ считает — их подгружает асинхронно book-rights.js по контракту
- *   GET /api/publications/{id}/rights (см. шапку book-details.php).
+ *   напрямую; кнопку «Редактировать» вьюха НЕ показывает сама — пункт
+ *   рендерится скрытым (hidden), показывает его permissions.js по
+ *   data-requires (см. шапку book-details.php).
  *
  * Стили — public/assets/css/rights-modal.css (каркас .modal — modal.css).
  */

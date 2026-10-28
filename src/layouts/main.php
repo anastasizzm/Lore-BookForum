@@ -25,6 +25,9 @@
   <!-- Универсальная плашка подтверждения (Log out, удаление поста и т.п.) -->
   <?php $view->include('confirm-modal'); ?>
 
+  <!-- Плашка «Пожаловаться» (книга / статья / пост / комментарий / ответ) -->
+  <?php $view->include('report-modal'); ?>
+
   <?php /* Плавающая «+» (создать статью / книгу). Скрыть на странице: $view->setBlock('hideFab', '1') */ ?>
   <?php $view->include('fab'); ?>
 
@@ -49,6 +52,8 @@
   </main>
 
   <script src="<?= $view->asset('js/modal.js') ?>"></script>
+  <!-- Плашка «Пожаловаться»: window.ReportModal + делегирование [data-report-open] -->
+  <script src="<?= $view->asset('js/report-modal.js') ?>"></script>
   <script src="<?= $view->asset('js/permissions.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/fab.js') ?>"></script>

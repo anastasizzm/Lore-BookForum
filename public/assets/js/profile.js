@@ -269,8 +269,11 @@
                       DOTS_SVG +
                     '</button>' +
                     '<div class="comment-card__menu" data-c-menu hidden>' +
+                      // Удаление — только автору (syncPostMenu), жалоба — всем
                       '<button type="button" class="comment-card__menu-item comment-card__menu-item--danger"' +
-                              ' data-c-delete>' + t('js.delete') + '</button>' +
+                              ' data-c-delete hidden>' + t('js.delete') + '</button>' +
+                      '<button type="button" class="comment-card__menu-item"' +
+                              ' data-report-open data-report-kind="post">' + t('report.menu') + '</button>' +
                     '</div>' +
                   '</div>' +
                 '</div>' +

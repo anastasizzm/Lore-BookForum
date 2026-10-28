@@ -1,15 +1,18 @@
 /**
  * rules.js — доступ к Common Rules бэкенда (window.LoreRules).
  *
- * Бэк отдаёт глобальные правила текущего пользователя четырьмя GET-ами
+ * Бэк отдаёт глобальные правила текущего пользователя тремя GET-ами
  * (все под AuthPolicy::Auth, контракт — config/endpoints.php):
  *
- *   GET /api/system/rules  -> { manageAccounts, manageAdditionals,
- *                               managePeople, manageRoles }
- *   GET /api/books/rules   -> { create, updateMeta, updateContent, delete,
- *                               read, managePeople, manageRoles }
- *   GET /api/articles/rules-> (та же PublicationAccessRules)
- *   GET /api/posts/rules   -> { create, update, delete }
+ *   GET /api/system/rules       -> { manageAccounts, manageAdditionals,
+ *                                    managePeople, manageRoles }
+ *   GET /api/publications/rules -> { create, updateMeta, updateContent,
+ *                                    delete, read, managePeople,
+ *                                    manageRoles }   (PublicationAccessRules;
+ *                                    общий для книг И статей — бэк больше
+ *                                    не разделяет их на /api/books/rules
+ *                                    и /api/articles/rules)
+ *   GET /api/posts/rules        -> { create, update, delete }
  *
  * Ответ каждого оборачивается в { "data": { ... } } (Controller::jsonObject).
  *
@@ -34,8 +37,10 @@
   'use strict';
 
   var ENDPOINTS = {
-    books:    '/api/books/rules',
-    articles: '/api/articles/rules',
+    // Книги и статьи читают ОДИН общий роут (бэк перенёс правила в
+    // PublicationPermissionsController, см. config/endpoints.php):
+    books:    '/api/publications/rules',
+    articles: '/api/publications/rules',
     posts:    '/api/posts/rules',
     system:   '/api/system/rules'
   };

@@ -191,7 +191,8 @@ $richEditor = static function (
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/article-rights.css') ?>">
+  <!-- реальное имя файла article-right.css (article-rights.css не существует) -->
+  <link rel="stylesheet" href="<?= $view->asset('css/article-right.css') ?>">
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
@@ -475,7 +476,10 @@ $richEditor = static function (
 
         <!-- Действия. «Create draft» сохраняет черновик и открывает страницу статьи;
              «Publish» сначала проверяет статью на бэке, затем открывает окно выбора прав
-             (partial article-rights-dialog + article-publish.js). -->
+             (partial article-rights-dialog + article-publish.js).
+             Права кнопок зависят от режима (как в book-form): создание —
+             publication.create / publication.publishNew, редактирование —
+             publication.edit / publication.publish с owner-override. -->
         <div class="article-form__actions">
           <p class="article-form__draft-status" data-draft-status aria-live="polite"></p>
           <div class="article-form__buttons">
@@ -486,16 +490,18 @@ $richEditor = static function (
             
             <button type="submit" class="btn btn--secondary" name="status" value="draft"
                     data-submit-draft
-                    data-requires="publication.create"
+                    data-requires="<?= $isEdit ? 'publication.edit' : 'publication.create' ?>"
                     data-requires-kind="article"
+                    <?= $isEdit ? 'data-requires-owner="1"' : '' ?>
                     hidden>
               <?= $tr('common.articleform.create_draft') ?>
             </button>
             
             <button type="submit" class="btn btn--primary" name="status" value="published"
                     data-submit-publish
-                    data-requires="publication.publishNew"
+                    data-requires="<?= $isEdit ? 'publication.publish' : 'publication.publishNew' ?>"
                     data-requires-kind="article"
+                    <?= $isEdit ? 'data-requires-owner="1"' : '' ?>
                     hidden>
               <?= $tr('common.articleform.publish') ?>
             </button>

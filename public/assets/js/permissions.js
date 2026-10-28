@@ -7,7 +7,8 @@
  *
  * Ключи ("область.право"):
  *   system.*       - GET /api/system/rules
- *   publication.*  - GET /api/books/rules или /api/articles/rules (ctx.kind)
+ *   publication.*  - GET /api/publications/rules (ctx.kind — только ключ кеша
+ *                    LoreRules: books/articles отдают одинаковый ответ)
  *   post.*         - GET /api/posts/rules
  *   admin.panel    - составное: любое из admin-прав (AdminAccessOperation)
  *

@@ -11,6 +11,9 @@
  *   3. Список языков блока Translations — GET /api/additional/languages,
  *      при недоступности встроенный мок.
  *   4. Клиентский поиск по таблице (data-search у строки — все переводы).
+ *   5. Жалобы (admin/reports) — модалка «Отклонить/Удалить»: сводка из
+ *      data-атрибутов строки, решение применяется локально (мок, см.
+ *      TODO(api) в разделе REPORTS).
  *
  * ─── FETCH-СЛОЙ СПРАВОЧНИКОВ (раздел 2.1) ───────────────────────────
  * Контракт (предположительный — бэкенд ещё не отдал, меняется в одном
@@ -110,6 +113,122 @@
       var row = btn.closest('tr');
       if (row) row.remove();
     });
+  }
+
+  /* ============================================================
+     REPORTS — модалка «Отклонить/Удалить» в таблице жалоб
+
+     Разметка: src/views/pages/admin/reports.php (строки несут полную
+     копию записи в data-атрибутах) + partials/admin-report-modal.php.
+     Решение применяется локально и меняет бейдж статуса строки.
+
+     TODO(api): PATCH /api/admin/reports/{id}
+                body: { decision: 'reject' | 'delete', note: string } → 204
+     (роутов админки нет: config/routes.php и app/ заморожены).
+     ============================================================ */
+  var reportState = {
+    modal: null,
+    row: null,
+    id: '',
+    submitting: false,
+    lastFocus: null
+  };
+
+  function reportRoot() {
+    if (!reportState.modal) reportState.modal = document.querySelector('[data-admin-report-modal]');
+    return reportState.modal;
+  }
+
+  function isReportOpen() {
+    var m = reportRoot();
+    return !!(m && !m.hidden);
+  }
+
+  function rq(sel) {
+    var m = reportRoot();
+    return m ? m.querySelector(sel) : null;
+  }
+
+  function closeReportModal() {
+    var m = reportRoot();
+    if (m) m.hidden = true;
+    document.body.classList.remove('is-modal-open');
+    reportState.row = null;
+    reportState.id = '';
+    reportState.submitting = false;
+
+    ['[data-admin-report-reject]', '[data-admin-report-delete]', '[data-admin-report-cancel]'].forEach(function (sel) {
+      var btn = rq(sel);
+      if (btn) btn.disabled = false;
+    });
+
+    if (reportState.lastFocus && reportState.lastFocus.isConnected) {
+      try { reportState.lastFocus.focus(); } catch (_) {}
+    }
+    reportState.lastFocus = null;
+  }
+
+  function openReportModal(btn) {
+    var m = reportRoot();
+    var row = btn.closest('tr');
+    if (!m || !row) return;
+
+    var text = function (sel, value) {
+      var el = rq(sel);
+      if (el) el.textContent = value || '';
+    };
+
+    reportState.row = row;
+    reportState.id = row.getAttribute('data-report-id') || '';
+
+    var title = rq('[data-admin-report-title]');
+    if (title) title.textContent = t('admin.decision_title', { id: reportState.id });
+
+    text('[data-admin-report-kind]', t('report.kind_' + (row.getAttribute('data-report-target-type') || 'comment')));
+    text('[data-admin-report-target]', row.getAttribute('data-report-target-label'));
+    text('[data-admin-report-reason]', t('report.reason_' + (row.getAttribute('data-report-reason') || 'other')));
+    text('[data-admin-report-reporter]', row.getAttribute('data-report-reporter'));
+    text('[data-admin-report-created]', row.getAttribute('data-report-created'));
+
+    var note = rq('[data-admin-report-note]');
+    if (note) note.value = '';
+
+    reportState.lastFocus = document.activeElement;
+    m.hidden = false;
+    document.body.classList.add('is-modal-open');
+
+    var cancel = rq('[data-admin-report-cancel]');
+    if (cancel) cancel.focus();
+  }
+
+  /** Решение по жалобе: reject — контент остаётся, delete — удаляем. */
+  function decideReport(action) {
+    var row = reportState.row;
+    if (!row || reportState.submitting) return;
+    reportState.submitting = true;
+
+    var note = rq('[data-admin-report-note]');
+    var noteText = note ? note.value.trim() : '';
+
+    // TODO(api): fetch('PATCH /api/admin/reports/' + reportState.id,
+    // body: { decision: action, note: noteText }) — роута пока нет.
+    console.log('Report decision', reportState.id, action, noteText);
+
+    var statusCell = row.querySelector('[data-status-cell]');
+    if (statusCell) {
+      statusCell.innerHTML =
+        '<span class="admin-badge ' + (action === 'delete' ? 'admin-badge--danger' : 'admin-badge--muted') + '">' +
+        t(action === 'delete' ? 'admin.status_deleted' : 'admin.status_rejected') +
+        '</span>';
+    }
+
+    // Решение уже принято — строку второй раз не рассматриваем
+    var reviewBtn = row.querySelector('[data-admin-report-review]');
+    if (reviewBtn) reviewBtn.disabled = true;
+
+    var toast = action === 'delete' ? 'admin.delete_report_success' : 'admin.reject_success';
+    closeReportModal();
+    notify(toast, 'success');
   }
 
   /* ============================================================
@@ -888,6 +1007,15 @@
 
     if (e.target.closest('[data-dict-dismiss], [data-dict-cancel]')) { closeDictForm(); return; }
 
+    // --- Жалобы (REPORTS) ---
+    var reportReview = e.target.closest('[data-admin-report-review]');
+    if (reportReview) { openReportModal(reportReview); return; }
+
+    if (e.target.closest('[data-admin-report-dismiss], [data-admin-report-cancel]')) { closeReportModal(); return; }
+
+    if (e.target.closest('[data-admin-report-reject]')) { decideReport('reject'); return; }
+    if (e.target.closest('[data-admin-report-delete]')) { decideReport('delete'); return; }
+
     // --- Пользователи / комментарии ---
     var blockBtn = e.target.closest('[data-admin-block]');
     if (blockBtn && !blockBtn.disabled) { blockUser(blockBtn); return; }
@@ -896,18 +1024,22 @@
     if (deleteBtn) deleteComment(deleteBtn);
   });
 
-  // Esc — закрыть модалку справочника; Tab — фокус зациклен внутри неё
+  // Esc — закрыть модалку справочника или решение по жалобе; Tab — фокус зациклен внутри открытой
   document.addEventListener('keydown', function (e) {
-    if (!isDictOpen()) return;
+    var dictOpen = isDictOpen();
+    var reportOpen = isReportOpen();
+    if (!dictOpen && !reportOpen) return;
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      closeDictForm();
+      if (dictOpen) closeDictForm(); else closeReportModal();
       return;
     }
     if (e.key !== 'Tab') return;
 
-    var dialog = dict.modal.querySelector('.modal__dialog');
+    var dialog = dictOpen
+      ? dict.modal.querySelector('.modal__dialog')
+      : reportState.modal.querySelector('.modal__dialog');
     if (!dialog) return;
     var items = Array.prototype.filter.call(
       dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]'),

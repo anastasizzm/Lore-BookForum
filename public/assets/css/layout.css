@@ -282,6 +282,13 @@ body.is-sidebar-expanded .sidebar-overlay {
   left: 12px;
   transform: none !important;
   min-width: 200px;
+  /* Ширина ПО КОНТЕНТУ, а не растяжением между left/right: иначе на
+     мобильном (layout.css, @media ≤768) меню сжимается до 195px против
+     213px на десктопе, и кнопка «Админ-панель» меняет ширину при
+     изменении размеров окна. max-width — защита от выпадения за экран
+     на очень узких вьюпортах. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 12px);
@@ -597,23 +604,18 @@ a.settings-menu__item--admin:focus-visible {
     justify-content: flex-start;
   }
 
+  /* Мобильное меню: только сдвиг left — ширина управляется базовым
+     width: max-content (см. .settings-menu выше), поэтому правый inset
+     здесь не нужен: он сжимал меню (и кнопку «Админ-панель») до 195px
+     против 273px на десктопе. */
   .settings-menu {
     left: 16px;
-    right: 16px;
-    min-width: 0;
   }
 
-  /* Админ-панель в мобильном меню: подгоняем под размеры мобильных
-     nav-кнопок (52px высота, radius 20px, шрифт 16px — как
-     .mobile-nav-btn выше). Кнопка без заливки (только синяя обводка
-     --color-accent, см. базовое правило выше) — в мобильном меню она
-     сохраняет этот вид, меняются только размеры.
-     font-size 16px также защищает от автозума iOS Safari. */
-  .settings-menu .settings-menu__item--admin {
-    min-height: 52px;
-    padding: 0 20px;
-    gap: 16px;
-    border-radius: 20px;
-    font-size: 16px;
-  }
+  /* Кнопка «Админ-панель» БЕЗ мобильных переопределений: раньше здесь
+     было min-height 52px / font-size 16px / radius 20 (коммит 2123211),
+     из-за чего кнопка меняла размер при пересечении брейкпоинта 768px
+     при изменении ширины окна. Теперь размер одинаков во всех окнах
+     и совпадает с соседними пунктами меню (Language, Log out):
+     padding 8px 16px, font-size 12px, radius берётся от .settings-menu__item. */
 }

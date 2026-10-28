@@ -3,9 +3,21 @@
  * article-details — страница статьи (по аналогии с book/book-details.php).
  *
  * Шапка страницы содержит меню «три точки» (details-menu.php): пункты
- * «Редактировать» (ссылка на /articles/{id}/edit, цвет по правам —
- * book-rights.js) и «Удалить» (DELETE /api/articles/{id}, details-menu.js);
- * контракт обоих роутов — в шапке partial (бэк добавит, config/ заморожен).
+ * «Редактировать» (ссылка на /articles/{id}/edit) и «Удалить»
+ * (DELETE /api/articles/{id}, details-menu.js) — оба рендерятся скрытыми
+ * (hidden) и показываются permissions.js по data-requires;
+ * контракт обоих роутов — в шапке partial.
+ *
+ * ЧЕРНОВИК / ПУБЛИКАЦИЯ (по образцу book-details):
+ *   $status   — контроллер может передать напрямую ('draft' | 'published');
+ *               иначе вьюха читает поле модели. Бэкенд статуса статьи
+ *               пока не отдаёт — до тех пор страница не считает статью
+ *               черновиком и publish-bar не показывает.
+ *   Статус draft: в шапке бейдж «Черновик», внизу страницы publish-bar
+ *               с кнопкой «Опубликовать статью» (hidden по умолчанию,
+ *               показывает permissions.js по data-requires="publication.publish");
+ *               кликом открывается article-rights-dialog (article-publish.js,
+ *               контракт POST /api/articles/{id}/publish — в partial).
  *
  * Ожидаемые переменные от контроллера:
  *   $article — объект App\Models\Publications\Article
@@ -101,15 +113,27 @@ if (($article->creator ?? null) !== null) {
     }
 }
 
-/* ---------- Владелец публикации (для кнопок Edit/Delete) ----------
- * Как в book-details: глобальные /api/articles/rules owner-override не
+/* ---------- Владелец публикации (для кнопок Edit/Delete/Publish) ----------
+ * Как в book-details: глобальные /api/publications/rules owner-override не
  * отдают, поэтому «это моя статья» считаем по creator.id и отдаём в
- * data-rules-owner — book-rights.js сложит признак с правилами.
+ * details-menu как $isOwner — там он рендерится в data-requires-owner,
+ * и permissions.js складывает признак с правилами.
  */
 $creatorObj = is_object($article) ? ($article->creator ?? null) : null;
 $creatorId  = is_object($creatorObj) ? (int) ($creatorObj->id ?? 0) : 0;
 $viewerId   = (int) ($currentUserId ?? 0);
 $isOwnerPub = $viewerId > 0 && $creatorId > 0 && $viewerId === $creatorId;
+
+/* ---------- Статус публикации (бейдж «Черновик» + publish-bar) ----------
+ * Приоритет — явный $status от контроллера, иначе поле модели
+ * (как в book-details). Бэкенд статусы статей пока не отдаёт:
+ * до тех пор $isDraft = false и плашка публикации не показывается.
+ * Читаем и объект (прод), и query-массив (тест-роут /pages/test).
+ */
+$statusRaw = $status ?? (is_array($article) ? ($article['status'] ?? null)
+                                            : ($article->status ?? null));
+$status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
+$isDraft   = $status === 'draft';
 
 /* ---------- Жанр / DOI ---------- */
 
@@ -192,16 +216,31 @@ if (!empty($iconId)) {
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="/assets/css/book.css">
+  <!-- publish-bar и бейдж черновика — стили book.css (подключён выше);
+       article-right.css — окно выбора прав при публикации статьи -->
+  <link rel="stylesheet" href="/assets/css/article-right.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
     <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
+    <?php if ($isDraft): ?>
+      <!-- Метка черновика: статья ещё не опубликована -->
+      <span class="book-page-header__badge"
+            title="<?= $tr('common.article.draft_hint') ?>"><?= $tr('common.article.draft_badge') ?></span>
+    <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
-         по образцу book-details. Пункты гасятся по правилам
-         /api/articles/rules (book-rights.js), $isOwnerPub — owner-override. -->
-    <?php $view->include('details-menu', ['type' => 'article', 'id' => $articleId, 'isOwner' => $isOwnerPub]); ?>
+         по образцу book-details. Пункты рендерятся скрытыми, показывает
+         permissions.js по правилам /api/publications/rules, $isOwnerPub —
+         owner-override (data-requires-owner). -->
+    <?php $view->include('details-menu', [
+        'type'    => 'article',
+        'id'      => $articleId,
+        'isOwner' => $isOwnerPub,
+        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
+        'title'   => (string) ($article->title ?? ''),
+    ]); ?>
   </div>
 
   <div class="book-details">
@@ -437,11 +476,15 @@ if (!empty($iconId)) {
     <div class="stack" data-comment-list>
       <?php foreach ($comments as $comment): ?>
         <?php
-          $cId    = (int) ($comment['id'] ?? 0);
-          $cLikes = (int) ($comment['likes'] ?? 0);
-          $cLiked = (bool) ($comment['liked'] ?? false);
+          $cId       = (int) ($comment['id'] ?? 0);
+          $cLikes    = (int) ($comment['likes'] ?? 0);
+          $cLiked    = (bool) ($comment['liked'] ?? false);
+          // Автор — нужен comments.js, чтобы «Удалить» в меню «три точки»
+          // показывало только автору (само меню видно всем: там есть «Пожаловаться»)
+          $cAuthorId = (int) ($comment['userId'] ?? 0);
         ?>
-        <div class="comment-card" data-page="1"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
+        <div class="comment-card" data-page="1"
+             data-author-id="<?= $cAuthorId ?>"<?= $cId ? ' data-comment-id="' . $cId . '"' : '' ?>>
           <div class="comment-card__inner">
             <?php
             $cAvatar = (string) ($comment['userAvatar'] ?? '');
@@ -463,21 +506,8 @@ if (!empty($iconId)) {
                 </div>
 
                 <!-- Лайк уходит вниз (рядом с Reply); здесь — «три точки»:
-                     меню удаления, раскрывается НАД кнопкой; только для автора -->
-                <div class="comment-card__actions" data-c-menu-wrap hidden>
-                  <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                          aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                      <circle cx="8" cy="3" r="1.5"/>
-                      <circle cx="8" cy="8" r="1.5"/>
-                      <circle cx="8" cy="13" r="1.5"/>
-                    </svg>
-                  </button>
-                  <div class="comment-card__menu" data-c-menu hidden>
-                    <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                            data-c-delete><?= $tr('common.js.delete') ?></button>
-                  </div>
-                </div>
+                     удаление (только автор) + «Пожаловаться» (всем) -->
+                <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
               </div>
 
               <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
@@ -536,22 +566,9 @@ if (!empty($iconId)) {
               <div class="comment-card__text" data-c-text></div>
             </div>
 
-            <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
-                 (comments.js скрывает врап, если authorId != мой id) -->
-            <div class="comment-card__actions" data-c-menu-wrap hidden>
-              <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                      aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <circle cx="8" cy="3" r="1.5"/>
-                  <circle cx="8" cy="8" r="1.5"/>
-                  <circle cx="8" cy="13" r="1.5"/>
-                </svg>
-              </button>
-              <div class="comment-card__menu" data-c-menu hidden>
-                <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                        data-c-delete><?= $tr('common.js.delete') ?></button>
-              </div>
-            </div>
+            <!-- Меню «три точки»: удаление (только автор) + «Пожаловаться»
+                 (всем). Видимость пунктов гонит comments.js -->
+            <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
           </div>
 
           <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
@@ -610,22 +627,9 @@ if (!empty($iconId)) {
             <div class="comment-reply__author"></div>
             <div class="comment-reply__text"></div>
           </div>
-          <!-- Меню удаления: раскрывается НАД кнопкой; только для автора
-               (comments.js скрывает врап, если authorId != мой id) -->
-          <div class="comment-card__actions comment-reply__actions" data-c-menu-wrap hidden>
-            <button type="button" class="btn-icon-small comment-card__menu-btn" data-c-menu-toggle
-                    aria-haspopup="true" aria-expanded="false" aria-label="<?= $tr('common.comments.options') ?>">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="8" cy="3" r="1.5"/>
-                <circle cx="8" cy="8" r="1.5"/>
-                <circle cx="8" cy="13" r="1.5"/>
-              </svg>
-            </button>
-            <div class="comment-card__menu" data-c-menu hidden>
-              <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
-                      data-c-delete><?= $tr('common.js.delete') ?></button>
-            </div>
-          </div>
+          <!-- Меню ответа «три точки»: удаление (только автор) + «Пожаловаться»
+               (всем). Видимость пунктов гонит comments.js -->
+          <?php $view->include('comment-menu', ['variant' => 'reply']); ?>
         </div>
         <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->
         <div class="comment-card__footer comment-reply__footer">
@@ -651,12 +655,46 @@ if (!empty($iconId)) {
     </div>
   </template>
 
+  <?php if ($isDraft): ?>
+    <!-- ============================================================
+         КНОПКА ПУБЛИКАЦИИ — внизу страницы, видна ВСЕГДА, пока у статьи
+         статус draft (по образцу book-details). Кликом открывается
+         article-rights-dialog (article-publish.js): выбор редакторов и
+         POST /api/articles/{id}/publish → перезагрузка.
+         Кнопка рендерится скрытой (hidden), показывает permissions.js
+         по data-requires="publication.publish" (+ owner-override из
+         data-requires-owner).
+         ============================================================ -->
+    <section class="publish-bar" data-publish-bar>
+      <div class="publish-bar__text">
+        <strong class="publish-bar__label"><?= $tr('common.article.draft_badge') ?></strong>
+        <span class="publish-bar__hint"><?= $tr('common.article.publish_bar_text') ?></span>
+      </div>
+      <button type="button"
+        class="btn btn--primary publish-bar__cta"
+        data-article-publish-open
+        data-requires="publication.publish"
+        data-requires-kind="article"
+        data-requires-owner="<?= $isOwnerPub ? '1' : '0' ?>"
+        hidden
+        data-article-id="<?= (int) $articleId ?>">
+        <?= $tr('common.article.publish_cta') ?>
+      </button>
+    </section>
+  <?php endif; ?>
+
+  <!-- Окно выбора прав при публикации статьи (article-publish.js) -->
+  <?php $view->include('article-rights-dialog'); ?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <!-- article-publish.js — окно выбора прав при публикации статьи
+       (кнопка publish-bar у черновика, data-article-publish-open) -->
+  <script src="/assets/js/article-publish.js"></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>
