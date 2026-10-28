@@ -219,8 +219,8 @@ final class PublicationPermissionsService
 
     public function removeUser(int $publicationId, int $userId): void
     {
-        $versions = $this->repository->removeUser($userId, null, $publicationId);
-        if ($versions === []) {
+        $removed = $this->repository->removeUser($userId, null, $publicationId);
+        if (!$removed) {
             throw new NotFoundException($this->translator->t('errors.common.not_found'));
         }
     }
@@ -248,18 +248,17 @@ final class PublicationPermissionsService
         }
     }
 
-    public function removeUserRole(int $publicationId, int $userId, int $roleId): int
+    public function removeUserRole(int $publicationId, int $userId, int $roleId): void
     {
-        return $this->uow->transactional(function () use ($userId, $roleId, $publicationId) : int {
+        $this->uow->transactional(function () use ($userId, $roleId, $publicationId) {
             $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
             if ($rolesCount < 2)
                 throw new ConflictException($this->translator->t('errors.roles.last_role'));
         
-            $versions = $this->repository->removeUser($userId, $roleId, $publicationId);
-            if ($versions === []) {
+            $removed = $this->repository->removeUser($userId, $roleId, $publicationId);
+            if (!$removed) {
                 throw new NotFoundException($this->translator->t('errors.common.not_found'));
             }
-            return $versions[0];
         });
     }
 

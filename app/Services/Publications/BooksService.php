@@ -10,6 +10,7 @@ use App\Services\Storage\FileService;
 use App\Factories\CriteriasFactory;
 
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookContentForm;
 use App\Validators\Publications\BookFormValidator;
 use App\Validators\Publications\ReadProgressFormValidator;
 use App\Validators\Publications\RateFormValidator;
@@ -36,6 +37,7 @@ use App\Extensions\EnumExtensions;
 use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
+use App\ErrorCodes;
 
 use PDO;
 
@@ -127,6 +129,28 @@ final class BooksService extends PublicationsService
 
                 return $bookId;
             });
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function addContent(int $bookId, BookContentForm $form) : void 
+    {
+        try{
+            $this->repository->addContent($bookId, $form->contentId);
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function removeContent(int $bookId, Uuid $contentId) : void 
+    {
+        try{
+            $removed = $this->repository->removeContent($bookId, $contentId);
+            if ($removed) $this->fileService->delete($contentId);
+            else throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);

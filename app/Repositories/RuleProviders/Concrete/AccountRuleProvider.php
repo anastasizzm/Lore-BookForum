@@ -49,7 +49,7 @@ final class AccountRuleProvider extends Repository implements RuleProvider
 
     public function getRulesMany(int $userId, array $entities) : array 
     {
-        $ids = array_map('intval', $entityIds);
+        $ids = array_map('intval', $entities);
         if ($ids === []) {
             return [];
         }

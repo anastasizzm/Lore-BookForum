@@ -56,7 +56,7 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
     {
         $ids = array_map('intval', $entities);
 
-        if($ids = [])
+        if($ids == [])
         {
             return [];
         }

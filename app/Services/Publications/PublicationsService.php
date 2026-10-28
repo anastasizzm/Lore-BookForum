@@ -19,6 +19,7 @@ use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Lib\I18n\Translator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
+use App\ErrorCodes;
 
 use PDO;
 

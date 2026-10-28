@@ -42,6 +42,8 @@ return function(Router $router)
     $router->post('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', ReadPublicationOperation::class);
     $router->post('/api/books/{id}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
     $router->delete('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
+    $router->post('/api/books/{id}/contents', [App\Controllers\Api\Publications\BooksController::class, 'addContent'], 'api.books.contents.add', UpdateContentPublicationOperation::class);
+    $router->delete('/api/books/{id}/contents/{contentId}', [App\Controllers\Api\Publications\BooksController::class, 'removeContent'], 'api.books.contents.remove', UpdateContentPublicationOperation::class);
     $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);

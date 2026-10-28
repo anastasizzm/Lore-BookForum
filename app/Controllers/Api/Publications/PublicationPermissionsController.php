@@ -218,9 +218,8 @@ final class PublicationPermissionsController extends Controller
         if (!$this->permissionsService->canManageUser($currentUserId, $targetUserId, $publicationId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
-        $newVersion = $this->permissionsService->removeUserRole($publicationId, $targetUserId, $roleId);
-
-        return $this->jsonEmpty(204)->withHeader('ETag', sprintf('"%d"', $newVersion));
+        $this->permissionsService->removeUserRole($publicationId, $targetUserId, $roleId);
+        return $this->jsonEmpty(204);
     }
 
     private function requireVersion(HttpContext $context): int

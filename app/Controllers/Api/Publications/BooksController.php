@@ -8,6 +8,7 @@ use App\Services\Publications\BooksService;
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Publications\BookFiles;
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookContentForm;
 use App\Forms\Publications\RateForm;
 use App\Forms\Publications\BookProgressForm;
 use App\Models\Enums\BookFormat;
@@ -42,7 +43,7 @@ final class BooksController extends PublicationsController
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $query = BooksListQuery::fromInput($context->request->query, $userId);
-        $paginatedList = $this->booksService->getListWithContext($query);
+        $paginatedList = $this->service->getListWithContext($query);
         return $this->jsonList($paginatedList->getArray(), [
                 'page' => $paginatedList->getPage(),
                 'pageSize' => $paginatedList->getPageSize(),
@@ -57,10 +58,28 @@ final class BooksController extends PublicationsController
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $formData = $context->request->body();
-        $bookId = $this->booksService->create(
+        $bookId = $this->service->create(
             BookForm::fromInput($formData),
             $userId
         );
         return $this->jsonCreatedId($bookId);
+    }
+
+    public function addContent(HttpContext $context, string $id)
+    {
+        $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
+
+        $formData = $context->request->body();
+        $this->service->addContent($bookId, BookContentForm::fromInput($formData));
+        return $this->jsonEmpty();
+    }
+
+    public function removeContent(HttpContext $context, string $id, string $contentId)
+    {
+        $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
+        $contentId = RouteParamParser::uuid(['id' => $contentId], 'id');
+
+        $this->service->removeContent($bookId, $contentId);
+        return $this->jsonEmpty(204);
     }
 }

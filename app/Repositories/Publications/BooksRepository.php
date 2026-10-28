@@ -257,7 +257,7 @@ final class BooksRepository extends PublicationsRepository
         $stmt->execute([':fileIds' => $fileIdsArray]);
     }
 
-    public function removeContent(int $bookId, Uuid $contentId) : void
+    public function removeContent(int $bookId, Uuid $contentId) : bool
     {
         $values = [
             ':bookId' => ScriptParam::asInt($bookId),
@@ -266,6 +266,7 @@ final class BooksRepository extends PublicationsRepository
 
         $sql = 'DELETE FROM books_content WHERE book_id = :bookId AND content_id = :contentId';
         $stmt = $this->execute($sql, $values);
+        return $stmt->rowCount() > 0;
     }
 
     public function validatePublish(int $bookId) : bool 
