@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/additional/languages"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r\n    \"code\": \"by\"\r\n}"
+order: 2000

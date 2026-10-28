@@ -38,7 +38,7 @@ final class CategoriesScriptDirector extends ScriptDirector
     public function addCategorySelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("categories.id,\ncategories.created_at")
+        $this->tempBuilder->addSelect("categories.id,\ncategories.created_at,\ncategories.deleted_at")
             ->addSelect("COALESCE(
                     MAX(CASE WHEN categories_translations.code = :currentCulture THEN categories_translations.title END),
                     MAX(CASE WHEN categories_translations.code = :fallbackCulture THEN categories_translations.title END)
@@ -55,6 +55,13 @@ final class CategoriesScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("categories.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function addOrderTemp(BasicModelSortBy $sort)
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
@@ -63,6 +70,13 @@ final class CategoriesScriptDirector extends ScriptDirector
             BasicModelSortBy::Newest => 'categories.created_at DESC',
         };
         $this->tempBuilder->setOrder($order);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("categories.is_active");
         return $this;
     }
 

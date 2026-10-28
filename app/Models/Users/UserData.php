@@ -17,7 +17,8 @@ readonly class UserData extends UserShortData
         string $avatar,
         public string $email,
         public string $bio,
-        public DateTimeImmutable $createdAt
+        public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $deletedAt
     ) {
         parent::__construct($id, $username, $name, $surname, $avatar);
     }
@@ -33,7 +34,8 @@ readonly class UserData extends UserShortData
             avatar: $parent->avatar,
             email: self::str($row, $prefix . 'email'),
             bio: self::str($row, $prefix . 'bio'),
-            createdAt: self::dt($row, $prefix . 'created_at')
+            createdAt: self::dt($row, $prefix . 'created_at'),
+            deletedAt: self::dtN($row, $prefix . 'deleted_at')
         );
     }
 
@@ -46,4 +48,6 @@ readonly class UserData extends UserShortData
             'createdAt' => $this->createdAt
         ];
     }
+
+    public function isActive() : bool { return $this->deletedAt === NULL; }
 }

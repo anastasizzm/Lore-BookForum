@@ -14,13 +14,14 @@ readonly class Publication extends PublicationShort
         int $id,
         string $title,
         DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $deletedAt,
         ?Uuid $iconId,
         private int $creatorId,
         private int $genreId,
         public ?BasicModel $genre,
         public ?UserShortData $creator
     ){
-        parent::__construct($id, $title, $createdAt, $iconId);
+        parent::__construct($id, $title, $createdAt, $deletedAt, $iconId);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -33,7 +34,8 @@ readonly class Publication extends PublicationShort
             id: $parent->id,
             title: $parent->title,
             iconId: $parent->iconId,
-            createdAt: $parent->createdAt,  
+            createdAt: $parent->createdAt,
+            deletedAt: $parent->deletedAt,
             creatorId: self::int($row, $prefix . 'creator_id'),
             genreId: self::int($row, $prefix . 'genre_id'),
             creator: self::hasGroup($row, $prefix . $u, 'id')

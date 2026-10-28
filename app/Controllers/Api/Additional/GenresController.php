@@ -36,6 +36,13 @@ final class GenresController extends Controller
             ]);
     }
 
+    public function retrieve(HttpContext $context, string $genreId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $genreId], 'id');
+        $model = $this->genresService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function create(HttpContext $context)
     {
         $form = GenreForm::fromInput($context->request->body());
@@ -54,29 +61,11 @@ final class GenresController extends Controller
         return $this->jsonEmpty();
     }
 
-    /**public function delete(HttpContext $context, string $genreId)
+    public function delete(HttpContext $context, string $genreId)
     {
         $id = RouteParamParser::positiveInt(['id' => $genreId], 'id');
 
-        try {
-            $deleted = $this->genresService->delete($id);
-        } catch (ConflictException) {
-            return $this->jsonError(
-                new \App\Models\Errors\Error(
-                    $this->translator->t('errors.common.in_use'),
-                    ErrorCodes::CONFLICT,
-                ),
-                409
-            );
-        }
-
-        if (!$deleted) {
-            throw new NotFoundException(
-                $this->translator->t('errors.common.not_found'),
-                ErrorCodes::NOT_FOUND,
-            );
-        }
-
-        return $this->jsonEmpty();
-    }**/
+        $this->genresService->delete($id);
+        return $this->jsonEmpty(204);
+    }
 }

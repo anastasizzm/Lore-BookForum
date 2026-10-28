@@ -67,7 +67,8 @@
         "position_taken": "Could not find a free position",
         "position_changed": "Position changed while saving",
         "insufficient_role": "Insufficient permissions",
-        "last_role": "You can't delete the last role"
+        "last_role": "You can't delete the last role",
+        "system_role_delete": "You cant delete system roles"
     },
     "articles": {
         "pub_exists": "An article for this publication already exists",

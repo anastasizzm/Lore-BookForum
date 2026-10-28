@@ -12,9 +12,10 @@ final readonly class UserRole extends BasicModel
         int $id, 
         string $title,
         DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $deletedAt,
         public string $color
     ){
-        parent::__construct($id, $title, $createdAt);
+        parent::__construct($id, $title, $createdAt, $deletedAt);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -24,6 +25,7 @@ final readonly class UserRole extends BasicModel
             id: $parent->id,
             title: $parent->title,
             createdAt: $parent->createdAt,
+            deletedAt: $parent->deletedAt,
             color: self::str($row, $prefix . 'color')
         );
     }

@@ -102,12 +102,18 @@ final class ArticlesRepository extends PublicationsRepository
             case App\Models\Publications\Article::class:
                 $this->director->addArticleSelectTemp();
                 break;
+            default:
+                throw new \RuntimeException("Invalid class provided");
+                break;
         }
     }
 
     public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
-        $this->director->startTempFilter()->addViewerTemp($criteria->viewerId);
+        $this->director->startTempFilter()
+            ->addViewerTemp($criteria->viewerId)
+            ->addActiveTempFilter();
+            
         $this->addSelect($criteria->classType);
 
         $filters = $criteria->filters;

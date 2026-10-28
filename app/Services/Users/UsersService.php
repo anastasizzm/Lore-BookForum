@@ -11,12 +11,17 @@ use App\Attributes\Inject;
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\Users\ProfileFormValidator;
 
+use App\Models\PaginatedList;
+use App\Models\Queries\Users\UsersListQuery;
 use App\Models\Enums\ServiceType;
+use App\Models\Access\Permissions\RulesCombination;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
+use App\Models\Users\UserShortData;
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Exceptions\Translators\UserExceptionTranslator;
+use App\Factories\CriteriasFactory;
 use Throwable;
 use PDO;
 
@@ -30,8 +35,22 @@ final class UsersService
         private readonly ProfileFormValidator $profileFormValidator,
 
         #[Inject(key: ServiceType::System)]
-        private readonly CommonRuleProvider $ruleProvider
+        private readonly CommonRuleProvider $systemRuleProvider,
+
+        #[Inject(key: ServiceType::Post)]
+        private readonly CommonRuleProvider $postRuleProvider,
+
+        #[Inject(key: ServiceType::Publication)]
+        private readonly CommonRuleProvider $pubRuleProvider
     ){}
+
+    public function getList(UsersListQuery $query) : PaginatedList 
+    {
+        $criteria = CriteriasFactory::buildUserFromQuery($query, UserShortData::class);
+        $items = $this->usersRepo->getList($criteria);
+
+        return PaginatedList::fromArray($items, $query->pagination->page(), $query->pagination->pageSize());
+    }
 
     public function loadContext(int $userId): ?UserContext
     {
@@ -51,10 +70,17 @@ final class UsersService
             return null;
         }
 
-        $rules = $this->ruleProvider->getRule($userId);
-        if ($rules !== NULL)
-            $user = $user->withRules($rules);
+        $sysRules = $this->systemRuleProvider->getRule($userId);
+        $postRules = $this->postRuleProvider->getRule($userId);
+        $pubRules = $this->pubRuleProvider->getRule($userId);
 
+        $rulesCombination = RulesCombination::fromArray([
+            'system' => $sysRules,
+            'post' => $postRules,
+            'publication' => $pubRules
+        ]);
+
+        $user = $user->withRules($rulesCombination);
         try {
             $this->cache->set($user, ttl: 300);
         } catch (Throwable $e) {

@@ -38,13 +38,20 @@ final class RolesScriptDirector extends ScriptDirector
     public function addRoleSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("user_roles.id,\nuser_roles.color,\nuser_roles.is_system,\nuser_roles.created_at")
+        $this->tempBuilder->addSelect("user_roles.id,\nuser_roles.color,\nuser_roles.is_system,\nuser_roles.created_at,\nuser_roles.deleted_at")
             ->addSelect("COALESCE(
                     MAX(CASE WHEN user_roles_translations.code = :currentCulture THEN user_roles_translations.title END),
                     MAX(CASE WHEN user_roles_translations.code = :fallbackCulture THEN user_roles_translations.title END)
                 ) as title", [':currentCulture' => ScriptParam::asStr($currentLocale), ':fallbackCulture' => ScriptParam::asStr($fallbackLocale)])
             ->setGroup("user_roles.id");
         
+        return $this;
+    }
+
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("user_roles.id = :id", [':id' => ScriptParam::asInt($id)]);
         return $this;
     }
 
@@ -63,6 +70,13 @@ final class RolesScriptDirector extends ScriptDirector
             BasicModelSortBy::Newest => 'user_roles.created_at DESC',
         };
         $this->tempBuilder->setOrder($order);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("user_roles.is_active");
         return $this;
     }
 

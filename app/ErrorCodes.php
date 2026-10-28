@@ -25,6 +25,7 @@ final class ErrorCodes
     public const INVALID_ENCTYPTION = 'invalid_encryption';
     public const INVALID_HEADER = 'invalid_header';
     
+    public const SYSTEM_PART = 'system_part';
     public const UNHANDLED_EX = 'unhandled';
     public const ALREADY_DONE = 'already_done';
 

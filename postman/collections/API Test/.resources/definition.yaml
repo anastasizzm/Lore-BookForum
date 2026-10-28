@@ -6,3 +6,5 @@ variables:
   userId: ""
   fileId: ""
   roleId: ""
+  genreId: ""
+  langId: ""

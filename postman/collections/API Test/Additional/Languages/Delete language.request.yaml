@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/additional/languages/{{langId}}"
+method: DELETE
+headers:
+  x-csrf-token: "{{csrf_token}}"
+order: 4000

@@ -11,9 +11,9 @@ use App\Lib\I18n\Translator;
 use App\Controllers\Controller;
 
 use App\Models\Error;
-use App\Models\Enums\ServiceType;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Models\Queries\PaginationQuery;
+use App\Models\Enums\ServiceType;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Attributes\Inject;
 

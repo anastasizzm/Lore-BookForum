@@ -13,12 +13,12 @@ final readonly class Post extends Dto
     public function __construct(
         public int $id,
         public string $content,
-        public bool $isActive,
         public int $likesCount,
         public int $commentsCount,
         private int $creatorId,
         private int $publicationId,
         public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $deletedAt,
         public ?UserShortData $creator = null,
         public ?PublicationShort $publication = null,
     ) {}
@@ -33,8 +33,8 @@ final readonly class Post extends Dto
         return new self(
             id: self::int($row, $prefix . 'id'),
             content: self::str($row, $prefix . 'content'),
-            isActive: self::bool($row, $prefix . 'is_active'),
             createdAt: self::dt($row, $prefix . 'created_at'),
+            deletedAt: self::dtN($row, $prefix . 'deleted_at'),
             likesCount: self::int($row, $prefix . 'likes_count'),
             commentsCount: self::int($row, $prefix . 'comments_count'),
             publicationId: self::int($row, $prefix . 'publication_id'),
@@ -54,14 +54,16 @@ final readonly class Post extends Dto
         return [
             'id' => $this->id,
             'content' => $this->content,
-            'isActive' => $this->isActive,
             'likesCount' => $this->likesCount,
             'commentsCount' => $this->commentsCount,
             'creatorId' => $this->creatorId,
             'publicationId' => $this->publicationId,
             'createdAt' => $this->createdAt,
+            'deletedAt' => $this->deletedAt,
             'creator' => $this->creator,
             'publication' => $this->publication,
         ];
     }
+
+    public function isActive() : bool { return $this->deletedAt === NULL; }
 }

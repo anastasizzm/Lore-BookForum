@@ -8,6 +8,7 @@ use App\Controllers\Controller;
 use App\Services\Users\UsersService;
 
 use App\Http\HttpContext;
+use App\Models\Queries\Users\UsersListQuery;
 use App\Exceptions\ValidationException;
 use App\Extensions\Parsers\RouteParamParser;
 
@@ -27,5 +28,16 @@ final class UsersController extends Controller
         $formData = $context->request->body();
         $this->usersService->editProfile($userId, ProfileForm::fromInput($formData));
         return $this->jsonEmpty(201);
+    }
+
+    public function list(HttpContext $context)
+    {
+        $query = UsersListQuery::fromInput($context->request->query);
+        $paginatedList = $this->usersService->getList($query);
+        return $this->jsonList($paginatedList->getArray(), [
+            'page' => $paginatedList->getPage(),
+            'pageSize' => $paginatedList->getPageSize(),
+            'hasNext' => $paginatedList->hasNext(),
+        ]);
     }
 }

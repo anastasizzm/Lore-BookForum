@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Models\Users;
 
-use App\Models\Access\Rules\SystemAccessRules;
+use App\Models\Access\Permissions\RulesCombination;
 use App\Models\Dto;
 
 final readonly class UserContext extends UserShortData
@@ -14,7 +14,7 @@ final readonly class UserContext extends UserShortData
         string $name,
         string $surname,
         string $avatar,
-        private SystemAccessRules $systemRules
+        private RulesCombination $rules
     ) {
         parent::__construct($id, $username, $name, $surname, $avatar);
     }
@@ -28,12 +28,12 @@ final readonly class UserContext extends UserShortData
             username: $parent->username,
             surname: $parent->surname,
             avatar: $parent->avatar,
-            systemRules: SystemAccessRules::fromEmpty()
+            rules: RulesCombination::fromEmpty()
         );
     }
 
-    public function getSystemRules() { return $this->systemRules; }
-    public function withRules(SystemAccessRules $rules) : self 
+    public function getrules() { return $this->rules; }
+    public function withRules(RulesCombination $rules) : self 
     {
         return new self(
             id: $this->id,
@@ -41,7 +41,7 @@ final readonly class UserContext extends UserShortData
             name: $this->name,
             surname: $this->surname,
             avatar: $this->avatar,
-            systemRules: $rules
+            rules: $rules
         );
     }
 
@@ -53,20 +53,20 @@ final readonly class UserContext extends UserShortData
             'name' => $this->name,
             'surname' => $this->surname,
             'avatar' => $this->avatar,
-            'systemRules' => $this->systemRules->toArray()
+            'rules' => $this->rules->toArray()
         ];
     }
 
     public function fromArray(array $data) : static 
     {
-        $systemRules = $data['systemRules'] ?? NULL;
+        $rules = $data['rules'] ?? NULL;
         return new self(
             id: (int) $data['id'],
             username: (string) $data['username'],
             name: (string) ($data['name'] ?? ''),
             avatar: (string) ($data['avatar'] ?? 'default'),
             surname: (string)($data['surname'] ?? ''),
-            systemRules:  $systemRules === NULL ? SystemAccessRules::fromEmpty() : SystemAccessRules::fromArray($systemRules)
+            rules:  $rules === NULL ? RulesCombination::fromEmpty() : RulesCombination::fromArray($rules)
         );
     }
 }

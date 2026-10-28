@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/api/additional/roles/{{roleId}}"
+method: PUT
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \    \"color\": \"09DBA6\",\r
+
+    \    \"translations\": {\r
+
+    \        \"en\": \"Redactor\",\r
+
+    \        \"ru\": \"Редактор\"\r
+
+    \    }\r
+
+    }"
+order: 3000
