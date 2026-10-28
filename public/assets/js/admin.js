@@ -11,9 +11,9 @@
  *   3. Список языков блока Translations — GET /api/additional/languages,
  *      при недоступности встроенный мок.
  *   4. Клиентский поиск по таблице (data-search у строки — все переводы).
- *   5. Жалобы (admin/reports) — модалка «Отклонить/Удалить»: сводка из
- *      data-атрибутов строки, решение применяется локально (мок, см.
- *      TODO(api) в разделе REPORTS).
+ *   5. Жалобы (admin/reports) — модалка «Отклонить/Удалить» + фильтр по
+ *      статусу; решение уходит в fetch-слой reportsApi (PATCH), при
+ *      недоступности роута применяется локально (мок).
  *   6. Системные роли (admin/roles) — модалка прав: три группы чекбоксов
  *      (system/posts/pubs) из JSON-подложки страницы, сохранение через
  *      fetch-слой rolesApi (раздел 6.1) — PUT /api/system/roles/{id} c
@@ -124,11 +124,10 @@
 
      Разметка: src/views/pages/admin/reports.php (строки несут полную
      копию записи в data-атрибутах) + partials/admin-report-modal.php.
-     Решение применяется локально и меняет бейдж статуса строки.
 
-     TODO(api): PATCH /api/admin/reports/{id}
-                body: { decision: 'reject' | 'delete', note: string } → 204
-     (роутов админки нет: config/routes.php и app/ заморожены).
+     Решение уходит в fetch-слой reportsApi (раздел REPORTS API ниже):
+     PATCH /api/admin/reports/{id}. Пока роута нет, слой сам падает в
+     режим mock, и решение применяется локально (бейдж статуса строки).
      ============================================================ */
   var reportState = {
     modal: null,
@@ -137,6 +136,102 @@
     submitting: false,
     lastFocus: null
   };
+
+  /* ============================================================
+     REPORTS API — fetch-слой жалоб (раздел REPORTS API)
+
+     Контракт:
+       GET   /api/admin/reports?page=&ps= -> { items: [ … ] }
+       PATCH /api/admin/reports/{id}      -> 204
+               body: { decision: 'reject' | 'delete', note: string }
+
+     Оба метода возвращают Promise, который НИКОГДА неreject'ится
+     (сетевая ошибка — тоже ответ режима mock).
+     ============================================================ */
+  var reportsApi = (function () {
+    var BASE = '/api/admin/reports';
+    var status = 'unknown';        // 'unknown' | 'live' | 'mock'
+
+    function table() { return document.querySelector('[data-admin-table="reports"]'); }
+
+    function setStatus(next) {
+      if (status === next) return;
+      status = next;
+      var el = table();
+      if (el) el.setAttribute('data-reports-api', next);
+      if (next === 'mock') {
+        console.warn('[admin] reports API is not available yet — decisions stay on page mocks');
+      }
+    }
+
+    function request(method, path, body) {
+      var url = BASE + (path || '');
+      var options = {
+        method: method,
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      };
+      if (body !== undefined && body !== null) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+
+      var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
+      var result = function (status, ok, raw) {
+        var data = null;
+        var isJson = false;
+        if (raw && /^[\s]*[\[{]/.test(raw)) {
+          try { data = JSON.parse(raw); isJson = true; } catch (_) { data = null; }
+        }
+        return { status: status, ok: ok, data: data, raw: raw || '', isJson: isJson };
+      };
+
+      return Promise.resolve()
+        .then(function () { return run(url, options); })
+        .then(function (res) {
+          return res.text().then(
+            function (raw) { return result(res.status, res.ok, raw); },
+            function () { return result(res.status, res.ok, ''); }
+          );
+        })
+        .catch(function (err) {
+          return { status: 0, ok: false, data: null, raw: '', isJson: false, networkError: err };
+        });
+    }
+
+    function classify(r) {
+      if (r.networkError) return 'mock';
+      var looksHtml = /^\s*</.test(r.raw || '');
+      if (r.ok) return looksHtml ? 'mock' : 'ok';
+      if (looksHtml || !r.isJson) return 'mock';
+      if (r.status === 404 || r.status === 405) return 'mock';
+      if (r.status === 403) return 'forbidden';
+      return 'error';
+    }
+
+    function errorText(r) {
+      var fallback = null;
+      if (window.LoreI18n) fallback = LoreI18n.t('errors.common.request_failed', { status: r.status });
+      if (window.Messages && Messages.describe) return Messages.describe(r.status, r.data, r.raw, fallback);
+      return fallback || ('HTTP ' + r.status);
+    }
+
+    return {
+      get status() { return status; },
+
+      /** PATCH /api/admin/reports/{id}. Никогда неreject'ится. */
+      decide: function (id, decision, note) {
+        return request('PATCH', '/' + id, { decision: decision, note: note }).then(function (r) {
+          var kind = classify(r);
+          if (kind === 'ok') { setStatus('live'); return { mode: 'api', status: r.status }; }
+          if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
+          if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+          return { mode: 'error', status: r.status, message: errorText(r) };
+        });
+      }
+    };
+  })();
+
 
   function reportRoot() {
     if (!reportState.modal) reportState.modal = document.querySelector('[data-admin-report-modal]');
@@ -151,6 +246,22 @@
   function rq(sel) {
     var m = reportRoot();
     return m ? m.querySelector(sel) : null;
+  }
+
+  /** Живой статус под тулбаром (aria-live): ошибка решения и т.п. */
+  function setReportsStatus(text) {
+    var el = document.querySelector('[data-admin-reports-status]');
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  /** Блокировка кнопок решения в модалке (во время отправки). */
+  function setReportButtonsDisabled(disabled) {
+    ['[data-admin-report-reject]', '[data-admin-report-delete]'].forEach(function (sel) {
+      var btn = rq(sel);
+      if (btn) btn.disabled = disabled;
+    });
   }
 
   function closeReportModal() {
@@ -197,6 +308,7 @@
     var note = rq('[data-admin-report-note]');
     if (note) note.value = '';
 
+    setReportsStatus('');
     reportState.lastFocus = document.activeElement;
     m.hidden = false;
     document.body.classList.add('is-modal-open');
@@ -205,34 +317,65 @@
     if (cancel) cancel.focus();
   }
 
-  /** Решение по жалобе: reject — контент остаётся, delete — удаляем. */
-  function decideReport(action) {
-    var row = reportState.row;
-    if (!row || reportState.submitting) return;
-    reportState.submitting = true;
-
-    var note = rq('[data-admin-report-note]');
-    var noteText = note ? note.value.trim() : '';
-
-    // TODO(api): fetch('PATCH /api/admin/reports/' + reportState.id,
-    // body: { decision: action, note: noteText }) — роута пока нет.
-    console.log('Report decision', reportState.id, action, noteText);
+  /** Локальное применение решения: бейдж статуса + блокировка кнопки. */
+  function applyReportDecision(row, action) {
+    var status = action === 'delete' ? 'deleted' : 'rejected';
+    row.setAttribute('data-status', status);
 
     var statusCell = row.querySelector('[data-status-cell]');
     if (statusCell) {
       statusCell.innerHTML =
         '<span class="admin-badge ' + (action === 'delete' ? 'admin-badge--danger' : 'admin-badge--muted') + '">' +
-        t(action === 'delete' ? 'admin.status_deleted' : 'admin.status_rejected') +
+        t('admin.status_' + status) +
         '</span>';
     }
 
     // Решение уже принято — строку второй раз не рассматриваем
     var reviewBtn = row.querySelector('[data-admin-report-review]');
     if (reviewBtn) reviewBtn.disabled = true;
+  }
 
-    var toast = action === 'delete' ? 'admin.delete_report_success' : 'admin.reject_success';
-    closeReportModal();
-    notify(toast, 'success');
+  /** Решение по жалобе: reject — контент остаётся, delete — удаляем. */
+  function decideReport(action) {
+    var row = reportState.row;
+    if (!row || reportState.submitting) return;
+    reportState.submitting = true;
+
+    // Блокируем кнопки, чтобы решение не отправилось дважды
+    setReportButtonsDisabled(true);
+
+    var note = rq('[data-admin-report-note]');
+    var noteText = note ? note.value.trim() : '';
+
+    reportsApi.decide(reportState.id, action, noteText).then(function (result) {
+      if (result.mode === 'forbidden') {
+        notify(t('js.no_rights'), 'error');
+        setReportsStatus(t('js.no_rights'));
+        setReportButtonsDisabled(false);
+        return;
+      }
+      if (result.mode === 'error') {
+        notify(result.message, 'error');
+        setReportsStatus(result.message);
+        setReportButtonsDisabled(false);
+        return;
+      }
+
+      applyReportDecision(row, action);
+      var toast = action === 'delete' ? 'admin.delete_report_success' : 'admin.reject_success';
+      closeReportModal();
+      notify(toast, 'success');
+    })
+    .catch(function (err) {
+      // decide() неreject'ится — это страховка от багов самого слоя
+      console.warn('[admin] report decision failed', err);
+      notify(t('errors.common.network_error'), 'error');
+      setReportsStatus(t('errors.common.network_error'));
+      setReportButtonsDisabled(false);
+    })
+    .then(function () {
+      reportState.submitting = false;
+    });
   }
 
   /* ============================================================
@@ -1331,23 +1474,29 @@
     var table = document.querySelector('[data-admin-table]');
     if (!input || !table) return;
 
+    var statusSel = document.querySelector('[data-admin-status]');
     var emptyRow = table.querySelector('[data-admin-empty]');
     var emptyText = emptyRow ? (emptyRow.querySelector('td') || emptyRow).textContent.trim() : '';
 
     searchState = {
       input: input,
       table: table,
+      status: statusSel,
       count: document.querySelector('[data-admin-count]'),
       emptyRow: emptyRow,
       emptyText: emptyText,
       apply: function () {
         var q = (searchState.input.value || '').trim().toLowerCase();
+        // Фильтр по статусу (страница жалоб): пусто — все статусы
+        var status = searchState.status ? String(searchState.status.value || '') : '';
         var rows = searchState.table.querySelectorAll('tbody tr[data-search]');
         var shown = 0;
 
         Array.prototype.forEach.call(rows, function (row) {
           var haystack = (row.getAttribute('data-search') || '').toLowerCase();
-          var hit = q === '' || haystack.indexOf(q) !== -1;
+          var hitText = q === '' || haystack.indexOf(q) !== -1;
+          var hitStatus = status === '' || (row.getAttribute('data-status') || '') === status;
+          var hit = hitText && hitStatus;
           row.hidden = !hit;
           if (hit) shown++;
         });
@@ -1369,6 +1518,7 @@
     };
 
     input.addEventListener('input', searchState.apply);
+    if (statusSel) statusSel.addEventListener('change', searchState.apply);
     searchState.apply();
   }
 

@@ -144,6 +144,42 @@
   white-space: nowrap;
 }
 
+/* Фильтр по статусу в тулбаре (страница жалоб) */
+.admin-toolbar__filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.admin-toolbar__filter-label {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.admin-toolbar__select {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  color: var(--color-text);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.admin-toolbar__select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* Живой статус загрузки/ошибки под тулбаром */
+.admin-toolbar__status {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
 /* ============================================
    TABLE — таблицы админки
    .admin-table-wrap даёт горизонтальный скролл на узких экранах,
@@ -632,6 +668,17 @@
 
   .admin-toolbar__count {
     margin-left: 0;
+  }
+
+  /* Фильтр по статусу растягивается на всю ширину, как и поиск */
+  .admin-toolbar__filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-toolbar__select {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   /* Таблица не сжимается в ноль: скролл внутри .admin-table-wrap,

@@ -11,8 +11,9 @@
  *   [data-admin-report-reject] — «Отклонить»: жалобу отклоняем, контент
  *                                остаётся (в моке — бейдж статуса);
  *   [data-admin-report-delete] — «Удалить»: контент удаляем, жалоба закрыта.
- * Обе — мок (см. TODO(api) в admin.js): PATCH /api/admin/reports/{id}
- * body { decision, note }. Заметка модератора необязательна.
+ * Обе уходят в reportsApi (admin.js, раздел REPORTS API): PATCH
+ * /api/admin/reports/{id} body { decision, note }; пока роута нет —
+ * применяются локально. Заметка модератора необязательна.
  *
  * Стили — public/assets/css/admin.css (.admin-report__*), каркас .modal —
  * modal.css.
