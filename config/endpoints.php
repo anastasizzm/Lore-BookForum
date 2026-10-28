@@ -29,7 +29,7 @@ return function(Router $router)
     // Auth
     $router->post('/api/mail/resend', [App\Controllers\Api\Auth\AccountController::class, 'resendMailVerify'], 'api.sendmail', AuthPolicy::Public);
     
-    $rotuer->get('/api/rules', [App\Controllers\Api\Auth\AccountController::class, 'getCommonRules'], 'api.rules', AuthPolicy::Auth);
+    $router->get('/api/rules', [App\Controllers\Api\Auth\AccountController::class, 'getCommonRules'], 'api.rules', AuthPolicy::Auth);
     $router->put('/api/users/{userId}/credits/edit', [App\Controllers\Api\Auth\AccountController::class, 'changeCredits'], 'api.users.credits.edit.submit', ManageAccountOperation::class);
 
     // Publications

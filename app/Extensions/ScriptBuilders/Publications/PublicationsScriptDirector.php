@@ -79,7 +79,7 @@ abstract class PublicationsScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("publications.is_active");
+        $this->tempBuilder->addWhere("publications.is_active");
         return $this;
     }
 

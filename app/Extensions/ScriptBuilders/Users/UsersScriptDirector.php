@@ -78,7 +78,7 @@ final class UsersScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("users.is_active");
+        $this->tempBuilder->addWhere("users.is_active");
         return $this;
     }
 

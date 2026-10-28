@@ -17,9 +17,9 @@ final readonly class RulesCombination
     public function toArray() : array 
     {
         return [
-            'system' => $sysRules->toArray(),
-            'post' => $postRules->toArray(),
-            'publication' => $pubRules->toArray()
+            'system' => $this->system->toArray(),
+            'post' => $this->post->toArray(),
+            'publication' => $this->publication->toArray()
         ];
     }
 
@@ -34,10 +34,14 @@ final readonly class RulesCombination
 
     public static function fromArray(array $data) : self 
     {
+        $system = $data['system'];
+        $post = $data['post'];
+        $pub = $data['publication'];
+
         return new self(
-            system: isset($data['system']) ? SystemAccessRules::fromArray($data['system']) : SystemAccessRules::fromEmpty(),
-            post: isset($data['post']) ? PostAccessRules::fromArray($data['post']) : PostAccessRules::fromEmpty(),
-            publication: isset($data['publication']) ? PublicationAccessRules::fromArray($data['publication']) : PublicationAccessRules::fromEmpty(),
+            system: isset($system) ? ($system instanceof SystemAccessRules ? $system : SystemAccessRules::fromArray($system)) : SystemAccessRules::fromEmpty(),
+            post: isset($post) ? ($post instanceof PostAccessRules ? $post : PostAccessRules::fromArray($post)) : PostAccessRules::fromEmpty(),
+            publication: isset($publication) ? ($publication instanceof PublicationAccessRules ? $publication : PublicationAccessRules::fromArray($publication)) : PublicationAccessRules::fromEmpty(),
         );
     }
 }

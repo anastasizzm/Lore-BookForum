@@ -21,8 +21,8 @@ final class LanguagesRepository extends Repository
         int $pageSize,
     ) : array
     {
-        $stmt = $this->pdo()->prepare('SELECT code, created_at, deleted_at FROM languages LIMIT :limit OFFSET :offset');
-        $stmt->execute([':limit' => $page+1, ':offset' => ($page-1) * $pageSize]);
+        $stmt = $this->pdo()->prepare('SELECT code, created_at, deleted_at FROM languages WHERE is_active LIMIT :limit OFFSET :offset');
+        $stmt->execute([':limit' => $pageSize+1, ':offset' => ($page-1) * $pageSize]);
 
         $items = array_map(
             static fn(array $row) => Language::fromRow($row),
@@ -34,11 +34,10 @@ final class LanguagesRepository extends Repository
 
     public function retrieve(string $code) : ?Language
     {
-        $stmt = $this->pdo()->prepare('SELECT code, created_at, deleted_at FROM languages WHERE code = :code LIMIT 1');
+        $stmt = $this->pdo()->prepare('SELECT code, created_at, deleted_at FROM languages WHERE code = :code AND is_active LIMIT 1');
         $stmt->execute([':code' => $code]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
         return $row === false ? NULL : Language::fromRow($row);
     }
 

@@ -80,7 +80,7 @@ final class PostsScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("comments.is_active");
+        $this->tempBuilder->addWhere("comments.is_active");
         return $this;
     }
 

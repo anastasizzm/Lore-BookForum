@@ -21,7 +21,7 @@ final readonly class Language extends Dto
         return new self(
             code: self::str($row, $prefix . 'code'),
             createdAt: self::dt($row, $prefix . 'created_at'),
-            deletedAt: self::dt($row, $prefix . 'deleted_at'),
+            deletedAt: self::dtN($row, $prefix . 'deleted_at'),
         );
     }
 

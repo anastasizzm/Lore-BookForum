@@ -8,6 +8,7 @@ use App\Models\Auth\AccountCredits;
 use App\Models\Users\UserContext;
 use App\Models\Users\UserData;
 use App\Models\Users\UserShortData;
+use App\Models\Criterias\Users\UsersCriteria;
 use App\Extensions\ScriptBuilders\Users\UsersScriptDirector;
 
 use App\Repositories\Repository;

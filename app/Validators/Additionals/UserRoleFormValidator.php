@@ -12,7 +12,7 @@ use App\Models\Errors\ErrorBag;
 
 final class UserRoleFormValidator extends Validator
 {
-    private const COLOR_REGEX = "#[A-Z0-9]{6}#";
+    private const COLOR_REGEX = "#^[A-Z0-9]{6}$#";
 
     private readonly UserRoleFormLimits $limits;
 

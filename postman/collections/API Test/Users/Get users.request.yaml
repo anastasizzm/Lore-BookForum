@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{base_url}}/api/users"
+method: GET
+queryParams:
+  - key: q
+    value: ""
+    disabled: true
+    description: ""
+order: 1000

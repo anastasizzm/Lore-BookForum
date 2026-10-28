@@ -58,6 +58,7 @@ final class RolesRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addRoleSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
             ->addConcreteTempFilter($roleId)->setLimitTemp(1);
 
         $data = $this->director->buildTempFilter();
@@ -78,7 +79,7 @@ final class RolesRepository extends Repository
 
     public function create(string $color, array $translations) : int
     {
-        return $this->uow->transactional(function() use ($translations) {
+        return $this->uow->transactional(function() use ($translations, $color) {
             $id = (int)$this->execute('INSERT INTO user_roles (color) VALUES (:color) RETURNING id', [':color' => ScriptParam::asStr($color)])
                 ->fetchColumn();
             $this->saveTranslations($id, $translations);

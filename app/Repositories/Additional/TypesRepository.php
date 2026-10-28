@@ -58,6 +58,7 @@ final class TypesRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
             ->addConcreteTempFilter($roleId)->setLimitTemp(1);
 
         $data = $this->director->buildTempFilter();

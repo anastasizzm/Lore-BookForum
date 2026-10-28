@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Forms\Additionals;
 use App\Forms\Form;
-use App\Extensions\QueryParser;
+use App\Extensions\Parsers\QueryParser;
 
 final readonly class LanguageForm implements Form
 {

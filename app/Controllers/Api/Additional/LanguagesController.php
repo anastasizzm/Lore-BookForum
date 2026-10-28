@@ -37,7 +37,7 @@ final class LanguagesController extends Controller
 
     public function retrieve(HttpContext $context, string $code) 
     {
-        $code = RouteParamParser::positiveInt(['c' => $code], 'c');
+        $code = RouteParamParser::string(['c' => $code], 'c');
         $model = $this->languagesService->retrieve($code);
         return $this->jsonObject($model);
     }
@@ -61,7 +61,7 @@ final class LanguagesController extends Controller
         $code = RouteParamParser::string(['c' => $code], 'c');
         $formData = $context->request->body();
 
-        $this->languagesService->update(LanguageForm::fromInput($formData));
+        $this->languagesService->update($code, LanguageForm::fromInput($formData));
         return $this->jsonEmpty();
     }
 

@@ -35,6 +35,7 @@ final class CategoriesRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addCategorySelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
             ->addActiveTempFilter();
 
         if (!empty($search))

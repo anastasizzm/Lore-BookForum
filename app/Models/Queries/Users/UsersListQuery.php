@@ -16,7 +16,7 @@ final readonly class UsersListQuery
     ) {}
 
     /** @param array<string, mixed> $q */
-    public static function fromInput(array $q, int $viewerId): self
+    public static function fromInput(array $q): self
     {
         return new self(
             pagination: PaginationQuery::fromInput($q),

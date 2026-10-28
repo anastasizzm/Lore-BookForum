@@ -58,6 +58,7 @@ final class GenresRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
             ->addConcreteTempFilter($genreId)->setLimitTemp(1);
 
         $data = $this->director->buildTempFilter();

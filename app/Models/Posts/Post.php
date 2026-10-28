@@ -13,7 +13,6 @@ final readonly class Post extends Dto
     public function __construct(
         public int $id,
         public string $content,
-        public bool $isActive,
         public int $likesCount,
         public int $commentsCount,
         private int $creatorId,
@@ -34,7 +33,6 @@ final readonly class Post extends Dto
         return new self(
             id: self::int($row, $prefix . 'id'),
             content: self::str($row, $prefix . 'content'),
-            isActive: self::bool($row, $prefix . 'is_active'),
             createdAt: self::dt($row, $prefix . 'created_at'),
             deletedAt: self::dtN($row, $prefix . 'deleted_at'),
             likesCount: self::int($row, $prefix . 'likes_count'),
@@ -56,7 +54,6 @@ final readonly class Post extends Dto
         return [
             'id' => $this->id,
             'content' => $this->content,
-            'isActive' => $this->isActive,
             'likesCount' => $this->likesCount,
             'commentsCount' => $this->commentsCount,
             'creatorId' => $this->creatorId,

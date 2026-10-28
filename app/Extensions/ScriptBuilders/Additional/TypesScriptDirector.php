@@ -64,7 +64,7 @@ final class TypesScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("types.is_active");
+        $this->tempBuilder->addWhere("types.is_active");
         return $this;
     }
 

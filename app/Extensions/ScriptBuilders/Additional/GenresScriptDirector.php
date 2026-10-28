@@ -57,7 +57,7 @@ final class GenresScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("genres.is_active");
+        $this->tempBuilder->addWhere("genres.is_active");
         return $this;
     }
 

@@ -69,7 +69,7 @@ final class RolesService
         }
 
         try {
-            return $this->rolesRepo->create($form->translations);
+            return $this->rolesRepo->create($form->color, $form->translations);
         } catch (PDOException $e) {
             throw $this->translator->translate($e);
         }

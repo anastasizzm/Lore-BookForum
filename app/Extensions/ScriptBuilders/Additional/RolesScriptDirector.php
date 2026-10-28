@@ -76,7 +76,7 @@ final class RolesScriptDirector extends ScriptDirector
     public function addActiveTempFilter() : self 
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->templateBuilder->addWhere("user_roles.is_active");
+        $this->tempBuilder->addWhere("user_roles.is_active");
         return $this;
     }
 

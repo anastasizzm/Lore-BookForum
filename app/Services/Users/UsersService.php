@@ -47,7 +47,9 @@ final class UsersService
     public function getList(UsersListQuery $query) : PaginatedList 
     {
         $criteria = CriteriasFactory::buildUserFromQuery($query, UserShortData::class);
-        return $this->usersRepo->getList($criteria,);
+        $items = $this->usersRepo->getList($criteria);
+
+        return PaginatedList::fromArray($items, $query->pagination->page(), $query->pagination->pageSize());
     }
 
     public function loadContext(int $userId): ?UserContext

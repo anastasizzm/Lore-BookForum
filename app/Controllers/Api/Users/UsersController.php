@@ -35,9 +35,9 @@ final class UsersController extends Controller
         $query = UsersListQuery::fromInput($context->request->query);
         $paginatedList = $this->usersService->getList($query);
         return $this->jsonList($paginatedList->getArray(), [
-                'page' => $paginatedList->getPage(),
-                'pageSize' => $paginatedList->getPageSize(),
-                'hasNext' => $paginatedList->hasNext(),
-            ]);
+            'page' => $paginatedList->getPage(),
+            'pageSize' => $paginatedList->getPageSize(),
+            'hasNext' => $paginatedList->hasNext(),
+        ]);
     }
 }
