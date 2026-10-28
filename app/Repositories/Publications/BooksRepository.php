@@ -38,13 +38,7 @@ final class BooksRepository extends PublicationsRepository
         parent::__construct($db, $translator, new BooksScriptDirector());
     }
 
-    public function checkType(int $publicationId) : bool
-    {
-        $data = $this->director->getExistsScript($publicationId);
-        $stmt = $this->executeScript($data);
-
-        return $stmt->fetchColumn() !== false;
-    }
+    protected function getCheckTable() : string { return "books"; }
 
     protected function applyFilters(PublicationsFilters $filters) : void 
     {
@@ -162,7 +156,7 @@ final class BooksRepository extends PublicationsRepository
         int $creatorId,
     ) : int 
     {
-        return $this->uow->transactional(function (PDO $pdo) use ($model, $creatorId) : int {
+        return $this->uow->transactional(function () use ($model, $creatorId) : int {
             $pubId = $this->insertPublication(
                 $model->title,
                 $model->description,
@@ -203,12 +197,7 @@ final class BooksRepository extends PublicationsRepository
                 VALUES (:pubId, :catId, :publ, :pages, :isbn) RETURNING publication_id';
         
         $stmt = $this->execute($sql, $values);
-        $id = $stmt->fetchColumn();
-        if ($id === false) {
-            throw new \RuntimeException('No instance created');
-        }
-        
-        return (int)$id;
+        return (int)$stmt->fetchColumn();
     }
 
     public function identifyContent(int $bookId, string $format) : ?Uuid 
@@ -226,16 +215,15 @@ final class BooksRepository extends PublicationsRepository
         return !is_string($id) ? NULL : Uuid::fromString($id);
     }
 
-    public function addContent(int $bookId, Uuid $contentId, string $format) : void
+    public function addContent(int $bookId, Uuid $contentId) : void
     {
         $values = [
             ':bookId' => ScriptParam::asInt($bookId),
             ':contentId' => ScriptParam::asStr($contentId->toString()),
-            ':format' => ScriptParam::asStr($format)
         ];
 
         $sql = 'INSERT INTO books_content (book_id, content_id, format)
-        VALUES (:bookId, :contentId, :format)';
+                SELECT :bookId::bigint, id, format FROM files WHERE id = :contentId';
 
         $this->execute($sql, $values);
     }
@@ -265,7 +253,7 @@ final class BooksRepository extends PublicationsRepository
     private function activateFiles(array $fileIds) : void 
     {
         $fileIdsArray = '{' . implode(',', $fileIds) . '}';
-        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id IN (SELECT file_id FROM unnest(:fileIds::uuid[]) AS t(file_id))");
+        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = ANY(:fileIds::uuid[])");
         $stmt->execute([':fileIds' => $fileIdsArray]);
     }
 
@@ -278,5 +266,16 @@ final class BooksRepository extends PublicationsRepository
 
         $sql = 'DELETE FROM books_content WHERE book_id = :bookId AND content_id = :contentId';
         $stmt = $this->execute($sql, $values);
+    }
+
+    public function validatePublish(int $bookId) : bool 
+    {
+        $sql = "SELECT 1
+                FROM books_content bc
+                WHERE bc.book_id = :bookId
+                    AND LOWER(bc.format) = 'pdf'";
+
+        $stmt = $this->execute($sql, [':bookId' => ScriptParam::asInt($bookId)]);
+        return $stmt->rowCount() > 0;
     }
 }

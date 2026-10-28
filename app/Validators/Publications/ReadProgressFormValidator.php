@@ -10,9 +10,9 @@ use App\Models\Errors\ErrorBag;
 use App\Lib\Settings\Settings;
 
 /**
- * @extends Validator<BookProgressForm>
+ * @extends Validator<ReadProgressForm>
  */
-final class BookProgressFormValidator extends Validator 
+final class ReadProgressFormValidator extends Validator 
 {
     public function __construct(Settings $settings, Translator $translator)
     {

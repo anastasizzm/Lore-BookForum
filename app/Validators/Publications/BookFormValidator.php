@@ -38,11 +38,6 @@ final class BookFormValidator extends PublicationFormValidator
             $ok = false;
         }
 
-        if (count($item->contentIds) < 1){
-            $bag->add('contentIds', [$this->translator->t('errors.common.min_len', [":value" => 1])]);
-            $ok = false;
-        }
-
         return (bool)$ok;
     }
 }

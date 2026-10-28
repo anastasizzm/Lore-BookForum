@@ -22,6 +22,8 @@ use PDO;
 
 abstract class PublicationsRepository extends Repository
 {
+    private const array ALLOWED_TABLES = ['books', 'articles'];
+
     public function __construct(
         Database $db,
         protected Translator $translator,
@@ -30,7 +32,17 @@ abstract class PublicationsRepository extends Repository
         parent::__construct($db);
     }
 
-    public abstract function checkType(int $publicationId) : bool;
+    protected abstract function getCheckTable() : string;
+
+    private function checkTable() : string 
+    {
+        $table = $this->getCheckTable();
+
+        if (!in_array($table, self::ALLOWED_TABLES, true))
+            throw new \InvalidArgumentException("'{$table}' is not allowed");
+
+        return $table;
+    }
 
     public function retrieveShort(int $publicationId) : ?PublicationShort 
     {
@@ -51,42 +63,92 @@ abstract class PublicationsRepository extends Repository
 
     public function rate(int $userId, int $publicationId, int $rating) : void 
     {
-        $stmt = $this->pdo()->prepare(
-            "INSERT INTO ratings (user_id, publication_id, rating)
-                VALUES (:userId, :pubId, :rating)
-                ON CONFLICT (user_id, publication_id)
-                DO UPDATE SET rating = EXCLUDED.rating;
-            "
-        );
-        $stmt->execute([':userId' => $userId, ':pubId' => $publicationId, ':rating' => $rating]);
+        $checkTable = $this->checkTable();
+
+        $sql = "INSERT INTO ratings (user_id, publication_id, rating)
+                    SELECT :userId::bigint, checker.publication_id, :rating::smallint
+                    FROM {$checkTable} checker
+                    WHERE checker.publication_id = :pubId
+                    ON CONFLICT (user_id, publication_id)
+                    DO UPDATE SET rating = EXCLUDED.rating;
+                ";
+        $this->execute($sql, [
+            ':userId' => ScriptParam::asInt($userId), 
+            ':pubId' => ScriptParam::asInt($publicationId), 
+            ':rating' => ScriptParam::asInt($rating)
+        ]);
     }
 
     public function unrate(int $userId, int $publicationId) : void 
     {
-        $stmt = $this->pdo()->prepare(
-            'DELETE FROM ratings WHERE user_id = :userId AND publication_id = :pubId'
-        );
+        $checkTable = $this->checkTable();
 
-        $stmt->execute([':userId' => $userId, ':pubId' => $publicationId]);
+        $sql = "DELETE FROM ratings 
+                WHERE user_id = :userId 
+                    AND publication_id = :pubIdOuter
+                    AND EXISTS (
+                        SELECT 1 FROM {$checkTable} checker
+                        WHERE checker.publication_id = :pubIdInner
+                        )";
+
+        $this->execute($sql, [
+            ':userId' => ScriptParam::asInt($userId), 
+            ':pubIdInner' => ScriptParam::asInt($publicationId), 
+            ':pubIdOuter' => ScriptParam::asInt($publicationId), 
+        ]);
     }
 
     public function save(int $userId, int $publicationId) : void
     {
-        $stmt = $this->pdo()->prepare(
-            'INSERT INTO saved_publications (user_id, publication_id)
-            VALUES (:userId, :publicationId)'
-        );
+        $checkTable = $this->checkTable();
 
-        $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
+        $sql = "INSERT INTO saved_publications (user_id, publication_id)
+                SELECT :userId::bigint, checker.publication_id 
+                FROM {$checkTable} checker
+                WHERE checker.publicaiton_id = :pubId
+                ON CONFLICT DO NOTHING";
+
+        $this->execute($sql, [
+            ':userId' => ScriptParam::asInt($userId), 
+            ':pubId' => ScriptParam::asInt($publicationId), 
+        ]);
     }
 
     public function deleteSave(int $userId, int $publicationId) : void
     {
-        $stmt = $this->pdo()->prepare(
-            'DELETE FROM saved_publications WHERE user_id = :userId AND publication_id = :publicationId'
-        );
-        $stmt->execute([':userId' => $userId, ':publicationId' => $publicationId]);
+        $checkTable = $this->checkTable();
+    
+        $sql = "DELETE FROM saved_publications 
+                    WHERE user_id = :userId 
+                        AND publication_id = :pubIdOuter
+                        AND EXISTS (
+                            SELECT 1 FROM {$checkTable} checker
+                            WHERE checker.publication_id = :pubIdInner
+                        )";
+        
+        $this->execute($sql, [
+            ':userId' => ScriptParam::asInt($userId), 
+            ':pubIdInner' => ScriptParam::asInt($publicationId), 
+            ':pubIdOuter' => ScriptParam::asInt($publicationId), 
+        ]);
     }  
+
+    public abstract function validatePublish(int $publicationId) : bool;
+
+    public function publish(int $publicationId) : bool 
+    {
+        $stmt = $this->pdo()->prepare(
+            "UPDATE publications
+            SET status = 'published'
+            WHERE id = :pubId
+            AND status != 'published'"
+        );
+
+        $stmt->execute([':pubId' => $publicationId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    // --- Internals
 
     protected function insertPublication(
         string $title, 
@@ -113,12 +175,7 @@ abstract class PublicationsRepository extends Repository
                 VALUES (:t, :d, :n, :g, :c, :o, :i, :st) RETURNING id';
         
         $stmt = $this->execute($sql, $values);
-        $id = $stmt->fetchColumn();
-        if ($id === false) {
-            throw new \RuntimeException('No instance created');
-        }
-        
-        return (int)$id;
+        return (int)$stmt->fetchColumn();
     }
 
     protected function addSelect(string $className) : void

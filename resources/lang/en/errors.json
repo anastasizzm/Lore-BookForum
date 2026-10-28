@@ -75,6 +75,9 @@
         "doi_exists": "An article with this DOI already exists",
         "doi_format": "DOI must match the format 10.XXXX/YYYY"
     },
+    "publications": {
+        "cannot_publish": "Cannot publish the publication. Please check the publication settings"
+    },
     "books": {
         "pub_exists": "A book for this publication already exists",
         "isbn_exists": "A book with this ISBN already exists",

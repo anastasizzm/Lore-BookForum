@@ -18,6 +18,9 @@ use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\ArticlesFilters;
 use App\Models\Scripts\ScriptParam;
 
+/**
+ * @property ArticlesScriptDirector $director
+ */
 final class ArticlesRepository extends PublicationsRepository
 {
     public function __construct(
@@ -27,13 +30,7 @@ final class ArticlesRepository extends PublicationsRepository
         parent::__construct($db, $translator, new ArticlesScriptDirector());
     }
 
-    public function checkType(int $publicationId) : bool
-    {
-        $data = $this->director->getExistsScript($publicationId);
-        $stmt = $this->executeScript($data);
-
-        return $stmt->fetchColumn() !== false;
-    }
+    protected function getCheckTable() : string { return "articles"; }
 
     protected function applyFilters(PublicationsFilters $filters) : void 
     {
@@ -164,4 +161,6 @@ final class ArticlesRepository extends PublicationsRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row === false ? null : Article::fromRow($row);
     }
+
+    public function validatePublish(int $articleId) : bool { return true; }
 }
