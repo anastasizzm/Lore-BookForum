@@ -178,6 +178,57 @@ abstract class PublicationsRepository extends Repository
         return (int)$stmt->fetchColumn();
     }
 
+    protected function updatePublication(
+        int $publicationId,
+        string|false $title,
+        string|false $description,
+        string|false $authorNotes,
+        int|false $genreId,
+        Uuid|null|false $iconId
+    ) : bool
+    {
+        $sets = [];
+        $params = [':id' => ScriptParam::asInt($publicationId)];
+
+        // 1. Build the dynamic SET clause
+        if ($title !== false) {
+            $sets[] = 'title = :title';
+            $params[':title'] = ScriptParam::asStr($title);
+        }
+
+        if ($description !== false) {
+            $sets[] = 'description = :description';
+            $params[':description'] = ScriptParam::asStr($description);
+        }
+
+        if ($authorNotes !== false) {
+            $sets[] = 'author_notes = :authorNotes';
+            $params[':authorNotes'] = ScriptParam::asStr($authorNotes);
+        }
+
+        if ($genreId !== false) {
+            $sets[] = 'genre_id = :genreId';
+            $params[':genreId'] = ScriptParam::asInt($genreId);
+        }
+
+        if ($iconId !== false) {
+            $sets[] = 'icon_id = :iconId';
+            $params[':iconId'] = ScriptParam::asStr($iconId?->toString());
+        }
+
+        if (empty($sets)) {
+            return true; 
+        }
+
+        $sql = "UPDATE publications 
+                SET " . implode(', ', $sets) . " 
+                WHERE id = :id 
+                RETURNING id";
+
+        $stmt = $this->execute($sql, $params);
+        return $stmt->fetchColumn() !== false;
+    }
+
     protected function addSelect(string $className) : void
     {
         switch($className)

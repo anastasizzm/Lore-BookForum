@@ -42,6 +42,7 @@ return function(Router $router)
     $router->post('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', ReadPublicationOperation::class);
     $router->post('/api/books/{id}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
     $router->delete('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
+    $router->patch('/api/books/{id}', [App\Controllers\Api\Publications\BooksController::class, 'update'], 'api.books.update', UpdateMetaPublicationOperation::class);
     $router->post('/api/books/{id}/contents', [App\Controllers\Api\Publications\BooksController::class, 'addContent'], 'api.books.contents.add', UpdateContentPublicationOperation::class);
     $router->delete('/api/books/{id}/contents/{contentId}', [App\Controllers\Api\Publications\BooksController::class, 'removeContent'], 'api.books.contents.remove', UpdateContentPublicationOperation::class);
     $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);
@@ -107,9 +108,9 @@ return function(Router $router)
 
     $router->get('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'list'], 'api.roles', AuthPolicy::Auth);
     $router->get('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'retrieve'], 'api.roles.retrieve', AuthPolicy::Auth);
-    $router->post('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'create'], 'api.roles.create', ManageAdditionalsSystemOperation::class);
-    $router->put('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'update'], 'api.roles.update', ManageAdditionalsSystemOperation::class);
-    $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageAdditionalsSystemOperation::class);
+    $router->post('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'create'], 'api.roles.create', ManageRolesSystemOperation::class);
+    $router->put('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'update'], 'api.roles.update', ManageRolesSystemOperation::class);
+    $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageRolesSystemOperation::class);
 
     // Users
     $router->get('/api/users', [App\Controllers\Api\Users\UsersController::class, 'list'], 'api.users', AuthPolicy::Auth);

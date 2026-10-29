@@ -10,6 +10,7 @@ use App\Models\Publications\BookFiles;
 use App\Forms\Publications\BookForm;
 use App\Forms\Publications\BookContentForm;
 use App\Forms\Publications\RateForm;
+use App\Forms\Publications\BookPatchForm;
 use App\Forms\Publications\BookProgressForm;
 use App\Models\Enums\BookFormat;
 use App\Extensions\Parsers\RouteParamParser;
@@ -63,6 +64,15 @@ final class BooksController extends PublicationsController
             $userId
         );
         return $this->jsonCreatedId($bookId);
+    }
+
+    public function update(HttpContext $context, string $id) 
+    {
+        $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
+
+        $formData = $context->request->body();
+        $this->service->update($bookId, BookPatchForm::fromInput($formData));
+        return $this->jsonEmpty();
     }
 
     public function addContent(HttpContext $context, string $id)

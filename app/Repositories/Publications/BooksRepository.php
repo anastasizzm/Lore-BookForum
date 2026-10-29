@@ -16,6 +16,7 @@ use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
 use App\Models\Enums\FileCategory;
 use App\Models\Publications\BookModel;
+use App\Models\Publications\BookPatchModel;
 use App\Models\Criterias\Publications\BooksCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\BooksFilters;
@@ -177,6 +178,38 @@ final class BooksRepository extends PublicationsRepository
         });
     }
 
+    public function update(
+        int $bookId,
+        BookPatchModel $model
+    ) : bool 
+    {
+        try{
+            $this->uow->transactional(function () use ($model, $bookId) : void {
+                $exists = $this->updatePublication(
+                    $bookId,
+                    $model->title,
+                    $model->description,
+                    $model->authorNotes,
+                    $model->genreId,
+                    $model->iconId,
+                );
+                if (!$exists) throw new RuntimeException("Not found");
+                $exists = $this->updateBook(
+                    $bookId,
+                    $model->categoryId,
+                    $model->publisher,
+                    $model->pagesCount,
+                    $model->isbn
+                );
+                if (!$exists) throw new RuntimeException("Not found");
+            });
+            return true;
+        }
+        catch(\RuntimeException $e){
+            return false;
+        }
+    }
+
     protected function insertBook(
         int $publicationId,
         int $categoryId,
@@ -198,6 +231,50 @@ final class BooksRepository extends PublicationsRepository
         
         $stmt = $this->execute($sql, $values);
         return (int)$stmt->fetchColumn();
+    }
+
+    protected function updateBook(
+        int $bookId,
+        int|false $categoryId,
+        string|false $publisher,
+        int|false $pagesCount,
+        string|null|false $isbn = NULL
+    ) : bool 
+    {
+        $sets = [];
+        $params = [':id' => ScriptParam::asInt($publicationId)];
+
+        if ($publisher !== false) {
+            $sets[] = 'publisher = :publisher';
+            $params[':publisher'] = ScriptParam::asStr($publisher);
+        }
+
+        if ($categoryId !== false) {
+            $sets[] = 'category_id = :categoryId';
+            $params[':categoryId'] = ScriptParam::asInt($categoryId);
+        }
+
+        if ($pagesCount !== false) {
+            $sets[] = 'pagesCount = :pagesCount';
+            $params[':pagesCount'] = ScriptParam::asInt($pagesCount);
+        }
+
+        if ($isbn !== false) {
+            $sets[] = 'isbn = :isbn';
+            $params[':isbn'] = ScriptParam::asStr($isbn);
+        }
+
+        if (empty($sets)) {
+            return true; 
+        }
+
+        $sql = "UPDATE books 
+                SET " . implode(', ', $sets) . " 
+                WHERE publication_id = :id 
+                RETURNING publication_id";
+
+        $stmt = $this->execute($sql, $params);
+        return $stmt->fetchColumn() !== false;
     }
 
     public function identifyContent(int $bookId, string $format) : ?Uuid 

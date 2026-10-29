@@ -10,6 +10,7 @@ use App\Services\Storage\FileService;
 use App\Factories\CriteriasFactory;
 
 use App\Forms\Publications\BookForm;
+use App\Forms\Publications\BookPatchForm;
 use App\Forms\Publications\BookContentForm;
 use App\Validators\Publications\BookFormValidator;
 use App\Validators\Publications\ReadProgressFormValidator;
@@ -20,6 +21,7 @@ use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
 use App\Models\Publications\BookFiles;
 use App\Models\Publications\BookModel;
+use App\Models\Publications\BookPatchModel;
 use App\Models\Enums\PublicationsSortBy;
 use App\Models\Enums\BookFormat;
 use App\Models\Enums\ReadingStatus;
@@ -53,6 +55,7 @@ final class BooksService extends PublicationsService
         private readonly PublicationContextEnricher $enricher,
         private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
+        private readonly BookPatchFormValidator $patchValidator,
         private readonly FileService $fileService
     ){
         parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator);
@@ -129,6 +132,24 @@ final class BooksService extends PublicationsService
 
                 return $bookId;
             });
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function update(
+        int $bookId,
+        BookPatchForm $form
+    ) : void 
+    {
+        $bag = $this->patchValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        try{
+            $model = BookPatchModel::fromForm($form);
+            $updated = $this->repository->update($bookId, $model);
+            if (!$updated) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);
