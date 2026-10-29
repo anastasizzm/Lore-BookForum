@@ -161,4 +161,16 @@ abstract class PublicationsService
             throw $this->exceptionTranslator->translate($e);
         }
     }
+
+    public function delete(int $publicationId) : void 
+    {
+        try{
+            $exists = $this->repository->delete($publicationId);
+            if (!$exists) throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+        }
+        catch(\PDOException $e)
+        {
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
 }

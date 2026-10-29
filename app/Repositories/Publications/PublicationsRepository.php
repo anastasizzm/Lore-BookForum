@@ -138,14 +138,40 @@ abstract class PublicationsRepository extends Repository
 
     public function publish(int $publicationId) : bool 
     {
-        $stmt = $this->pdo()->prepare(
-            "UPDATE publications
-            SET status = 'public'
-            WHERE id = :pubId
-            AND status != 'public'"
-        );
+        $checkTable = $this->checkTable();
 
-        $stmt->execute([':pubId' => $publicationId]);
+        $sql = "UPDATE publications
+            SET status = 'public'
+            WHERE id = :pubIdOuter
+            AND status != 'public'
+            AND EXISTS (
+                    SELECT 1 FROM {$checkTable} checker
+                    WHERE checker.publication_id = :pubIdInner
+                )";
+
+        $stmt = $this->execute($sql, [
+            ':pubIdInner' => ScriptParam::asInt($publicationId), 
+            ':pubIdOuter' => ScriptParam::asInt($publicationId), 
+        ]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function delete(int $publicationId) : bool 
+    {
+        $checkTable = $this->checkTable();
+
+        $sql = "UPDATE publications
+            SET deleted_at = NOW()
+            WHERE id = :pubIdOuter
+            AND EXISTS (
+                    SELECT 1 FROM {$checkTable} checker
+                    WHERE checker.publication_id = :pubIdInner
+                )";
+
+        $stmt = $this->execute($sql, [
+            ':pubIdInner' => ScriptParam::asInt($publicationId), 
+            ':pubIdOuter' => ScriptParam::asInt($publicationId), 
+        ]);
         return $stmt->rowCount() > 0;
     }
 

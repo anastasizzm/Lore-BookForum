@@ -68,6 +68,7 @@ final class UsersRepository extends Repository
             'SELECT id, pass_hash, is_blocked, is_verified, username
             FROM users
             WHERE email = :email OR username = :username
+            AND is_active
             LIMIT 1'
         );
         $stmt->execute([':email' => $login, ':username' => $login]);
@@ -79,7 +80,7 @@ final class UsersRepository extends Repository
     public function getAccountCredits(int $userId) : ?AccountCredits 
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id, email, username FROM users WHERE id = :userId LIMIT 1'
+            'SELECT id, email, username FROM users WHERE id = :userId AND is_active LIMIT 1'
         );
         $stmt->execute([':userId' => $userId]);
 
@@ -90,7 +91,7 @@ final class UsersRepository extends Repository
     public function identifyByLogin(string $login) : ?int 
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id FROM users WHERE email = :email OR username = :username LIMIT 1'
+            'SELECT id FROM users WHERE email = :email OR username = :username AND is_active LIMIT 1'
         );
         $stmt->execute([':email' => $login, ':username' => $login]);
 
@@ -100,7 +101,7 @@ final class UsersRepository extends Repository
 
     public function exists(int $id) : bool
     {
-        $stmt = $this->pdo()->prepare('SELECT 1 FROM users WHERE id = :id LIMIT 1');
+        $stmt = $this->pdo()->prepare('SELECT 1 FROM users WHERE id = :id AND is_active LIMIT 1');
         $stmt->execute([':id' => $id]);
 
         return (bool)$stmt->fetchColumn();
@@ -147,7 +148,7 @@ final class UsersRepository extends Repository
     public function checkVerified(int $id) : bool 
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id FROM users WHERE is_verified = true AND id = :userId'
+            'SELECT id FROM users WHERE is_verified = true AND is_active AND id = :userId'
         );
         $stmt->execute([':userId' => $id]);
 
@@ -160,6 +161,7 @@ final class UsersRepository extends Repository
             'UPDATE users
             SET is_verified = true
             WHERE id = :id
+            AND is_active
             AND is_verified = false
             RETURNING id'
         );
@@ -179,7 +181,7 @@ final class UsersRepository extends Repository
                 p.avatar
             FROM users u
             INNER JOIN profiles p ON p.user_id = u.id
-            WHERE u.id = :userId'
+            WHERE u.id = :userId AND is_active'
         );
         $stmt->execute([':userId' => $userId]);
 
@@ -202,6 +204,7 @@ final class UsersRepository extends Repository
             FROM users u
             INNER JOIN profiles p ON p.user_id = u.id
             WHERE u.id = :userId
+            AND is_active
             LIMIT 1
         ";
 
@@ -216,7 +219,7 @@ final class UsersRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'UPDATE users SET email = :email, username = :username
-            WHERE id = :userId'
+            WHERE id = :userId AND is_active'
         );
 
         $stmt->execute([':userId' => $userId, ':email' => $email, ':username' => $username]);
@@ -226,7 +229,7 @@ final class UsersRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'UPDATE users SET pass_hash = :passHash
-            WHERE id = :userId
+            WHERE id = :userId AND is_active
             RETURNING id'
         );
 
@@ -243,9 +246,9 @@ final class UsersRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'UPDATE profiles SET name = :name, surname = :surname, bio = :bio, avatar = :avatar
-            WHERE user_id = :userId'
+            WHERE user_id = :userIdOuter AND EXISTS (SELECT 1 FROM users WHERE id = :userIdInner AND is_active)'
         );
 
-        $stmt->execute([':userId' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
+        $stmt->execute([':userIdOuter' => $userId, ':userIdInner' => $userId, ':name' => $name, ':surname' => $surname, ':bio' => $bio, ':avatar' => $avatar]);
     }
 }

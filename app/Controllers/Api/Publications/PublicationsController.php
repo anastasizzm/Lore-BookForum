@@ -131,4 +131,12 @@ abstract class PublicationsController extends Controller
             'hasNext' => $list->hasNext()
         ]);
     }
+
+    public function delete(HttpContext $context, string $id)
+    {
+        $publicationId = RouteParamParser::positiveInt(['id' => $id], 'id');
+
+        $this->service->delete($publicationId);
+        return $this->jsonEmpty(204);
+    }
 }

@@ -35,6 +35,7 @@ return function(Router $router)
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
     $router->get('/api/books/{id}/authors', [App\Controllers\Api\Publications\BooksController::class, 'getAuthors'], 'api.books.authors', ReadPublicationOperation::class);
+    $router->delete('/api/books/{id}', [App\Controllers\Api\Publications\BooksController::class, 'delete'], 'api.books.delete', DeletePublicationOperation::class);
     $router->post('/api/books/', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
     $router->post('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
     $router->delete('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
@@ -50,6 +51,7 @@ return function(Router $router)
     $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
+    $router->delete('/api/articles/{id}', [App\Controllers\Api\Publications\ArticlesController::class, 'delete'], 'api.articles.delete', DeletePublicationOperation::class);
     $router->post('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
     $router->delete('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
     $router->put('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
