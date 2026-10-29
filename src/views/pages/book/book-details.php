@@ -244,6 +244,8 @@ $isDraft   = $status === 'draft';
   <link rel="stylesheet" href="/assets/css/book.css">
   <!-- плашка выбора прав (кнопка публикации у черновика) -->
   <link rel="stylesheet" href="/assets/css/rights-modal.css">
+  <!-- плашка ролей и людей публикации (publication-roles.js) -->
+  <link rel="stylesheet" href="/assets/css/publication-roles.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -693,6 +695,7 @@ $isDraft   = $status === 'draft';
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление книги (DELETE /api/books/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <script src="/assets/js/publication-roles.js"></script>
   <!-- rights-modal.js — плашка выбора прав (кнопка «Опубликовать книгу»
        у черновика); подключается до book.js, но порядок не важен —
        обработчики вешаются делегированием на document -->

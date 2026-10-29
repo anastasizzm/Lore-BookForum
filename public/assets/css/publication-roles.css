@@ -1,0 +1,171 @@
+/* ============================================================
+   publication-roles.css — плашка ролей и людей публикации
+   (src/partials/publication-roles-panel.php,
+    JS — publication-roles.js)
+
+   Компактная полоса под списком людей в окне публикации книги
+   (rights-modal) и статьи (article-rights-dialog): бейджи ролей
+   и участники. Всё на токенах variable.css.
+   ============================================================ */
+
+.pub-roles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.pub-roles__title {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* Заметка «показаны демо-данные» — видна только в режиме mock */
+.pub-roles__mock {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.pub-roles__mock[hidden] {
+  display: none !important;
+}
+
+/* --- Блоки Roles / People --- */
+.pub-roles__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.pub-roles__label {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.pub-roles__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pub-roles__list[hidden] {
+  display: none !important;
+}
+
+/* --- Бейдж роли: цветная точка + название --- */
+.pub-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.pub-role-badge__dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.pub-role-badge__title {
+  overflow-wrap: anywhere;
+}
+
+/* --- Участник --- */
+.pub-people__item {
+  padding: 2px var(--space-2);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow-wrap: anywhere;
+}
+
+/* --- Состояния: загрузка / ошибка / пусто --- */
+.pub-roles__loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.pub-roles__loading[hidden],
+.pub-roles__error[hidden],
+.pub-roles__empty[hidden] {
+  display: none !important;
+}
+
+.pub-roles__spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: pub-roles-spin 0.7s linear infinite;
+}
+
+@keyframes pub-roles-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pub-roles__spinner { animation: none; }
+}
+
+.pub-roles__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--fs-small);
+}
+
+.pub-roles__error-text {
+  margin: 0;
+  color: var(--color-error);
+}
+
+.pub-roles__empty {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+/* Кнопка «Повторить» компактная */
+.pub-roles__error .btn {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+}
+
+/* На узком экране (375px) плашка просто переносится — flex-wrap уже есть */
+@media (max-width: 480px) {
+  .pub-roles {
+    padding: var(--space-2);
+  }
+}

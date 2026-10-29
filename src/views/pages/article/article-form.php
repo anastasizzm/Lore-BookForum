@@ -193,6 +193,9 @@ $richEditor = static function (
   <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
   <!-- реальное имя файла article-right.css (article-rights.css не существует) -->
   <link rel="stylesheet" href="<?= $view->asset('css/article-right.css') ?>">
+  <!-- плашка ролей и людей публикации (publication-roles.js) -->
+  <link rel="stylesheet" href="<?= $view->asset('css/publication-roles.css') ?>">
+  <script src="<?= $view->asset('js/publication-roles.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>

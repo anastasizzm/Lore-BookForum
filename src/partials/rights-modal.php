@@ -85,6 +85,10 @@
             <p class="rights-modal__save-error" data-rights-save-error hidden aria-live="polite"></p>
         </div>
 
+        <!-- Плашка ролей и людей публикации (id книги уже известен):
+             publication-roles.js грузит /api/publications/{id}/roles и /users -->
+        <?php $view->include('publication-roles-panel'); ?>
+
         <div class="modal__actions">
             <button type="button" class="btn btn--secondary" data-rights-cancel>
                 <?= $view->e($view->t('common.rights.cancel')) ?>
