@@ -185,7 +185,7 @@ final class PublicationPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers($publicationId, $sortEnum, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers($publicationId, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 

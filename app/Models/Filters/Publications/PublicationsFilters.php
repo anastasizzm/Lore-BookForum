@@ -26,13 +26,33 @@ readonly class PublicationsFilters
         );
     }
 
+    public static function fromDraft(array $q) : self
+    {
+        return new self(
+            genreId: QueryParser::optionalPositiveInt($q, 'genre'),
+            creatorId: QueryParser::optionalPositiveInt($q, 'creator'),
+            search: QueryParser::optionalString($q, 'q'),
+            status: PublicationStatus::Draft
+        );
+    }
+
+    public static function fromPublic(array $q) : self
+    {
+        return new self(
+            genreId: QueryParser::optionalPositiveInt($q, 'genre'),
+            creatorId: QueryParser::optionalPositiveInt($q, 'creator'),
+            search: QueryParser::optionalString($q, 'q'),
+            status: PublicationStatus::Public
+        );
+    }
+
     public static function fromCreator(array $q, int $creatorId) : self 
     {
         return new self(
             creatorId: $creatorId,
             genreId: QueryParser::optionalPositiveInt($q, 'genre'),
             search: QueryParser::optionalString($q, 'q'),
-            status: QueryParser::optinalEnum($q, 'p_status', PublicationStatus::class) ?? PublicationStatus::Public
+            status: QueryParser::optionalEnum($q, 'p_status', PublicationStatus::class) ?? PublicationStatus::Public
         );
     }
 }

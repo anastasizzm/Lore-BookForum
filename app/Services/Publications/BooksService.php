@@ -13,6 +13,7 @@ use App\Forms\Publications\BookForm;
 use App\Forms\Publications\BookPatchForm;
 use App\Forms\Publications\BookContentForm;
 use App\Validators\Publications\BookFormValidator;
+use App\Validators\Publications\BookPatchFormValidator;
 use App\Validators\Publications\ReadProgressFormValidator;
 use App\Validators\Publications\RateFormValidator;
 
@@ -39,7 +40,10 @@ use App\Extensions\EnumExtensions;
 use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ConflictException;
 use App\ErrorCodes;
+use App\Lib\I18n\Translator;
 
 use PDO;
 
@@ -52,13 +56,13 @@ final class BooksService extends PublicationsService
         ReadProgressFormValidator $progressValidator,
         RateFormValidator $rateValidator,
         Translator $translator,
+        UnitOfWork $uow,
         private readonly PublicationContextEnricher $enricher,
-        private readonly UnitOfWork $uow,
         private readonly BookFormValidator $validator,
         private readonly BookPatchFormValidator $patchValidator,
         private readonly FileService $fileService
     ){
-        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator);
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
     }
 
     public function getList(BooksListQuery $query) : PaginatedList
@@ -115,6 +119,11 @@ final class BooksService extends PublicationsService
         );
     }
 
+    public function getContents(int $bookId) : array
+    {
+        return $this->repository->getContents($bookId);
+    } 
+
     public function create(
         BookForm $form, 
         int $creatorId
@@ -128,7 +137,8 @@ final class BooksService extends PublicationsService
                 $model = BookModel::fromForm($form);
                 
                 $bookId = $this->repository->create($model, $creatorId);
-                $this->repository->addPendingContents($bookId, $form->contentIds);
+                $fileIds = $this->repository->addPendingContents($bookId, $form->contentIds);
+                $this->fileService->activateMany($fileIds);
 
                 return $bookId;
             });
@@ -170,7 +180,7 @@ final class BooksService extends PublicationsService
     {
         try{
             $removed = $this->repository->removeContent($bookId, $contentId);
-            if ($removed) $this->fileService->delete($contentId);
+            if ($removed) try{$this->fileService->delete($contentId);}catch(ConflictException $e) {}
             else throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
         }
         catch(\PDOException $e){

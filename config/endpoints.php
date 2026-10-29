@@ -34,6 +34,7 @@ return function(Router $router)
 
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
+    $router->get('/api/books/{id}/authors', [App\Controllers\Api\Publications\BooksController::class, 'getAuthors'], 'api.books.authors', ReadPublicationOperation::class);
     $router->post('/api/books/', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
     $router->post('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
     $router->delete('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
@@ -43,6 +44,7 @@ return function(Router $router)
     $router->post('/api/books/{id}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
     $router->delete('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
     $router->patch('/api/books/{id}', [App\Controllers\Api\Publications\BooksController::class, 'update'], 'api.books.update', UpdateMetaPublicationOperation::class);
+    $router->get('/api/books/{id}/contents',[App\Controllers\Api\Publications\BooksController::class, 'listContents'], 'api.books.contents', ReadPublicationOperation::class);
     $router->post('/api/books/{id}/contents', [App\Controllers\Api\Publications\BooksController::class, 'addContent'], 'api.books.contents.add', UpdateContentPublicationOperation::class);
     $router->delete('/api/books/{id}/contents/{contentId}', [App\Controllers\Api\Publications\BooksController::class, 'removeContent'], 'api.books.contents.remove', UpdateContentPublicationOperation::class);
     $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);

@@ -4,12 +4,14 @@ declare(strict_types=1);
 namespace App\Controllers\Api\Publications;
 
 use App\Services\Publications\PublicationsService;
+use App\Services\Permissions\PublicationPermissionsService;
 
 use App\Forms\Publications\RateForm;
 use App\Forms\Publications\ReadProgressForm;
 use App\Models\Enums\BookFormat;
-use App\Extensions\Parsers\RouteParamParser;
+use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Extensions\Parsers\QueryParser;
+use App\Extensions\Parsers\RouteParamParser;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 
 use App\Controllers\Controller;
@@ -24,7 +26,8 @@ abstract class PublicationsController extends Controller
 {
     public function __construct(
         protected readonly CommonRuleProvider $ruleProvider,
-        protected readonly PublicationsService $service
+        protected readonly PublicationsService $service,
+        private readonly PublicationPermissionsService $permsService
     ){}
     
     public function save(HttpContext $context, string $id)
@@ -114,5 +117,18 @@ abstract class PublicationsController extends Controller
         $publicationId = RouteParamParser::positiveInt(['id' => $id], 'id');
         $this->service->publish($publicationId);
         return $this->jsonEmpty();
+    }
+
+    public function getAuthors(HttpContext $context, string $id)
+    {
+        $publicationId = RouteParamParser::positiveInt(['id' => $id], 'id');
+        
+        $query = RolesUserListQuery::fromCustomRole($context->request->query, AUTHOR_ROLE_ID);
+        $list = $this->permsService->getUsers($publicationId, $query);
+        return $this->jsonList($list->getArray(), [
+            'page' => $list->getPage(),
+            'pageSize' => $list->getPageSize(),
+            'hasNext' => $list->hasNext()
+        ]);
     }
 }

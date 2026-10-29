@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Publications;
 
+use App\Services\Permissions\PublicationPermissionsService;
 use App\Services\Publications\BooksService;
 
 use App\Models\Queries\Publications\BooksListQuery;
@@ -32,9 +33,10 @@ final class BooksController extends PublicationsController
     public function __construct(
         #[Inject(key: ServiceType::Publication)]
         CommonRuleProvider $ruleProvider,
-        BooksService $booksService
+        BooksService $booksService,
+        PublicationPermissionsService $permsService
     ){
-        parent::__construct($ruleProvider, $booksService);
+        parent::__construct($ruleProvider, $booksService, $permsService);
     }
 
     public function list(HttpContext $context)
@@ -50,6 +52,13 @@ final class BooksController extends PublicationsController
                 'pageSize' => $paginatedList->getPageSize(),
                 'hasNext' => $paginatedList->hasNext(),
             ]);
+    }
+
+    public function listContents(HttpContext $context, string $id)
+    {
+        $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
+        $items = $this->service->getContents($bookId);
+        return $this->jsonList($items);
     }
     
     public function create(HttpContext $context)

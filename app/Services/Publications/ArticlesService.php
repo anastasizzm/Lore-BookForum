@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\ArticlesRepository;
+use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 use App\Factories\CriteriasFactory;
 
@@ -11,6 +12,7 @@ use App\Validators\Publications\RateFormValidator;
 
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
+use App\Validators\Publications\ReadProgressFormValidator;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 
@@ -27,6 +29,8 @@ use App\Services\Configuration\UnitOfWork;
 
 use App\Exceptions\Translators\ArticleExceptionTranslator;
 use App\Exceptions\ValidationException;
+use App\Exceptions\NotFoundException;
+use App\Lib\I18n\Translator;
 
 use PDO;
 
@@ -39,10 +43,10 @@ final class ArticlesService extends PublicationsService
         ReadProgressFormValidator $progressValidator,
         RateFormValidator $rateValidator,
         Translator $translator,
+        UnitOfWork $uow,
         private readonly PublicationContextEnricher $enricher,
-        private readonly UnitOfWork $uow
     ){
-        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator);
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
     }
 
     public function getList(ArticlesListQuery $query) : PaginatedList

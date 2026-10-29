@@ -162,5 +162,5 @@ final class ArticlesRepository extends PublicationsRepository
         return $row === false ? null : Article::fromRow($row);
     }
 
-    public function validatePublish(int $articleId) : bool { return true; }
+    public function validatePublish(int $articleId) : array { return []; }
 }

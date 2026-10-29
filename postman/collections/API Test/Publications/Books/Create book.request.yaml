@@ -1,0 +1,33 @@
+$kind: http-request
+url: "{{base_url}}/api/books"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \    \"title\": \"New test book\",\r
+
+    \    \"description\": \"The description of new test book\",\r
+
+    \    \"authorNotes\": \"Some author notes for the new test book\",\r
+
+    \    \"genreId\": 1,\r
+
+    \    \"categoryId\": 1,\r
+
+    \    \"publisher\": \"No name publisher\",\r
+
+    \    \"pages\": 3,\r
+
+    \    \"iconId\": \"96529c85-b438-460b-b03d-7e1b7d062dfe\",\r
+
+    \    \"contentIds\": [\r
+
+    \        \"c2b5b887-de0f-4bac-b281-dcf23a8c19ab\"\r
+
+    \    ]\r
+
+    }"
+order: 1000

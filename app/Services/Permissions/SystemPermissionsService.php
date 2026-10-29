@@ -197,7 +197,7 @@ final class SystemPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers(NULL, $sortEnum, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 

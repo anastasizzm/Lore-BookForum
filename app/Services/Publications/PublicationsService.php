@@ -5,6 +5,7 @@ namespace App\Services\Publications;
 
 use App\Repositories\Publications\PublicationsRepository;
 use App\Repositories\Publications\UsersReadRepository;
+use App\Services\Configuration\UnitOfWork;
 
 use App\Forms\Publications\RateForm;
 use App\Forms\Publications\ReadProgressForm;
@@ -19,6 +20,7 @@ use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Lib\I18n\Translator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\ConflictException;
 use App\ErrorCodes;
 
 use PDO;
@@ -31,7 +33,8 @@ abstract class PublicationsService
         protected readonly ExceptionTranslator $exceptionTranslator,
         protected readonly ReadProgressFormValidator $progressValidator,
         protected readonly RateFormValidator $rateValidator,
-        protected readonly Translator $translator
+        protected readonly Translator $translator,
+        protected readonly UnitOfWork $uow
     ){}
 
     public function retrieveShort(int $publicationId) : ?PublicationShort 
@@ -145,8 +148,9 @@ abstract class PublicationsService
     {
         try{
             $this->uow->transactional(function () use ($publicationId) {
-                $isValid = $this->repository->validatePublish($publicationId);
-                if (!$isValid) throw new ConflictException($this->translator->t("errors.common.cannot_publish"));
+                $errors = $this->repository->validatePublish($publicationId);
+                if ($errors !== [])
+                    throw new ConflictException($this->translator->t("errors.publications.cannot_publish") . ". " . implode("; ", $errors));
 
                 $exists = $this->repository->publish($publicationId);
                 if (!$exists) throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);

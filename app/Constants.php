@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace App;
 
+define("USER_ROLE_ID", 0);
+define("HEAD_ROLE_ID", 1);
+define("AUTHOR_ROLE_ID", 2);
+
 final class Constants
 {
     public const TOKEN_COOKIE = 'access_token';

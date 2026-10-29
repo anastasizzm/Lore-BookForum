@@ -207,6 +207,7 @@ class PermissionsRepository extends Repository
     public function getUsers(
         ?int $publicationId, 
         UsersSortBy $sort,
+        ?int $roleId,
         int $page, 
         int $pageSize,
         array $includeObjects) : array 
@@ -218,6 +219,9 @@ class PermissionsRepository extends Repository
 
         if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
         else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        if(!empty($roleId))
+            $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");
         $builder->addWithBuilder("users_ids", $innerBuilder)

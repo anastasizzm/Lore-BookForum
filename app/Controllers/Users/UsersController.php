@@ -85,7 +85,8 @@ final class UsersController extends Controller
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
                 filters: BooksFilters::fromCreator($q, $userId),
-                userFilters: UserRelationFilters::fromInput($q, $currentUserId)
+                userFilters: UserRelationFilters::fromInput($q, $currentUserId),
+                viewerId: $currentUserId
             );
 
             $paginatedList = $this->booksService->getList($query);
@@ -127,7 +128,8 @@ final class UsersController extends Controller
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
                 filters: ArticlesFilters::fromCreator($q, $userId),
-                userFilters: UserRelationFilters::fromInput($q, $currentUserId)
+                userFilters: UserRelationFilters::fromInput($q, $currentUserId),
+                viewerId: $currentUserId
             );
 
             $paginatedList = $this->articlesService->getList($query);

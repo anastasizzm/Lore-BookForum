@@ -14,6 +14,7 @@ use App\Http\HttpException;
 use App\Extensions\EnumExtensions;
 use App\Models\PaginatedList;
 use App\Models\Enums\BasicModelSortBy;
+use App\Models\Enums\RoleStatus;
 use App\Exceptions\Translators\RolesExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
@@ -41,11 +42,17 @@ final class RolesService
             ? EnumExtensions::tryResolve(BasicModelSortBy::class, $query->sort->sortString())
             : null) ?? BasicModelSortBy::Alphabet;
 
+        $statusEnum = ($query->status->hasData()
+            ? EnumExtensions::tryResolve(RoleStatus::class, $query->sort->sortString())
+            : null) ?? RoleStatus::All;
+
+
         $items = $this->rolesRepo->getList(
             $page, 
             $pageSize, 
             $sortEnum,
             $query->search,
+            $statusEnum
         );
 
         return PaginatedList::fromArray($items, $page, $pageSize);
@@ -69,7 +76,7 @@ final class RolesService
         }
 
         try {
-            return $this->rolesRepo->create($form->color, $form->translations);
+            return $this->rolesRepo->create($form->color, $form->isPublic, $form->translations);
         } catch (PDOException $e) {
             throw $this->translator->translate($e);
         }
@@ -86,7 +93,7 @@ final class RolesService
         }
 
         try {
-            $exists = $this->rolesRepo->update($id, $form->translations);
+            $exists = $this->rolesRepo->update($id, $form->color, $form->isPublic, $form->translations);
             if (!$exists) {
                 throw new NotFoundException($this->i18n->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
             }

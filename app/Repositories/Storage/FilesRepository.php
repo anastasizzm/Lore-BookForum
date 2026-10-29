@@ -82,4 +82,18 @@ final class FilesRepository extends Repository
         $this->pdo()->prepare('DELETE FROM files WHERE id = :id')
             ->execute([':id' => $id->toString()]);
     }
+
+    public function activate(Uuid $id) : void 
+    {
+        $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = :fileId::uuid")
+            ->execute([':fileId' => $id->toString()]);
+    }
+
+    /** @param array<Uuid> $ids */
+    public function activateMany(array $ids) : void 
+    {
+        $fileIdsArray = '{' . implode(',', $ids) . '}';
+        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = ANY(:fileIds::uuid[])");
+        $stmt->execute([':fileIds' => $fileIdsArray]);
+    }
 }

@@ -14,6 +14,7 @@ use App\Lib\I18n\Translator;
 use App\Models\Uuid;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
+use App\Models\Files\File;
 use App\Models\Enums\FileCategory;
 use App\Models\Publications\BookModel;
 use App\Models\Publications\BookPatchModel;
@@ -198,7 +199,7 @@ final class BooksRepository extends PublicationsRepository
                     $bookId,
                     $model->categoryId,
                     $model->publisher,
-                    $model->pagesCount,
+                    $model->pages,
                     $model->isbn
                 );
                 if (!$exists) throw new RuntimeException("Not found");
@@ -242,7 +243,7 @@ final class BooksRepository extends PublicationsRepository
     ) : bool 
     {
         $sets = [];
-        $params = [':id' => ScriptParam::asInt($publicationId)];
+        $params = [':id' => ScriptParam::asInt($bookId)];
 
         if ($publisher !== false) {
             $sets[] = 'publisher = :publisher';
@@ -292,6 +293,37 @@ final class BooksRepository extends PublicationsRepository
         return !is_string($id) ? NULL : Uuid::fromString($id);
     }
 
+    /** @return array<File> */
+    public function getContents(int $bookId) : array 
+    {
+        $sql = "SELECT 
+                    f.id, 
+                    f.path, 
+                    f.mime_type, 
+                    f.size_bytes ,
+                    f.category,
+                    f.status,
+                    f.original_name,
+                    f.format,
+                    f.uploaded_by,
+                    f.created_at
+                FROM books_content bc
+                INNER JOIN files f ON f.id = bc.content_id
+                WHERE bc.book_id = :bookId";
+
+        $params = [
+            ':bookId' => ScriptParam::asInt($bookId)
+        ];
+
+        $stmt = $this->execute($sql, $params);
+        $items = array_map(
+            static fn(array $row) => File::fromRow($row),
+            $stmt->fetchAll(),
+        );
+
+        return $items;
+    }
+
     public function addContent(int $bookId, Uuid $contentId) : void
     {
         $values = [
@@ -305,33 +337,26 @@ final class BooksRepository extends PublicationsRepository
         $this->execute($sql, $values);
     }
 
-    public function addPendingContents(int $bookId, array $contentIds) : void 
+    /** 
+     *  @param array<Uuid> $contentIds
+     *  @return array<Uuid> 
+    */
+    public function addPendingContents(int $bookId, array $contentIds) : array 
     {
-        if ($contentIds === []) return;
+        if ($contentIds === []) return [];
 
         $builder = ScriptBuilder::withTable("files");
-        $builder->addSelect(":bookId, id, format", [':bookId' => ScriptParam::asInt($bookId)]);
+        $builder->addSelect(":bookId::bigint, id, format", [':bookId' => ScriptParam::asInt($bookId)]);
 
-        $contentIdsArray = '{' . implode(',',  array_map(function($id) : string {
-            if ($id instanceof Uuid) return $id->toString();
-            else return (string)$id;
-        }, $contentIds)) . '}';
+        $contentIdsArray = '{' . implode(',',  array_map(fn($id) => $id->toString(), $contentIds)) . '}';
 
-        $builder->addWith("contents", "SELECT content_id FROM unnest(:contentIds::uuid[]) AS t(content_id)", true, [":contentIds" => $contentIdsArray]);
-        $builder->addWhere("id IN (SELECT content_id FROM contents)")->addWhere("category = :category", [":category" => FileCategory::Book->value]);
+        $builder->addWhere("id = ANY(:contentIds::uuid[])", [":contentIds" => ScriptParam::asStr($contentIdsArray)])
+            ->addWhere("category = :category", [":category" => ScriptParam::asStr(FileCategory::Book->value)]);
     
         $sql = "INSERT INTO books_content (book_id, content_id, format)\n" . $builder->build() . "\nRETURNING content_id";
         $stmt = $this->execute($sql, $builder->getParams());
 
-        $pendingFilesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        $this->activateFiles($pendingFilesIds);
-    }
-
-    private function activateFiles(array $fileIds) : void 
-    {
-        $fileIdsArray = '{' . implode(',', $fileIds) . '}';
-        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = ANY(:fileIds::uuid[])");
-        $stmt->execute([':fileIds' => $fileIdsArray]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function removeContent(int $bookId, Uuid $contentId) : bool
@@ -346,7 +371,7 @@ final class BooksRepository extends PublicationsRepository
         return $stmt->rowCount() > 0;
     }
 
-    public function validatePublish(int $bookId) : bool 
+    public function validatePublish(int $bookId) : array 
     {
         $sql = "SELECT 1
                 FROM books_content bc
@@ -354,6 +379,8 @@ final class BooksRepository extends PublicationsRepository
                     AND LOWER(bc.format) = 'pdf'";
 
         $stmt = $this->execute($sql, [':bookId' => ScriptParam::asInt($bookId)]);
-        return $stmt->rowCount() > 0;
+        if($stmt->rowCount() > 0) return [];
+
+        return [$this->translator->t("errors.books.content_pdf")];
     }
 }

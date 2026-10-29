@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api\Publications;
 
+use App\Services\Permissions\PublicationPermissionsService;
 use App\Services\Publications\ArticlesService;
 
 use App\Models\Queries\Publications\ArticlesListQuery;
@@ -24,9 +25,10 @@ final class ArticlesController extends PublicationsController
     public function __construct(
         #[Inject(key: ServiceType::Publication)]
         CommonRuleProvider $ruleProvider,
-        ArticlesService $articlesService
+        ArticlesService $articlesService,
+        PublicationPermissionsService $permsService
     ){
-        parent::__construct($ruleProvider, $booksService);
+        parent::__construct($ruleProvider, $articlesService, $permsService);
     }
 
     public function list(HttpContext $context)

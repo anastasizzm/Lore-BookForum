@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/api/books/{{bookId}}/contents/{{fileId}}"
+method: DELETE
+headers:
+  x-csrf-token: "{{csrf_token}}"
+order: 3000

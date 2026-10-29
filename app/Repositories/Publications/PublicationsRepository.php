@@ -133,15 +133,16 @@ abstract class PublicationsRepository extends Repository
         ]);
     }  
 
-    public abstract function validatePublish(int $publicationId) : bool;
+    /** @return array<string> */
+    public abstract function validatePublish(int $publicationId) : array;
 
     public function publish(int $publicationId) : bool 
     {
         $stmt = $this->pdo()->prepare(
             "UPDATE publications
-            SET status = 'published'
+            SET status = 'public'
             WHERE id = :pubId
-            AND status != 'published'"
+            AND status != 'public'"
         );
 
         $stmt->execute([':pubId' => $publicationId]);
