@@ -219,6 +219,8 @@ if (!empty($iconId)) {
   <!-- publish-bar и бейдж черновика — стили book.css (подключён выше);
        article-right.css — окно выбора прав при публикации статьи -->
   <link rel="stylesheet" href="/assets/css/article-right.css">
+  <!-- плашка ролей и людей публикации (publication-roles.js) -->
+  <link rel="stylesheet" href="/assets/css/publication-roles.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -692,6 +694,7 @@ if (!empty($iconId)) {
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->
   <script src="/assets/js/article-publish.js"></script>

@@ -32,6 +32,8 @@ $cards = [
     ['href' => '/pages/test?page=admin/types',      'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint'),      'count' => '—'],
     // Жалобы: таблица + модалка «Отклонить/Удалить» на моках
     ['href' => '/pages/test?page=admin/reports',    'title' => $tr('common.admin.card_reports'),    'hint' => $tr('common.admin.card_reports_hint'),    'count' => '—'],
+    // Системные роли: список + модалка прав (три группы чекбоксов)
+    ['href' => '/pages/test?page=admin/roles',      'title' => $tr('common.admin.role_card_title'), 'hint' => $tr('common.admin.role_card_text'),       'count' => '—'],
 ];
 ?>
 

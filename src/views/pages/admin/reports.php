@@ -4,15 +4,15 @@
  * «Отклонить/Удалить»).
  *
  * Статус: ЗАГЛОШКА на моках — проверок прав нет (имена разрешений ждём
- * от бэка), запросов к API нет (config/routes.php и app/ заморожены).
- *
- * Мок-данные лежат прямо здесь, как в admin/{users,comments}.php: строки
- * рендерит сервер, но у каждой есть data-атрибуты с полной копией записи —
- * из них admin.js наполняет модалку решения (partials/admin-report-modal.php)
- * и обновляет строку после решения. КОНТРАКТ, к которому готовимся:
+ * от бэка). Строки рендерит сервер из мок-массива ниже, но решение по
+ * жалобе уходит в fetch-слой reportsApi (public/assets/js/admin.js,
+ * раздел REPORTS API) c graceful-фолбэком на мок. КОНТРАКТ:
  *   GET    /api/admin/reports?page=&ps=  -> { items: [...] }
  *   PATCH  /api/admin/reports/{id}       -> 204
  *          body: { decision: 'reject' | 'delete', note: string }
+ *
+ * Плюс клиентский фильтр по статусу (select [data-admin-status])
+ * поверх поиска [data-admin-search]. Строки несут data-status.
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-badge,
  * .admin-report__*), каркас .modal — modal.css.
@@ -62,8 +62,22 @@ $statusBadge = [
          placeholder="<?= $tr('common.admin.search_reports_ph') ?>"
          aria-label="<?= $tr('common.admin.search_reports_ph') ?>"
          autocomplete="off">
+  <label class="admin-toolbar__filter">
+    <span class="admin-toolbar__filter-label"><?= $tr('common.admin.filter_status') ?></span>
+    <select class="form-field__input admin-toolbar__select"
+            data-admin-status
+            aria-label="<?= $tr('common.admin.filter_status') ?>">
+      <option value=""><?= $tr('common.admin.status_all') ?></option>
+      <option value="new"><?= $tr('common.admin.status_new') ?></option>
+      <option value="rejected"><?= $tr('common.admin.status_rejected') ?></option>
+      <option value="deleted"><?= $tr('common.admin.status_deleted') ?></option>
+    </select>
+  </label>
   <span class="admin-toolbar__count" data-admin-count><?= count($reports) ?></span>
 </div>
+
+<!-- Статус загрузки/ошибки (живой регион): наполняет admin.js (раздел REPORTS) -->
+<p class="admin-toolbar__status" role="status" aria-live="polite" data-admin-reports-status hidden></p>
 
 <div class="admin-table-wrap">
   <table class="admin-table" data-admin-table="reports">
@@ -81,6 +95,7 @@ $statusBadge = [
     <tbody>
       <?php foreach ($reports as $row): $row['id'] = (int) $row['id']; ?>
         <tr data-report-id="<?= $row['id'] ?>"
+            data-status="<?= $view->e($row['status']) ?>"
             data-search="<?= $view->e(mb_strtolower(implode(' ', [
                 $row['reporter'],
                 $row['targetLabel'],
@@ -111,7 +126,7 @@ $statusBadge = [
           <td>
             <div class="admin-actions">
               <!-- Модалка «Отклонить/Удалить» — admin.js (раздел REPORTS):
-                   TODO(api) PATCH /api/admin/reports/{id} -->
+                   решение уходит в reportsApi (PATCH /api/admin/reports/{id}) -->
               <button type="button"
                       class="btn btn--secondary"
                       data-admin-report-review

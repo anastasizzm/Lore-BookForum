@@ -41,6 +41,10 @@ $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p));
       <p class="article-rights__empty" data-rights-status><?= $tr('common.common.loading') ?></p>
     </div>
 
+    <!-- Плашка ролей и людей публикации (id статьи уже известен):
+         publication-roles.js грузит /api/publications/{id}/roles и /users -->
+    <?php $view->include('publication-roles-panel'); ?>
+
     <footer class="article-rights__foot">
       <button type="button" class="btn btn--secondary" data-rights-cancel>
         <?= $tr('common.cancel') ?>
