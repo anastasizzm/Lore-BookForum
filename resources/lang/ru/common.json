@@ -645,7 +645,7 @@
         "search_roles_ph": "Поиск ролей",
         "col_permissions": "Права",
         "action_permissions": "Права",
-        "role_sys_perms": "{n} прав",
+        "role_sys_perms": ":n прав",
         "role_modal_title": "Права роли",
         "role_sys_system": "Системные",
         "role_sys_posts": "Посты",

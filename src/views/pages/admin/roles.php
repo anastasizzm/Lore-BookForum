@@ -118,7 +118,7 @@ $roles = [
           </td>
           <td>
             <span class="admin-badge admin-badge--accent" data-role-syscount>
-              <?= $view->e($view->t('common.admin.role_sys_perms', ['count' => $sum])) ?>
+              <?= $view->e($view->t('common.admin.role_sys_perms', ['n' => $sum])) ?>
             </span>
           </td>
           <td>

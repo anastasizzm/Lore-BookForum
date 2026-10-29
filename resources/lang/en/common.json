@@ -645,7 +645,7 @@
         "search_roles_ph": "Search roles",
         "col_permissions": "Permissions",
         "action_permissions": "Permissions",
-        "role_sys_perms": "{n} permissions",
+        "role_sys_perms": ":n permissions",
         "role_modal_title": "Role permissions",
         "role_sys_system": "System",
         "role_sys_posts": "Posts",
