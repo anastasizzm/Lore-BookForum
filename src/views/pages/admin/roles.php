@@ -1,21 +1,27 @@
 <?php
 /**
- * admin/roles — страница системных ролей админки (список + модалка прав).
+ * admin/roles — страница системных ролей админки (список + окна прав и создания).
  *
- * Статус: UI на моках. Строки рендерит сервер из мок-массива ниже, но у
- * каждой роли в JSON (data-roles-data) лежит полная копия — из неё admin.js
- * (раздел ROLES) наполняет модалку прав и применяет изменения локально.
+ * Данных на странице нет: здесь только каркас таблицы. Строки рисует
+ * public/assets/js/admin.js (раздел ROLES) по ответу GET /api/system/roles —
+ * там же считается число прав и подбирается форма слова («1 правило / 2 правила / 5 правил»).
+ * Пока список грузится, под шапкой показывается статус (data-roles-status),
+ * при ошибке — её текст.
  *
- * КОНТРАКТ, к которому готовимся:
+ * КОНТРАКТ:
  *   GET  /api/system/roles          -> { items: [ { role: {id,title,color,createdAt},
  *                                                  systemPermissions: {...},
  *                                                  postPermissions: {...},
  *                                                  pubPermissions: {...},
  *                                                  canManage, version } ] }
+ *   POST /api/system/roles          -> создание (тело: translations, visibility, color;
+ *                                      visibility по умолчанию 'public')
+ *   GET  /api/system/roles?q=…      -> серверный поиск (только по Enter)
  *   PUT  /api/system/roles/{roleId} -> 200, заголовок ETag: "newVersion"
  *          headers: If-Match: "version"
  *          body: { systemPermissions: {...}, postPermissions: {...},
  *                  pubPermissions: {...} }
+ *   DELETE /api/system/roles/{roleId} -> удаление, headers: If-Match: "version"
  *
  * Группы прав (ключи бэка — см. SystemAccessRules / PostAccessRules /
  * PublicationAccessRules::toArray):
@@ -31,31 +37,6 @@
 
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
-
-// ---- ЗАГЛУШКА: список ролей. Придут из GET /api/system/roles ----
-$roles = [
-    [
-        'role' => ['id' => 0, 'title' => 'Administrator', 'color' => '#D64545', 'createdAt' => '2026-01-01'],
-        'systemPermissions' => ['manageAccounts' => true, 'manageAdditionals' => true, 'managePeople' => true, 'manageRoles' => true],
-        'postPermissions'   => ['create' => true, 'update' => true, 'delete' => true],
-        'pubPermissions'    => ['create' => true, 'updateMeta' => true, 'updateContent' => true, 'delete' => true, 'read' => true, 'managePeople' => true, 'manageRoles' => true],
-        'canManage' => true, 'version' => 1,
-    ],
-    [
-        'role' => ['id' => 1, 'title' => 'Moderator', 'color' => '#1C7ED6', 'createdAt' => '2026-01-01'],
-        'systemPermissions' => ['manageAccounts' => false, 'manageAdditionals' => false, 'managePeople' => true, 'manageRoles' => false],
-        'postPermissions'   => ['create' => true, 'update' => true, 'delete' => true],
-        'pubPermissions'    => ['create' => true, 'updateMeta' => true, 'updateContent' => true, 'delete' => false, 'read' => true, 'managePeople' => true, 'manageRoles' => false],
-        'canManage' => true, 'version' => 1,
-    ],
-    [
-        'role' => ['id' => 2, 'title' => 'Curator', 'color' => '#2F9E44', 'createdAt' => '2026-02-10'],
-        'systemPermissions' => ['manageAccounts' => false, 'manageAdditionals' => true, 'managePeople' => false, 'manageRoles' => false],
-        'postPermissions'   => ['create' => true, 'update' => false, 'delete' => false],
-        'pubPermissions'    => ['create' => true, 'updateMeta' => false, 'updateContent' => false, 'delete' => false, 'read' => true, 'managePeople' => false, 'manageRoles' => false],
-        'canManage' => true, 'version' => 1,
-    ],
-];
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -73,7 +54,8 @@ $roles = [
     'subtitle' => $view->t('common.admin.roles_subtitle'),
 ]); ?>
 
-<p class="admin-note" data-roles-stub><?= $tr('common.admin.stub_note') ?></p>
+<!-- Загрузка списка / ошибка GET /api/system/roles (заполняет admin.js) -->
+<p class="admin-toolbar__status" data-roles-status role="status" aria-live="polite"><?= $tr('common.admin.roles_loading') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
@@ -82,8 +64,14 @@ $roles = [
          data-admin-search
          placeholder="<?= $tr('common.admin.search_roles_ph') ?>"
          aria-label="<?= $tr('common.admin.search_roles_ph') ?>"
+         enterkeyhint="search"
          autocomplete="off">
-  <span class="admin-toolbar__count" data-admin-count><?= count($roles) ?></span>
+  <button type="button"
+          class="btn btn--primary admin-toolbar__add admin-toolbar__add--icon"
+          data-rolenew-open
+          title="<?= $tr('common.admin.role_new_title') ?>"
+          aria-label="<?= $tr('common.admin.role_new_title') ?>">+</button>
+  <span class="admin-toolbar__count" data-admin-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
@@ -93,48 +81,12 @@ $roles = [
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
         <th scope="col"><?= $tr('common.admin.col_role') ?></th>
         <th scope="col"><?= $tr('common.admin.col_permissions') ?></th>
-        <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_delete') ?></th>
       </tr>
     </thead>
+    <!-- Строки добавляет admin.js после GET /api/system/roles; здесь — только строка «пусто» -->
     <tbody data-roles-rows>
-      <?php foreach ($roles as $row):
-          $rid   = (int) $row['role']['id'];
-          $title = (string) $row['role']['title'];
-          $color = (string) ($row['role']['color'] ?? '');
-          $sp    = $row['systemPermissions'];
-          $sum   = (int) $sp['manageAccounts'] + (int) $sp['manageAdditionals']
-                 + (int) $sp['managePeople'] + (int) $sp['manageRoles'];
-          $search = mb_strtolower($title);
-      ?>
-        <tr data-role-row-id="<?= $rid ?>" data-search="<?= $view->e($search) ?>">
-          <td class="admin-table__id"><?= $rid ?></td>
-          <td>
-            <span class="admin-role__title">
-              <?php if ($color !== ''): ?>
-                <span class="admin-role__dot" style="background: <?= $view->e($color) ?>"></span>
-              <?php endif; ?>
-              <?= $view->e($title) ?>
-            </span>
-          </td>
-          <td>
-            <span class="admin-badge admin-badge--accent" data-role-syscount>
-              <?= $view->e($view->t('common.admin.role_sys_perms', ['n' => $sum])) ?>
-            </span>
-          </td>
-          <td>
-            <div class="admin-actions">
-              <button type="button"
-                      class="btn btn--secondary"
-                      data-role-edit
-                      data-role-id="<?= $rid ?>">
-                <?= $tr('common.admin.action_permissions') ?>
-              </button>
-            </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-
-      <tr class="admin-table__empty" data-admin-empty<?= $roles ? ' hidden' : '' ?>>
+      <tr class="admin-table__empty" data-admin-empty hidden>
         <td colspan="4"><?= $tr('common.admin.empty') ?></td>
       </tr>
     </tbody>
@@ -144,11 +96,8 @@ $roles = [
 <!-- Модалка прав роли: три группы чекбоксов (system / posts / pubs) -->
 <?php $view->include('admin-role-modal'); ?>
 
-<!-- Мок-массив ролей: admin.js читает его при открытии модалки и правках -->
-<script type="application/json" data-roles-data><?= json_encode(
-    $roles,
-    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
-) ?></script>
+<!-- Окно «Новая роль»: название, языки, Private/Public (по умолчанию Public), цвет, Save / Permissions -->
+<?php $view->include('admin-role-create-modal'); ?>
 
 <?php $view->endBlock('content'); ?>
 
