@@ -78,7 +78,6 @@ final class ArticlesRepository extends PublicationsRepository
         $this->director->startTempFilter()
             ->addConcreteTempFilter($articleId)->setLimitTemp(1);
         $this->addSelect(Article::class);
-        
 
         $filterBuilder = $this->director->getTempBuilder();
         $filterCteName = "filtered_article";
@@ -107,13 +106,16 @@ final class ArticlesRepository extends PublicationsRepository
                 $creatorId,
                 $model->iconId
             );
+            
+            $bookData = $model->content->getBookData();
+            $contentData = $model->content->content;
             $this->insertArticle(
                 $pubId,
                 $model->typeId,
-                $model->content->bookData?->bookId,
-                $model->content->bookData?->pageStart,
-                $model->content->bookData?->pageEnd,
-                $model->content->content,
+                $bookData?->bookId,
+                $bookData?->pageStart,
+                $bookData?->pageEnd,
+                $contentData->content,
                 $model->doi
             );
 

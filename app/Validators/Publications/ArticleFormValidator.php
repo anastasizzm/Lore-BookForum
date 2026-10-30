@@ -24,43 +24,32 @@ final class ArticleFormValidator extends PublicationFormValidator
     {
         $ok = parent::validate($item, $bag);
 
-        if ($item->bookId !== NULL)
+        if ($item->book !== NULL)
         {
+            $book = $item->book;
             if ($item->content !== NULL)
             {
                 $bag->add('content', [$this->translator->t("errors.articles.both_provided")]);
                 $ok = false;
             }
 
-            if ($item->pageStart !== NULL || $item->pageStart <= 0)
+            if ($book->pageStart <= 0)
             {
                 $bag->add('pageStart', [$this->translator->t("errors.common.required")]);
                 $ok = false;
             }
 
-            if ($item->pageEnd !== NULL || $item->pageEnd <= 0)
+            if ($book->pageEnd <= 0)
             {
                 $bag->add('pageEnd', [$this->translator->t("errors.common.required")]);
-                $ok = false;
-            }
-
-            if ($item->pageStart !== NULL && $item->pageStart <= 0)
-            {
-                $bag->add('pageStart', [$this->translator->t("errors.common.format")]);
-                $ok = false;
-            }
-
-            if ($item->pageEnd !== NULL && $item->pageEnd <= 0)
-            {
-                $bag->add('pageEnd', [$this->translator->t("errors.common.format")]);
                 $ok = false;
             }
         }
         else if ($item->content !== NULL)
         {
-            if ($item->bookId !== NULL)
+            if ($item->book !== NULL)
             {
-                $bag->add('bookId', [$this->translator->t("errors.articles.both_provided")]);
+                $bag->add('book', [$this->translator->t("errors.articles.both_provided")]);
                 $ok = false;
             }
         }

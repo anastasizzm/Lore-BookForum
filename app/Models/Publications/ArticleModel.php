@@ -8,7 +8,7 @@ use App\Forms\Publications\ArticleForm;
 use App\Forms\Publications\PublicationForm;
 use App\Models\Publications\ContentData;
 use App\Models\Publications\BookData;
-use App\Models\Enums\ArticleContentType;
+use App\Models\Enums\ArticleContentMode;
 use RuntimeException;
 
 final readonly class ArticleModel extends PublicationModel
@@ -33,17 +33,11 @@ final readonly class ArticleModel extends PublicationModel
 
         $parent = parent::fromForm($form);
 
-        $contentData = $form->bookId !== NULL && $form->pageStart !== NULL && $form->pageEnd !== NULL
-            ? ContentData::fromBook(
-                new BookData(
-                    $form->bookId,
-                    pageStart: $form->pageStart,
-                    pageEnd: $form->pageEnd
-                )
-            ) 
+        $contentData = $form->book !== NULL
+            ? ContentData::fromBook($form->book) 
             : ($form->content !== NULL
                 ? ContentData::fromContent($form->content)
-                : ContentData::fromEmpty());
+                : throw new \InvalidArgumentException("Neither book or content provided"));
 
         return new self(
             title: $parent->title,
@@ -57,6 +51,6 @@ final readonly class ArticleModel extends PublicationModel
         );
     }
 
-    public function isBookBased() { return $this->contentData->getType() === ArticleContentType::Book; }
-    public function isContentBased() { return $this->contentData->getType() === ArticleContentType::Content; }
+    public function isBookBased() { return $this->contentData->getType() === ArticleContentMode::Book; }
+    public function isContentBased() { return $this->contentData->getType() === ArticleContentMode::Text; }
 }

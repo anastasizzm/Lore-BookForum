@@ -9,32 +9,10 @@ use App\Models\Publications\Publication;
 use App\Models\Publications\PublicationShort;
 use App\Models\Publications\BookData;
 use App\Models\Publications\ContentData;
-use App\Models\Enums\ArticleContentType;
+use App\Models\Enums\ArticleContentMode;
 use App\Models\BasicModel;
 
 use App\Models\Enums\ArticleType;
-
-final readonly class ContentData
-{
-    public function __construct(
-        private readonly ?BookData $bookData,
-        private readonly ?string $content
-    ){}
-
-    public function getBookData() : ?BookData { return $this->bookData; }
-    public function getContent() : ?string { return $this->content; }
-
-    public static function fromBook(BookData $book) : self {return new self ($book, NULL);}
-    public static function fromContent(string $content) : self {return new self (NULL, $content);}
-    public static function fromEmpty() : self {return new self (NULL, NULL);}
-
-    public function getType() : ArticleContentType
-    {
-        if ($this->bookData === NULL && $this->content === NULL)return ArticleContentType::None;
-        if ($this->content === NULL) return ArticleContentType::Book;
-        return ArticleContentType::Content;
-    }
-}
 
 readonly class Article extends PublicationExtended
 {
@@ -56,7 +34,9 @@ readonly class Article extends PublicationExtended
         private int $typeId,
         public ?BasicModel $type,
         public ?string $doi,
-        public ContentData $contentData
+        public ArticleContentMode $contentMode,
+        private int $bookId,
+        public ?PublicationShort $book
     ){
         parent::__construct(
             $id, 
@@ -82,24 +62,6 @@ readonly class Article extends PublicationExtended
         $t = 't_';
 
         $parent = parent::fromRow($row, $prefix);
-        $bookId = self::intN($row, $prefix . 'book_id');
-        $content = self::strN($row, $prefix . 'content');
-
-        $contentData = $bookId !== NULL
-            ? ContentData::fromBook(
-                new BookData(
-                    $bookId,
-                    self::hasGroup($row, $b, 'id')
-                        ? PublicationShort::fromRow($row, $prefix . $b) 
-                        : NULL,
-                    self::int($row, $prefix . 'page_start'),
-                    self::int($row, $prefix . 'page_end')
-                )
-            ) 
-            : ($content !== NULL
-                ? ContentData::fromContent($content)
-                : ContentData::fromEmpty());
-
         return new self(
             id: $parent->id,
             title: $parent->title,
@@ -119,12 +81,13 @@ readonly class Article extends PublicationExtended
             type: self::hasGroup($row, $t, 'id')
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
             doi: self::strN($row, $prefix . 'doi'),
-            contentData: $contentData
+            bookId: self::intN($row, $prefix . 'book_id'),
+            contentMode: self::str($row, $prefix . 'content_mode'),
+            book: self::hasGroup($row, $b, 'id')
+                ? PublicationShort::fromRow($row, $prefix . $b)
+                : NULL
         );
     }
-
-    public function isBookBased() { return $this->contentData->getType() === ArticleContentType::Book; }
-    public function isContentBased() { return $this->contentData->getType() === ArticleContentType::Content; }
 
     public function toArray() : array
     {
@@ -132,7 +95,8 @@ readonly class Article extends PublicationExtended
         return $parent + [
             'type' => $this->type,
             'doi' => $this->doi,
-            'contentData' => $this->contentData
+            'contentMode' => $this->contentMode,
+            'book' => $this->book
         ];
     }
 }

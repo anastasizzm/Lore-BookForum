@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 namespace App\Models\Publications;
-use App\Models\Enums\ArticleContentType;
+use App\Models\Enums\ArticleContentMode;
 use App\Models\Publications\BookData;
 
 final readonly class ContentData
@@ -17,12 +17,12 @@ final readonly class ContentData
 
     public static function fromBook(BookData $book) : self {return new self ($book, NULL);}
     public static function fromContent(string $content) : self {return new self (NULL, $content);}
-    public static function fromEmpty() : self {return new self (NULL, NULL);}
 
-    public function getType() : ArticleContentType
+    public function getType() : ArticleContentMode
     {
-        if ($this->bookData === NULL && $this->content === NULL)return ArticleContentType::None;
-        if ($this->content === NULL) return ArticleContentType::Book;
-        return ArticleContentType::Content;
+        if ($this->bookData !== NULL) return ArticleContentType::Book;
+        if ($this->content !== NULL) return ArticleContentType::Text;
+
+        throw new \RuntimException("Neither bookData or content provided");
     }
 }

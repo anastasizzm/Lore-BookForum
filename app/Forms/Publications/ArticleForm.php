@@ -5,6 +5,7 @@ namespace App\Forms\Publications;
 
 use App\Forms\Publications\PublicationForm;
 use App\Extensions\Parsers\QueryParser;
+use App\Models\Enums\ArticleContentMode;
 use App\Models\Uuid;
 
 final readonly class ArticleForm extends PublicationForm
@@ -16,9 +17,7 @@ final readonly class ArticleForm extends PublicationForm
         int $genreId,
         ?Uuid $iconId,
         public int $typeId,
-        public ?int $bookId,
-        public ?int $pageStart,
-        public ?int $pageEnd,
+        public ?BookData $book,
         public ?string $content,
         public ?string $doi
     ){
@@ -35,9 +34,13 @@ final readonly class ArticleForm extends PublicationForm
             genreId: $parent->genreId,
             iconId: $parent->iconId,
             typeId: QueryParser::positiveInt($input, 'typeId'),
-            bookId: QueryParser::optionalPositiveInt($input, 'bookId'),
-            pageStart: QueryParser::optionalPositiveInt($input, 'pageStart'),
-            pageEnd: QueryParser::optionalPositiveInt($input, 'pageEnd'),
+            book: array_key_exists('book', $input)
+                ? new BookData(
+                    bookId: QueryParser::positiveInt($input['book'], 'bookId'),
+                    pageStart: QueryParser::positiveInt($input['book'], 'pageStart'),
+                    pageEnd: QueryParser::positiveInt($input['book'], 'pageEnd')
+                )
+                : NULL,
             content: QueryParser::optionalString($input, 'content'),
             doi: QueryParser::optionalString($input, 'doi')
         );
