@@ -10,15 +10,18 @@ use App\Factories\CriteriasFactory;
 
 use App\Validators\Publications\RateFormValidator;
 
+use App\Forms\Publications\ArticleForm;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Validators\Publications\ReadProgressFormValidator;
+use App\Validators\Publications\ArticleFormValidator;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
+use App\Models\Publications\ArticleModel;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
@@ -44,6 +47,7 @@ final class ArticlesService extends PublicationsService
         RateFormValidator $rateValidator,
         Translator $translator,
         UnitOfWork $uow,
+        private readonly ArticleFormValidator $validator,
         private readonly PublicationContextEnricher $enricher,
     ){
         parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
@@ -103,5 +107,22 @@ final class ArticlesService extends PublicationsService
             $item,
             $currentUserId
         );
+    }
+
+    public function create(
+        ArticleForm $form, 
+        int $creatorId
+    ) : int
+    {
+        $bag = $this->validator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+        
+        try{
+            $model = ArticleModel::fromForm($form);
+            return $this->repository->create($model, $creatorId);
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
     }
 }

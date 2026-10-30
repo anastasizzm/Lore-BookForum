@@ -13,9 +13,11 @@ use App\Lib\I18n\Translator;
 
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
+use App\Models\Publications\ArticleModel;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\ArticlesFilters;
+use App\Services\Configuration\UnitOfWork;
 use App\Models\Scripts\ScriptParam;
 
 /**
@@ -24,6 +26,7 @@ use App\Models\Scripts\ScriptParam;
 final class ArticlesRepository extends PublicationsRepository
 {
     public function __construct(
+        private readonly UnitOfWork $uow,
         Database $db,
         Translator $translator
     ){
@@ -31,6 +34,93 @@ final class ArticlesRepository extends PublicationsRepository
     }
 
     protected function getCheckTable() : string { return "articles"; }
+
+    public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
+    {
+        $this->director->startTempFilter()
+            ->addViewerTemp($criteria->viewerId)
+            ->addActiveTempFilter();
+            
+        $this->addSelect($criteria->classType);
+
+        $filters = $criteria->filters;
+        $this->applyFilters($filters);
+
+        $userFilters = $criteria->userCriteria;
+        if ($userFilters !== null){
+            $this->applyUserRelationCriteria($userFilters);
+        }
+
+        $this->director->addOrderTemp($criteria->sortBy)
+            ->setExtraPaginationTemp($criteria->page, $criteria->pageSize);
+
+        $filterBuilder = $this->director->getTempBuilder();
+        $filterCteName = "filtered_articles";
+
+        $builder = ScriptBuilder::withTable($filterCteName);
+        $builder->addSelect("$filterCteName.*")
+            ->addWithBuilder($filterCteName, $filterBuilder, true);
+        $this->addIncludes($builder, $filterCteName, $includeObjects);
+        $this->addOrder($builder, $filterCteName, $criteria->sortBy);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $items = array_map(
+            static fn(array $row) => $criteria->classType::fromRow($row),
+            $stmt->fetchAll(),
+        );
+
+        return $items;
+    }
+
+    public function retrieve(int $articleId, array $includeObjects) : ?Article
+    {
+        $this->director->startTempFilter()
+            ->addConcreteTempFilter($articleId)->setLimitTemp(1);
+        $this->addSelect(Article::class);
+        
+
+        $filterBuilder = $this->director->getTempBuilder();
+        $filterCteName = "filtered_article";
+
+        $builder = ScriptBuilder::withTable($filterCteName);
+        $builder->addSelect("$filterCteName.*")
+            ->addWithBuilder($filterCteName, $filterBuilder, true);
+        $this->addIncludes($builder, $filterCteName, $includeObjects);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : Article::fromRow($row);
+    }
+
+    public function validatePublish(int $articleId) : array { return []; }
+
+    public function create(ArticleModel $model, int $creatorId) : int 
+    {
+        $this->uow->transactional(function () use ($model, $creatorId)
+        {
+            $pubId = $this->insertPublication(
+                $model->title,
+                $model->description,
+                $model->authorNotes,
+                $model->genreId,
+                $creatorId,
+                $model->iconId
+            );
+            $this->insertArticle(
+                $pubId,
+                $model->typeId,
+                $model->content->bookData?->bookId,
+                $model->content->bookData?->pageStart,
+                $model->content->bookData?->pageEnd,
+                $model->content->content,
+                $model->doi
+            );
+
+            return $pubId;
+        });
+    }
+
+    // --- Internals
 
     protected function applyFilters(PublicationsFilters $filters) : void 
     {
@@ -105,62 +195,30 @@ final class ArticlesRepository extends PublicationsRepository
         }
     }
 
-    public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
+    protected function insertArticle(
+        int $publicationId,
+        int $typeId,
+        ?int $bookId,
+        ?int $pageStart,
+        ?int $pageEnd,
+        ?string $content,
+        ?string $doi = NULL
+    ) : int
     {
-        $this->director->startTempFilter()
-            ->addViewerTemp($criteria->viewerId)
-            ->addActiveTempFilter();
-            
-        $this->addSelect($criteria->classType);
+        $values = [
+            ':pubId' => ScriptParam::asInt($publicationId),
+            ':typId' => ScriptParam::asInt($typeId),
+            ':content' => ScriptParam::asStr($content),
+            ':bookId' => ScriptParam::asInt($bookId),
+            ':pStart' => ScriptParam::asInt($pageStart),
+            ':pEnd' => ScriptParam::asInt($pageEnd),
+            ':doi' => ScriptParam::asStr($doi?->toString())
+        ];
 
-        $filters = $criteria->filters;
-        $this->applyFilters($filters);
-
-        $userFilters = $criteria->userCriteria;
-        if ($userFilters !== null){
-            $this->applyUserRelationCriteria($userFilters);
-        }
-
-        $this->director->addOrderTemp($criteria->sortBy)
-            ->setExtraPaginationTemp($criteria->page, $criteria->pageSize);
-
-        $filterBuilder = $this->director->getTempBuilder();
-        $filterCteName = "filtered_articles";
-
-        $builder = ScriptBuilder::withTable($filterCteName);
-        $builder->addSelect("$filterCteName.*")
-            ->addWithBuilder($filterCteName, $filterBuilder, true);
-        $this->addIncludes($builder, $filterCteName, $includeObjects);
-        $this->addOrder($builder, $filterCteName, $criteria->sortBy);
-
-        $stmt = $this->execute($builder->build(), $builder->getParams());
-        $items = array_map(
-            static fn(array $row) => $criteria->classType::fromRow($row),
-            $stmt->fetchAll(),
-        );
-
-        return $items;
-    }
-
-    public function retrieve(int $articleId, array $includeObjects) : ?Article
-    {
-        $this->director->startTempFilter()
-            ->addConcreteTempFilter($articleId)->setLimitTemp(1);
-        $this->addSelect(Article::class);
+        $sql = 'INSERT INTO articles (publication_id, type_id, content, book_id, page_start, page_end, doi)
+                VALUES (:pubId, :typId, :content, :bookId, :pStart, :pEnd, :doi) RETURNING publication_id';
         
-
-        $filterBuilder = $this->director->getTempBuilder();
-        $filterCteName = "filtered_article";
-
-        $builder = ScriptBuilder::withTable($filterCteName);
-        $builder->addSelect("$filterCteName.*")
-            ->addWithBuilder($filterCteName, $filterBuilder, true);
-        $this->addIncludes($builder, $filterCteName, $includeObjects);
-
-        $stmt = $this->execute($builder->build(), $builder->getParams());
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row === false ? null : Article::fromRow($row);
+        $stmt = $this->execute($sql, $values);
+        return (int)$stmt->fetchColumn();
     }
-
-    public function validatePublish(int $articleId) : array { return []; }
 }

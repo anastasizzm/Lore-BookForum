@@ -7,26 +7,12 @@ use App\Models\Uuid;
 use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
 use App\Models\Publications\PublicationShort;
+use App\Models\Publications\BookData;
+use App\Models\Publications\ContentData;
+use App\Models\Enums\ArticleContentType;
 use App\Models\BasicModel;
 
 use App\Models\Enums\ArticleType;
-
-enum ArticleContentType
-{
-    case None;
-    case Book;
-    case Content;
-}
-
-final readonly class BookData
-{
-    public function __construct(
-        public int $bookId,
-        public ?PublicationShort $book,
-        public int $pageStart,
-        public int $pageEnd
-    ){}
-}
 
 final readonly class ContentData
 {

@@ -76,6 +76,8 @@ return function(Router $router)
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
     $router->get('/articles/drafts', [App\Controllers\Publications\ArticlesController::class, 'draftList'], 'articles.drafts', AuthPolicy::Auth);
     $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
+    $router->get('/articles/new', [App\Controllers\Publications\ArticlesController::class, 'getCreate'], 'articles.create', CreatePublicationOperation::class);
+    $router->post('/articles/new', [App\Controllers\Publications\ArticlesController::class, 'create'], 'articles.create.submit', CreatePublicationOperation::class);
     $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
     
 

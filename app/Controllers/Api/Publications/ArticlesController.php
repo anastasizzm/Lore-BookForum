@@ -45,4 +45,18 @@ final class ArticlesController extends PublicationsController
                 'hasNext' => $paginatedList->hasNext(),
             ]);
     }
+
+    public function create(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $formData = $context->request->body();
+        $articleId = $this->service->create(
+            ArticleForm::fromInput($formData),
+            $userId
+        );
+        return $this->jsonCreatedId($articleId);
+    }
 }

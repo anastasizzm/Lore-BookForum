@@ -19,6 +19,7 @@ use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
 use App\Models\Filters\Publications\ArticlesFilters;
 use App\Models\Filters\Publications\UserRelationFilters;
+use App\Forms\Publications\ArticleForm;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Extensions\Parsers\QueryParser;
 
@@ -181,6 +182,42 @@ final class ArticlesController extends Controller
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
             ]);
+        }
+    }
+
+    public function getCreate(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login'));
+
+        $userContext = $this->usersService->loadContext($userId);
+        return $this->render('article/article-form', [
+            'user' => $userContext
+        ]);
+    }
+
+    public function create(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login'));
+
+        $formData = $context->request->body();
+        try{
+            $articleId = $this->articlesService->create(
+                ArticleForm::fromInput($formData),
+                $userId
+            );
+            return Response::redirect($this->url->url('articles.retrieve', ['articleId' => $articleId]));
+        }
+        catch(ValidationException $e){
+            $userContext = $this->usersService->loadContext($userId);
+            return $this->render('article/article-form', [
+                'form' => $formData, 
+                'errors' => $e->errors(),
+                'user' => $userContext
+            ], 422);
         }
     }
 }
