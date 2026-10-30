@@ -8,6 +8,8 @@ use App\Services\Publications\ArticlesService;
 
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Extensions\Parsers\RouteParamParser;
+use App\Forms\Publications\ArticleForm;
+use App\Forms\Publications\ArticlePatchForm;
 use App\Models\Enums\ServiceType;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Attributes\Inject;
@@ -58,5 +60,14 @@ final class ArticlesController extends PublicationsController
             $userId
         );
         return $this->jsonCreatedId($articleId);
+    }
+
+    public function update(HttpContext $context, string $id) 
+    {
+        $articleId = RouteParamParser::positiveInt(['id' => $id], 'id');
+
+        $formData = $context->request->body();
+        $this->service->update($articleId, ArticlePatchForm::fromInput($formData));
+        return $this->jsonEmpty();
     }
 }

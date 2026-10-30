@@ -51,11 +51,14 @@ return function(Router $router)
     $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
+    $router->get('/api/articles/{id}/authors', [App\Controllers\Api\Publications\ArticlesController::class, 'getAuthors'], 'api.articles.authors', ReadPublicationOperation::class);
     $router->delete('/api/articles/{id}', [App\Controllers\Api\Publications\ArticlesController::class, 'delete'], 'api.articles.delete', DeletePublicationOperation::class);
+    $router->post('/api/articles/', [App\Controllers\Api\Publications\ArticlesController::class, 'create'], 'api.articles.create.submit', CreatePublicationOperation::class);
     $router->post('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
     $router->delete('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
     $router->put('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
     $router->delete('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
+    $router->patch('/api/articles/{id}', [App\Controllers\Api\Publications\ArticlesController::class, 'update'], 'api.articles.update', UpdateMetaPublicationOperation::class);
     $router->post('/api/articles/{id}/publish', [App\Controllers\Api\Publications\ArticlesController::class, 'publish'], 'api.articles.publish', UpdateMetaPublicationOperation::class);
 
 

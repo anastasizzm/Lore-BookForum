@@ -14,6 +14,7 @@ use App\Lib\I18n\Translator;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
+use App\Models\Publications\ArticlePatchModel;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\ArticlesFilters;
@@ -120,6 +121,36 @@ final class ArticlesRepository extends PublicationsRepository
         });
     }
 
+    public function update(
+        int $articleId,
+        ArticlePatchModel $model
+    ) : bool 
+    {
+        try{
+            $this->uow->transactional(function () use ($model, $articleId) : void {
+                $exists = $this->updatePublication(
+                    $articleId,
+                    $model->title,
+                    $model->description,
+                    $model->authorNotes,
+                    $model->genreId,
+                    $model->iconId,
+                );
+                if (!$exists) throw new RuntimeException("Not found");
+                $exists = $this->updateBook(
+                    $articleId,
+                    $model->typeId,
+                    $model->doi
+                );
+                if (!$exists) throw new RuntimeException("Not found");
+            });
+            return true;
+        }
+        catch(\RuntimeException $e){
+            return false;
+        }
+    }
+
     // --- Internals
 
     protected function applyFilters(PublicationsFilters $filters) : void 
@@ -220,5 +251,37 @@ final class ArticlesRepository extends PublicationsRepository
         
         $stmt = $this->execute($sql, $values);
         return (int)$stmt->fetchColumn();
+    }
+
+    protected function updateBook(
+        int $articleId,
+        int|false $typeId,
+        string|null|false $doi = NULL
+    ) : bool 
+    {
+        $sets = [];
+        $params = [':id' => ScriptParam::asInt($articleId)];
+
+        if ($typeId !== false) {
+            $sets[] = 'type_id = :typeId';
+            $params[':typeId'] = ScriptParam::asInt($typeId);
+        }
+
+        if ($doi !== false) {
+            $sets[] = 'doi = :doi';
+            $params[':doi'] = ScriptParam::asStr($doi);
+        }
+
+        if (empty($sets)) {
+            return true; 
+        }
+
+        $sql = "UPDATE articles 
+                SET " . implode(', ', $sets) . " 
+                WHERE publication_id = :id 
+                RETURNING publication_id";
+
+        $stmt = $this->execute($sql, $params);
+        return $stmt->fetchColumn() !== false;
     }
 }

@@ -22,6 +22,8 @@ use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
+use App\Models\Publications\ArticlePatchModel;
+use App\Forms\Publications\ArticlePatchForm;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
@@ -120,6 +122,24 @@ final class ArticlesService extends PublicationsService
         try{
             $model = ArticleModel::fromForm($form);
             return $this->repository->create($model, $creatorId);
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function update(
+        int $articleId,
+        ArticlePatchForm $form
+    ) : void 
+    {
+        $bag = $this->patchValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        try{
+            $model = ArticlePatchModel::fromForm($form);
+            $updated = $this->repository->update($articleId, $model);
+            if (!$updated) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);
