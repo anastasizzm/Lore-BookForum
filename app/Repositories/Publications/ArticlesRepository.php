@@ -15,6 +15,7 @@ use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
 use App\Models\Publications\ArticlePatchModel;
+use App\Models\Publications\ContentData;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\ArticlesFilters;
@@ -92,6 +93,24 @@ final class ArticlesRepository extends PublicationsRepository
         return $row === false ? null : Article::fromRow($row);
     }
 
+    public function getContent(int $articleId) : ?ContentData 
+    {
+        $sql = "SELECT 
+                    content,
+                    book_id,
+                    page_start,
+                    page_end,
+                    content_mode
+                FROM articles
+                WHERE publication_id = :id
+                LIMIT 1";
+
+        $stmt = $this->execute($sql, [':id' => ScriptParam::asInt($articleId)]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? NULL : ContentData::fromRow($row);
+    }
+
     public function validatePublish(int $articleId) : array { return []; }
 
     public function create(ArticleModel $model, int $creatorId) : int 
@@ -139,7 +158,7 @@ final class ArticlesRepository extends PublicationsRepository
                     $model->iconId,
                 );
                 if (!$exists) throw new RuntimeException("Not found");
-                $exists = $this->updateBook(
+                $exists = $this->updateArticle(
                     $articleId,
                     $model->typeId,
                     $model->doi
@@ -151,6 +170,33 @@ final class ArticlesRepository extends PublicationsRepository
         catch(\RuntimeException $e){
             return false;
         }
+    }
+
+    public function updateContent(
+        int $articleId,
+        ContentData $contentData,
+        int $expectedVersion
+    ) : ?int 
+    {
+        $sql = "UPDATE articles 
+                SET content = :content, book_id = :bookId, page_start = :pageStart, page_end = :pageEnd, version = version + 1
+                WHERE publication_id = :id
+                    AND version = :expectedVersion
+                RETURNING version";
+
+        $book = $contentData->getBookData();
+        $content = $contentData->getContent();
+        $params = [
+            ':id' => ScriptParam::asInt($articleId),
+            ':bookId' => ScriptParam::asInt($book->bookId),
+            ':pageStart' => ScriptParam::asInt($book->pageStart),
+            ':pageEnd' => ScriptParam::asInt($book->pageEnd),
+            ':content' => ScriptParam::asStr($content),
+            ':expectedVersion' => ScriptParam::asInt($expectedVersion)
+        ];
+
+        $row = $stmt->fetchColumn();
+        return $row === false ? null : (int)$row;
     }
 
     // --- Internals
@@ -255,7 +301,7 @@ final class ArticlesRepository extends PublicationsRepository
         return (int)$stmt->fetchColumn();
     }
 
-    protected function updateBook(
+    protected function updateArticle(
         int $articleId,
         int|false $typeId,
         string|null|false $doi = NULL

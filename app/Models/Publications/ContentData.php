@@ -4,8 +4,9 @@ declare(strict_types=1);
 namespace App\Models\Publications;
 use App\Models\Enums\ArticleContentMode;
 use App\Models\Publications\BookData;
+use App\Models\RowModel;
 
-final readonly class ContentData
+final readonly class ContentData extends RowModel
 {
     public function __construct(
         private readonly ?BookData $bookData,
@@ -20,9 +21,16 @@ final readonly class ContentData
 
     public function getType() : ArticleContentMode
     {
-        if ($this->bookData !== NULL) return ArticleContentType::Book;
-        if ($this->content !== NULL) return ArticleContentType::Text;
+        if ($this->bookData !== NULL) return ArticleContentMode::Book;
+        if ($this->content !== NULL) return ArticleContentMode::Text;
 
         throw new \RuntimException("Neither bookData or content provided");
+    }
+
+    public static function fromRow(array $row, string $prefix = '') : self 
+    {
+        $mode = self::enum($row, $prefix . 'content_mode', ArticleContentMode::class);
+        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row));
+        else return new self(content: self::str($row, $prefix . 'content'));
     }
 }

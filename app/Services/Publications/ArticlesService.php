@@ -14,6 +14,8 @@ use App\Forms\Publications\ArticleForm;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
 use App\Validators\Publications\ReadProgressFormValidator;
+use App\Validators\Publications\ArticlePatchFormValidator;
+use App\Validators\Publications\ArticleContentFormValidator;
 use App\Validators\Publications\ArticleFormValidator;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
@@ -22,8 +24,10 @@ use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
+use App\Models\Publications\ContentData;
 use App\Models\Publications\ArticlePatchModel;
 use App\Forms\Publications\ArticlePatchForm;
+use App\Forms\Publications\ArticleСontentForm;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
@@ -35,6 +39,7 @@ use App\Services\Configuration\UnitOfWork;
 use App\Exceptions\Translators\ArticleExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\ConflictException;
 use App\Lib\I18n\Translator;
 
 use PDO;
@@ -50,6 +55,8 @@ final class ArticlesService extends PublicationsService
         Translator $translator,
         UnitOfWork $uow,
         private readonly ArticleFormValidator $validator,
+        private readonly ArticlePatchFormValidator $patchValidator,
+        private readonly ArticleContentFormValidator $contentValidator,
         private readonly PublicationContextEnricher $enricher,
     ){
         parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
@@ -111,6 +118,13 @@ final class ArticlesService extends PublicationsService
         );
     }
 
+    public function getContent(int $articleId) : ContentData 
+    {
+        $data = $this->repository->getContent($articleId);
+        if($data === NULL) throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+        return $data;
+    }
+
     public function create(
         ArticleForm $form, 
         int $creatorId
@@ -139,7 +153,32 @@ final class ArticlesService extends PublicationsService
         try{
             $model = ArticlePatchModel::fromForm($form);
             $updated = $this->repository->update($articleId, $model);
-            if (!$updated) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+            if (!$updated) throw new ConflictException($this->translator->t('errors.common.version_invalid'));
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function updateContent(
+        int $articleId,
+        ArticleСontentForm $form,
+        int $expectedVersion,
+    ) : int 
+    {
+        $bag = $this->contentValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        $contentData = $form->book !== NULL
+            ? ContentData::fromBook($form->book) 
+            : ($form->content !== NULL
+                ? ContentData::fromContent($form->content)
+                : throw new ValidationException(['content' => $this->translator->t("errors.common.required")]));
+
+        try{
+            $newVersion = $this->repository->updateContent($articleId, $contentData, $expectedVersion);
+            if ($newVersion === NULL) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+            return $newVersion;
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);

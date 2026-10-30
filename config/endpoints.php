@@ -59,6 +59,8 @@ return function(Router $router)
     $router->put('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
     $router->delete('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
     $router->patch('/api/articles/{id}', [App\Controllers\Api\Publications\ArticlesController::class, 'update'], 'api.articles.update', UpdateMetaPublicationOperation::class);
+    $router->get('/api/articles/{id}/content', [App\Controllers\Api\Publications\ArticlesController::class, 'getContent'], 'api.articles.content', ReadPublicationOperation::class);
+    $router->put('/api/articles/{id}/content', [App\Controllers\Api\Publications\ArticlesController::class, 'updateContent'], 'api.articles.content.update', UpdateContentPublicationOperation::class);
     $router->post('/api/articles/{id}/publish', [App\Controllers\Api\Publications\ArticlesController::class, 'publish'], 'api.articles.publish', UpdateMetaPublicationOperation::class);
 
 
