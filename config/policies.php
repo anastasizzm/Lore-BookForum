@@ -73,11 +73,11 @@ use App\Models\Access\Operations\Posts\CreatePostOperation;
 
 $registry->registerPolicy(
     CreatePublicationOperation::class, 
-    fn($ctx) => new SystemAccessRequirement(PUB_PATTERN_COMMON, new CreatePublicationOperation()),
+    fn($ctx) => new PublicationAccessRequirement(PUB_PATTERN_COMMON, new CreatePublicationOperation()),
     AccessHandler::class);
 $registry->registerPolicy(
     CreatePostOperation::class, 
-    fn($ctx) => new SystemAccessRequirement(POST_PATTERN_COMMON, new CreatePostOperation()),
+    fn($ctx) => new PostAccessRequirement(POST_PATTERN_COMMON, new CreatePostOperation()),
     AccessHandler::class);
 
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;

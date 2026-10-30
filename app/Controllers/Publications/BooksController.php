@@ -55,7 +55,7 @@ final class BooksController extends Controller
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
                 properties: PropertiesQuery::fromRaw("creator"),
-                filters: BooksFilters::fromInput($q),
+                filters: BooksFilters::fromPublic($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId),
                 viewerId: $userId
             );
@@ -75,6 +75,47 @@ final class BooksController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('library/library-list', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+                'filterState' => $filterState
+            ]);
+        }
+    }
+
+    public function draftList(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login'));
+
+        $q = $context->request->query;
+        $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $query = new BooksListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator"),
+                filters: BooksFilters::fromDraft($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId),
+                viewerId: $userId
+            );
+
+            $paginatedList = $this->booksService->getListWithContext($query);
+            return $this->render('drafts/drafts', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'book'
+                ], 
+                'user' => $userContext,
+                'filterState' => $filterState
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('drafts/drafts', [
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
                 'filterState' => $filterState

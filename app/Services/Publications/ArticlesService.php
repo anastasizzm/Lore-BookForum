@@ -4,14 +4,15 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\ArticlesRepository;
+use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 use App\Factories\CriteriasFactory;
 
-use App\Forms\Publications\RateForm;
 use App\Validators\Publications\RateFormValidator;
 
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
+use App\Validators\Publications\ReadProgressFormValidator;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 
@@ -28,18 +29,25 @@ use App\Services\Configuration\UnitOfWork;
 
 use App\Exceptions\Translators\ArticleExceptionTranslator;
 use App\Exceptions\ValidationException;
+use App\Exceptions\NotFoundException;
+use App\Lib\I18n\Translator;
 
 use PDO;
 
-final class ArticlesService
+final class ArticlesService extends PublicationsService
 {
     public function __construct(
-        private readonly ArticlesRepository $articlesRepo,
-        private readonly ArticleExceptionTranslator $translator,
+        ArticlesRepository $repository,
+        UsersReadRepository $usersReadRepo,
+        ArticleExceptionTranslator $exceptionTranslator,
+        ReadProgressFormValidator $progressValidator,
+        RateFormValidator $rateValidator,
+        Translator $translator,
+        UnitOfWork $uow,
         private readonly PublicationContextEnricher $enricher,
-        private readonly RateFormValidator $rateValidator,
-        private readonly UnitOfWork $uow
-    ){}
+    ){
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
+    }
 
     public function getList(ArticlesListQuery $query) : PaginatedList
     {
@@ -69,7 +77,7 @@ final class ArticlesService
         if(!$isValid) throw new ValidationException($errors);
         
         $criteria = CriteriasFactory::buildArticleFromQuery($query, Publication::class);
-        return $this->articlesRepo->getList(
+        return $this->repository->getList(
             $criteria,
             $query->properties->getProps()
         );
@@ -83,7 +91,7 @@ final class ArticlesService
         $isValid = $props->validateForType(Article::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
 
-        return $this->articlesRepo->retrieve($articleId, $props->getProps());
+        return $this->repository->retrieve($articleId, $props->getProps());
     }
 
     public function retrieveWithContext(int $articleId, PropertiesQuery $props, int $currentUserId) : ?WithContext 
@@ -95,68 +103,5 @@ final class ArticlesService
             $item,
             $currentUserId
         );
-    }
-
-    public function save(int $userId, int $articleId) : void
-    {
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-
-                $this->articlesRepo->save($userId, $articleId); 
-            });
-        }
-        catch(\PDOException $e){
-            throw $this->translator->translate($e);
-        }
-    }
-
-    public function deleteSave(int $userId, int $articleId) : void
-    {
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-
-                $this->articlesRepo->deleteSave($userId, $articleId);
-            });
-        }
-        catch(\PDOException $e){
-            throw $this->translator->translate($e);
-        }
-    }
-
-    public function rate(int $userId, int $articleId, RateForm $form) : void 
-    {
-        $bag = $this->rateValidator->validateOne($form);
-        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
-
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId, $form) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-                $this->articlesRepo->rate($userId, $articleId, $form->rating);
-            });
-        }
-        catch(\PDOException $e)
-        {
-            throw $this->translator->translate($e);
-        }
-    }
-
-    public function uprate(int $userId, int $articleId) : void 
-    {
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-                $this->articlesRepo->unrate($userId, $articleId);
-            });
-        }
-        catch(\PDOException $e)
-        {
-            throw $this->translator->translate($e);
-        }
     }
 }
