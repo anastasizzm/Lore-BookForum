@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Additional;
 
 use App\Repositories\Additional\RolesRepository;
-use App\Models\Queries\Additional\BasicModelListQuery;
+use App\Models\Queries\Additional\UserRoleListQuery;
 use App\Forms\Translations\Additionals\UserRoleForm;
 use App\Models\Additional\UserRole;
 use App\Validators\Additionals\UserRoleFormValidator;
@@ -33,7 +33,7 @@ final class RolesService
         private readonly Translator $i18n
     ){}
 
-    public function getList(BasicModelListQuery $query) : PaginatedList
+    public function getList(UserRoleListQuery $query) : PaginatedList
     {
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();

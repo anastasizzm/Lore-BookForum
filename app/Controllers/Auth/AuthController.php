@@ -39,7 +39,8 @@ final class AuthController extends Controller
     ){}
 
     public function getLogin(HttpContext $c) : Response {
-        return $this->render('auth/login');
+        $redirectUrl = $c->query('redirect');
+        return $this->render('auth/login', ['redirectUrl' => $redirectUrl]);
     }
 
     public function getRegister(HttpContext $c) : Response {
@@ -61,17 +62,18 @@ final class AuthController extends Controller
 
     public function login(HttpContext $ctx) : Response {
         $formData = $ctx->request->body();
+        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
 
         try{
             $token = $this->service->login(LoginForm::fromInput($formData));
-            $response = Response::redirect($this->url->url('home'));
+            $response = Response::redirect($redirectUrl);
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
         catch(UnauthorizedException $e){
             return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [InnerMessage::asError("Authentication failed", $e->getMessage())]]);
         }
         catch(ForbiddenException $e){
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login'), 'actionTitle' => 'Understood']);
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login') . "?redirect=" . $redirectUrl, 'actionTitle' => 'Understood']);
         }
         catch(ValidationException $e){
             return $this->render('auth/login', ['form' => $formData, 'errors' => $e->errors()]);

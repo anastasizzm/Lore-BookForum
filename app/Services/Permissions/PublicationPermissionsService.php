@@ -16,7 +16,7 @@ use App\Exceptions\Translators\PermissionExceptionTranslator;
 use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditPublicationPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
@@ -86,7 +86,7 @@ final class PublicationPermissionsService
     public function editRole(
         int $publicationId,
         int $roleId,
-        EditPermissionForm $form,
+        EditPublicationPermissionForm $form,
         int $expectedVersion
     ): int {
         if ($form->pubPermissions === NULL)
@@ -185,7 +185,7 @@ final class PublicationPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers($publicationId, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers($publicationId, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUser::class);
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 

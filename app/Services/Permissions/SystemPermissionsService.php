@@ -9,6 +9,7 @@ use App\Exceptions\ConflictException;
 use App\Exceptions\ValidationException;
 use App\Models\PaginatedList;
 use App\Models\Access\Assignment\RolesUser;
+use App\Models\Access\Assignment\RolesUserSystem;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
@@ -16,7 +17,7 @@ use App\Exceptions\Translators\PermissionExceptionTranslator;
 use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditSystemPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
@@ -86,7 +87,7 @@ final class SystemPermissionsService
         }
     }
 
-    public function editRole(int $roleId, EditPermissionForm $form, int $expectedVersion): int
+    public function editRole(int $roleId, EditSystemPermissionForm $form, int $expectedVersion): int
     {
         $bag = new ErrorBag();
         if ($form->pubPermissions === NULL)
@@ -187,7 +188,7 @@ final class SystemPermissionsService
     public function getUsers(RolesUserListQuery $query) : PaginatedList 
     {
         $errors = [];
-        $isValid = $query->properties->validateForType(RolesUser::class, $errors);
+        $isValid = $query->properties->validateForType(RolesUserSystem::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
 
         $sortEnum = $query->sort->hasData() 
@@ -197,7 +198,7 @@ final class SystemPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUserSystem::class);
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 

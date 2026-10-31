@@ -5,6 +5,7 @@ namespace App\Models\Access\Rules;
 use App\Models\Access\Operations\AccessOperation;
 use App\Extensions\Parsers\QueryParser;
 
+use App\Models\Access\Operations\Posts\ControlPostOperation;
 use App\Models\Access\Operations\Posts\PostAccessOperation;
 use App\Models\Access\Operations\Posts\CreatePostOperation;
 use App\Models\Access\Operations\Posts\DeletePostOperation;
@@ -33,6 +34,7 @@ readonly class PostAccessRules extends RowModel implements OperationChecker, For
             $operation instanceof CreatePostOperation => $this->create,
             $operation instanceof UpdatePostOperation => $this->update,
             $operation instanceof DeletePostOperation => $this->delete,
+            $operation instanceof ControlPostOperation => $this->update || $this->delete,
             default => false,
         };
     }
@@ -71,7 +73,7 @@ readonly class PostAccessRules extends RowModel implements OperationChecker, For
         ];
     }
 
-    public static function fromArray(array $data): static
+    public static function fromArray(array $data): self
     {
         return new self (
             create: (bool)($data['create'] ?? false),

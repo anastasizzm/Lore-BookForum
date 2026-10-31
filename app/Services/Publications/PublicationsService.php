@@ -6,18 +6,24 @@ namespace App\Services\Publications;
 use App\Repositories\Publications\PublicationsRepository;
 use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Configuration\UnitOfWork;
+use App\Services\ConsumesSignedTokens;
+use App\Services\Users\UsersService;
 
 use App\Forms\Publications\RateForm;
 use App\Forms\Publications\ReadProgressForm;
 use App\Validators\Publications\ReadProgressFormValidator;
 use App\Validators\Publications\RateFormValidator;
+use App\Cache\Publications\PublicationDeleteCache;
 
 use App\Models\Publications\PublicationShort;
 use App\Models\Enums\BookFormat;
 use App\Models\Uuid;
+use App\Models\Email;
 
 use App\Exceptions\Translators\Translator as ExceptionTranslator;
 use App\Lib\I18n\Translator;
+use App\Lib\View;
+use App\Lib\Jwt;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
 use App\Exceptions\ConflictException;
@@ -36,6 +42,8 @@ abstract class PublicationsService
         protected readonly Translator $translator,
         protected readonly UnitOfWork $uow
     ){}
+
+    // --- public
 
     public function retrieveShort(int $publicationId) : ?PublicationShort 
     {

@@ -14,7 +14,7 @@ final class RouteUrlGenerator implements UrlGenerator
         private readonly Translator $translator
     ) {}
 
-    public function url(string $name, array $params = []): string
+    public function url(string $name, array $params = [], array $query = []): string
     {
         $route = $this->registry->named($name);
         $path  = $route->path;
@@ -27,12 +27,19 @@ final class RouteUrlGenerator implements UrlGenerator
             );
         }
 
-        return '/' . ltrim($path, '/') . '?lang=' . $this->translator->locale();
+        $query['lang'] = $this->translator->locale();
+        $queryString = '?';
+        foreach($query as $key => $value){
+            $value = rawurlencode((string)$value);
+            $queryString .= "$key={$value}&";
+        }
+
+        return '/' . ltrim($path, '/') . $queryString;
     }
 
-    public function fullUrl(string $name, array $params = []) : string
+    public function fullUrl(string $name, array $params = [], array $query = []) : string
     {
-        $url = $this->url($name, $params);
+        $url = $this->url($name, $params, $query);
         $host = trim($this->settings->appUrl, '/');
         return $host . $url;
     }

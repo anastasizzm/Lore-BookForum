@@ -5,12 +5,14 @@ namespace App\Http;
 
 use App\Http\Route;
 use App\Http\Request;
+use App\Lib\Container;
 
 final readonly class HttpContext
 {
     public function __construct(
         public Request $request,
         public Route $route,
+        public Container $container,
         /** @var array<string, string> */
         public array $routeParams = [],
     ) {}

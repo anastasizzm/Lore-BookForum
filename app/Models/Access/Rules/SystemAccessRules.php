@@ -83,7 +83,7 @@ readonly class SystemAccessRules extends RowModel implements OperationChecker, F
         ];
     }
 
-    public static function fromArray(array $data): static
+    public static function fromArray(array $data): self
     {
         return new self(
             manageAccounts: (bool)($data['manageAccounts'] ?? false),

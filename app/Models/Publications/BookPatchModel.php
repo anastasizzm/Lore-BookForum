@@ -5,6 +5,7 @@ namespace App\Models\Publications;
 
 use App\Forms\Publications\BookPatchForm;
 use App\Forms\Publications\PublicationPatchForm;
+use App\Models\Uuid;
 use RuntimeException;
 
 final readonly class BookPatchModel extends PublicationPatchModel
@@ -19,7 +20,7 @@ final readonly class BookPatchModel extends PublicationPatchModel
         public int|false $categoryId,
         public string|false $publisher,
         public int|false $pages,
-        public string|false $isbn
+        public string|false|null $isbn
     ){
         parent::__construct($title, $description, $authorNotes, $genreId, $iconId);
     }

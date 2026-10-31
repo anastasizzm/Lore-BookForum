@@ -8,7 +8,7 @@ use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\PublicationAccessRules;
 
-final readonly class EditPermissionForm implements Form
+final readonly class EditSystemPermissionForm implements Form
 {
     public function __construct(
         public ?SystemAccessRules $systemPermissions,

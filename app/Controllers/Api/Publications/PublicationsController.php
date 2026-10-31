@@ -137,6 +137,6 @@ abstract class PublicationsController extends Controller
         $publicationId = RouteParamParser::positiveInt(['id' => $id], 'id');
 
         $this->service->delete($publicationId);
-        return $this->jsonEmpty(204);
+        return $this->jsonEmpty(200);
     }
 }

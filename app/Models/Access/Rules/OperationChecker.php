@@ -12,5 +12,5 @@ interface OperationChecker
     
     public function toArray(): array;
     /** @param array<string, mixed> $data */
-    public static function fromArray(array $data): static;
+    public static function fromArray(array $data): self;
 }

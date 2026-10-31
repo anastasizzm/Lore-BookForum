@@ -14,6 +14,7 @@ use App\Http\HttpException;
 use App\Cache\Auth\MailVerifyCache;
 use App\Services\Mail\Mailer;
 use App\Services\Auth\TokenResetService;
+use App\Services\ConsumesSignedTokens;
 use App\Services\Configuration\UnitOfWork;
 
 use App\Repositories\Users\UsersRepository;
@@ -31,19 +32,30 @@ use PDO;
 
 final class EmailVerificationService
 {
+    use ConsumesSignedTokens;
+
     private const VERIFY_TOKEN_TYP = 'email_verify';
     private const VERIFY_TOKEN_TTL = 3600;
 
     public function __construct(
-        private readonly Jwt             $jwt,
-        private readonly UrlGenerator    $url,
-        private readonly Mailer          $mailer,
-        private readonly UsersRepository $users,
-        private readonly MailVerifyCache $cache,
+        private readonly Jwt               $jwt,
+        private readonly UrlGenerator      $url,
+        private readonly Mailer            $mailer,
+        private readonly UsersRepository   $users,
+        private readonly MailVerifyCache   $cache,
         private readonly TokenResetService $tokenResetService,
-        private readonly UnitOfWork      $uow,
-        private readonly Translator $translator
+        private readonly UnitOfWork        $uow,
+        private readonly Translator        $translator,
     ) {}
+
+    // ---- trait
+
+    protected function tokenType(): string   { return self::VERIFY_TOKEN_TYP; }
+    protected function tokenCache(): object  { return $this->cache; }
+    protected function tokenJwt(): Jwt       { return $this->jwt; }
+    protected function tokenTranslator(): Translator { return $this->translator; }
+
+    // ---- public
 
     public function startVerification(int $userId, string $email): void
     {
@@ -59,95 +71,55 @@ final class EmailVerificationService
         ));
     }
 
-    public function restartVerification(string $oldToken) : void 
+    public function restartVerification(string $oldToken): void
     {
         $claims = $this->decodeToken($oldToken);
         $userId = $this->extractUserId($claims);
-        $mail = $this->extractEmail($claims);
+        $mail   = $this->extractEmail($claims);
 
         $this->startVerification($userId, $mail);
     }
 
     public function completeVerification(string $rawToken): string
     {
-        $userId = $this->consumeToken($rawToken);
-        if ($this->checkVerificationExists($userId))
-            throw new HttpException($this->translator->t("errors.mail.already_verified"), 302, ErrorCodes::ALREADY_DONE);
+        $userId = $this->validateToken($rawToken);
 
-        $ok = $this->uow->transactional(function (PDO $pdo) use ($userId): bool {
-            return $this->users->markEmailVerified($userId);
-        });
+        if ($this->users->checkVerified($userId)) {
+            throw new HttpException(
+                $this->translator->t('errors.mail.already_verified'),
+                302,
+                ErrorCodes::ALREADY_DONE,
+            );
+        }
 
-        if (!$ok) throw new NotFoundException($this->translator->t("item_based.not_found.m", [':item' => $this->translator->t('display_names.user')]));
-        
+        $ok = $this->uow->transactional(
+            fn (PDO $pdo): bool => $this->users->markEmailVerified($userId),
+        );
+
+        if (!$ok) {
+            throw new NotFoundException(
+                $this->translator->t('item_based.not_found.m', [
+                    ':item' => $this->translator->t('display_names.user'),
+                ]),
+            );
+        }
+
+        $this->cache->forget($userId);
         $this->tokenResetService->resetFromUser($userId);
         return $this->issueSessionToken($userId);
     }
 
-    private function checkVerificationExists(int $userId) : bool 
-    {
-        return $this->users->checkVerified($userId);
-    }
+    // ---- service-specific
 
-    private function consumeToken(string $rawToken): int
-    {
-        $claims = $this->decodeVerifiedToken($rawToken);
-        $userId = $this->extractUserId($claims);
-
-        $cachedHash = $this->cache->get($userId);
-        if ($cachedHash === null) {
-            throw new GoneException($this->translator->t("errors.mail.link_expired"));
-        }
-
-        if (!hash_equals($cachedHash, $this->fingerprint($rawToken))) {
-            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
-        }
-
-        // One-shot: the link dies the moment it is redeemed.
-        $this->cache->forget($userId);
-
-        return $userId;
-    }
-
-    private function decodeToken(string $rawToken) : array 
-    {
-        $claims = $this->jwt->decode($rawToken);
-
-        if ($claims === null || ($claims['typ'] ?? null) !== self::VERIFY_TOKEN_TYP
-        ) {
-            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
-        }
-
-        return $claims;
-    }
-
-    private function decodeVerifiedToken(string $rawToken): array
-    {
-        $claims = $this->decodeToken($rawToken);
-
-        if (!$this->jwt->verify($claims))
-            throw new ForbiddenException($this->translator->t("errors.mail.invalid_token"));
-
-        return $claims;
-    }
-
-    private function extractEmail(array $claims) : string 
+    private function extractEmail(array $claims): string
     {
         $email = $claims['email'] ?? null;
-        if (empty($email))
-            throw new BadRequestException($this->translator->t("errors.mail.no_user_data"));
-
-        return $email;
-    }
-
-    private function extractUserId(array $claims): int
-    {
-        $userId = $claims['sub'] ?? null;
-        if (empty($userId)) {
-            throw new BadRequestException($this->translator->t("errors.mail.no_email_data"));
+        if (empty($email)) {
+            throw new BadRequestException(
+                $this->translator->t('errors.mail.no_user_data'),
+            );
         }
-
-        return (int) $userId;
+        return $email;
     }
 
     private function issueVerifyToken(int $userId, string $email): string
@@ -163,10 +135,5 @@ final class EmailVerificationService
     private function issueSessionToken(int $userId): string
     {
         return $this->jwt->access($userId, ['verified' => '1']);
-    }
-
-    private function fingerprint(string $token): string
-    {
-        return hash('sha256', $token);
     }
 }

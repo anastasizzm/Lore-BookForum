@@ -11,6 +11,7 @@ use App\Services\Publications\ArticlesService;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Http\UrlGenerator;
 
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\Publications\ArticlesListQuery;
@@ -33,7 +34,8 @@ final class UsersController extends Controller
     public function __construct(
         private readonly UsersService $usersService,
         private readonly BooksService $booksService,
-        private readonly ArticlesService $articlesService
+        private readonly ArticlesService $articlesService,
+        private readonly UrlGenerator $url
     ){}
 
     public function retrieve(HttpContext $context, string $userId)
@@ -42,7 +44,7 @@ final class UsersController extends Controller
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $userContext = $this->usersService->loadContext($currentUserId);
         $userData = $this->usersService->retrieve($userId);
@@ -58,7 +60,7 @@ final class UsersController extends Controller
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $userContext = $this->usersService->loadContext($currentUserId);
         $userData = $this->usersService->retrieve($userId);
@@ -74,7 +76,7 @@ final class UsersController extends Controller
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -117,7 +119,7 @@ final class UsersController extends Controller
 
         $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($currentUserId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';

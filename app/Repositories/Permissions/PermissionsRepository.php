@@ -12,11 +12,13 @@ use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Assignment\RolesUser;
+use App\Models\Access\Assignment\RolesUserSystem;
 use App\Models\Access\Assignment\RolesUsersAssignment;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
 use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
+use App\Models\Dto;
 use PDO;
 
 class PermissionsRepository extends Repository
@@ -203,6 +205,40 @@ class PermissionsRepository extends Repository
 
     // --- User
 
+    protected function addSelect(ScriptBuilder $builder, string $className) : void
+    {
+        switch($className)
+        {
+            case RolesUser::class:
+                $this->addRolesUserSelect($builder);
+                break;
+            case RolesUserSystem::class:
+                $this->addRolesUserSystemSelect($builder);
+                break;
+            default:
+                $this->addCustomSelect($className);
+                break;
+        }
+    }
+
+    private function addRolesUserSelect(ScriptBuilder $builder) : void 
+    {
+        $builder->addSelect("u.id,
+            \nu.username,
+            \nu.email,
+            \nu.created_at,
+            \nu.deleted_at,
+            \np.name,
+            \np.surname,
+            \np.avatar");
+    }
+
+    private function addRolesUserSystemSelect(ScriptBuilder $builder) : void 
+    {
+        $this->addRolesUserSelect($builder);
+        $builder->addSelect("u.is_verified,\nu.is_blocked");
+    }
+
     /** @return array<RolesUser> */
     public function getUsers(
         ?int $publicationId, 
@@ -210,7 +246,8 @@ class PermissionsRepository extends Repository
         ?int $roleId,
         int $page, 
         int $pageSize,
-        array $includeObjects) : array 
+        array $includeObjects,
+        string $returnClass) : array 
     {
         $innerBuilder = ScriptBuilder::withTable("roles_users");
         $innerBuilder->addSelect("user_id")
@@ -224,14 +261,11 @@ class PermissionsRepository extends Repository
             $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");
+        $this->addSelect($builder, $returnClass);
         $builder->addWithBuilder("users_ids", $innerBuilder)
-            ->addSelect("u.id,
-                \nu.username,
-                \np.name,
-                \np.surname,
-                \np.avatar")
             ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
             ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
+            ->addWhere("u.is_active")
             ->setOrder(
                 match($sort)
                 {
@@ -242,16 +276,15 @@ class PermissionsRepository extends Repository
             )
             ->setLimit($pageSize+1, ($page-1)*$pageSize);
 
-
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $items = array_map(
-            static fn (array $row) => RolesUser::fromRow($row), 
+            static fn (array $row) => $returnClass::fromRow($row), 
             $stmt->fetchAll()
         );
 
         if (!in_array('roles', $includeObjects)) return $items;
 
-        $ids = array_map(static fn(RolesUser $user) => $user->id, $items);
+        $ids = array_map(static fn(Dto $user) => $user->id, $items);
         $roles = $this->acceptUsersRoles($ids, $publicationId);
         
         $result = [];
@@ -262,7 +295,7 @@ class PermissionsRepository extends Repository
     }
 
     /** @return array<UserRole> */
-    private function acceptUsersRoles(array $usersIds, ?int $publicationId) : array 
+    private function acceptUsersRoles(array $userIds, ?int $publicationId) : array 
     {
         $builder = ScriptBuilder::withTable("roles_users", "ru");
         $builder->addSelect("ru.user_id,
