@@ -73,11 +73,13 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   POST /api/books/new только создаёт и дубликат не увидит.
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
- *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
- *        ТОЛЬКО на book-details; из формы (11.4) публикация идёт второй
- *        фазой после создания черновика — POST /books/{id}/publish,
- *        при неудаче редирект на страницу книги (права можно выставить
- *        там). Права (rights-modal) из формы не выбираются.
+ *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
+ *        и на book-details, и здесь. Из формы (11.4) публикация идёт второй
+ *        фазой после создания черновика — POST /books/{id}/publish, затем
+ *        открывается плашка с модулем ролей ( RightsModal.open(
+ *        { mode:'after-publish', bookId, redirect } ) ): назначаем роли и
+ *        Publish ведёт на страницу книги. Права (rights-modal) из формы
+ *        не выбираются — только модуль ролей.
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
@@ -274,7 +276,12 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
+  <!-- плашка публикации (после создания книги) + модуль ролей внутри неё -->
+  <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/roles-module.css') ?>">
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
+  <script src="<?= $view->asset('js/rights-modal.js') ?>" defer></script>
+  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -681,6 +688,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
     </form>
 
   </section>
+
+  <!-- Плашка публикации с модулем ролей: открывается book-form.js после
+       успеха POST /books/{id}/publish ( RightsModal.open({mode:'after-publish'}) ) -->
+  <?php $view->include('rights-modal'); ?>
 
 </div>
 
