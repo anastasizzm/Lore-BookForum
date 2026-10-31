@@ -174,7 +174,11 @@
   gap: var(--space-2);
   max-height: 46vh;
   overflow-y: auto;
-  padding-right: 2px;
+  /* запас под focus-обводку полей (outline 2px + offset 1px = 3px):
+     иначе overflow-y: auto срезает её слева/сверху/справа.
+     Отрицательный margin компенсирует padding — вёрстка не сдвигается. */
+  padding: 4px;
+  margin: -4px;
 }
 
 .roles-module__body[hidden] {
@@ -288,6 +292,10 @@
   background: var(--color-accent);
 }
 
+.roles-row.is-locked .roles-row__dot {
+  margin-left: 18px;
+}
+
 .roles-row__main {
   flex: 1 1 auto;
   min-width: 0;
@@ -353,35 +361,15 @@
    ЭКРАН 2. Страница «Пользователи»: таблица USERNAME | ROLE
    ============================================================ */
 
-/* Общая рамка таблицы: шапка + строки */
+/* Общая рамка таблицы: строки */
 .roles-users-table {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-}
-
-.roles-users-table__head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) 28px;
-  gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.roles-users-table__th {
-  font-size: var(--fs-small);
-  font-weight: var(--fw-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-}
-
-/* колонка ROLE по центру — и в шапке, и в строках */
-.roles-users-table__th:nth-child(2) {
-  justify-self: center;
+  /* макет-фикс: больше отступа под списком пользователей во вкладке Users */
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .roles-users__item {
@@ -437,6 +425,8 @@
   justify-self: center;
   max-width: 100%;
   min-width: 0;
+  /* одинаковая высота пилюли и «тире» — чтобы строки таблицы были ровными */
+  min-height: 26px;
   padding: 2px 10px;
   font-size: var(--fs-small);
   color: var(--color-text);
@@ -452,8 +442,11 @@
   white-space: nowrap;
 }
 
-/* без ролей — просто тире */
+/* без ролей — просто тире (высота равна пилюле) */
 .roles-users__top-role--none {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
   padding: 2px 0;
   background: none;
   border: 0;
@@ -555,9 +548,10 @@
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1;
-  padding: 0 0 0 2px;
+  padding: 2px 6px;
+  margin-left: auto;
 }
 
 .roles-chip__x:hover {
@@ -779,13 +773,18 @@
 
 /* ---------- экран 3: поиск + чипы ---------- */
 
-/* Внутри модалки выпадающий список — в потоке: он не вылезает за край
-   диалога и не накрывает кнопки Save/Cancel (макет-фикс наложений). */
+/* Внутри модалки выпадающий список — absolute «над» содержимым, без сдвига
+   layout (макет-фикс): открывается поверх и не двигает UI. top: 100% — список
+   не перекрывает нижнюю обводку (border) поля поиска белыми полями. */
 .roles-overlay__dialog .roles-picker__results {
-  position: static;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
   max-height: 168px;
-  margin-top: var(--space-1);
-  box-shadow: none;
+  margin-top: 0;
+  overflow-y: auto;
 }
 
 .roles-picker {
@@ -816,7 +815,7 @@
   margin: 0;
   padding: var(--space-1);
   position: absolute;
-  top: calc(100% - 4px);
+  top: 100%;
   left: 0;
   right: 0;
   z-index: 5;

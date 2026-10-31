@@ -29,8 +29,13 @@ window.LoreRoles = (function () {
   'use strict';
 
   var PUB_BASE = '/api/publications/';
-  var SYSTEM_USERS_URL = '/api/system/users?ps=50';
-  var SYSTEM_ROLES_URL = '/api/system/roles?ps=50';
+  // Каталоги людей и ролей — Auth-роуты develop (публичны для вошедшего):
+  //   GET /api/users             (UsersController::list,    page/ps/q)
+  //   GET /api/additional/roles  (RolesController::list,    page/ps/q)
+  // Системные /api/system/users|roles стоят под AnySystemOperation —
+  // обычный автор публикации получает на них 403.
+  var USERS_CATALOG_URL = '/api/users?ps=50';
+  var ROLES_CATALOG_URL = '/api/additional/roles?ps=50';
 
   /** Ключи pubPermissions (бэк: PublicationAccessRules::toArray). */
   var PUB_PERMS = [
@@ -49,7 +54,7 @@ window.LoreRoles = (function () {
       { id: '1', username: 'mossy_otter42',  canManage: true, roles: [{ id: '1', title: 'Editor', color: '#1C7ED6' }] },
       { id: '2', username: 'teal_penguin7',  canManage: true, roles: [{ id: '2', title: 'Author', color: '#F76707' }] }
     ],
-    // Каталог людей (GET /api/system/users) для поиска на экране 3
+    // Каталог людей (GET /api/users) для поиска на экране 3
     catalogUsers: [
       { id: '1', username: 'mossy_otter42',  roles: [] },
       { id: '2', username: 'teal_penguin7',  roles: [] },
@@ -57,7 +62,7 @@ window.LoreRoles = (function () {
       { id: '4', username: 'neon_wombat',    roles: [] },
       { id: '5', username: 'salty_comet9',   roles: [] }
     ],
-    // Каталог ролей (GET /api/system/roles) для выбора/вставки роли
+    // Каталог ролей (GET /api/additional/roles) для выбора/вставки роли
     catalogRoles: [
       { id: '1', title: 'Editor',  color: '#1C7ED6' },
       { id: '2', title: 'Author',  color: '#F76707' },
@@ -116,6 +121,7 @@ window.LoreRoles = (function () {
     roles: [],
     users: [],
     expanded: {},          // раскрытые строки пользователей (экран 2): userId -> true
+    usersQ: '',            // строка поиска по таблице пользователей (экран 2)
     page: 'users',         // страница экрана 1: users | roles
     screen: 1,             // экран 1 | 2
     context: 'create',     // create | edit — флоу создания (Create → Continue → Publish)
@@ -134,8 +140,8 @@ window.LoreRoles = (function () {
       userLocked: false,   // в edit пользователь не меняется
       users: [],           // выбранные люди  [{ id, username }]
       roles: [],           // выбранные роли  [{ id, title, color }]
-      catalogUsers: [],    // каталог людей (GET /api/system/users)
-      catalogRoles: [],    // каталог ролей (GET /api/system/roles)
+      catalogUsers: [],    // каталог людей (GET /api/users)
+      catalogRoles: [],    // каталог ролей (GET /api/additional/roles)
       catalogFallback: false, // людей ищем по уже привязанным (роута нет)
       roleFallback: false,
       userPage: 1,
@@ -591,11 +597,29 @@ window.LoreRoles = (function () {
 
     // Порядок по рангу: чем выше роль в списке rank'ов, тем раньше пользователь;
     // люди без ролей — в конец, при равенстве — по алфавиту.
-    var users = st.users.slice().sort(function (a, b) {
-      var diff = topRankIndex(a) - topRankIndex(b);
-      if (diff) return diff;
-      return String(a.username).localeCompare(String(b.username));
-    });
+    // Поиск (по добавленным пользователям) — фильтрация по add.q.
+    var users = st.users
+      .filter(function (user) { return matchQuery(user, st.add.q); })
+      .slice()
+      .sort(function (a, b) {
+        var diff = topRankIndex(a) - topRankIndex(b);
+        if (diff) return diff;
+        return String(a.username).localeCompare(String(b.username));
+      });
+
+    // Поиск по таблице: по нику и по названиям ролей
+    var needle = String(st.usersQ || '').toLowerCase();
+    if (needle) {
+      users = users.filter(function (user) {
+        var hay = [user.username].concat((user.roles || []).map(function (r) { return r.title; }))
+          .join(' ').toLowerCase();
+        return hay.indexOf(needle) >= 0;
+      });
+      if (!users.length) {
+        list.innerHTML = '<li class="roles-module__empty">' + esc(t('roles.nothing_found')) + '</li>';
+        return;
+      }
+    }
 
     list.innerHTML = users.map(function (user) {
       var expanded = !!st.expanded[String(user.id)];
@@ -880,26 +904,29 @@ window.LoreRoles = (function () {
       return;
     }
 
-    // создание роли + сразу её права (POST /roles может быть ещё не развёрнут бэком)
-    request('POST', base() + '/roles', JSON.stringify({ title: picked.title }))
-      .then(function (res) {
-        if (res.kind === 'ok' || res.kind === 'missing') {
-          var data = res.data || {};
-          var newId = data.id != null ? data.id : (data.data && data.data.id != null ? data.data.id : '');
-          if (res.kind === 'ok' && newId !== '') {
-            addLocalRole(newId, picked, perms.draft);
-            perms.roleId = String(newId);
-            applyPermsLocally();
-          }
-          perms.saving = false;
-          closeCreateModals();
-          render();
-          notify(t('roles.saved'), 'success');
-        } else {
-          perms.saving = false;
-          notify(describe(res, t('roles.save_failed', { status: res.status })));
+    // создание роли каталога в публикации: POST /roles принимает
+    // PublicationPermissionForm { roleId, pubPermissions, aboveId?, belowId? }
+    // и отвечает 201 пустым телом с ETag новой версии (id роли — roleId из запроса)
+    request('POST', base() + '/roles', JSON.stringify({
+      roleId: num(picked.id),
+      pubPermissions: perms.draft
+    })).then(function (res) {
+      if (res.kind === 'ok' || res.kind === 'missing') {
+        if (res.kind === 'ok') {
+          var version = parseInt(String(res.etag || '').replace(/"/g, ''), 10) || 1;
+          addLocalRole(picked.id, picked, perms.draft);
+          var created = findRole(String(num(picked.id)));
+          if (created) created.version = version;
         }
-      });
+        perms.saving = false;
+        closeCreateModals();
+        render();
+        notify(t('roles.saved'), 'success');
+      } else {
+        perms.saving = false;
+        notify(describe(res, t('roles.save_failed', { status: res.status })));
+      }
+    });
   }
 
   /* ---------- МОДАЛКА: создание «роль + пользователь» ---------- */
@@ -971,7 +998,7 @@ window.LoreRoles = (function () {
     add.loadingUsers = true;
     if (!append) renderAddResults();
 
-    return request('GET', SYSTEM_USERS_URL + '&page=' + page).then(function (res) {
+    return request('GET', USERS_CATALOG_URL + '&page=' + page).then(function (res) {
       add.loadingUsers = false;
 
       if (res.kind === 'ok') {
@@ -1009,7 +1036,7 @@ window.LoreRoles = (function () {
       return Promise.resolve();
     }
 
-    return request('GET', SYSTEM_ROLES_URL).then(function (res) {
+    return request('GET', ROLES_CATALOG_URL).then(function (res) {
       if (res.kind === 'ok') {
         add.catalogRoles = mapList(res.data, normalizeRole) || [];
         add.roleFallback = false;
@@ -1240,7 +1267,8 @@ window.LoreRoles = (function () {
 
   function makeRemoveUserStep(userId) {
     return function () {
-      return request('DELETE', base() + '/users/' + userId + '/roles')
+      // бэк снимает человека с публикации целиком: DELETE .../users/{userId}
+      return request('DELETE', base() + '/users/' + userId)
         .then(function (res) {
           if (okKind(res)) {
             var user = findUser(userId);
@@ -1478,7 +1506,7 @@ window.LoreRoles = (function () {
 
     // Сначала меню чекбоксов, и только потом — плашка подтверждения перед сохранением
     confirmAction('roles.perms_confirm_title', 'roles.perms_confirm_text',
-      { name: perms.title }, doSavePerms, 'roles.perms_save');
+      { name: perms.title }, doSavePerms, 'roles.perms_save', false); // Save — не опасное действие, кнопка не красная
   }
 
   function doSavePerms() {
@@ -1740,7 +1768,7 @@ window.LoreRoles = (function () {
     ins.loading = true;
     renderInsert();
 
-    request('GET', SYSTEM_ROLES_URL).then(function (res) {
+    request('GET', ROLES_CATALOG_URL).then(function (res) {
       ins.loading = false;
       if (res.kind === 'ok') {
         ins.catalog = mapList(res.data, normalizeRole) || [];
@@ -1819,6 +1847,9 @@ window.LoreRoles = (function () {
     st.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
     st.page = 'users';
     st.expanded = {};
+    st.usersQ = '';
+    var usersSearch = q('[data-roles-user-search]');
+    if (usersSearch) usersSearch.value = '';
     st.context = opts.context === 'edit' ? 'edit' : 'create';
     st.error = '';
     st.publishing = false;
@@ -1870,14 +1901,14 @@ window.LoreRoles = (function () {
      СОБЫТИЯ (делегирование на корне — контент рендерится позже)
      ============================================================ */
 
-  function confirmAction(titleKey, textKey, params, onYes, confirmTextKey) {
+  function confirmAction(titleKey, textKey, params, onYes, confirmTextKey, danger) {
     if (window.ConfirmModal && typeof window.ConfirmModal.confirm === 'function') {
       window.ConfirmModal.confirm({
         title: t(titleKey, params),
         message: t(textKey, params),
         confirmText: t(confirmTextKey || 'js.delete'),
         cancelText: t('common.cancel'),
-        danger: true
+        danger: danger != null ? danger : true
       }).then(function (yes) { if (yes) onYes(); });
       return;
     }
@@ -1978,6 +2009,9 @@ window.LoreRoles = (function () {
 
       if (target.closest('[data-roles-retry]')) { reload(); return; }
       if (target.closest('[data-roles-publish]')) { publish(); return; }
+
+      // клик по полю-поиска людей открывает список (по нажатию; ввод открывает)
+      if (target.matches('[data-roles-user-search]')) return;
 
       var userExpand = target.closest('[data-user-expand]');
       if (userExpand) { toggleUserExpand(userExpand.getAttribute('data-user-expand')); return; }
@@ -2143,11 +2177,18 @@ window.LoreRoles = (function () {
       var target = e.target && e.target.closest ? e.target : null;
       if (!target) return;
 
-      if (target.matches('[data-roles-user-search]') || target.matches('[data-roles-create-user-user-search]')) {
+      if (target.matches('[data-roles-user-search]')) {
+        st.usersQ = target.value.trim();
+        renderUsers();
+        return;
+      }
+
+      if (target.matches('[data-roles-create-user-user-search]')) {
         st.add.q = target.value.trim();
         st.add.userOpen = true;
         clearTimeout(searchTimer);
         searchTimer = setTimeout(function () { loadMoreIfEmpty(); }, 250);
+        // модалка — результаты каталога
         renderAddResults();
         return;
       }
@@ -2161,13 +2202,9 @@ window.LoreRoles = (function () {
       }
     });
 
-    /* --- поиск: раскрытие/скрытие выпадающих списков --- */
-    root.addEventListener('focusin', function (e) {
-      var target = e.target && e.target.closest ? e.target : null;
-      if (!target) return;
-      if (target.matches('[data-roles-user-search]') || target.matches('[data-roles-create-user-user-search]')) { st.add.userOpen = true; renderAddResults(); }
-      if (target.matches('[data-roles-role-search]') || target.matches('[data-roles-create-user-role-search]') || target.matches('[data-roles-create-role-search]')) { st.add.roleOpen = true; renderAddResults(); }
-    });
+    /* --- поиск: раскрытие/скрытие выпадающих списков ---
+       Только клик: «по умолчанию» список не открывается (фокус сам по себе не
+       открывает — в т.ч. чтобы Safari не трогал фокус у кнопок-опций). */
 
     root.addEventListener('focusout', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
@@ -2272,7 +2309,7 @@ window.LoreRoles = (function () {
     _render: render,
     _confirm: confirmAction,
     _PUB_PERMS: PUB_PERMS,
-    _SYSTEM_USERS_URL: SYSTEM_USERS_URL,
-    _SYSTEM_ROLES_URL: SYSTEM_ROLES_URL
+    _USERS_CATALOG_URL: USERS_CATALOG_URL,
+    _ROLES_CATALOG_URL: ROLES_CATALOG_URL
   };
 })();

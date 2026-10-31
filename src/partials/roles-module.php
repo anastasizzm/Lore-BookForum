@@ -93,7 +93,6 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                 </svg>
             </button>
             <span class="roles-module__title"><?= $tr('common.roles.users_label') ?></span>
-            <span class="roles-module__spacer" aria-hidden="true"></span>
 
             <!-- «+» открывает модалку добавления пользователя (роль назначается одна) -->
             <button type="button"
@@ -117,12 +116,8 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                        placeholder="<?= $tr('common.roles.search_users_ph') ?>">
 
                 <!-- Таблица людей как на макете: USERNAME | ROLE (+ шеврон раскрытия) -->
+                <!-- (заголовок-«плашка» с надписями USERS / ROLES убрали — только данные) -->
                 <div class="roles-users-table" data-roles-users-table hidden>
-                    <div class="roles-users-table__head">
-                        <span class="roles-users-table__th"><?= $tr('common.roles.users_label') ?></span>
-                        <span class="roles-users-table__th"><?= $tr('common.roles.roles_label') ?></span>
-                        <span class="roles-users-table__th roles-users-table__th--chev"></span>
-                    </div>
                     <ul class="roles-users" data-roles-users></ul>
                 </div>
                 <p class="roles-module__empty" data-roles-empty="users" hidden><?= $tr('common.roles.users_empty') ?></p>
