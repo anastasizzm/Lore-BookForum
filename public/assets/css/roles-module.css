@@ -350,24 +350,60 @@
 }
 
 /* ============================================================
-   ЭКРАН 2. Страница «Пользователи»: строка пользователя
+   ЭКРАН 2. Страница «Пользователи»: таблица USERNAME | ROLE
    ============================================================ */
+
+/* Общая рамка таблицы: шапка + строки */
+.roles-users-table {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.roles-users-table__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) 28px;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.roles-users-table__th {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+/* колонка ROLE по центру — и в шапке, и в строках */
+.roles-users-table__th:nth-child(2) {
+  justify-self: center;
+}
 
 .roles-users__item {
   display: block;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--color-border); /* разделитель строк без двойных рамок */
 }
 
-/* Кликабельная строка: «user — роль» + шеврон справа */
+.roles-users__item:last-child {
+  box-shadow: none;
+}
+
+/* Кликабельная строка: имя | высшая роль | шеврон */
 .roles-users__row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(96px, auto) 28px;
   gap: var(--space-2);
+  align-items: center;
   width: 100%;
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   background: none;
   border: 0;
   cursor: pointer;
@@ -385,7 +421,6 @@
 }
 
 .roles-users__name {
-  flex: 1 1 auto;
   min-width: 0;
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
@@ -394,9 +429,40 @@
   white-space: nowrap;
 }
 
+/* Пилюля высшей роли в колонке ROLE (по центру колонки) */
+.roles-users__top-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: center;
+  max-width: 100%;
+  min-width: 0;
+  padding: 2px 10px;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.roles-users__top-role > span:not(.roles-chip__dot) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* без ролей — просто тире */
+.roles-users__top-role--none {
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  color: var(--color-text-muted);
+}
+
 /* Шеврон: «v» — свёрнут, «^» — раскрыт */
 .roles-users__chevron {
-  flex: none;
+  justify-self: end;
   color: var(--color-text-muted);
   transition: transform var(--dur-fast, 150ms) ease;
 }
@@ -405,90 +471,49 @@
   transform: rotate(180deg);
 }
 
-/* Раскрытый блок: роли пользователя + «+» внизу */
+/* Раскрытый блок: чипы ролей + широкая кнопка «+» */
 .roles-users__detail {
-  padding: 0 var(--space-2) var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
   border-top: 1px solid var(--color-border);
 }
 
+/* Чипы ролей в раскрытии растянуты на всю ширину — как кнопка «+» */
 .roles-users__roles {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.roles-users__role {
+.roles-users__roles .roles-chip {
+  justify-content: flex-start;
+  width: 100%;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body);
+}
+
+/* Широкая кнопка «+»: добавить ещё одну роль */
+.roles-users__add {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  font-size: var(--fs-small);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-}
-
-.roles-users__role-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.roles-users__role--muted {
-  color: var(--color-text-muted);
-}
-
-/* Иконка корзины: удалить эту роль у пользователя */
-.roles-users__trash {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--color-danger, #E03131);
-  cursor: pointer;
-}
-
-.roles-users__trash:hover:not(:disabled) {
-  background: var(--color-danger-bg, rgba(224, 49, 49, 0.1));
-}
-
-.roles-users__trash:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* «+» внизу раскрытого списка — добавить ещё одну роль */
-.roles-users__add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  margin-top: var(--space-2);
-  padding: 0;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-2);
   font-size: 18px;
   line-height: 1;
-  background: var(--color-bg-secondary);
-  border: 1px dashed var(--color-border);
+  background: var(--color-accent);
+  border: 0;
   border-radius: var(--radius-sm);
-  color: var(--color-text);
+  color: #fff;
   cursor: pointer;
 }
 
 .roles-users__add:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  filter: brightness(0.95);
 }
 
 .roles-users__add:disabled {
@@ -537,6 +562,11 @@
 
 .roles-chip__x:hover {
   color: var(--color-error);
+}
+
+.roles-chip__x:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .roles-chip--muted {
@@ -742,9 +772,21 @@
 
 .roles-overlay__actions .btn {
   width: auto;
+  border-radius: var(--radius-pill);
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
 }
 
 /* ---------- экран 3: поиск + чипы ---------- */
+
+/* Внутри модалки выпадающий список — в потоке: он не вылезает за край
+   диалога и не накрывает кнопки Save/Cancel (макет-фикс наложений). */
+.roles-overlay__dialog .roles-picker__results {
+  position: static;
+  max-height: 168px;
+  margin-top: var(--space-1);
+  box-shadow: none;
+}
 
 .roles-picker {
   position: relative;
@@ -757,6 +799,12 @@
   font-size: var(--fs-small);
   font-weight: var(--fw-medium);
   color: var(--color-text-muted);
+}
+
+/* капитель как на макете («ROLE», «PUBLICATION RIGHTS») */
+.roles-picker__label--caps {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .roles-picker__input {
@@ -810,75 +858,31 @@
   color: var(--color-text-muted);
 }
 
-/* ---------- дропдаун выбора роли (модалка «Add role to user») ---------- */
+/* ---------- поле выбора роли: поиск + выпадающий список (как у людей) ---------- */
 
 .roles-select {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  width: 100%;
-  padding: 8px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  font: inherit;
-  font-size: var(--fs-small);
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
 }
 
-.roles-select:hover {
-  border-color: var(--color-text-muted);
+.roles-select__input {
+  padding-right: 32px;
 }
 
-.roles-select__label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* нативная кнопка очистки search-инпута налезает на шеврон — прячем */
+.roles-select__input::-webkit-search-cancel-button,
+.roles-picker__input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.roles-select__label.is-placeholder {
-  color: var(--color-text-muted);
-}
-
+/* шеврон-указатель выпадающего списка */
 .roles-select__caret {
-  flex: none;
-  color: var(--color-text-muted);
-}
-
-.roles-select__panel {
   position: absolute;
-  top: calc(100% - 4px);
-  left: 0;
-  right: 0;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-}
-
-.roles-select__panel[hidden] {
-  display: none;
-}
-
-/* внутри панели список идёт потоком — без второй рамки и тени */
-.roles-picker__results--inline {
-  position: static;
-  max-height: 160px;
-  padding: var(--space-1) 0 0;
-  border: 0;
-  box-shadow: none;
+  right: 12px;
+  color: var(--color-text-muted);
+  pointer-events: none;
 }
 
 .roles-chips {
@@ -931,12 +935,31 @@
   cursor: pointer;
 }
 
+/* чекбокс-галочка (макет): скруглённый квадрат, отмеченный — с штрихом */
 .roles-perm input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
   flex: none;
-  accent-color: var(--color-accent);
+  margin: 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: 5px;
+  background-color: var(--color-surface);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px;
   cursor: pointer;
+}
+
+.roles-perm input[type='checkbox']:checked {
+  border-color: var(--color-text);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.7l4.5-5' fill='none' stroke='%231F2937' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.roles-perm input[type='checkbox']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ---------- экран 3/4: адаптив ---------- */

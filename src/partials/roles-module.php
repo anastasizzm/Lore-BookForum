@@ -115,16 +115,22 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                        data-roles-user-search
                        autocomplete="off"
                        placeholder="<?= $tr('common.roles.search_users_ph') ?>">
-                <ul class="roles-users" data-roles-users></ul>
+
+                <!-- Таблица людей как на макете: USERNAME | ROLE (+ шеврон раскрытия) -->
+                <div class="roles-users-table" data-roles-users-table hidden>
+                    <div class="roles-users-table__head">
+                        <span class="roles-users-table__th"><?= $tr('common.roles.users_label') ?></span>
+                        <span class="roles-users-table__th"><?= $tr('common.roles.roles_label') ?></span>
+                        <span class="roles-users-table__th roles-users-table__th--chev"></span>
+                    </div>
+                    <ul class="roles-users" data-roles-users></ul>
+                </div>
                 <p class="roles-module__empty" data-roles-empty="users" hidden><?= $tr('common.roles.users_empty') ?></p>
                 <p class="roles-module__hint" data-roles-empty-hint="users" hidden><?= $tr('common.roles.users_empty_hint') ?></p>
             </div>
         </div>
 
         <footer class="roles-module__foot">
-            <button type="button" class="btn btn--secondary" data-roles-screen-back="1">
-                <?= $tr('common.roles.back') ?>
-            </button>
             <button type="button" class="btn btn--primary" data-roles-publish>
                 <?= $tr('common.roles.publish') ?>
             </button>
@@ -163,23 +169,32 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
              aria-modal="true"
              aria-labelledby="rolesCreateTitle">
             <h2 class="roles-overlay__title" id="rolesCreateTitle" data-roles-create-title>
-                <?= $tr('roles.create_title') ?>
+                <?= $tr('common.roles.create_role_title') ?>
             </h2>
-            <p class="roles-overlay__hint" data-roles-create-hint><?= $tr('roles.create_hint') ?></p>
 
-            <!-- Выпадающий список ролей: поиск + список -->
-            <div class="roles-picker">
-                <label class="roles-picker__label" for="rolesCreateRole"><?= $tr('common.roles.roles_label') ?></label>
-                <input type="search"
-                       class="form-field__input roles-picker__input"
-                       id="rolesCreateRole"
-                       data-roles-create-role-search
-                       autocomplete="off"
-                       placeholder="<?= $tr('common.roles.search_roles_ph') ?>">
+            <!-- ROLE: поле-поиск с выпадающим списком ролей каталога -->
+            <div class="roles-picker roles-picker--select">
+                <label class="roles-picker__label roles-picker__label--caps" for="rolesCreateRole"><?= $tr('common.roles.role_label') ?></label>
+                <div class="roles-select">
+                    <input type="search"
+                           class="form-field__input roles-picker__input roles-select__input"
+                           id="rolesCreateRole"
+                           data-roles-create-role-search
+                           autocomplete="off"
+                           role="combobox"
+                           aria-expanded="false"
+                           aria-autocomplete="list"
+                           placeholder="<?= $tr('common.roles.choose_role') ?>">
+                    <svg class="roles-select__caret" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                         stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M3 4.5 6 7.5l3-3"/>
+                    </svg>
+                </div>
                 <ul class="roles-picker__results" data-roles-create-role-results hidden></ul>
             </div>
 
-            <!-- Список чекбоксов с правами для публикации -->
+            <!-- Все права публикации одной группой (без категорий) -->
             <div class="roles-perms">
                 <div class="roles-perms__group" data-perms-group="pub" hidden>
                     <h4 class="roles-perms__group-title"><?= $tr('common.roles.perms_group_pub') ?></h4>
@@ -194,7 +209,7 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                     <?= $tr('common.cancel') ?>
                 </button>
                 <button type="button" class="btn btn--primary" data-roles-create-add>
-                    <?= $tr('roles.create_add') ?>
+                    <?= $tr('common.roles.create_add') ?>
                 </button>
             </div>
         </div>
@@ -209,9 +224,9 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
              aria-modal="true"
              aria-labelledby="rolesCreateUserTitle">
             <h2 class="roles-overlay__title" id="rolesCreateUserTitle" data-roles-create-user-title>
-                <?= $tr('roles.create_user_title') ?>
+                <?= $tr('common.roles.create_user_title') ?>
             </h2>
-            <p class="roles-overlay__hint" data-roles-create-user-hint><?= $tr('roles.create_user_hint') ?></p>
+            <p class="roles-overlay__hint" data-roles-create-user-hint><?= $tr('common.roles.create_user_hint') ?></p>
 
             <!-- USER: поиск, одиночный выбор -->
             <div class="roles-picker" data-roles-create-user-user-picker>
@@ -225,33 +240,26 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                 <ul class="roles-picker__results" data-roles-create-user-user-results hidden></ul>
             </div>
 
-            <!-- ROLE: дропдаун «Choose a role» с поиском внутри; роль выбирается только одна -->
+            <!-- ROLE: поле-поиск с выпадающим списком (как у пользователей); роль только одна -->
             <div class="roles-picker roles-picker--select" data-roles-create-user-role-picker>
                 <label class="roles-picker__label" for="rolesCreateUserRole"><?= $tr('common.roles.roles_label') ?></label>
-                <button type="button"
-                        class="roles-select"
-                        id="rolesCreateUserRole"
-                        data-roles-create-user-role-trigger
-                        aria-haspopup="listbox"
-                        aria-expanded="false">
-                    <span class="roles-select__label is-placeholder" data-roles-create-user-role-label>
-                        <?= $tr('common.roles.choose_role') ?>
-                    </span>
+                <div class="roles-select">
+                    <input type="search"
+                           class="form-field__input roles-picker__input roles-select__input"
+                           id="rolesCreateUserRole"
+                           data-roles-create-user-role-search
+                           autocomplete="off"
+                           role="combobox"
+                           aria-expanded="false"
+                           aria-autocomplete="list"
+                           placeholder="<?= $tr('common.roles.choose_role') ?>">
                     <svg class="roles-select__caret" width="12" height="12" viewBox="0 0 12 12" fill="none"
                          stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
                          aria-hidden="true">
                         <path d="M3 4.5 6 7.5l3-3"/>
                     </svg>
-                </button>
-                <div class="roles-select__panel" data-roles-create-user-role-panel hidden>
-                    <input type="search"
-                           class="form-field__input roles-picker__input"
-                           data-roles-create-user-role-search
-                           autocomplete="off"
-                           aria-label="<?= $tr('common.roles.roles_label') ?>"
-                           placeholder="<?= $tr('common.roles.search_roles_ph') ?>">
-                    <ul class="roles-picker__results roles-picker__results--inline" data-roles-create-user-role-results hidden></ul>
                 </div>
+                <ul class="roles-picker__results" data-roles-create-user-role-results hidden></ul>
             </div>
 
             <p class="roles-overlay__status" data-roles-create-user-status hidden aria-live="polite"></p>
@@ -261,7 +269,7 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
                     <?= $tr('common.cancel') ?>
                 </button>
                 <button type="button" class="btn btn--primary" data-roles-create-user-add>
-                    <?= $tr('roles.create_user_add') ?>
+                    <?= $tr('common.roles.create_user_add') ?>
                 </button>
             </div>
         </div>

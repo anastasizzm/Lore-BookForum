@@ -787,6 +787,9 @@
         "perms_group_pub": "Publication rights",
         "perms_save": "Save",
         "perms_saved": "Permissions saved.",
+        "perms_confirm_title": "Save changes?",
+        "perms_confirm_text": "The publication rights for the role \":name\" will be updated.",
+        "perms_save": "Save",
         "perms_conflict": "The role has changed on the server. Reload the list and try again.",
         "perm_create": "Create publications",
         "perm_updateMeta": "Edit meta data",
@@ -832,6 +835,8 @@
         "add_role_hint": "Choose a role to assign.",
         "create_add": "Add",
         "choose_role": "Choose a role",
+        "role_label": "Role",
+        "create_role_title": "Add role to project",
         "create_user_title": "Add role to user",
         "create_user_hint": "Choose a user and assign a role.",
         "create_user_add": "Add"
