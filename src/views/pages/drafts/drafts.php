@@ -1,51 +1,11 @@
 <?php $view->extends('main'); ?>
-<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
+<?php $tr = fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php
 /*
  * drafts — страница черновиков пользователя (DR-02, DR-03, DR-08).
- *
- * КОНТРАКТ С БЭКОМ (фронт-каркас готов; роут и контроллер добавит бэк —
- * config/routes.php и app/ для фронта заморожены):
- *
- *   TODO(backend): роута GET /drafts в config/routes.php ПОКА НЕТ — страница
- *   доступна только через тест-роут. Нужны: роут drafts (AuthPolicy::Auth),
- *   метод контроллера со списком своих черновиков (книги+статьи, draft),
- *   пагинация ?page=. Ссылка в сайдбаре вести на него должна через
- *   $view->url('drafts') ТОЛЬКО после добавления роута (до этого — 404/исключение
- *   генератора URL).
- *
- *   GET /drafts → роут drafts, AuthPolicy::Auth
- *        рендерит эту вьюху, передавая:
- *          $user  — UserContext текущего пользователя (сайдбар);
- *          $drafts — список черновиков СОЗДАННЫХ ТЕКУЩИМ ПОЛЬЗОВАТЕЛЕМ
- *                    (книги и статьи со статусом draft); каждый элемент —
- *                    массив ИЛИ объект (Publication/Book/Article) с полями:
- *                      id        — int
- *                      type      — 'book' | 'article'
- *                                  (если объект — определяется по классу)
- *                      title     — string
- *                      icon      — Uuid|string обложки (как Publication->iconId)
- *                                  или готовый URL в 'cover'/'iconUrl'
- *                      updatedAt — DateTimeInterface|string (приоритет)
- *                      createdAt — DateTimeInterface|string (фолбэк даты)
- *          $meta  — ['page' => int, 'pageSize' => int, 'hasNext' => bool]
- *                   (как у BooksController::savedList — пагинация).
- *
- *        Сайдбар: ссылка «Черновики» пока ведёт на /books?p_status=draft
- *        ($draftsUrl в sidebar.php); когда роут drafts появится — заменить
- *        на $url('drafts') (одна строка).
- *
- *        Ссылки «Продолжить» ведут на /books/{id}/edit и /articles/{id}/edit —
- *        этих роутов пока нет (см. card-draft); «Открыть» — на существующие
- *        /books/{id} и /articles/{id}.
- *
- *   Локально страницу можно открыть через тест-роут:
- *        /pages/test?page=drafts/drafts
- *
- * Стили — public/assets/css/drafts.css (.card-draft*).
- * Карточка — src/partials/card-draft.php (DR-03).
- * JS не нужен: только ссылки и пагинация.
+ * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts")
+ * + drafts-filters.js (publish / delete).
  */
 
 $view->setBlock('selectedTab', 'drafts');
@@ -61,10 +21,6 @@ $hasNext  = (bool) ($meta['hasNext'] ?? false);
 
 $coversBase = '/uploads/covers/';
 
-/**
- * Дата элемента: updatedAt приоритетнее createdAt; строка проходит как есть.
- * Формат d.m.Y — как на book-details / article-details.
- */
 $draftDate = static function (object|array $item): string {
     foreach (['updatedAt', 'createdAt'] as $key) {
         $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
@@ -74,7 +30,6 @@ $draftDate = static function (object|array $item): string {
     return '';
 };
 
-/** Тип: явное поле type → имя класса модели → 'book'. */
 $draftType = static function (object|array $item): string {
     $raw = is_array($item) ? ($item['type'] ?? null) : ($item->type ?? null);
     if (is_string($raw)) {
@@ -89,14 +44,12 @@ $draftType = static function (object|array $item): string {
     return 'book';
 };
 
-/** Значение поля: массив или объект — читаем одинаково. */
 $pick = static function (object|array $item, array $keys, string $default = '') use ($coversBase): string {
     foreach ($keys as $key) {
         $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
         if ($raw instanceof \Stringable) $raw = (string) $raw;
         if ($raw === null || $raw === '') continue;
         if (is_string($raw)) {
-            // UUID обложки (как Publication->iconId) -> путь загрузки
             if ($key === 'icon' || $key === 'iconId') return $coversBase . $raw;
             return $raw;
         }
@@ -107,7 +60,6 @@ $pick = static function (object|array $item, array $keys, string $default = '') 
 $cards = [];
 foreach ($drafts as $one) {
     if (!is_array($one) && !is_object($one)) continue;
-
     $id = (int) (is_array($one) ? ($one['id'] ?? 0) : ($one->id ?? 0));
     if ($id <= 0) continue;
 
@@ -120,10 +72,6 @@ foreach ($drafts as $one) {
     ];
 }
 
-/**
- * Локаль и адрес страницы для ссылок пагинации: путь берём из URI
- * (роута /drafts ещё нет — страницу открывают и через /pages/test).
- */
 $currentLang = $_GET['lang'] ?? null;
 if (!is_string($currentLang) || $currentLang === '') {
     $currentLang = method_exists($view, 'locale') ? $view->locale() : null;
@@ -141,8 +89,17 @@ $pageLink = static function (int $to) use ($currentPath, $currentLang): string {
 
 $shown = ($page - 1) * $pageSize + count($cards);
 
-/** Совсем нет черновиков (а не «страница пагинации опустела»). */
-$isEmptyAll = empty($cards) && $page <= 1 && !$hasNext;
+// Есть ли активные фильтры: тогда пустой список — результат фильтра, а не «черновиков нет совсем»
+$hasFilters = false;
+foreach (['q', 'genre', 'kind', 'ctype'] as $fk) {
+    if (isset($_GET[$fk]) && $_GET[$fk] !== '') { $hasFilters = true; break; }
+}
+$isEmptyAll = empty($cards) && $page <= 1 && !$hasNext && !$hasFilters;
+
+// По умолчанию панель фильтров открыта; закрыта только при ?f=closed (как в library-filters)
+$fRaw        = $_GET['f'] ?? null;
+$filter_open = !(is_string($fRaw) && strtolower($fRaw) === 'closed');
+$searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '';
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr('common.drafts.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
@@ -153,16 +110,41 @@ $isEmptyAll = empty($cards) && $page <= 1 && !$hasNext;
 
 <?php $view->startBlock('content'); ?>
 
-<?php $view->include('page-header', [
+<?php
+// Поиск и кнопка фильтров нужны, только когда есть что фильтровать
+$pageActions = '';
+if (!$isEmptyAll) {
+    ob_start();
+    $view->include('input', [
+        'type'        => 'search',
+        'name'        => 'q',
+        'placeholder' => $view->t('common.feed.search'),
+        'value'       => $searchQuery,
+    ]);
+    ?>
+    <button type="button"
+            class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
+            data-filter-toggle
+            aria-label="<?= $tr('common.common.filters') ?>">
+      <span>&#9776;</span>
+    </button>
+    <?php
+    $pageActions = ob_get_clean();
+}
+
+$view->include('page-header', [
     'title'    => $view->t('common.drafts.title'),
     'subtitle' => $view->t('common.drafts.subtitle'),
-]); ?>
+    'actions'  => $pageActions,
+]);
+
+if (!$isEmptyAll) {
+    $view->include('library-filters', ['mode' => 'drafts']);
+}
+?>
 
 <?php if ($isEmptyAll): ?>
 
-  <!-- ============================================================
-       ПУСТОЕ СОСТОЯНИЕ (DR-08): ни одной строки от бэка
-       ============================================================ -->
   <section class="books-panel drafts-panel">
     <div class="empty-state drafts-empty">
       <div class="drafts-empty__icon" aria-hidden="true">
@@ -183,7 +165,14 @@ $isEmptyAll = empty($cards) && $page <= 1 && !$hasNext;
 
 <?php else: ?>
 
-  <section class="books-panel drafts-panel" data-drafts-page>
+  <section class="books-panel drafts-panel"
+           data-drafts
+           data-list="drafts"
+           data-list-hydrate
+           data-api-books="/api/books"
+           data-api-articles="/api/articles"
+           data-initial-page="<?= $page ?>"
+           data-initial-has-next="<?= $hasNext ? '1' : '0' ?>">
 
     <header class="books-panel__head">
       <div class="books-panel__title-wrap">
@@ -197,42 +186,37 @@ $isEmptyAll = empty($cards) && $page <= 1 && !$hasNext;
         <div>
           <h2 class="books-panel__title"><?= $tr('common.drafts.panel_title') ?></h2>
           <p class="books-panel__meta">
-            <span data-drafts-count><?= $shown ?></span><?= $hasNext ? '+' : '' ?>
+            <span data-drafts-count><?= $shown ?></span><span data-drafts-plus <?= $hasNext ? '' : 'hidden' ?>>+</span>
             <?= $tr('common.drafts.count_suffix') ?>
           </p>
         </div>
       </div>
+
+      <?php $view->include('list-sort'); ?>
     </header>
 
-    <?php if (empty($cards)): ?>
-      <!-- Страница есть, но на ней пусто (пагинация увела дальше): ниже
-           остаётся pager, чтобы вернуться назад -->
-      <p class="empty-state__text"><?= $tr('common.drafts.none_page') ?></p>
-    <?php else: ?>
-      <div class="grid-books drafts-grid">
-        <?php foreach ($cards as $card): ?>
-          <?php $view->include('card-draft', $card); ?>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+    <?php /* Пустое сообщение, сетка и «Показать ещё» рендерятся всегда: filters.js переключает их без перезагрузки */ ?>
+    <p class="empty-state__text" data-drafts-empty <?= empty($cards) ? '' : 'hidden' ?>><?= $tr('common.drafts.none_page') ?></p>
 
-    <?php if ($page > 1 || $hasNext): ?>
-      <nav class="books-panel__pager" aria-label="<?= $tr('common.drafts.pagination') ?>">
-        <?php if ($page > 1): ?>
-          <a class="btn btn--secondary" href="<?= $view->e($pageLink($page - 1)) ?>">
-            <?= $tr('common.drafts.prev') ?>
-          </a>
-        <?php endif; ?>
-        <?php if ($hasNext): ?>
-          <a class="btn btn--secondary" href="<?= $view->e($pageLink($page + 1)) ?>">
-            <?= $tr('common.drafts.next') ?>
-          </a>
-        <?php endif; ?>
-      </nav>
-    <?php endif; ?>
+    <div class="grid-books drafts-grid" data-drafts-grid <?= empty($cards) ? 'hidden' : '' ?>>
+      <?php foreach ($cards as $card): ?>
+        <?php $view->include('card-draft', $card); ?>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="feed-panel__load-more" data-drafts-more <?= $hasNext ? '' : 'hidden' ?>>
+      <button type="button" class="btn btn--secondary" data-drafts-load-more>
+        <?= $tr('common.common.load_more') ?>
+      </button>
+    </div>
 
   </section>
 
 <?php endif; ?>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+<script src="<?= $view->asset('js/filters.js') ?>"></script>
+<script src="<?= $view->asset('js/drafts-filters.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

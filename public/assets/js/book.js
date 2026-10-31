@@ -2,9 +2,6 @@
 
 (function () {
   // Start / Resume / Read again (RD-02, RD-03).
-  // new / in_progress — обычная ссылка на /books/{id}/read: страницу для Resume
-  // читалка берёт из data-start-page. finished («Read again») — сначала сбрасываем
-  // прогресс (DELETE /api/books/{id}/progress), затем открываем с 1-й страницы.
   var startReading = document.querySelector('[data-start-reading]');
   if (startReading) {
     startReading.addEventListener('click', function (e) {
@@ -28,46 +25,20 @@
         if (!res.ok) console.warn('DELETE progress', res.status);
       }).catch(function (err) {
         console.warn('DELETE progress failed', err);
-      }).then(go);   // открываем в любом случае: ?page=1 в ссылке уже есть
+      }).then(go);
     });
 
-    // Вернулись «назад» из читалки (bfcache): кнопка показывала бы старый статус
     window.addEventListener('pageshow', function (e) {
       if (e.persisted) window.location.reload();
     });
   }
 
   /* ============================================================
-     ОЦЕНКА КНИГИ/СТАТЬИ: клик по звезде отправляет оценку на бэк.
-
-     Контракт (config/endpoints.php — rate/unrate, PR #73):
-       PUT    /api/{books|articles}/{id}/rate  body: rating=1..5
-       DELETE /api/{books|articles}/{id}/rate  — снять свою оценку
-     Тело — application/x-www-form-urlencoded (Request::body()
-     принимает его и JSON; сырой text/plain даёт пустой массив и 422),
-     CSRF уходит заголовком X-CSRF-Token (csrf.js). Ответ: 201 на
-     rate, 204 на unrate.
-
-     СВОЯ ОЦЕНКА: вьюха отдаёт её в data-rate-current
-     (PublicationContext::rating из контекста юзера) — звёзды сразу
-     отмечены, если пользователь уже оценивал; клик по той же звезде
-     снимает оценку, как и раньше.
-
-     СВОДКА РЕЙТИНГА (средний балл рядом со звёздами) обновляется
-     сразу после успешного rate/unrate: GET /api/{kind}?q=<title>
-     отдаёт свежий rating_avg (×10) по совпадению id — отдельного
-     эндпоинта «рейтинг публикации» нет. Не нашли/не удалось — сводку
-     не трогаем (никаких ложных цифр в UI).
-
-     Любая неудача (нет id публикации, 4xx/5xx, HTML-редирект на
-     логин): UI откатывается к прежней оценке и показывает
-     предупреждение js.book_rate_failed — как в publish-фазе
-     формы (11.4).
+     ОЦЕНКА КНИГИ/СТАТЬИ
      ============================================================ */
   var rate = document.querySelector('[data-rate]');
   if (rate) {
     var stars = rate.querySelectorAll('[data-rate-value]');
-    // Своя оценка приходит с сервера: 0 — не оценивал, 1..5 — уже оценил
     var currentAttr = Number(rate.getAttribute('data-rate-current') || 0);
     var current = (currentAttr >= 1 && currentAttr <= 5) ? Math.floor(currentAttr) : 0;
     var rateSending = false;
@@ -85,7 +56,6 @@
       });
     };
 
-    /** Обновляет сводку (звёзды + дробный балл) по rating_avg ×10. */
     var paintSummary = function (ratingRaw) {
       var summaryStars = document.querySelector('[data-rating-stars]');
       var summaryValue = document.querySelector('[data-rating-value]');
@@ -103,7 +73,6 @@
       summaryValue.classList.toggle('book-rating__value--none', !hasRating);
     };
 
-    /** Свежий средний балл после оценки: список публикаций + совпадение id. */
     var refreshSummary = function () {
       var title = rate.getAttribute('data-rate-title') || '';
       var id = Number(rate.getAttribute('data-rate-publication') || 0);
@@ -134,17 +103,15 @@
       });
     };
 
-    /** Неудача: откат к прежней оценке + предупреждение. */
     var rateFailed = function (previous) {
       current = previous;
       paint(current);
       if (window.Messages) window.Messages.show(t('js.book_rate_failed'), { type: 'warning' });
     };
 
-    /** value: 1..5 — поставить оценку, 0 — снять (повторный клик). */
     var sendRating = function (value, previous) {
       if (rateSending) return;
-      if (!rateUrl) { rateFailed(previous); return; }   // нет id публикации
+      if (!rateUrl) { rateFailed(previous); return; }
       rateSending = true;
 
       var opts = {
@@ -163,13 +130,10 @@
 
       doFetch(rateUrl, opts).then(function (res) {
         return res.text().then(function (raw) {
-          // HTML вместо JSON (редирект на логин и т.п.) тоже считаем
-          // неудачей — иначе «успех» показали бы неавторизованному.
           if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
         });
       }).then(function () {
         rateSending = false;
-        // Оценка принята — сразу показываем обновлённый средний балл
         refreshSummary();
       }, function (err) {
         rateSending = false;
@@ -191,7 +155,6 @@
     });
 
     rate.addEventListener('mouseleave', function () { paint(current); });
-    // data-rating-current — своя оценка с сервера: звёзды отмечены сразу
     paint(current);
   }
 
@@ -403,9 +366,11 @@
         if (list) list.replaceChildren();
       }
 
-      var withReplies = [];
+      // ВАЖНО: ответы больше НЕ догружаются автоматически.
+      // У карточки комментария с ответами остаётся кнопка [data-replies-toggle],
+      // по клику на неё подгружаем один раз (обработчик ниже).
       items.forEach(function (item) {
-        var node = appendComment({
+        appendComment({
           id: item.id,
           author: (item.creator && (item.creator.username || item.creator.name)) || '',
           authorId: item.creator && item.creator.id,
@@ -418,9 +383,7 @@
           liked: !!item.isLiked,
           replies: Number(item.commentsCount) || 0
         }, false);
-        if (node && Number(item.commentsCount) > 0) withReplies.push(node);
       });
-      withReplies.forEach(function (node) { loadReplies(node); });
 
       if (emptyEl()) {
         var n = listEl() ? listEl().children.length : 0;
@@ -520,8 +483,6 @@
           initials: null,
           user: null,
           text: text,
-          // dd.mm.yyyy — как после перезагрузки (loadComments/formatDate),
-          // иначе в [data-c-date] попадала бы сырая ISO-строка.
           date: formatDate(new Date().toISOString()),
           likes: 0,
           liked: false
@@ -693,6 +654,24 @@
     }
   });
 
+  // ===== Ответы: подгрузка ТОЛЬКО по клику =====
+  // Один раз на карточку. Если у вас в разметке кнопка называется иначе —
+  // замените селектор [data-replies-toggle] ниже.
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest && e.target.closest('[data-replies-toggle]');
+    if (!toggle) return;
+    var card = toggle.closest('[data-comment-id]');
+    if (!card) return;
+    if (card.dataset.repliesLoaded === '1') {
+      // Уже загружали — просто переключаем видимость
+      var list = one('[data-replies]', card);
+      if (list) list.hidden = !list.hidden;
+      return;
+    }
+    card.dataset.repliesLoaded = '1';
+    loadReplies(card);
+  });
+
   document.addEventListener('input', function (e) {
     var input = e.target.closest && e.target.closest('.comment-reply-form__input');
     if (!input) return;
@@ -763,8 +742,6 @@
           initials: me.initials,
           avatar: me.avatar,
           text: text,
-          // как у нового комментария: сразу показываем сегодняшнюю дату
-          // в том же формате, что и после перезагрузки (loadReplies).
           date: formatDate(new Date().toISOString())
         });
         bumpCount();
