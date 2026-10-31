@@ -1,17 +1,10 @@
 /* ============================================
-   ADMIN — стили админки (dashboard, таблицы, бейджи).
-   Подключается только страницами src/views/pages/admin/* через
-   блок head_extra (см. admin/dashboard.php и т.д.).
-
-   Всё на токенах из variable.css: отступы (--space-*), границы
-   (--color-border), поверхность (--color-surface), радиусы (--radius-*),
-   тени (--shadow-*), шрифты (--fs-*, --fw-medium).
-   Адаптив: сетка/таблицы перестраиваются на 480px (то, что нужно
-   для 375px-экрана) + общее правило для всех брейкпоинтов ниже.
+   ADMIN — стили админки (dashboard, таблицы, бейджи, роли).
+   Подключается страницами src/views/pages/admin/* через
+   блок head_extra.
    ============================================ */
 
-/* Локальные токены статусов: в variable.css зелёного нет,
-   жёлтый/красный берём оттуда же (--color-warning / --color-error). */
+/* Локальные токены статусов */
 :root {
   --admin-success: #2F9E44;
   --admin-success-bg: #E7F5EC;
@@ -55,7 +48,6 @@
   outline-offset: 2px;
 }
 
-/* Карточка-заглушка (Reports — раздела пока нет) */
 .admin-card--soon {
   opacity: 0.65;
   cursor: default;
@@ -96,7 +88,7 @@
 }
 
 /* ============================================
-   TOOLBAR — поиск, фильтры, счётчик над таблицей
+   TOOLBAR — поиск, фильтры, счётчик, кнопка добавления
    ============================================ */
 .admin-toolbar {
   display: flex;
@@ -105,6 +97,10 @@
   gap: var(--space-2);
   margin-bottom: var(--space-3);
   width: 100%;
+}
+
+.admin-toolbar--end {
+  justify-content: flex-end;
 }
 
 .admin-toolbar__search {
@@ -136,7 +132,7 @@
   white-space: nowrap;
 }
 
-/* Кнопка «+ Add» в тулбаре справочников */
+/* Кнопка «+ Add» обычная текстовая */
 .admin-toolbar__add {
   flex: 0 0 auto;
   min-height: 44px;
@@ -144,7 +140,32 @@
   white-space: nowrap;
 }
 
-/* Фильтр по статусу в тулбаре (страница жалоб) */
+/* Кнопка «+» круглая (идеально центрированная) */
+.admin-toolbar__add--icon {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  flex: 0 0 44px !important;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.admin-toolbar__add--icon svg {
+  display: block;
+  margin: auto;
+  pointer-events: none;
+}
+
+/* Фильтр по статусу в тулбаре */
 .admin-toolbar__filter {
   display: flex;
   align-items: center;
@@ -173,7 +194,6 @@
   outline-offset: 1px;
 }
 
-/* Живой статус загрузки/ошибки под тулбаром */
 .admin-toolbar__status {
   margin: 0 0 var(--space-3);
   font-size: var(--fs-small);
@@ -182,10 +202,9 @@
 
 /* ============================================
    TABLE — таблицы админки
-   .admin-table-wrap даёт горизонтальный скролл на узких экранах,
-   чтобы на 375px ничего не выезжало за край контента.
    ============================================ */
 .admin-table-wrap {
+  position: relative;
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -241,7 +260,6 @@
   color: var(--color-text-muted);
 }
 
-/* Длинные тексты (email, текст комментария) не рвут таблицу */
 .admin-table__clip {
   display: block;
   max-width: 320px;
@@ -301,7 +319,7 @@
 }
 
 /* ============================================
-   ACTIONS — кнопки в колонке Actions
+   ACTIONS — кнопки действий
    ============================================ */
 .admin-actions {
   display: flex;
@@ -317,9 +335,6 @@
   font-size: var(--fs-small);
 }
 
-/* ============================================
-   Заметка-заглушка под шапкой («API ещё нет»)
-   ============================================ */
 .admin-note {
   margin: 0 0 var(--space-3);
   font-size: var(--fs-small);
@@ -327,21 +342,15 @@
 }
 
 /* ============================================
-   DICTIONARY — справочники: переводы в таблице + модалка формы
-   Страницы: admin/{genres,categories,types}.php
-   Разметка: partials/dictionary-table.php, dictionary-form.php
-   Логика:   public/assets/js/admin.js (dict)
+   DICTIONARY — справочники
    ============================================ */
-
-/* Ячейка Translations: все переводы через « / », длинный список переносится */
 .admin-dict__translations {
   display: inline-block;
   max-width: 480px;
   line-height: var(--lh-normal);
-  overflow-wrap: anywhere;      /* одно длинное слово не рвёт узкую колонку на 375px */
+  overflow-wrap: anywhere;
 }
 
-/* --- Модалка формы --- */
 .admin-dict__dialog {
   max-width: 560px;
 }
@@ -373,7 +382,6 @@
   color: var(--color-text-muted);
 }
 
-/* --- Строки языков: [код] [input Title] [✕] --- */
 .admin-dict__langs {
   display: flex;
   flex-direction: column;
@@ -385,7 +393,7 @@
 }
 
 .admin-dict__langs:empty + .admin-dict__langs-empty {
-  display: block;                 /* пустая подсказка видна только когда строк нет */
+  display: block;
 }
 
 .admin-dict__lang-row {
@@ -439,13 +447,11 @@
   color: var(--color-text-muted);
 }
 
-/* --- Дропдаун «+ Add language»: меню раскрывается влево от кнопки --- */
 .admin-dict__lang .dropdown__menu {
   right: auto;
   left: 0;
 }
 
-/* Пункт — кнопка, а не ссылка: не должна вести на «#» */
 .admin-dict__lang-menu .dropdown__item {
   width: 100%;
   padding: var(--space-2) var(--space-3);
@@ -459,17 +465,14 @@
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;      /* длинное название языка не вылезает за узкое меню на 375px */
+  text-overflow: ellipsis;
 }
 
-/* Меню языков: при большом списке прокручивается, а не вылезает за экран */
 .admin-dict__lang-menu {
   max-height: 240px;
   overflow-y: auto;
 }
 
-/* Фокус пункта в меню языков: подсветка как hover + кольцо внутри
-   узкого меню (inset, чтобы не обрезалось краем .dropdown__menu) */
 .admin-dict__lang-menu .dropdown__item:focus-visible {
   background: var(--color-overlay);
   outline: 2px solid var(--color-primary);
@@ -498,17 +501,12 @@
 }
 
 /* ============================================
-   REPORTS — модалка решения по жалобе
-   Страница: admin/reports.php
-   Разметка: partials/admin-report-modal.php
-   Логика:   public/assets/js/admin.js (REPORTS)
+   REPORTS — модалка решений по жалобам
    ============================================ */
-
 .admin-report__dialog {
   max-width: 560px;
 }
 
-/* Сводка: dt-подписи слева, значения справа; на узком экране сворачивается в колонку */
 .admin-report__facts {
   display: grid;
   grid-template-columns: minmax(120px, auto) 1fr;
@@ -541,7 +539,6 @@
   align-items: baseline;
 }
 
-/* Название цели (книга/статья/комментарий) — длинный текст переносится */
 .admin-report__target {
   overflow-wrap: anywhere;
 }
@@ -561,7 +558,6 @@
   padding: var(--space-2) var(--space-3);
 }
 
-/* Кнопки: Отмена слева, «Отклонить» и «Удалить» справа; на 480px — в столбик */
 .admin-report__actions {
   display: flex;
   flex-wrap: wrap;
@@ -570,12 +566,8 @@
 }
 
 /* ============================================
-   ROLES — страница системных ролей и модалка прав
-   Страница: admin/roles.php
-   Разметка: partials/admin-role-modal.php
-   Логика:   public/assets/js/admin.js (ROLES)
+   ROLES — системные роли, элементы и модалка
    ============================================ */
-
 .admin-role__title {
   display: inline-flex;
   align-items: center;
@@ -583,7 +575,6 @@
   font-weight: var(--fw-medium);
 }
 
-/* Цветная точка роли: цвет приходит из role.color */
 .admin-role__dot {
   width: 10px;
   height: 10px;
@@ -606,6 +597,7 @@
 }
 
 .admin-role__group-title {
+  display: block;
   margin: 0 0 var(--space-2);
   font-size: var(--fs-small);
   font-weight: var(--fw-medium);
@@ -614,7 +606,6 @@
   color: var(--color-text-muted);
 }
 
-/* Список чекбоксов: в две колонки, на узком экране — в одну */
 .admin-role__list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -649,151 +640,361 @@
   gap: var(--space-2);
   justify-content: flex-end;
 }
+
+/* Дропдаун выбора роли в модалке прав (кнопка «+» на странице roles) */
+.admin-role__dropdown {
+  margin-bottom: var(--space-3);
+}
+
+.admin-role__dd {
+  position: relative;
+}
+
+.admin-role__dd-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  text-align: left;
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.admin-role__dd-toggle:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.admin-role__dd-toggle:focus-visible,
+.admin-role__dd.is-open .admin-role__dd-toggle {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.admin-role__dd-toggle:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+.admin-role__dd-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.admin-role__dd-value.is-placeholder {
+  color: var(--color-text-muted);
+}
+
+.admin-role__dd-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-role__dd-chevron {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  transition: transform .15s;
+}
+
+.admin-role__dd.is-open .admin-role__dd-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-role__dd-menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+
+.admin-role__dd-menu[hidden] {
+  display: none;
+}
+
+.admin-role__dd-search {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  margin: 0 0 6px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.admin-role__dd-search:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.admin-role__dd-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-role__dd-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+}
+
+.admin-role__dd-item:hover,
+.admin-role__dd-item:focus-visible {
+  outline: none;
+  background: var(--color-bg-secondary);
+}
+
+.admin-role__dd-item.is-selected {
+  font-weight: var(--fw-medium);
+  color: var(--color-primary);
+  background: var(--color-bg-secondary);
+}
+
+.admin-role__dd-note {
+  padding: 9px 10px;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
 /* ============================================
-   RESPONSIVE — 480px покрывает целевой 375px-экран
+   ROLES DND & DRAG HANDLE
    ============================================ */
-@media (max-width: 480px) {
-  .admin-grid {
-    grid-template-columns: 1fr;
-    gap: var(--space-2);
-  }
+.admin-table__drag {
+  width: 44px;
+  padding-right: 0;
+}
 
-  .admin-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--space-2);
-  }
+.admin-role__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm, 6px);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
-  .admin-toolbar__add {
-    width: 100%;
-  }
+.admin-role__handle:hover {
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+}
 
-  .admin-toolbar__search {
-    flex: 1 1 auto;
-    width: 100%;
-  }
+.admin-role__handle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
 
-  .admin-toolbar__count {
-    margin-left: 0;
-  }
+.admin-role__handle.is-locked {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
 
-  /* Фильтр по статусу растягивается на всю ширину, как и поиск */
-  .admin-toolbar__filter {
-    width: 100%;
-    justify-content: space-between;
-  }
+.admin-role__handle.is-locked:hover {
+  color: var(--color-text-muted);
+  background: transparent;
+}
 
-  .admin-toolbar__select {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
+[data-roles-dnd="off"] .admin-role__handle {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
 
-  /* Таблица не сжимается в ноль: скролл внутри .admin-table-wrap,
-     внутри — плотнее, чтобы колонки помещались чаще. */
-  .admin-table {
-    min-width: 560px;
-    font-size: var(--fs-small);
-  }
+.admin-table tbody tr.is-lock-end td {
+  border-bottom: 2px solid var(--color-border);
+}
 
-  .admin-table th,
-  .admin-table td {
-    padding: var(--space-2);
-  }
+.admin-table tbody tr.is-lock-start td {
+  border-top: 2px solid var(--color-border);
+}
 
-  .admin-table__clip {
-    max-width: 180px;
-  }
+.admin-table tbody tr.is-dragging td {
+  opacity: 0.35;
+}
 
-  /* Справочники (Genres/Categories/Types): всего 3 колонки — таблица
-     ужимается под 375px вместо горизонтального скролла (общий min-width
-     560px оставляем широким таблицам Users/Comments/Reports) */
-  .admin-table[data-dict-table] {
-    min-width: 0;
-  }
+.admin-table tbody tr.is-pending .admin-role__title {
+  opacity: 0.6;
+}
 
-  .admin-table[data-dict-table] .admin-dict__translations {
-    max-width: none;
-  }
+.admin-role-ghost {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.18));
+  opacity: 0.95;
+  pointer-events: none;
+}
 
-  /* Кнопки Edit/Delete в узкой таблице справочника переносятся, а не вылезают */
-  .admin-table[data-dict-table] .admin-actions {
-    flex-wrap: wrap;
-  }
+.admin-role-ghost__grip {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
 
-  /* Строка перевода в модалке: кнопка ✕ не сжимается (touch-таргет 44px),
-     поле остаётся читаемым на 375px */
-  .admin-dict__lang-row {
-    grid-template-columns: minmax(36px, auto) minmax(0, 1fr) 44px;
-  }
+.admin-role-dropline {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
 
-  .admin-dict__lang-remove {
-    width: 44px;
-    height: 44px;
-  }
+.admin-role-dropline::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
 
-  .admin-actions {
-    flex-wrap: nowrap;
-  }
+.admin-role-dropline[hidden] { display: none; }
 
-  /* Модалка решения по жалобе: сводка в одну колонку (dt над dd), кнопки в столбик */
-  .admin-report__facts {
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-  }
+.admin-role-insert {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: #fff;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
 
-  .admin-report__fact {
-    display: block;
-  }
+.admin-role-insert:hover { filter: brightness(1.1); }
+.admin-role-insert:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.admin-role-insert[hidden] { display: none; }
 
-  .admin-report__fact dt {
-    margin-bottom: var(--space-1);
-  }
-
-  .admin-report__actions {
-    flex-direction: column-reverse;
-    justify-content: stretch;
-  }
-
-  .admin-report__actions .btn {
-    width: 100%;
-  }
-
-  /* Системные роли: таблица ужимается под 375px (4 колонки), чекбоксы в одну колонку */
-  .admin-table[data-roles-table] {
-    min-width: 0;
-  }
-
-  .admin-role__list {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-role__actions {
-    flex-direction: column-reverse;
-    justify-content: stretch;
-  }
-
-  .admin-role__actions .btn {
-    width: 100%;
-  }
+body.is-role-dragging,
+body.is-role-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ============================================================
-   Системные роли: окно «Новая роль» (partials/admin-role-create-modal.php)
+   СЕГМЕНТНЫЙ ПЕРЕКЛЮЧАТЕЛЬ (All / Public / Private)
    ============================================================ */
-
-/* Кнопка «+» у поиска ролей: квадрат 44px, на узких экранах — на всю ширину */
-.admin-toolbar__add--icon {
-  width: 44px;
-  padding: 0;
-  font-size: 22px;
-  line-height: 1;
+.admin-seg {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: stretch;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 3px;
+  gap: 2px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
 }
 
-@media (max-width: 480px) {
-  .admin-toolbar__add--icon { width: 100%; }
+.admin-seg label {
+  position: relative;
+  display: flex;
+  cursor: pointer;
 }
 
-/* ---------- Каркас окна ---------- */
+.admin-seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.admin-seg span {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-seg label:hover span {
+  color: var(--color-text);
+}
+
+.admin-seg input:checked + span {
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.admin-seg input:focus-visible + span {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   МОДАЛКА «НОВАЯ РОЛЬ» (.admin-rolenew)
+   ============================================================ */
 .admin-rolenew { position: relative; max-width: 480px; width: 100%; }
 
 .admin-rolenew__form {
@@ -805,12 +1006,11 @@
 
 .admin-rolenew__title {
   margin: 0;
-  padding-right: 40px;            /* место под крестик */
+  padding-right: 40px;
   font-size: 22px;
   line-height: 1.25;
 }
 
-/* Крестик — в правом верхнем углу */
 .admin-rolenew__close {
   position: absolute;
   top: 16px;
@@ -838,9 +1038,9 @@
   background: rgba(214, 69, 69, .1);
   color: #B42318;
   font-size: 14px;
+  white-space: pre-line;
 }
 
-/* ---------- Секции и подписи ---------- */
 .admin-rolenew__section { display: flex; flex-direction: column; gap: 8px; border: 0; margin: 0; padding: 0; min-width: 0; }
 .admin-rolenew__label {
   display: block;
@@ -850,16 +1050,13 @@
   color: var(--color-text-muted);
 }
 
-/* <legend> не участвует в flex-gap секции (gap: 8px на неё не действует),
-   поэтому отступ до таблетки Visibility / ряда цветов задаём явно */
 legend.admin-rolenew__label {
   margin-bottom: 14px;
 }
 
-/* ---------- Доп. языки ---------- */
 .admin-rolenew__langs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .admin-rolenew__langs:empty { display: none; }
-.admin-rolenew__lang { display: flex; align-items: center; gap: 8px; }
+.admin-rolenew__lang { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .admin-rolenew__lang .form-field__input { flex: 1; min-width: 0; }
 .admin-rolenew__code { min-width: 36px; text-align: center; }
 .admin-rolenew__remove {
@@ -869,7 +1066,6 @@ legend.admin-rolenew__label {
 }
 .admin-rolenew__remove:hover { background: var(--color-bg-secondary); color: #B42318; }
 
-/* «+ Add language» и меню */
 .admin-rolenew__dd { position: relative; align-self: flex-start; }
 .admin-rolenew__add {
   display: inline-flex; align-items: center; gap: 6px;
@@ -896,7 +1092,6 @@ legend.admin-rolenew__label {
 .admin-rolenew__item:focus-visible { background: var(--color-bg-secondary); outline: none; }
 .admin-rolenew__note { padding: 8px 10px; font-size: 13px; color: var(--color-text-muted); }
 
-/* ---------- Private / Public — «таблетка» ---------- */
 .admin-rolenew__pill {
   display: inline-flex; align-self: flex-start; padding: 3px; gap: 2px;
   border: 1px solid var(--color-border); border-radius: 999px;
@@ -911,7 +1106,6 @@ legend.admin-rolenew__label {
 .admin-rolenew__pill input:checked + span { background: var(--color-surface); color: var(--color-text); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
 .admin-rolenew__pill input:focus-visible + span { outline: 2px solid var(--color-primary, #4F46E5); outline-offset: 2px; }
 
-/* ---------- Цвета — те же точки, что в таблице ролей ---------- */
 .admin-rolenew__colors { display: flex; flex-wrap: wrap; gap: 12px; padding: 3px; }
 .admin-rolenew__swatch { position: relative; cursor: pointer; }
 .admin-rolenew__swatch input { position: absolute; opacity: 0; pointer-events: none; }
@@ -924,7 +1118,6 @@ legend.admin-rolenew__label {
 .admin-rolenew__swatch input:checked + span { outline-color: var(--color-text); }
 .admin-rolenew__swatch input:focus-visible + span { outline-color: var(--color-primary, #4F46E5); }
 
-/* ---------- Две ключевые кнопки ---------- */
 .admin-rolenew__footer {
   display: flex; gap: 12px; justify-content: flex-end;
   margin-top: 4px; padding-top: 24px;
@@ -937,7 +1130,456 @@ legend.admin-rolenew__label {
 .admin-rolenew__footer .btn:focus-visible { outline: 2px solid var(--color-text); outline-offset: 2px; }
 .admin-rolenew__footer .btn[disabled] { opacity: .5; cursor: not-allowed; }
 
+.admin-rolenew__field-error {
+  flex: 0 0 100%;
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #B42318;
+}
+.admin-rolenew__field-error[hidden] { display: none; }
+.admin-rolenew__form .form-field__input[aria-invalid="true"] { border-color: #B42318; }
+
+/* ============================================
+   СТИЛИ ДЛЯ СПИСКА РОЛЕЙ ИЗ admin-role.css
+   ============================================ */
+.admin-roles {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.admin-roles__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-roles__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-role-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: box-shadow 0.2s, opacity 0.2s, background 0.2s;
+  user-select: none;
+}
+
+.admin-role-item.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.admin-role-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  user-select: text;
+}
+
+.admin-role-item.is-dragging {
+  opacity: 0.4;
+  background: var(--color-bg-secondary);
+}
+
+.admin-role-item.drag-over-top {
+  border-top: 3px solid var(--color-primary, #4F46E5);
+}
+.admin-role-item.drag-over-bottom {
+  border-bottom: 3px solid var(--color-primary, #4F46E5);
+}
+
+.admin-role-drag-handle {
+  color: var(--color-text-muted);
+  font-size: 18px;
+  cursor: grab;
+  padding: 4px;
+  border-radius: 4px;
+  pointer-events: auto;
+}
+
+.admin-role-drag-handle[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.admin-role-item.is-locked {
+  opacity: 0.6;
+  background: var(--color-bg-secondary);
+}
+.admin-role-item.is-locked .admin-role-drag-handle {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.admin-role-name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.admin-role-flags {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.admin-role-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-role-actions .btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.admin-role-flags-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.admin-role-flags-grid fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin: 0;
+}
+
+.admin-role-flags-grid legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0 4px;
+}
+
+.admin-role-flags-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+/* ============================================
+   RESPONSIVE — адаптация под мобильные экраны
+   ============================================ */
 @media (max-width: 520px) {
-  .admin-rolenew__footer { flex-direction: column-reverse; }
-  .admin-rolenew__footer .btn { width: 100%; }
+  .admin-rolenew__footer { 
+    flex-direction: column-reverse; 
+  }
+  .admin-rolenew__footer .btn { 
+    width: 100%; 
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar__add:not(.admin-toolbar__add--icon) {
+    width: 100%;
+  }
+
+  /* Круглая кнопка не ломается и не растягивается на мобилках */
+  .admin-toolbar__add--icon {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+  .admin-toolbar__search {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .admin-toolbar__count {
+    margin-left: 0;
+  }
+
+  .admin-toolbar__filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-toolbar__select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .admin-table {
+    min-width: 560px;
+    font-size: var(--fs-small);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: var(--space-2);
+  }
+
+  .admin-table__clip {
+    max-width: 180px;
+  }
+
+  .admin-table[data-dict-table],
+  .admin-table[data-roles-table],
+  .admin-table[data-allroles-table] {
+    min-width: 0;
+  }
+
+  .admin-table[data-dict-table] .admin-dict__translations {
+    max-width: none;
+  }
+
+  .admin-table[data-dict-table] .admin-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-dict__lang-row {
+    grid-template-columns: minmax(36px, auto) minmax(0, 1fr) 44px;
+  }
+
+  .admin-dict__lang-remove {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-actions {
+    flex-wrap: nowrap;
+  }
+
+  .admin-report__facts {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .admin-report__fact {
+    display: block;
+  }
+
+  .admin-report__fact dt {
+    margin-bottom: var(--space-1);
+  }
+
+  .admin-report__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-report__actions .btn {
+    width: 100%;
+  }
+
+  .admin-role__list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-role__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-role__actions .btn {
+    width: 100%;
+  }
+
+  .admin-seg { 
+    width: 100%; 
+  }
+  .admin-seg label { 
+    flex: 1 1 0; 
+  }
+  .admin-seg span { 
+    flex: 1; 
+    justify-content: center; 
+  }
+}
+/* ============================================
+   USERS — вложенный список ролей пользователя
+   ============================================ */
+.admin-table__expand {
+  width: 56px;
+  padding-left: 0;
+  text-align: right;
+}
+
+.admin-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.admin-expand:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.admin-expand:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.admin-expand svg {
+  transition: transform .15s;
+}
+
+.admin-expand.is-open svg {
+  transform: rotate(180deg);
+}
+
+.admin-user-roles[hidden] {
+  display: none;
+}
+
+.admin-table tbody tr.admin-user-roles:hover td {
+  background: var(--color-bg-secondary);
+}
+
+.admin-table tbody tr.admin-user-roles td {
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+}
+
+.admin-user-roles__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-user-roles__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-user-roles__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-user-roles__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-roles__remove {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: color .15s, background .15s, border-color .15s;
+}
+
+.admin-user-roles__remove:hover:not(:disabled) {
+  color: var(--color-error);
+  background: var(--admin-danger-bg);
+  border-color: var(--color-error);
+}
+
+.admin-user-roles__remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.admin-user-roles__remove:disabled {
+  opacity: .5;
+  cursor: progress;
+}
+
+.admin-user-roles__note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.admin-user-roles__foot {
+  display: flex;
+}
+
+/* «+» — прямоугольная кнопка по центру блока */
+/* «+» — цвет и hover от .btn--primary (как круглая кнопка в тулбаре),
+   форма: на всю длину списка, высота 32px */
+.admin-user-roles__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+/* Модалка «Добавить роль пользователю» */
+.admin-urole__user {
+  margin-bottom: var(--space-3);
+}
+
+.admin-urole__user-name {
+  padding: var(--space-2) var(--space-3);
+  font-weight: var(--fw-medium);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+/* Кнопка «Показать ещё» под таблицей пользователей */
+.admin-users__more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.admin-users__more[hidden],
+.admin-users__more [hidden] {
+  display: none;
 }

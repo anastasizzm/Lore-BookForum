@@ -5,6 +5,7 @@
         "not_exists": "Does not exists",
         "not_allowed": "The value is not allowed",
         "format": "Invalid format",
+        "invalid": "Invalid value",
         "csrf_fail": "CSRF token mismatch",
         "already_exists": "Already exists",
         "forbidden": "Forbidden",
