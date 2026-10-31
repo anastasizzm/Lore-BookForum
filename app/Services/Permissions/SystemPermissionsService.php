@@ -9,6 +9,7 @@ use App\Exceptions\ConflictException;
 use App\Exceptions\ValidationException;
 use App\Models\PaginatedList;
 use App\Models\Access\Assignment\RolesUser;
+use App\Models\Access\Assignment\RolesUserSystem;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
@@ -187,7 +188,7 @@ final class SystemPermissionsService
     public function getUsers(RolesUserListQuery $query) : PaginatedList 
     {
         $errors = [];
-        $isValid = $query->properties->validateForType(RolesUser::class, $errors);
+        $isValid = $query->properties->validateForType(RolesUserSystem::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
 
         $sortEnum = $query->sort->hasData() 
@@ -197,7 +198,7 @@ final class SystemPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUserSystem::class);
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
