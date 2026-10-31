@@ -59,7 +59,7 @@ final readonly class BookForm extends PublicationForm
 
             try {
                 $uuid = Uuid::fromString($value);
-            } catch (InvalidArgumentException) {
+            } catch (\InvalidArgumentException) {
                 continue;
             }
 

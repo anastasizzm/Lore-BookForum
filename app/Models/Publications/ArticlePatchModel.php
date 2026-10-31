@@ -1,0 +1,45 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Models\Publications;
+
+use App\Forms\Publications\ArticlePatchForm;
+use App\Models\Uuid;
+use App\Forms\Publications\PublicationPatchForm;
+use RuntimeException;
+
+final readonly class ArticlePatchModel extends PublicationPatchModel
+{
+    public function __construct(
+        string|false $title,
+        string|false $description,
+        string|false $authorNotes,
+        int|false $genreId,
+        Uuid|null|false $iconId,
+        
+        public int|false $typeId,
+        public string|false|null $doi
+    ){
+        parent::__construct($title, $description, $authorNotes, $genreId, $iconId);
+    }
+
+    public static function fromForm(PublicationPatchForm $form): self 
+    {
+        if (!$form instanceof ArticlePatchForm) {
+            throw new RuntimeException("ArticlePatchForm instance is required");
+        }
+
+        $parent = parent::fromForm($form);
+        
+        return new self(
+            title: $parent->title,
+            description: $parent->description,
+            authorNotes: $parent->authorNotes,
+            genreId: $parent->genreId,
+            iconId: $parent->iconId,
+            
+            typeId: $form->hasTypeId ? (int)$form->typeId : false,
+            doi: $form->hasDoi ? $form->doi : false,
+        );
+    }
+}

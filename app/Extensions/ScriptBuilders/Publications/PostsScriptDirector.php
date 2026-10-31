@@ -30,15 +30,14 @@ final class PostsScriptDirector extends ScriptDirector
     public function startTempFilter() : self
     {
         $this->startTemp('comments');
-        $this->tempBuilder->addWhere('comments.is_active')
-            ->addJoin('INNER JOIN users ON users.id = comments.creator_id');
+        $this->tempBuilder->addJoin('INNER JOIN publications ON publications.id = comments.publication_id');
         return $this;
     }
 
     public function addPostSelectTemp() : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("comments.id,\ncomments.content,\ncomments.is_active,\ncomments.creator_id,\ncomments.publication_id,\ncomments.created_at,\ncomments.likes_count,\ncomments.comments_count");
+        $this->tempBuilder->addSelect("comments.id,\ncomments.content,\ncomments.creator_id,\ncomments.publication_id,\ncomments.created_at,\ncomments.deleted_at,\ncomments.likes_count,\ncomments.comments_count");
         return $this;
     }
 
@@ -60,7 +59,7 @@ final class PostsScriptDirector extends ScriptDirector
     public function addSearchTempFilter(string $search) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addWhere("users.username ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
+        $this->tempBuilder->addWhere("publications.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
         return $this;
     }
 
@@ -75,6 +74,13 @@ final class PostsScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("comments.publication_id = :publicationId", [':publicationId' => ScriptParam::asInt($publicationId)]);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("comments.is_active");
         return $this;
     }
 
@@ -98,14 +104,14 @@ final class PostsScriptDirector extends ScriptDirector
             switch($prop)
             {
                 case 'creator':
-                    $this->tempBuilder->addJoin('INNER JOIN profiles ON profiles.user_id = users.id')
+                    $this->tempBuilder->addJoin('INNER JOIN users ON users.id = comments.creator_id')
+                        ->addJoin('INNER JOIN profiles ON profiles.user_id = users.id')
                         ->addSelect("users.id as u_id,\nusers.username as u_username")
                         ->addSelect("profiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar");
                     break;
                 
                 case 'publication':
-                    $this->tempBuilder->addJoin('INNER JOIN publications ON publications.id = comments.publication_id')
-                        ->addSelect("publications.id as pub_id,\npublications.title as pub_title,\npublications.icon_id as pub_icon_id,\npublications.created_at as pub_created_at");
+                    $this->tempBuilder->addSelect("publications.id as pub_id,\npublications.title as pub_title,\npublications.icon_id as pub_icon_id,\npublications.created_at as pub_created_at");
                     break;
                 default:
                     $this->handleFallbackIncluding($prop);

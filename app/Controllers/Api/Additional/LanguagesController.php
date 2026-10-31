@@ -6,11 +6,13 @@ namespace App\Controllers\Api\Additional;
 use App\Services\Additional\LanguagesService;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Additional\Language;
+use App\Forms\Additionals\LanguageForm;
+use App\Extensions\Parsers\RouteParamParser;
 
 use App\Controllers\Controller;
 
 use App\Http\HttpContext;
-use App\Lib\Settings;
+use App\Lib\Settings\Settings;
 
 use App\ErrorCodes;
 use App\Constants;
@@ -33,10 +35,40 @@ final class LanguagesController extends Controller
             ]);
     }
 
+    public function retrieve(HttpContext $context, string $code) 
+    {
+        $code = RouteParamParser::string(['c' => $code], 'c');
+        $model = $this->languagesService->retrieve($code);
+        return $this->jsonObject($model);
+    }
+
     public function fallback(HttpContext $context)
     {
-        $default = $this->settings->i18n->default;
-        $model = new Language($default, true);
+        $code = $this->settings->i18n->default;
+        $model = $this->languagesService->retrieve($code);
         return $this->jsonObject($model);
+    }
+
+    public function create(HttpContext $context)
+    {
+        $formData = $context->request->body();
+        $code = $this->languagesService->create(LanguageForm::fromInput($formData));
+        return $this->jsonCreatedId($code);
+    }
+
+    public function update(HttpContext $context, string $code)
+    {
+        $code = RouteParamParser::string(['c' => $code], 'c');
+        $formData = $context->request->body();
+
+        $this->languagesService->update($code, LanguageForm::fromInput($formData));
+        return $this->jsonEmpty();
+    }
+
+    public function delete(HttpContext $context, string $code)
+    {
+        $code = RouteParamParser::string(['c' => $code], 'c');
+        $this->languagesService->delete($code);
+        return $this->jsonEmpty(204);
     }
 }

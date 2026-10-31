@@ -4,20 +4,30 @@ declare(strict_types=1);
 namespace App\Services\Publications;
 
 use App\Repositories\Publications\ArticlesRepository;
+use App\Repositories\Publications\UsersReadRepository;
 use App\Services\Enrichers\PublicationContextEnricher;
 use App\Factories\CriteriasFactory;
 
-use App\Forms\Publications\RateForm;
 use App\Validators\Publications\RateFormValidator;
 
+use App\Forms\Publications\ArticleForm;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Criterias\Publications\UserRelationCriteria;
+use App\Validators\Publications\ReadProgressFormValidator;
+use App\Validators\Publications\ArticlePatchFormValidator;
+use App\Validators\Publications\ArticleContentFormValidator;
+use App\Validators\Publications\ArticleFormValidator;
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
+use App\Models\Publications\ArticleModel;
+use App\Models\Publications\ContentData;
+use App\Models\Publications\ArticlePatchModel;
+use App\Forms\Publications\ArticlePatchForm;
+use App\Forms\Publications\ArticleСontentForm;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
@@ -28,18 +38,30 @@ use App\Services\Configuration\UnitOfWork;
 
 use App\Exceptions\Translators\ArticleExceptionTranslator;
 use App\Exceptions\ValidationException;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\ConflictException;
+use App\Lib\I18n\Translator;
 
 use PDO;
 
-final class ArticlesService
+final class ArticlesService extends PublicationsService
 {
     public function __construct(
-        private readonly ArticlesRepository $articlesRepo,
-        private readonly ArticleExceptionTranslator $translator,
+        ArticlesRepository $repository,
+        UsersReadRepository $usersReadRepo,
+        ArticleExceptionTranslator $exceptionTranslator,
+        ReadProgressFormValidator $progressValidator,
+        RateFormValidator $rateValidator,
+        Translator $translator,
+        UnitOfWork $uow,
+        private readonly ArticleFormValidator $validator,
+        private readonly ArticlePatchFormValidator $patchValidator,
+        private readonly ArticleContentFormValidator $contentValidator,
         private readonly PublicationContextEnricher $enricher,
-        private readonly RateFormValidator $rateValidator,
-        private readonly UnitOfWork $uow
-    ){}
+    ){
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, 
+            $progressValidator, $rateValidator, $translator, $uow);
+    }
 
     public function getList(ArticlesListQuery $query) : PaginatedList
     {
@@ -69,7 +91,7 @@ final class ArticlesService
         if(!$isValid) throw new ValidationException($errors);
         
         $criteria = CriteriasFactory::buildArticleFromQuery($query, Publication::class);
-        return $this->articlesRepo->getList(
+        return $this->repository->getList(
             $criteria,
             $query->properties->getProps()
         );
@@ -83,7 +105,7 @@ final class ArticlesService
         $isValid = $props->validateForType(Article::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
 
-        return $this->articlesRepo->retrieve($articleId, $props->getProps());
+        return $this->repository->retrieve($articleId, $props->getProps());
     }
 
     public function retrieveWithContext(int $articleId, PropertiesQuery $props, int $currentUserId) : ?WithContext 
@@ -97,66 +119,70 @@ final class ArticlesService
         );
     }
 
-    public function save(int $userId, int $articleId) : void
+    public function getContent(int $articleId) : ContentData 
     {
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
+        $data = $this->repository->getContent($articleId);
+        if($data === NULL) throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+        return $data;
+    }
 
-                $this->articlesRepo->save($userId, $articleId); 
-            });
+    public function create(
+        ArticleForm $form, 
+        int $creatorId
+    ) : int
+    {
+        $bag = $this->validator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+        
+        try{
+            $model = ArticleModel::fromForm($form);
+            return $this->repository->create($model, $creatorId);
         }
         catch(\PDOException $e){
-            throw $this->translator->translate($e);
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 
-    public function deleteSave(int $userId, int $articleId) : void
+    public function update(
+        int $articleId,
+        ArticlePatchForm $form
+    ) : void 
     {
-        try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-
-                $this->articlesRepo->deleteSave($userId, $articleId);
-            });
-        }
-        catch(\PDOException $e){
-            throw $this->translator->translate($e);
-        }
-    }
-
-    public function rate(int $userId, int $articleId, RateForm $form) : void 
-    {
-        $bag = $this->rateValidator->validateOne($form);
+        $bag = $this->patchValidator->validateOne($form);
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
 
         try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId, $form) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-                $this->articlesRepo->rate($userId, $articleId, $form->rating);
-            });
+            $model = ArticlePatchModel::fromForm($form);
+            $updated = $this->repository->update($articleId, $model);
+            if (!$updated) throw new ConflictException($this->translator->t('errors.common.version_invalid'));
         }
-        catch(\PDOException $e)
-        {
-            throw $this->translator->translate($e);
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 
-    public function uprate(int $userId, int $articleId) : void 
+    public function updateContent(
+        int $articleId,
+        ArticleСontentForm $form,
+        int $expectedVersion,
+    ) : int 
     {
+        $bag = $this->contentValidator->validateOne($form);
+        if (!$bag->isEmpty()) throw new ValidationException($bag->all());
+
+        $contentData = $form->book !== NULL
+            ? ContentData::fromBook($form->book) 
+            : ($form->content !== NULL
+                ? ContentData::fromContent($form->content)
+                : throw new ValidationException(['content' => $this->translator->t("errors.common.required")]));
+
         try{
-            $this->uow->transactional(function (PDO $pdo) use($userId, $articleId) {
-                if (!$this->articlesRepo->checkType($articleId))
-                    throw new ValidationException(['articleId' => ['Article not found']]);
-                $this->articlesRepo->unrate($userId, $articleId);
-            });
+            $newVersion = $this->repository->updateContent($articleId, $contentData, $expectedVersion);
+            if ($newVersion === NULL) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+            return $newVersion;
         }
-        catch(\PDOException $e)
-        {
-            throw $this->translator->translate($e);
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 }

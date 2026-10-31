@@ -30,7 +30,7 @@ final class Kernel
 
         [$route, $params] = $match;
 
-        $ctx = new HttpContext($request, $route, $params);
+        $ctx = new HttpContext($request, $route, $this->container, $params);
         $pipeline = new Pipeline();
 
         foreach ($this->settings->middleware as $middlewareClass) {

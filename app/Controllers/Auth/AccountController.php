@@ -61,40 +61,45 @@ final class AccountController extends Controller
 
     public function getPasswordMail(HttpContext $ctx) : Response 
     {
-        return $this->render('auth/password-email');
+        $redirectUrl = $context->query('redirect');
+        return $this->render('auth/password-email', ['redirectUrl' => $redirectUrl]);
     }
 
     public function passwordMail(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
+        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
         try{
-            $this->passResetService->startReset(MailOnlyForm::fromInput($formData));
+            $this->passResetService->startReset(MailOnlyForm::fromInput($formData), $redirectUrl);
             return $this->render('message', ['message' => 'The link to reset your password was sent to your email']);
         }
         catch(ValidationException $e)
         {
-            return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors()]);
+            return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors(), 'redirectUrl' => $redirectUrl]);
         }
     }
 
     public function getPasswordReset(HttpContext $context, string $token) : Response 
     {
+        $redirectUrl = $context->query('redirect');
         try{
             $this->passResetService->consumeToken($token);
-            return $this->render('auth/password-reset', ['token' => $token]);
+            return $this->render('auth/password-reset', ['token' => $token, 'redirectUrl' => $redirectUrl]);
         }
         catch(HttpException $e)
         {
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage()]);
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'redirectUrl' => $redirectUrl]);
         }
     }
 
     public function passwordReset(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
+        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
+
         try{
             $this->passResetService->completeReset(PassResetForm::fromInput($formData));
-            return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $this->url->url('login'), 'Login']);
+            return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $redirectUrl, 'Login']);
         }
         catch(ValidationException $e)
         {

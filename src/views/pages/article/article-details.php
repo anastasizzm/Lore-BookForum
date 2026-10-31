@@ -694,6 +694,7 @@ if (!empty($iconId)) {
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->
   <script src="/assets/js/article-publish.js"></script>

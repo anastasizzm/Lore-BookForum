@@ -7,4 +7,5 @@ enum UsersSortBy : string
 {
     case Username = 'username';
     case Name = 'name';
+    case Created = 'created';
 }

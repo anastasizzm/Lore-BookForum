@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/api/additional/genres"
+method: POST
+headers:
+  x-csrf-token: "{{csrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \    \"translations\": {\r
+
+    \        \"ru\": \"Тест\",\r
+
+    \        \"en\": \"Test\"\r
+
+    \    }\r
+
+    }"
+order: 2000

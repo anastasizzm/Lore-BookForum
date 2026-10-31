@@ -35,7 +35,7 @@
         "search_failed_http": "Search failed (HTTP :status).",
         "users_load_failed": "Could not load the list of users.",
         "delete_failed": "Could not delete (HTTP :status).",
-        "in_use": "Already in use",
+        "in_use": "In use",
         "version_invalid": "Invalid version"
     },
     "validation": {
@@ -67,17 +67,23 @@
         "position_taken": "Could not find a free position",
         "position_changed": "Position changed while saving",
         "insufficient_role": "Insufficient permissions",
-        "last_role": "You can't delete the last role"
+        "last_role": "You can't delete the last role",
+        "system_role_delete": "You cant delete system roles"
     },
     "articles": {
         "pub_exists": "An article for this publication already exists",
         "doi_exists": "An article with this DOI already exists",
-        "doi_format": "DOI must match the format 10.XXXX/YYYY"
+        "doi_format": "DOI must match the format 10.XXXX/YYYY",
+        "both_provided": "Both content and book provided. Choose one"
+    },
+    "publications": {
+        "cannot_publish": "Cannot publish the publication. Please check the publication settings"
     },
     "books": {
         "pub_exists": "A book for this publication already exists",
         "isbn_exists": "A book with this ISBN already exists",
-        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X"
+        "isbn_format": "ISBN must match the format XXX-X-XXX-XXXXX-X",
+        "content_pdf": "The book must have at least one content where one should have 'pdf' format"
     },
     "account": {
         "credits_invalid": "Invalid login or password",
@@ -86,6 +92,21 @@
         "token_empty": "Token is not provided",
         "email_format": "Invalid email format",
         "mail_already_verified": "You have already verified the email"
+    },
+    "files": {
+        "ini_size": "File exceeds server limit",
+        "form_size": "File exceeds form limit",
+        "partial": "File was only partially uploaded",
+        "no_file": "No file was uploaded",
+        "no_tmp_dir": "Server has no temp directory",
+        "cant_write": "Server cannot write to disk",
+        "extension": "Upload stopped by extension",
+        "upload_fail": "Upload failed",
+        "file_empty": "File is empty",
+        "file_large": "File is too large (max :max MB)",
+        "invalid_upload": "Invalid upload",
+        "file_format": "Unsupported file format: :format",
+        "duplicate": "The duplicate file uploaded"
     },
     "policies": {
         "admin": "The user must be admin",

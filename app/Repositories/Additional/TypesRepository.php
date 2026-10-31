@@ -11,6 +11,7 @@ use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 use App\Models\Scripts\ScriptParam;
 use App\Services\Configuration\UnitOfWork;
+use PDO;
 
 final class TypesRepository extends Repository
 {
@@ -32,7 +33,9 @@ final class TypesRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback());
+        $this->director->startTempFilter()
+            ->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter();
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);
@@ -49,6 +52,20 @@ final class TypesRepository extends Repository
         );
 
         return $items;
+    }
+
+    public function retrieve(int $roleId) : ?BasicModel 
+    {
+        $this->director->startTempFilter()
+            ->addTypeSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
+            ->addConcreteTempFilter($roleId)->setLimitTemp(1);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? NULL : BasicModel::fromRow($row);
     }
 
     public function create(array $translations) : int
@@ -147,7 +164,7 @@ final class TypesRepository extends Repository
 
     public function delete(int $id) : bool
     {
-        $stmt = $this->execute('DELETE FROM types WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
+        $stmt = $this->execute('UPDATE types SET deleted_at = NOW() WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
         return $stmt->rowCount() > 0;
     }
 }

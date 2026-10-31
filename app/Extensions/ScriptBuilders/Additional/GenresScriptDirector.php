@@ -38,7 +38,7 @@ final class GenresScriptDirector extends ScriptDirector
     public function addGenreSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("genres.id,\ngenres.created_at")
+        $this->tempBuilder->addSelect("genres.id,\ngenres.created_at,\ngenres.deleted_at")
             ->addSelect("COALESCE(
                     MAX(CASE WHEN genres_translations.code = :currentCulture THEN genres_translations.title END),
                     MAX(CASE WHEN genres_translations.code = :fallbackCulture THEN genres_translations.title END)
@@ -54,6 +54,13 @@ final class GenresScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("genres.is_active");
+        return $this;
+    }
+
     public function addOrderTemp(BasicModelSortBy $sort)
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
@@ -62,6 +69,13 @@ final class GenresScriptDirector extends ScriptDirector
             BasicModelSortBy::Newest => 'genres.created_at DESC',
         };
         $this->tempBuilder->setOrder($order);
+        return $this;
+    }
+
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("genres.id = :id", [':id' => ScriptParam::asInt($id)]);
         return $this;
     }
 

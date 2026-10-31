@@ -1,4 +1,6 @@
 {
+    "yes": "Yes",
+    "no": "No",
     "save": "Save",
     "revert": "Revert",
     "cancel": "Cancel",
@@ -32,6 +34,10 @@
     "language": {
         "label": "Language",
         "switch": "Switch language"
+    },
+    "publication":{
+        "delete_question": "Do you want to delete the publication?",
+        "delete_page_title": "Delete publication"
     },
     "filter": {
         "books": "Books",
@@ -320,6 +326,15 @@
         "publish_confirm": "Publish",
         "save_failed": "Could not save rights (HTTP :status)."
     },
+    "pubroles": {
+        "title": "Roles and people",
+        "roles": "Roles",
+        "people": "People",
+        "loading": "Loading roles…",
+        "retry": "Retry",
+        "empty": "No roles or people assigned yet.",
+        "mock_note": "Demo data — the roles API is not available yet."
+    },
     "report": {
         "title": "Report",
         "menu": "Report",
@@ -363,7 +378,15 @@
         "reset_text": "We received a request to reset the password for your Lore BookForum account. Click the button below to choose a new password.",
         "reset_button": "Reset password",
         "reset_warning": "If you didn't request this, just ignore this email — your password will stay the same. The link works for a limited time.",
-        "signature": "Best regards,"
+        "signature": "Best regards,",
+        "delete_request_title": "Publication deletion request",
+        "delete_request_heading": "Publication deletion request",
+        "delete_request_hello": "Hello!",
+        "delete_request_text": "A user has requested the deletion of your publication. If you agree, confirm the deletion using the button below.",
+        "delete_request_publication": "Publication",
+        "delete_request_requester": "Requested by",
+        "delete_request_button": "Delete publication",
+        "delete_request_footer": "If you do not want to delete this publication, simply ignore this email. Nothing will be changed."
     },
     "reader": {
         "title": "Read",
@@ -631,6 +654,32 @@
         "col_text": "Text",
         "col_publication": "Publication",
         "col_created": "Created",
+        "roles_title": "System roles",
+        "roles_subtitle": "Permissions for roles across the forum",
+        "search_roles_ph": "Search roles",
+        "col_permissions": "Permissions",
+        "action_permissions": "Permissions",
+        "role_sys_perms": ":n permissions",
+        "role_modal_title": "Role permissions",
+        "role_sys_system": "System",
+        "role_sys_posts": "Posts",
+        "role_sys_pubs": "Publications",
+        "role_save": "Save",
+        "role_saved": "Permissions saved",
+        "role_load_error": "Failed to load permissions",
+        "role_card_title": "System roles",
+        "role_card_text": "Manage role permissions across the forum",
+        "role_conflict": "The role was modified elsewhere — reload the page and try again",
+        "perm_manageAccounts": "Manage accounts",
+        "perm_manageAdditionals": "Manage dictionaries",
+        "perm_managePeople": "Manage people",
+        "perm_manageRoles": "Manage roles",
+        "perm_create": "Create",
+        "perm_update": "Update",
+        "perm_delete": "Delete",
+        "perm_updateMeta": "Edit metadata",
+        "perm_updateContent": "Edit content",
+        "perm_read": "Read",
         "role_admin": "Admin",
         "role_user": "User",
         "status_active": "Active",
@@ -657,6 +706,10 @@
         "status_new": "New",
         "status_rejected": "Rejected",
         "status_deleted": "Deleted",
+        "status_all": "All statuses",
+        "filter_status": "Status",
+        "reports_loading": "Loading reports…",
+        "reports_error": "Failed to load reports",
         "action_reject": "Reject",
         "action_decide": "Review",
         "decision_title": "Report #:id",

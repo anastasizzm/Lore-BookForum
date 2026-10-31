@@ -695,6 +695,7 @@ $isDraft   = $status === 'draft';
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление книги (DELETE /api/books/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <script src="/assets/js/publication-roles.js"></script>
   <!-- rights-modal.js — плашка выбора прав (кнопка «Опубликовать книгу»
        у черновика); подключается до book.js, но порядок не важен —
        обработчики вешаются делегированием на document -->

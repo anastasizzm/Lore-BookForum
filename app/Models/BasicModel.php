@@ -10,7 +10,8 @@ readonly class BasicModel extends Dto
     public function __construct(
         public int $id,
         public string $title,
-        public DateTimeImmutable $createdAt
+        public DateTimeImmutable $createdAt,
+        public ?DateTimeImmutable $deletedAt
     ){}
 
     public function id() : mixed { return $this->id; }
@@ -20,7 +21,8 @@ readonly class BasicModel extends Dto
         return new self(
             id: self::int($row, $prefix . 'id'),
             title: self::str($row, $prefix . 'title'),
-            createdAt: self::dt($row, $prefix . 'created_at')
+            createdAt: self::dt($row, $prefix . 'created_at'),
+            deletedAt: self::dtN($row, $prefix .'deleted_at')
         );
     }
 
@@ -29,7 +31,10 @@ readonly class BasicModel extends Dto
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'createdAt' => $this->createdAt
+            'createdAt' => $this->createdAt,
+            'deletedAt' => $this->deletedAt
         ];
     }
+
+    public function isActive() : bool { return $this->deletedAt === NULL; }
 }

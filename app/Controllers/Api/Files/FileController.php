@@ -33,6 +33,7 @@ final class FileController extends Controller
     public function __construct(
         private readonly FileService $service,
         private readonly StorageSettings $settings,
+        private readonly FileStorage $storage,
         private readonly Translator $translator
     ) {}
 
@@ -63,6 +64,14 @@ final class FileController extends Controller
     {
         $file = $this->resolveFile($ctx, $fileId);
         return $this->fileResponse($file, disposition: 'inline');
+    }
+
+    public function delete(HttpContext $context, string $fileId)
+    {
+        $uuid = RouteParamParser::uuid(['u' => $fileId], 'u');
+        
+        $this->service->delete($uuid);
+        return $this->jsonEmpty(204);
     }
 
     // ---------- internals ----------

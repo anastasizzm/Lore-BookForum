@@ -35,10 +35,17 @@ final class TypesScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addConcreteTempFilter(int $id) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("types.id = :id", [':id' => ScriptParam::asInt($id)]);
+        return $this;
+    }
+
     public function addTypeSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("types.id,\ntypes.created_at")
+        $this->tempBuilder->addSelect("types.id,\ntypes.created_at,\ntypes.deleted_at")
             ->addSelect("COALESCE(
                     MAX(CASE WHEN types_translations.code = :currentCulture THEN types_translations.title END),
                     MAX(CASE WHEN types_translations.code = :fallbackCulture THEN types_translations.title END)
@@ -51,6 +58,13 @@ final class TypesScriptDirector extends ScriptDirector
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
         $this->tempBuilder->addWhere("types_translations.title ILIKE :q", [':q' => ScriptParam::asStr('%' .$search . '%')]);
+        return $this;
+    }
+
+    public function addActiveTempFilter() : self 
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere("types.is_active");
         return $this;
     }
 

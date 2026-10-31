@@ -14,6 +14,7 @@ readonly class PublicationExtended extends Publication
         int $id,
         string $title,
         DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $deletedAt,
         ?Uuid $iconId,
         int $creatorId,
         int $genreId,
@@ -29,6 +30,7 @@ readonly class PublicationExtended extends Publication
             $id, 
             $title, 
             $createdAt,
+            $deletedAt,
             $iconId, 
             $creatorId,
             $genreId,
@@ -44,6 +46,7 @@ readonly class PublicationExtended extends Publication
             title: $parent->title,
             iconId: $parent->iconId,
             createdAt: $parent->createdAt,
+            deletedAt: $parent->deletedAt,
             creatorId: $parent->getCreatorId(),
             genreId: $parent->getGenreId(),
             creator: $parent->creator,
@@ -63,7 +66,7 @@ readonly class PublicationExtended extends Publication
             'commentsCount' => $this->commentsCount,
             'savedCount' => $this->savedCount,
             'rating' => $this->rating,
-            'description' => $this->descriptions,
+            'description' => $this->description,
             'authorNotes' => $this->authorNotes
         ];
     }

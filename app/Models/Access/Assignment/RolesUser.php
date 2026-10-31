@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 namespace App\Models\Access\Assignment;
 
-use App\Models\Users\UserShortData;
+use App\Models\Users\UserMediumData;
 use App\Models\Additional\UserRole;
+use DateTimeImmutable;
 
-readonly class RolesUser extends UserShortData 
+readonly class RolesUser extends UserMediumData 
 {
     /** @param array<UserRole> $roles */
     public function __construct(
@@ -15,9 +16,12 @@ readonly class RolesUser extends UserShortData
         string  $name,
         string  $surname,
         string  $avatar,
+        string  $email,
+        DateTimeImmutable  $createdAt,
+        ?DateTimeImmutable  $deletedAt,
         public array $roles
     ) {
-        parent::__construct($id, $username, $name, $surname, $avatar);
+        parent::__construct($id, $username, $name, $surname, $avatar, $email, $createdAt, $deletedAt);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self
@@ -29,6 +33,9 @@ readonly class RolesUser extends UserShortData
             username: $parent->username,
             surname: $parent->surname,
             avatar: $parent->avatar,
+            email: $parent->email,
+            createdAt: $parent->createdAt,
+            deletedAt: $parent->deletedAt,
             roles: []
         );
     }
@@ -41,6 +48,9 @@ readonly class RolesUser extends UserShortData
             username: $this->username,
             surname: $this->surname,
             avatar: $this->avatar,
+            email: $this->email,
+            createdAt: $this->createdAt,
+            deletedAt: $this->deletedAt,
             roles: $roles
         );
     }

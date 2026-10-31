@@ -35,6 +35,7 @@ final class PostRuleProvider extends Repository implements RuleProvider
                         ON rp.role_id = ru.role_id
                         AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id")
             ->addWhere("ru.is_valid")
+            ->addWhere("p.is_active")
             ->addWhere("ru.user_id = :userId", [":userId" => ScriptParam::asInt($userId)])
             ->addWhere("ru.publication_id IS NULL")
             ->setGroup("p.id, ru.user_id");

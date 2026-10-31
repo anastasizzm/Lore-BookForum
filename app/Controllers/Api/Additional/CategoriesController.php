@@ -44,6 +44,13 @@ final class CategoriesController extends Controller
         return $this->jsonCreatedId($id);
     }
 
+    public function retrieve(HttpContext $context, string $categoryId) 
+    {
+        $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
+        $model = $this->categoriesService->retrieve($id);
+        return $this->jsonObject($model);
+    }
+
     public function update(HttpContext $context, string $categoryId)
     {
         $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
@@ -54,29 +61,11 @@ final class CategoriesController extends Controller
         return $this->jsonEmpty();
     }
 
-    /**public function delete(HttpContext $context, string $categoryId)
+    public function delete(HttpContext $context, string $categoryId)
     {
         $id = RouteParamParser::positiveInt(['id' => $categoryId], 'id');
 
-        try {
-            $deleted = $this->categoriesService->delete($id);
-        } catch (ConflictException) {
-            return $this->jsonError(
-                new \App\Models\Errors\Error(
-                    $this->translator->t('errors.common.in_use'),
-                    ErrorCodes::CONFLICT,
-                ),
-                409
-            );
-        }
-
-        if (!$deleted) {
-            throw new NotFoundException(
-                $this->translator->t('errors.common.not_found'),
-                ErrorCodes::NOT_FOUND,
-            );
-        }
-
-        return $this->jsonEmpty();
-    }**/
+        $this->categoriesService->delete($id);
+        return $this->jsonEmpty(204);
+    }
 }

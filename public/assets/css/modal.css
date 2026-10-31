@@ -18,6 +18,7 @@ body.is-modal-open {
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  overflow-y: auto;             /* высокая модалка (справочник с языками) прокручивается на 375px */
 }
 
 .modal[hidden] {
@@ -35,6 +36,7 @@ body.is-modal-open {
   position: relative;
   width: 100%;
   max-width: 400px;
+  margin: auto;                 /* центрирует, но при прокрутке не обрезает верх диалога */
   padding: var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-border);

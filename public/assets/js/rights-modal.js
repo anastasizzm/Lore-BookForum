@@ -351,6 +351,17 @@
     close();
   }
 
+  /* --------------------------------------------------------
+     ПЛАШКА РОЛЕЙ И ЛЮДЕЙ (publication-roles.js)
+     -------------------------------------------------------- */
+  function loadRolesPanel() {
+    if (!window.LorePubRoles) return;
+    var panel = root() ? root().querySelector('[data-pub-roles]') : null;
+    if (!panel) return;
+    panel.setAttribute('data-pub-roles-id', String(state.bookId || 0));
+    window.LorePubRoles.load(panel, state.bookId);
+  }
+
   function open(opts) {
     var r = root();
     if (!r) return;

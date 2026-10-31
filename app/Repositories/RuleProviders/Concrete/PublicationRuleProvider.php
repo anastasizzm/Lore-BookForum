@@ -41,6 +41,7 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
                         ON p.id = :pubId
                         AND (ru.publication_id IS NULL OR ru.publication_id = p.id)", [':pubId' => ScriptParam::asInt($entityId)])
             ->addWhere("ru.is_valid")
+            ->addWhere("p.is_active")
             ->addWhere("ru.user_id = :userId", [":userId" => ScriptParam::asInt($userId)])
             ->setGroup("p.id, ru.user_id");
 
@@ -56,7 +57,7 @@ final class PublicationRuleProvider extends Repository implements RuleProvider
     {
         $ids = array_map('intval', $entities);
 
-        if($ids = [])
+        if($ids == [])
         {
             return [];
         }

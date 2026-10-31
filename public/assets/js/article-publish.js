@@ -208,6 +208,15 @@ window.LoreArticlePublish = (function () {
     });
   }
 
+  /* ---------- плашка ролей (publication-roles.js) ---------- */
+  function loadRolesPanel() {
+    if (!window.LorePubRoles) return;
+    var panel = $('[data-pub-roles]');
+    if (!panel) return;
+    panel.setAttribute('data-pub-roles-id', String(state.articleId || 0));
+    window.LorePubRoles.load(panel, state.articleId);
+  }
+
   /* ---------- публикация ---------- */
   function submit() {
     if (state.busy) return Promise.resolve(false);
@@ -343,6 +352,7 @@ window.LoreArticlePublish = (function () {
     setStatus(t('articleform.publish_loading'));
     loadRights();
     loadUsers(1, true);
+    loadRolesPanel();
 
     if (search) { try { search.focus(); } catch (_) {} }
 

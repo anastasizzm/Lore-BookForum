@@ -11,9 +11,9 @@ use App\Lib\I18n\Translator;
 use App\Controllers\Controller;
 
 use App\Models\Error;
-use App\Models\Enums\ServiceType;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 use App\Models\Queries\PaginationQuery;
+use App\Models\Enums\ServiceType;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Attributes\Inject;
 
@@ -21,7 +21,7 @@ use App\Constants;
 use App\ErrorCodes;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditSystemPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Services\Permissions\SystemPermissionsService;
@@ -78,7 +78,7 @@ final class SystemPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
-        $form = EditPermissionForm::fromInput($context->request->body());
+        $form = EditSystemPermissionForm::fromInput($context->request->body());
         $expectedVersion = $this->requireVersion($context);
 
         if (!$this->permissionsService->canManageRole($userId, $roleId))
@@ -154,6 +154,21 @@ final class SystemPermissionsController extends Controller
         return $this->jsonEmpty(201)->withHeader('ETag', sprintf('"%d"', $version));
     }
 
+    public function removeUser(HttpContext $context, string $userId)
+    {
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $targetUserId  = RouteParamParser::positiveInt(['u' => $userId], 'u');
+
+        if (!$this->permissionsService->canManageUser($currentUserId, $targetUserId))
+            throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
+
+        $this->permissionsService->removeUser($targetUserId);
+        return $this->jsonEmpty(204);
+    }
+
     public function getUserRoles(HttpContext $context, string $userId)
     {
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
@@ -191,14 +206,13 @@ final class SystemPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
-        $roleId = RouteParamParser::optionalPositiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
 
         if (!$this->permissionsService->canManageUser($currentUserId, $userId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
-        $newVersion = $this->permissionsService->removeUserRole($userId, $roleId);
-
-        return $this->jsonEmpty(204)->withHeader('ETag', sprintf('"%d"', $newVersion));
+        $this->permissionsService->removeUserRole($userId, $roleId);
+        return $this->jsonEmpty(204);
     }
 
     /**

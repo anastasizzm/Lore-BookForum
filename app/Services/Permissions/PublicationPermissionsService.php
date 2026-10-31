@@ -16,7 +16,7 @@ use App\Exceptions\Translators\PermissionExceptionTranslator;
 use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditPublicationPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
@@ -86,7 +86,7 @@ final class PublicationPermissionsService
     public function editRole(
         int $publicationId,
         int $roleId,
-        EditPermissionForm $form,
+        EditPublicationPermissionForm $form,
         int $expectedVersion
     ): int {
         if ($form->pubPermissions === NULL)
@@ -185,7 +185,7 @@ final class PublicationPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers($publicationId, $sortEnum, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers($publicationId, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUser::class);
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
@@ -219,8 +219,8 @@ final class PublicationPermissionsService
 
     public function removeUser(int $publicationId, int $userId): void
     {
-        $versions = $this->repository->removeUser($userId, null, $publicationId);
-        if ($versions === []) {
+        $removed = $this->repository->removeUser($userId, null, $publicationId);
+        if (!$removed) {
             throw new NotFoundException($this->translator->t('errors.common.not_found'));
         }
     }
@@ -248,18 +248,17 @@ final class PublicationPermissionsService
         }
     }
 
-    public function removeUserRole(int $publicationId, int $userId, int $roleId): int
+    public function removeUserRole(int $publicationId, int $userId, int $roleId): void
     {
-        return $this->uow->transactional(function () use ($userId, $roleId, $publicationId) : int {
+        $this->uow->transactional(function () use ($userId, $roleId, $publicationId) {
             $rolesCount = $this->repository->countUserRoles($publicationId, $userId);
             if ($rolesCount < 2)
                 throw new ConflictException($this->translator->t('errors.roles.last_role'));
         
-            $versions = $this->repository->removeUser($userId, $roleId, $publicationId);
-            if ($versions === []) {
+            $removed = $this->repository->removeUser($userId, $roleId, $publicationId);
+            if (!$removed) {
                 throw new NotFoundException($this->translator->t('errors.common.not_found'));
             }
-            return $versions[0];
         });
     }
 

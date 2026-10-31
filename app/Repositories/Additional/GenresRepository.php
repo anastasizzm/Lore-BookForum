@@ -11,6 +11,7 @@ use App\Models\BasicModel;
 use App\Models\Enums\BasicModelSortBy;
 use App\Models\Scripts\ScriptParam;
 use App\Services\Configuration\UnitOfWork;
+use PDO;
 
 final class GenresRepository extends Repository
 {
@@ -32,7 +33,9 @@ final class GenresRepository extends Repository
         ?string $search = NULL,
     ) : array
     {
-        $this->director->startTempFilter()->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback());
+        $this->director->startTempFilter()
+            ->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter();
 
         if (!empty($search))
             $this->director->addSearchTempFilter($search);
@@ -49,6 +52,20 @@ final class GenresRepository extends Repository
         );
 
         return $items;
+    }
+
+    public function retrieve(int $genreId) : ?BasicModel 
+    {
+        $this->director->startTempFilter()
+            ->addGenreSelectTemp($this->translator->locale(), $this->translator->fallback())
+            ->addActiveTempFilter()
+            ->addConcreteTempFilter($genreId)->setLimitTemp(1);
+
+        $data = $this->director->buildTempFilter();
+        $stmt = $this->executeScript($data);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row === false ? NULL : BasicModel::fromRow($row);
     }
 
     public function create(array $translations) : int
@@ -146,7 +163,7 @@ final class GenresRepository extends Repository
 
     public function delete(int $id) : bool
     {
-        $stmt = $this->execute('DELETE FROM genres WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
+        $stmt = $this->execute('UPDATE genres SET deleted_at = NOW() WHERE id = :id', [':id' => ScriptParam::asInt($id)]);
         return $stmt->rowCount() > 0;
     }
 }
