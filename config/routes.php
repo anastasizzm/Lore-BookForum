@@ -14,15 +14,19 @@ use App\Models\Access\Operations\Publications\UpdateMetaPublicationOperation;
 use App\Models\Access\Operations\Publications\UpdateContentPublicationOperation;
 use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
+use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
+use App\Models\Access\Operations\Publications\ControlPublicationOperation;
 use App\Models\Access\Operations\Posts\CreatePostOperation;
 use App\Models\Access\Operations\Posts\DeletePostOperation;
 use App\Models\Access\Operations\Posts\UpdatePostOperation; 
+use App\Models\Access\Operations\Posts\ControlPostOperation; 
 use App\Models\Access\Operations\Account\BlockAccountOperation;
 use App\Models\Access\Operations\Account\ManageAccountOperation; 
 use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
 use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
 use App\Models\Access\Operations\System\ManageRolesSystemOperation;
+use App\Models\Access\Operations\System\AnySystemOperation;
 
 return function(Router $router)
 {
@@ -62,7 +66,7 @@ return function(Router $router)
     $router->post('/auth/password-reset/submit', [App\Controllers\Auth\AccountController::class, 'passwordReset'], 'password.reset.submit', AuthPolicy::Public);
 
     // Feed
-    $router->get('/', [App\Controllers\Feed\FeedController::class, 'list'], 'home', AuthPolicy::Auth);
+    $router->get('/', [App\Controllers\Posts\PostsController::class, 'list'], 'home', AuthPolicy::Auth);
 
 
     // Publications
@@ -94,4 +98,16 @@ return function(Router $router)
     // Additional
     $router->get('/help', [App\Controllers\Additional\HelpController::class, 'getHelp'], 'help', AuthPolicy::Public);
     $router->get('/privacy', [App\Controllers\Additional\HelpController::class, 'getPrivacy'], 'privacy', AuthPolicy::Public);
+
+
+    // Admin
+    $router->get('/admin', [App\Controllers\Additional\AdminPanelController::class, 'dashboard'], 'admin', AuthPolicy::Admin);
+    $router->get('/admin/articles', [App\Controllers\Publications\ArticlesController::class, 'adminList'], 'admin.articles', ControlPublicationOperation::class);
+    $router->get('/admin/books', [App\Controllers\Publications\BooksController::class, 'adminList'], 'admin.books', ControlPublicationOperation::class);
+    $router->get('/admin/categories', [App\Controllers\Additional\AdminPanelController::class, 'categories'], 'admin.categories', ManageAdditionalsSystemOperation::class);
+    $router->get('/admin/genres', [App\Controllers\Additional\AdminPanelController::class, 'genres'], 'admin.genres', ManageAdditionalsSystemOperation::class);
+    $router->get('/admin/types', [App\Controllers\Additional\AdminPanelController::class, 'types'], 'admin.types', ManageAdditionalsSystemOperation::class);
+    $router->get('/admin/posts', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.posts', ControlPostOperation::class);
+    $router->get('/admin/users', [App\Controllers\Additional\AdminPanelController::class, 'getUsers'], 'admin.users', ManagePeopleSystemOperation::class);
+    $router->get('/admin/roles', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.roles', ManageRolesSystemOperation::class);
 };

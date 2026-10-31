@@ -227,11 +227,15 @@ class PermissionsRepository extends Repository
         $builder->addWithBuilder("users_ids", $innerBuilder)
             ->addSelect("u.id,
                 \nu.username,
+                \nu.email,
+                \nu.created_at,
+                \nu.deleted_at,
                 \np.name,
                 \np.surname,
                 \np.avatar")
             ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
             ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
+            ->addWhere("u.is_active")
             ->setOrder(
                 match($sort)
                 {
@@ -241,7 +245,6 @@ class PermissionsRepository extends Repository
                 }
             )
             ->setLimit($pageSize+1, ($page-1)*$pageSize);
-
 
         $stmt = $this->execute($builder->build(), $builder->getParams());
         $items = array_map(
@@ -262,7 +265,7 @@ class PermissionsRepository extends Repository
     }
 
     /** @return array<UserRole> */
-    private function acceptUsersRoles(array $usersIds, ?int $publicationId) : array 
+    private function acceptUsersRoles(array $userIds, ?int $publicationId) : array 
     {
         $builder = ScriptBuilder::withTable("roles_users", "ru");
         $builder->addSelect("ru.user_id,

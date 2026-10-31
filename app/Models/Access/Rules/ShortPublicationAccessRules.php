@@ -14,6 +14,7 @@ use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 use App\Models\Access\Operations\Publications\AnyPublicationOperation;
+use App\Models\Access\Operations\Publications\ControlPublicationOperation;
 
 use App\Forms\Form;
 use App\Models\RowModel;
@@ -48,6 +49,8 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
             $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
             $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
             $operation instanceof AnyPublicationOperation => $this->hasAny(),
+            $operation instanceof ControlPublicationOperation => $this->updateMeta || $this->updateContent || $this->read,
+            $operation instanceof ControlRPPublicationOperation => $this->manageRoles || $this->managePeople,
             default => false,
         };
     }
@@ -98,7 +101,7 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
         ];
     }
 
-    public static function fromArray(array $data): static
+    public static function fromArray(array $data): self
     {
         return new self (
             create: (bool)($data['create'] ?? false),

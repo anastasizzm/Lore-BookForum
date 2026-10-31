@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace App\Controllers\Feed;
+namespace App\Controllers\Posts;
 
 use App\Controllers\Controller;
 
@@ -22,7 +22,7 @@ use App\Exceptions\ValidationException;
 
 use App\Constants;
 
-final class FeedController extends Controller
+final class PostsController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
@@ -57,6 +57,39 @@ final class FeedController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('feed/feed-list', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext
+            ]);
+        }
+    }
+
+    public function adminList(HttpContext $context){
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $userContext = $this->usersService->loadContext($userId);
+        $q = $context->request->query;
+        try{
+            $query = new PostsListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator+publication"),
+                filters: PostsFilters::fromInput($q),
+            );
+            $paginatedList = $this->postsService->getListWithContext($query, $userId);
+            return $this->render('admin/comments', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext()
+                ], 
+                'user' => $userContext
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('admin/comments', [
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext
             ]);

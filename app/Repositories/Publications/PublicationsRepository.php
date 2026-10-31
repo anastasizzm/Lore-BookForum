@@ -325,6 +325,13 @@ abstract class PublicationsRepository extends Repository
                         ->addSelect("creator_include.*");
                     break;
 
+                case 'owner':
+                    $includeBuilder = $this->createOwnerIncludeBuilder($dataCteName);
+                    $builder->addWithBuilder("owner_include", $includeBuilder)
+                        ->addJoin("LEFT JOIN owner_include ON owner_include.o_id = $dataCteName.owner_id")    
+                        ->addSelect("owner_include.*");
+                    break;
+
                 case 'genre':
                     $includeBuilder = $this->createGenreIncludeBuilder($dataCteName);
                     $builder->addWithBuilder("genre_include", $includeBuilder)
@@ -346,6 +353,17 @@ abstract class PublicationsRepository extends Repository
             ->addWhere("users.id IN (SELECT creator_id FROM $dataCteName)")
             ->addSelect("users.id as u_id,\nusers.username as u_username")
             ->addSelect("profiles.name as u_name,\nprofiles.surname as u_surname,\nprofiles.avatar as u_avatar");
+
+        return $builder;
+    }
+
+    private function createOwnerIncludeBuilder(string $dataCteName) : ScriptBuilder
+    {
+        $builder = ScriptBuilder::withTable("users");
+        $builder->addJoin("INNER JOIN profiles ON profiles.user_id = users.id")
+            ->addWhere("users.id IN (SELECT owner_id FROM $dataCteName)")
+            ->addSelect("users.id as o_id,\nusers.username as o_username")
+            ->addSelect("profiles.name as o_name,\nprofiles.surname as o_surname,\nprofiles.avatar as o_avatar");
 
         return $builder;
     }

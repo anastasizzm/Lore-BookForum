@@ -77,6 +77,44 @@ final class ArticlesController extends Controller
         }    
     }
 
+    public function adminList(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $q = $context->request->query;
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $query = new ArticlesListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator+owner+genre"),
+                filters: ArticlesFilters::fromPublic($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId),
+                viewerId: $userId
+            );
+    
+            $paginatedList = $this->articlesService->getListWithContext($query);
+            return $this->render('admin/articles', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'article'
+                ], 
+                'user' => $userContext,
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('admin/articles', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+            ]);
+        }    
+    }
+
     public function draftList(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))

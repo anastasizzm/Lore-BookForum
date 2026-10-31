@@ -9,6 +9,9 @@ use App\Policies\Auth\AuthenticatedRequirement;
 use App\Policies\Verified\VerifiedHandler;
 use App\Policies\Verified\VerifiedRequirement;
 
+use App\Policies\Access\AdminHandler;
+use App\Policies\Access\AdminRequirement;
+
 use App\Policies\Access\AccessHandler;
 use App\Policies\Access\System\SystemAccessRequirement;
 use App\Policies\Access\Post\PostAccessRequirement;
@@ -17,6 +20,7 @@ use App\Policies\Access\Account\AccountAccessRequirement;
 
 $registry->registerPolicy(AuthPolicy::Auth, fn($ctx) => new AuthenticatedRequirement(), AuthenticatedHandler::class);
 $registry->registerPolicy(AuthPolicy::Verified, fn($ctx) => new VerifiedRequirement(), VerifiedHandler::class);
+$registry->registerPolicy(AuthPolicy::Admin, fn($ctx) => new AdminRequirement(), AdminHandler::class);
 
 // Concrete Access
 define('PUB_PATTERN_CONCRETE', "#(?:books|articles|publications)\/(\d+)#");
@@ -34,6 +38,8 @@ foreach([
             App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation::class,
             App\Models\Access\Operations\Publications\ManageRolesPublicationOperation::class,
             App\Models\Access\Operations\Publications\AnyPublicationOperation::class,
+            App\Models\Access\Operations\Publications\ControlPublicationOperation::class,
+            App\Models\Access\Operations\Publications\ControlRPPublicationOperation::class,
         ]
     ],
 
@@ -42,6 +48,7 @@ foreach([
         'operations' => [
             App\Models\Access\Operations\Posts\DeletePostOperation::class,
             App\Models\Access\Operations\Posts\UpdatePostOperation::class,
+            App\Models\Access\Operations\Posts\ControlPostOperation::class,
         ]
     ],
 

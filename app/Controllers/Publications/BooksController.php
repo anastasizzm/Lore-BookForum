@@ -82,6 +82,43 @@ final class BooksController extends Controller
         }
     }
 
+    public function adminList(HttpContext $context){
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $q = $context->request->query;
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $query = new BooksListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator+genre+owner"),
+                filters: BooksFilters::fromPublic($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId),
+                viewerId: $userId
+            );
+
+            $paginatedList = $this->booksService->getListWithContext($query);
+            return $this->render('admin/books', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'book'
+                ], 
+                'user' => $userContext,
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('admin/books', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+            ]);
+        }
+    }
+
     public function draftList(HttpContext $context)
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);

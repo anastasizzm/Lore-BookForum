@@ -14,6 +14,7 @@ use App\Models\Access\Operations\Publications\ReadPublicationOperation;
 use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 use App\Models\Access\Operations\Publications\AnyPublicationOperation;
+use App\Models\Access\Operations\Publications\ControlPublicationOperation;
 
 use App\Forms\Form;
 use App\Models\RowModel;
@@ -28,7 +29,9 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
         bool $managePeople,
         bool $manageRoles,
         public bool $delete,
-    ){}
+    ){
+        parent::__construct($create, $updateMeta, $updateContent, $read, $managePeople, $manageRoles);
+    }
 
     public function hasAny() : bool 
     {
@@ -39,6 +42,7 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
     {
         return match(true) {
             $operation instanceof DeletePublicationOperation => $this->delete,
+            $operation instanceof ControlPublicationOperation => $this->updateMeta || $this->updateContent || $this->delete || $this->read,
             default => parent::allows($operation),
         };
     }
@@ -85,7 +89,7 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
         ];
     }
 
-    public static function fromArray(array $data): static
+    public static function fromArray(array $data): self
     {
         $parent = parent::fromArray($data);
         return new self (
