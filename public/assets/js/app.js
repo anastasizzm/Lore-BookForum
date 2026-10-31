@@ -205,11 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
 
-  // ===== 8. System rules: показ/скрытие элементов по GET /api/system/rules =====
-  // Пункты с data-system-rule="<flag>" рендерятся скрытыми и открываются,
-  // когда бэк подтверждает право. Ответ кеширует LoreRules (один GET на
-  // страницу). Права не пришли — элемент остаётся скрытым: это только
-  // видимость, реальный доступ всегда проверяет бэк (политика роута).
+  // ===== 8. System rules =====
   (function initSystemRules() {
     var items = document.querySelectorAll('[data-system-rule]');
     if (!items.length) return;
@@ -366,5 +362,130 @@ document.addEventListener('DOMContentLoaded', () => {
     ).forEach(function (img) {
       if (img.complete && img.naturalWidth === 0) mark(img);
     });
+  });
+})();
+
+/* ===== Drafts: publish / delete ===== */
+(function () {
+  var t = function (key, params) {
+    return window.LoreI18n ? LoreI18n.t(key, params) : key;
+  };
+
+  var busy = new WeakSet();
+
+  function csrfValue() {
+    var fromCookie = window.LoreCsrf ? window.LoreCsrf.token() : '';
+    if (fromCookie) return fromCookie;
+    var el = document.querySelector('input[type="hidden"][name="_token"]');
+    return el ? el.value : '';
+  }
+
+  function toast(text) {
+    if (window.Messages) { window.Messages.show(text, { type: 'error' }); return; }
+    var el = document.createElement('div');
+    el.setAttribute('role', 'alert');
+    el.textContent = text;
+    el.style.cssText =
+      'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+      'background:#222;color:#fff;padding:10px 16px;border-radius:8px;' +
+      'font-size:14px;z-index:1000;max-width:90vw;';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 3500);
+  }
+
+  function request(url, method) {
+    var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+    var body = new URLSearchParams();
+    var token = csrfValue();
+    if (token) {
+      headers['X-CSRF-Token'] = token;
+      body.set('_token', token);
+    }
+    return fetch(url, {
+      method: method,
+      credentials: 'same-origin',
+      headers: headers,
+      body: body
+    });
+  }
+
+  function dropCard(card) {
+    if (!card) return;
+    var grid = card.parentElement;
+    card.remove();
+
+    var countEl = document.querySelector('[data-library-count]') ||
+                  document.querySelector('[data-drafts-count]');
+    if (countEl) {
+      var n = Math.max(0, (parseInt(countEl.textContent, 10) || 0) - 1);
+      countEl.textContent = String(n);
+    }
+
+    if (grid && !grid.querySelector('[data-draft-id]')) {
+      var empty = document.querySelector('[data-library-empty]');
+      if (empty) {
+        empty.hidden = false;
+      } else {
+        var p = document.createElement('p');
+        p.className = 'empty-state__text';
+        p.textContent = t('common.drafts.empty_books');
+        grid.replaceWith(p);
+      }
+    }
+  }
+
+  async function handle(btn, kind) {
+    if (busy.has(btn) || btn.disabled) return;
+    var card = btn.closest('[data-draft-id]');
+    var url = btn.dataset.draftUrl || '';
+    if (!card || !url) {
+      toast(t('errors.common.request_failed', { status: 0 }));
+      return;
+    }
+
+    if (kind === 'delete') {
+      var msg = btn.dataset.confirm || t('common.drafts.delete_confirm', { title: '' });
+      if (!window.confirm(msg)) return;
+    }
+
+    busy.add(btn);
+    btn.disabled = true;
+    card.classList.add('is-busy');
+
+    try {
+      var res = await request(url, kind === 'delete' ? 'DELETE' : 'POST');
+
+      var raw = '';
+      try { raw = await res.text(); } catch (_) { raw = ''; }
+      var data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      var htmlBody = /^\s*</.test(raw);
+
+      if (res.ok && !htmlBody) {
+        dropCard(card);
+        btn.dispatchEvent(new CustomEvent('draft:' + kind + 'ed', {
+          bubbles: true,
+          detail: { id: Number(card.dataset.draftId), type: card.dataset.draftType }
+        }));
+      } else {
+        var fallback = t('errors.common.request_failed', { status: res.status });
+        toast(window.Messages
+          ? window.Messages.describe(res.status, data, raw, fallback)
+          : fallback);
+      }
+    } catch (err) {
+      toast(t('errors.common.network_error'));
+    } finally {
+      busy.delete(btn);
+      btn.disabled = false;
+      card.classList.remove('is-busy');
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var pub = e.target.closest('[data-draft-publish]');
+    if (pub) { e.preventDefault(); handle(pub, 'publish'); return; }
+    var del = e.target.closest('[data-draft-delete]');
+    if (del) { e.preventDefault(); handle(del, 'delete'); }
   });
 })();

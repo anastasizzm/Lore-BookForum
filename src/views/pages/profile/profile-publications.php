@@ -62,6 +62,10 @@ $link = static function (?int $pageN) use ($q, $userId, $isArticles, $withLang):
     return $withLang($base . ($qs !== '' ? '?' . $qs : ''));
 };
 
+// Имя параметра, которым API (/api/books, /api/articles) фильтрует публикации по автору.
+// Если здесь неверное имя, filters.js заметит чужие публикации в ответе и просто загрузит страницу обычным способом.
+$apiUserParam = 'creatorId';
+
 $view->setBlock('selectedTab', 'profile');
 ?>
 
@@ -104,7 +108,12 @@ $view->include('library-filters', [
 ]);
 ?>
 
-<section class="books-panel">
+<section class="books-panel"
+         data-list="profile"
+         data-list-hydrate
+         data-list-user="<?= (int) $userId ?>"
+         data-list-user-param="<?= $view->e($apiUserParam) ?>"
+         data-list-name="<?= $view->e($userName) ?>">
 
   <header class="books-panel__head">
     <div class="books-panel__title-wrap">
@@ -131,23 +140,22 @@ $view->include('library-filters', [
       </div>
       <div>
         <h2 class="books-panel__title"><?= $view->e($userName) ?></h2>
-        <p class="books-panel__meta"><?= $view->e(count($items ?? [])) ?> <?= $tr('common.common.items') ?></p>
+        <p class="books-panel__meta"><span><?= $view->e(count($items ?? [])) ?></span> <?= $tr('common.common.items') ?></p>
       </div>
     </div>
+
+    <?php $view->include('list-sort'); ?>
   </header>
 
-  <?php if (empty($items)): ?>
-
-    <div class="empty-state">
+  <?php /* empty-state и сетка рендерятся всегда: filters.js переключает их без перезагрузки */ ?>
+    <div class="empty-state" <?= empty($items) ? '' : 'hidden' ?>>
       <p class="empty-state__text">
         <?= $isArticles ? $tr('common.library.no_articles') : $tr('common.library.no_books') ?>
       </p>
     </div>
 
-  <?php else: ?>
-
-    <div class="grid-books">
-      <?php foreach ($items as $item): ?>
+    <div class="grid-books" <?= empty($items) ? 'hidden' : '' ?>>
+      <?php foreach (($items ?? []) as $item): ?>
         <?php
           $year = $item->createdAt ? $item->createdAt->format('Y') : '';
 
@@ -180,8 +188,6 @@ $view->include('library-filters', [
       <?php endforeach; ?>
     </div>
 
-  <?php endif; ?>
-
   <?php if ($page > 1 || $hasNext): ?>
     <nav class="books-panel__pager" aria-label="<?= $tr('common.common.pagination') ?>">
       <?php if ($page > 1): ?>
@@ -198,3 +204,7 @@ $view->include('library-filters', [
 </section>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+<script src="<?= $view->asset('js/filters.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

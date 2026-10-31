@@ -1,7 +1,22 @@
 "use strict";
 
 /* ============================================
-   Поиск в ленте по НАЗВАНИЮ КНИГИ.
+   Поиск в ленте по НАЗВАНИЮ КНИГИ (серверный).
+
+   Фильтрация перенесена на бэк: GET /api/posts?q=<query>&page=<n>
+   с Accept: text/html + X-Requested-With: XMLHttpRequest возвращает
+   HTML-фрагмент .feed-panel (только релевантные карточки + pager).
+   Клиент больше НЕ фильтрует карточки и НЕ ограничен MAX_PAGES —
+   пагинация серверная, hasNext берётся из .feed-panel__load-more a.
+
+   Бэк-контракт (config/endpoints.php: api.post → PostsController::list):
+     - принимает q и page;
+     - фильтрует по publication.title (сохраняем семантику старого
+       клиентского поиска: искали именно .card-feed__book-title,
+       а не текст поста);
+     - при Accept: text/html / X-Requested-With возвращает
+       фрагмент .feed-panel .stack > .card-feed (+ pager);
+     - при Accept: application/json возвращает { items, meta:{page,hasNext} }.
    ============================================ */
 
 window.LoreFeedSearch = (function () {
@@ -14,8 +29,7 @@ window.LoreFeedSearch = (function () {
       : url;
   };
 
-  var MAX_PAGES = 20;
-  var state = { q: '', page: 1, hasNext: false, busy: false };
+  var state = { q: '', original: '', page: 1, hasNext: false, busy: false };
 
   function ensurePanel() {
     var panel = document.querySelector('.feed-panel');
@@ -49,9 +63,10 @@ window.LoreFeedSearch = (function () {
 
   function pageUrl(page) {
     var p = new URLSearchParams();
+    p.set('q', state.original);
     if (page > 1) p.set('page', String(page));
-    var qs = p.toString();
-    return withLang(location.pathname + (qs ? '?' + qs : ''));
+    if (window.LoreI18n && LoreI18n.locale) p.set('lang', LoreI18n.locale);
+    return withLang('/api/posts?' + p.toString());
   }
 
   function notify(text) {
@@ -60,7 +75,13 @@ window.LoreFeedSearch = (function () {
   }
 
   function fetchPage(page) {
-    return fetch(pageUrl(page), { credentials: 'same-origin' })
+    return fetch(pageUrl(page), {
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'text/html',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
       .then(function (res) {
         if (res.ok) return res.text();
         var reading = window.Messages
@@ -75,17 +96,13 @@ window.LoreFeedSearch = (function () {
       .then(function (html) {
         var doc = new DOMParser().parseFromString(html, 'text/html');
         return {
+          // Сервер уже отфильтровал — берём все карточки как есть.
           cards: Array.prototype.slice.call(
             doc.querySelectorAll('.feed-panel .stack > .card-feed')
           ),
           hasNext: !!doc.querySelector('.feed-panel__load-more a'),
         };
       });
-  }
-
-  function matches(card) {
-    var title = card.querySelector('.card-feed__book-title');
-    return !!title && title.textContent.toLowerCase().indexOf(state.q) !== -1;
   }
 
   function scan(page, replace) {
@@ -100,12 +117,12 @@ window.LoreFeedSearch = (function () {
 
     function step(n) {
       return fetchPage(n).then(function (data) {
-        data.cards.filter(matches).forEach(function (card) {
+        data.cards.forEach(function (card) {
           target.appendChild(card);
         });
         state.hasNext = data.hasNext;
         state.page = n;
-        if (data.hasNext && n < MAX_PAGES) return step(n + 1);
+        if (data.hasNext) return step(n + 1);
         return null;
       });
     }
