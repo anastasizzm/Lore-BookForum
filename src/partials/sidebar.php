@@ -52,7 +52,9 @@
   $adminUrl     = '/admin'
       . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
 
-  $draftsUrl = $urlPath('/books?p_status=draft');
+  // «Черновики» ведут на роут books.drafts — по умолчанию открываются книги.
+  // Переключение на статьи — внутри страницы (articles.drafts).
+  $draftsUrl = $url('books.drafts');
 ?>
 <aside class="sidebar" data-sidebar>
     <nav class="sidebar-nav">
