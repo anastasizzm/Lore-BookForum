@@ -1,0 +1,74 @@
+/* ============================================
+   TABLE — таблицы админки
+   ============================================ */
+.admin-table-wrap {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden; /* только список растёт вниз; своей вертикальной прокрутки у таблицы нет */
+  -webkit-overflow-scrolling: touch;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+}
+
+.admin-table caption {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.admin-table th,
+.admin-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-table thead th {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.admin-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--color-bg-main);
+}
+
+.admin-table__id {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.admin-table__clip {
+  display: block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-table__empty td {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+}

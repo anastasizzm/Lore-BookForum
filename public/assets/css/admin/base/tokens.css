@@ -1,0 +1,7 @@
+/* Локальные токены статусов админки */
+:root {
+  --admin-success: #2F9E44;
+  --admin-success-bg: #E7F5EC;
+  --admin-danger-bg: #FDECEC;
+  --admin-warning-bg: #FCF3E3;
+}

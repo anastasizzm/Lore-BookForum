@@ -1,0 +1,155 @@
+/* ============================================
+   ROLES DND & DRAG HANDLE
+   ============================================ */
+.admin-table__drag {
+  width: 44px;
+  padding-right: 0;
+}
+
+.admin-role__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm, 6px);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.admin-role__handle:hover {
+  color: var(--color-text);
+  background: var(--color-bg-secondary);
+}
+
+.admin-role__handle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.admin-role__handle.is-locked {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.admin-role__handle.is-locked:hover {
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+[data-roles-dnd="off"] .admin-role__handle {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.admin-table tbody tr.is-lock-end td {
+  border-bottom: 2px solid var(--color-border);
+}
+
+.admin-table tbody tr.is-lock-start td {
+  border-top: 2px solid var(--color-border);
+}
+
+.admin-table tbody tr.is-dragging td {
+  opacity: 0.35;
+}
+
+.admin-table tbody tr.is-pending .admin-role__title {
+  opacity: 0.6;
+}
+
+.admin-role-ghost {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.18));
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.admin-role-ghost__grip {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+.admin-role-dropline {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 2px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.admin-role-dropline::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+.admin-role-dropline[hidden] { display: none; }
+
+.admin-role-insert {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: #fff;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.admin-role-insert svg {
+  display: block;
+  pointer-events: none;
+}
+
+.admin-role-insert:hover { filter: brightness(1.1); }
+.admin-role-insert:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.admin-role-insert[hidden] { display: none; }
+
+body.is-role-dragging,
+body.is-role-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Нижняя граница списка: список растёт вниз, чтобы кружок «+» поместился */
+.admin-table-wrap.is-insert-tail {
+  padding-bottom: 14px;
+}

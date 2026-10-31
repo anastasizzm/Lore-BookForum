@@ -1,0 +1,226 @@
+/* ============================================
+   ROLES — системные роли, элементы и модалка
+   ============================================ */
+.admin-role__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fw-medium);
+}
+
+.admin-role__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+
+.admin-role__dialog {
+  max-width: 520px;
+}
+
+.admin-role__loading {
+  margin: var(--space-3) 0;
+  color: var(--color-text-muted);
+}
+
+.admin-role__group {
+  margin-bottom: var(--space-3);
+}
+
+.admin-role__group-title {
+  display: block;
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.admin-role__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+
+.admin-role__perm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  cursor: pointer;
+}
+
+.admin-role__perm input {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent, currentColor);
+  cursor: pointer;
+}
+
+.admin-role__perm span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-role__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+/* Дропдаун выбора роли в модалке прав (кнопка «+» на странице roles) */
+.admin-role__dropdown {
+  margin-bottom: var(--space-3);
+}
+
+.admin-role__dd {
+  position: relative;
+}
+
+.admin-role__dd-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  text-align: left;
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.admin-role__dd-toggle:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.admin-role__dd-toggle:focus-visible,
+.admin-role__dd.is-open .admin-role__dd-toggle {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.admin-role__dd-toggle:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+.admin-role__dd-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.admin-role__dd-value.is-placeholder {
+  color: var(--color-text-muted);
+}
+
+.admin-role__dd-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-role__dd-chevron {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  transition: transform .15s;
+}
+
+.admin-role__dd.is-open .admin-role__dd-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-role__dd-menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+
+.admin-role__dd-menu[hidden] {
+  display: none;
+}
+
+.admin-role__dd-search {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  margin: 0 0 6px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  background: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-sm, 8px);
+}
+
+.admin-role__dd-search:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.admin-role__dd-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-role__dd-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+}
+
+.admin-role__dd-item:hover,
+.admin-role__dd-item:focus-visible {
+  outline: none;
+  background: var(--color-bg-secondary);
+}
+
+.admin-role__dd-item.is-selected {
+  font-weight: var(--fw-medium);
+  color: var(--color-primary);
+  background: var(--color-bg-secondary);
+}
+
+.admin-role__dd-note {
+  padding: 9px 10px;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}

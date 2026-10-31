@@ -1,0 +1,22 @@
+/* ============================================
+   ACTIONS — кнопки действий
+   ============================================ */
+.admin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.admin-actions .btn {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-small);
+}
+
+.admin-note {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
