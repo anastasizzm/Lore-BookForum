@@ -1,42 +1,13 @@
 <?php
 /**
- * admin/roles — страница системных ролей админки (список + окна прав и создания).
- *
- * Данных на странице нет: здесь только каркас таблицы. Строки рисует
- * public/assets/js/admin.js (раздел ROLES) по ответу GET /api/system/roles —
- * там же считается число прав и подбирается форма слова («1 правило / 2 правила / 5 правил»).
- * Пока список грузится, под шапкой показывается статус (data-roles-status),
- * при ошибке — её текст.
- *
- * КОНТРАКТ:
- *   GET  /api/system/roles          -> { items: [ { role: {id,title,color,createdAt},
- *                                                  systemPermissions: {...},
- *                                                  postPermissions: {...},
- *                                                  pubPermissions: {...},
- *                                                  canManage, version } ] }
- *   POST /api/system/roles          -> создание (тело: translations, visibility, color;
- *                                      visibility по умолчанию 'public')
- *   GET  /api/system/roles?q=…      -> серверный поиск (только по Enter)
- *   PUT  /api/system/roles/{roleId} -> 200, заголовок ETag: "newVersion"
- *          headers: If-Match: "version"
- *          body: { systemPermissions: {...}, postPermissions: {...},
- *                  pubPermissions: {...} }
- *   DELETE /api/system/roles/{roleId} -> удаление, headers: If-Match: "version"
- *
- * Группы прав (ключи бэка — см. SystemAccessRules / PostAccessRules /
- * PublicationAccessRules::toArray):
- *   system: manageAccounts, manageAdditionals, managePeople, manageRoles
- *   posts:  create, update, delete
- *   pubs:   create, updateMeta, updateContent, delete, read,
- *           managePeople, manageRoles
- *
- * Стили — public/assets/css/admin.css (.admin-table, .admin-badge,
- * .admin-role__*), каркас .modal — modal.css.
- * Логика — public/assets/js/admin.js (раздел ROLES).
+ * admin/roles — страница системных ролей админки.
  */
-
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+$tx = static function (string $key, string $fallback) use ($view): string {
+    $value = $view->t($key);
+    return $view->e(($value === '' || $value === $key) ? $fallback : $value);
+};
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -54,50 +25,42 @@ $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $
     'subtitle' => $view->t('common.admin.roles_subtitle'),
 ]); ?>
 
-<!-- Загрузка списка / ошибка GET /api/system/roles (заполняет admin.js) -->
 <p class="admin-toolbar__status" data-roles-status role="status" aria-live="polite"><?= $tr('common.admin.roles_loading') ?></p>
 
-<div class="admin-toolbar">
-  <input class="admin-toolbar__search"
-         type="search"
-         name="q"
-         data-admin-search
-         placeholder="<?= $tr('common.admin.search_roles_ph') ?>"
-         aria-label="<?= $tr('common.admin.search_roles_ph') ?>"
-         enterkeyhint="search"
-         autocomplete="off">
+<div class="admin-toolbar admin-toolbar--end">
   <button type="button"
           class="btn btn--primary admin-toolbar__add admin-toolbar__add--icon"
-          data-rolenew-open
-          title="<?= $tr('common.admin.role_new_title') ?>"
-          aria-label="<?= $tr('common.admin.role_new_title') ?>">+</button>
-  <span class="admin-toolbar__count" data-admin-count>0</span>
+          data-role-add
+          title="<?= $tx('common.admin.role_attach_title', 'Add role to project') ?>"
+          aria-label="<?= $tx('common.admin.role_attach_title', 'Add role to project') ?>">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="9" y1="3" x2="9" y2="15"></line>
+      <line x1="3" y1="9" x2="15" y2="9"></line>
+    </svg>
+  </button>
 </div>
 
 <div class="admin-table-wrap">
   <table class="admin-table" data-admin-table="roles" data-roles-table>
     <thead>
       <tr>
+        <th scope="col" class="admin-table__drag" aria-label="<?= $tx('common.admin.role_drag', 'Drag to reorder') ?>"></th>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
         <th scope="col"><?= $tr('common.admin.col_role') ?></th>
         <th scope="col"><?= $tr('common.admin.col_permissions') ?></th>
         <th scope="col"><?= $tr('common.admin.col_delete') ?></th>
       </tr>
     </thead>
-    <!-- Строки добавляет admin.js после GET /api/system/roles; здесь — только строка «пусто» -->
     <tbody data-roles-rows>
       <tr class="admin-table__empty" data-admin-empty hidden>
-        <td colspan="4"><?= $tr('common.admin.empty') ?></td>
+        <td colspan="5"><?= $tr('common.admin.empty') ?></td>
       </tr>
     </tbody>
   </table>
 </div>
 
-<!-- Модалка прав роли: три группы чекбоксов (system / posts / pubs) -->
+<!-- Модалка прав роли / добавления роли в проект -->
 <?php $view->include('admin-role-modal'); ?>
-
-<!-- Окно «Новая роль»: название, языки, Private/Public (по умолчанию Public), цвет, Save / Permissions -->
-<?php $view->include('admin-role-create-modal'); ?>
 
 <?php $view->endBlock('content'); ?>
 

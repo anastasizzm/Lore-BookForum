@@ -3,9 +3,7 @@
  * partials/admin-role-create-modal — окно «Новая роль» (admin/roles).
  *
  * Логика — public/assets/js/admin.js (раздел ROLE CREATE).
- * Поля: название (EN) → «+ язык» → Private/Public → цвет → Save / Permissions.
- * Дропдаун языков наполняется из GET /api/additional/languages минус
- * языки, на которых название уже введено.
+ * Поля: название (EN) → «+ язык» → Private/Public → цвет → Save.
  */
 
 // Если ключа перевода ещё нет, показываем запасной текст, а не сам ключ.
@@ -79,10 +77,7 @@ $colors = ['#D64545', '#1C7ED6', '#2F9E44', '#F08C00', '#7048E8', '#0CA678', '#D
 
       <div class="admin-rolenew__footer">
         <button type="submit" class="btn admin-rolenew__save" data-rolenew-submit="save">
-          <?= $tx('common.admin.role_save', 'Save') ?>
-        </button>
-        <button type="button" class="btn admin-rolenew__perm" data-rolenew-submit="permissions">
-          <?= $tx('common.admin.action_permissions', 'Permissions') ?>
+          <?= $tx('common.admin.role_save_only', 'Save') ?>
         </button>
       </div>
     </form>
