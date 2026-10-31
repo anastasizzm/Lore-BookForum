@@ -7,7 +7,7 @@ use App\Models\Users\UserShortData;
 
 use DateTimeImmutable;
 
-readonly class UserData extends UserShortData
+readonly class UserData extends UserMediumData
 {
     public function __construct(
         int    $id,
@@ -15,12 +15,12 @@ readonly class UserData extends UserShortData
         string $name,
         string $surname,
         string $avatar,
-        public string $email,
+        string $email,
+        DateTimeImmutable $createdAt,
+        ?DateTimeImmutable $deletedAt,
         public string $bio,
-        public DateTimeImmutable $createdAt,
-        public ?DateTimeImmutable $deletedAt
     ) {
-        parent::__construct($id, $username, $name, $surname, $avatar);
+        parent::__construct($id, $username, $name, $surname, $avatar, $email, $createdAt, $deletedAt);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self
@@ -32,10 +32,10 @@ readonly class UserData extends UserShortData
             username: $parent->username,
             surname: $parent->surname,
             avatar: $parent->avatar,
-            email: self::str($row, $prefix . 'email'),
+            email: $parent->email,
+            createdAt: $parent->createdAt,
+            deletedAt: $parent->deletedAt,
             bio: self::str($row, $prefix . 'bio'),
-            createdAt: self::dt($row, $prefix . 'created_at'),
-            deletedAt: self::dtN($row, $prefix . 'deleted_at')
         );
     }
 
@@ -43,11 +43,7 @@ readonly class UserData extends UserShortData
     {
         $parent = parent::toArray();
         return $parent + [
-            'email' => $this->email,
             'bio' => $this->bio,
-            'createdAt' => $this->createdAt
         ];
     }
-
-    public function isActive() : bool { return $this->deletedAt === NULL; }
 }

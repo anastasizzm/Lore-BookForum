@@ -5,7 +5,7 @@ namespace App\Forms\Permissions;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
-use App\Models\Access\Rules\PublicationAccessRules;
+use App\Models\Access\Rules\ShortPublicationAccessRules;
 
 final readonly class PublicationPermissionForm extends PermissionForm
 {
@@ -13,7 +13,7 @@ final readonly class PublicationPermissionForm extends PermissionForm
         int $roleId,
         ?int $belowId,
         ?int $aboveId,
-        public PublicationAccessRules $pubPermissions
+        public ShortPublicationAccessRules $pubPermissions
     ){
         parent::__construct($roleId, $belowId, $aboveId);
     }
@@ -25,7 +25,7 @@ final readonly class PublicationPermissionForm extends PermissionForm
             roleId : $parent->roleId,
             belowId: $parent->belowId,
             aboveId: $parent->aboveId,
-            pubPermissions: PublicationAccessRules::fromInput($form['pubPermissions'] ?? [])
+            pubPermissions: ShortPublicationAccessRules::fromInput($form['pubPermissions'] ?? [])
         );
     }
 }

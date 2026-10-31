@@ -21,7 +21,7 @@ use App\Constants;
 use App\ErrorCodes;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditSystemPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Services\Permissions\SystemPermissionsService;
@@ -78,7 +78,7 @@ final class SystemPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
-        $form = EditPermissionForm::fromInput($context->request->body());
+        $form = EditSystemPermissionForm::fromInput($context->request->body());
         $expectedVersion = $this->requireVersion($context);
 
         if (!$this->permissionsService->canManageRole($userId, $roleId))

@@ -44,7 +44,7 @@ final class AuthorizationMiddleware implements Middleware
         }
 
         return match ($decision->status) {
-            401     => Response::redirect($this->url->url('login'), 303),
+            401     => Response::redirect($this->url->url('login', query: ['redirect' => $ctx->request->path]), 303),
             404     => Response::html(View::render('message', ['statusCode' => 404, 'message' => $this->buildMessage("Not Found", $decision->reason, $decision->errorCode)]), 404),
             default => Response::html(View::render('message', ['statusCode' => $decision->status, 'message' => $this->buildMessage("Forbidden", $decision->reason, $decision->errorCode)]), $decision->status),
         };

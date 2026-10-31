@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers\Api\Additional;
 
 use App\Services\Additional\RolesService;
-use App\Models\Queries\Additional\BasicModelListQuery;
+use App\Models\Queries\Additional\UserRoleListQuery;
 use App\Forms\Translations\Additionals\UserRoleForm;
 
 use App\Controllers\Controller;
@@ -27,7 +27,7 @@ final class RolesController extends Controller
 
     public function list(HttpContext $context)
     {
-        $query = BasicModelListQuery::fromInput($context->request->query);
+        $query = UserRoleListQuery::fromInput($context->request->query);
         $paginatedList = $this->rolesService->getList($query);
         return $this->jsonList($paginatedList->getArray(), [
                 'page' => $paginatedList->getPage(),

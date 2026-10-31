@@ -12,6 +12,7 @@ use App\Models\Publications\PublicationShort;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Http\UrlGenerator;
 
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PaginationQuery;
@@ -19,6 +20,7 @@ use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
 use App\Models\Filters\Publications\ArticlesFilters;
 use App\Models\Filters\Publications\UserRelationFilters;
+use App\Forms\Publications\ArticleForm;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Extensions\Parsers\QueryParser;
 
@@ -31,13 +33,14 @@ final class ArticlesController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
-        private readonly ArticlesService $articlesService
+        private readonly ArticlesService $articlesService,
+        private readonly UrlGenerator $url
     ){}
 
     public function list(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -74,10 +77,48 @@ final class ArticlesController extends Controller
         }    
     }
 
+    public function adminList(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $q = $context->request->query;
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $query = new ArticlesListQuery(
+                pagination: PaginationQuery::fromInput($q),
+                sort: SortQuery::fromInput($q),
+                properties: PropertiesQuery::fromRaw("creator+owner+genre"),
+                filters: ArticlesFilters::fromPublic($q),
+                userFilters: UserRelationFilters::fromAll($q, $userId),
+                viewerId: $userId
+            );
+    
+            $paginatedList = $this->articlesService->getListWithContext($query);
+            return $this->render('admin/articles', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                    'type' => 'article'
+                ], 
+                'user' => $userContext,
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('admin/articles', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+            ]);
+        }    
+    }
+
     public function draftList(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -118,7 +159,7 @@ final class ArticlesController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -161,7 +202,7 @@ final class ArticlesController extends Controller
         
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $propsQ = PropertiesQuery::fromRaw("creator+genre+type");
 
@@ -181,6 +222,42 @@ final class ArticlesController extends Controller
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
             ]);
+        }
+    }
+
+    public function getCreate(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login'));
+
+        $userContext = $this->usersService->loadContext($userId);
+        return $this->render('article/article-form', [
+            'user' => $userContext
+        ]);
+    }
+
+    public function create(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url($this->url->url('login', query: ['redirect' => $context->request->path])));
+
+        $formData = $context->request->body();
+        try{
+            $articleId = $this->articlesService->create(
+                ArticleForm::fromInput($formData),
+                $userId
+            );
+            return Response::redirect($this->url->url('articles.retrieve', ['articleId' => $articleId]));
+        }
+        catch(ValidationException $e){
+            $userContext = $this->usersService->loadContext($userId);
+            return $this->render('article/article-form', [
+                'form' => $formData, 
+                'errors' => $e->errors(),
+                'user' => $userContext
+            ], 422);
         }
     }
 }

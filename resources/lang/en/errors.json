@@ -73,7 +73,8 @@
     "articles": {
         "pub_exists": "An article for this publication already exists",
         "doi_exists": "An article with this DOI already exists",
-        "doi_format": "DOI must match the format 10.XXXX/YYYY"
+        "doi_format": "DOI must match the format 10.XXXX/YYYY",
+        "both_provided": "Both content and book provided. Choose one"
     },
     "publications": {
         "cannot_publish": "Cannot publish the publication. Please check the publication settings"

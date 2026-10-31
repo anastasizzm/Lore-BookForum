@@ -30,7 +30,7 @@ final class ArticlesScriptDirector extends PublicationsScriptDirector
     public function addArticleSelectTemp() : self
     {
         $this->addPublicationExtendedSelectTemp();
-        $this->tempBuilder->addSelect("articles.book_id,\narticles.page_start,\narticles.page_end,\narticles.type_id,\narticles.doi,\narticles.content");
+        $this->tempBuilder->addSelect("articles.book_id,\narticles.type_id,\narticles.doi,\narticles.content_mode");
         return $this;
     }
 
