@@ -1,31 +1,28 @@
 <?php
 /**
- * admin/users — каркас таблицы пользователей админки.
+ * admin/users — таблица пользователей админки.
  *
- * Статус: ЗАГЛОВКА без проверок прав — финальные имена разрешений
- * (canPublication, canManagePublication и т.п.) бэк ещё не назвал,
- * поэтому isAdmin / isRedactor здесь НЕ проверяем.
- * Реальных запросов к API админки тоже нет: API ещё не вынесли.
+ * Строки рисует public/assets/js/admin.js (раздел USERS LIST):
+ *   GET /api/users?q=…&page=N&ps=20
+ * Поиск уходит в API только по Enter (и при очистке поля крестиком),
+ * «Показать ещё» подгружает следующую страницу.
  *
- * Роли/статусы — заглушки; когда бэк назовёт поля, заменить
- * $role / $status на реальные значения из ответа.
+ * Внутри строки — вложенный список ролей (раздел USER ROLES):
+ * GET/POST /api/system/users/{id}/roles.
  *
- * Кнопка Block открывает ConfirmModal.confirm() (см. public/assets/js/admin.js),
- * TODO(fetch) внутри — PATCH /api/admin/users/{id}.
+ * Кнопка Block открывает ConfirmModal.confirm(); роута блокировки в
+ * endpoints.php пока нет, поэтому блок применяется локально.
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
- * .admin-badge, .admin-actions).
+ * .admin-badge, .admin-actions, .admin-user-roles).
  */
 
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
-
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/users ----
-$users = [
-    ['id' => 1, 'username' => 'anastasizzm', 'email' => 'anastasia@example.com', 'role' => 'admin', 'status' => 'active'],
-    ['id' => 2, 'username' => 'reader_one',  'email' => 'reader1@example.com',   'role' => 'user',  'status' => 'active'],
-    ['id' => 3, 'username' => 'spam_bot',    'email' => 'spam@example.com',      'role' => 'user',  'status' => 'blocked'],
-];
+$tx = static function (string $key, string $fallback) use ($view): string {
+    $value = $view->t($key);
+    return $view->e(($value === '' || $value === $key) ? $fallback : $value);
+};
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -43,20 +40,22 @@ $users = [
     'subtitle' => $view->t('common.admin.users_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<p class="admin-toolbar__status" data-users-status role="status" aria-live="polite"><?= $tx('common.admin.users_loading', 'Loading users…') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
          type="search"
          name="q"
+         data-users-search
          placeholder="<?= $tr('common.admin.search_users_ph') ?>"
          aria-label="<?= $tr('common.admin.search_users_ph') ?>"
+         enterkeyhint="search"
          autocomplete="off">
-  <span class="admin-toolbar__count"><?= count($users) ?></span>
+  <span class="admin-toolbar__count" data-users-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-admin-table="users">
+  <table class="admin-table" data-admin-table="users" data-users-table>
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
@@ -65,54 +64,21 @@ $users = [
         <th scope="col"><?= $tr('common.admin.col_role') ?></th>
         <th scope="col"><?= $tr('common.admin.col_status') ?></th>
         <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
+        <th scope="col" class="admin-table__expand" aria-label="<?= $tx('common.admin.user_roles_toggle', 'Roles') ?>"></th>
       </tr>
     </thead>
-    <tbody>
-      <?php foreach ($users as $userRow): $userRow['id'] = (int) $userRow['id']; ?>
-        <tr data-user-id="<?= $userRow['id'] ?>">
-          <td class="admin-table__id"><?= $userRow['id'] ?></td>
-          <td><?= $view->e($userRow['username']) ?></td>
-          <td><span class="admin-table__clip" title="<?= $view->e($userRow['email']) ?>"><?= $view->e($userRow['email']) ?></span></td>
-          <td>
-            <span class="admin-badge <?= $userRow['role'] === 'admin' ? 'admin-badge--accent' : '' ?>">
-              <?= $userRow['role'] === 'admin' ? $tr('common.admin.role_admin') : $tr('common.admin.role_user') ?>
-            </span>
-          </td>
-          <td data-status-cell>
-            <?php if ($userRow['status'] === 'blocked'): ?>
-              <span class="admin-badge admin-badge--danger"><?= $tr('common.admin.status_blocked') ?></span>
-            <?php else: ?>
-              <span class="admin-badge admin-badge--success"><?= $tr('common.admin.status_active') ?></span>
-            <?php endif; ?>
-          </td>
-          <td>
-            <div class="admin-actions">
-              <!-- Профиль пользователя: роут users.profile уже есть в
-                   config/routes.php (?lang= не сохраняем — как в card-feed). -->
-              <a class="btn btn--secondary" href="/users/<?= $userRow['id'] ?>"><?= $tr('common.admin.action_view') ?></a>
-
-              <!-- ConfirmModal.confirm() — см. public/assets/js/admin.js.
-                   TODO(api): fetch PATCH /api/admin/users/{id} (роута ещё нет). -->
-              <button type="button"
-                      class="btn btn--secondary"
-                      data-admin-block
-                      data-user-id="<?= $userRow['id'] ?>"
-                      data-user-name="<?= $view->e($userRow['username']) ?>">
-                <?= $tr('common.admin.action_block') ?>
-              </button>
-            </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-
-      <?php if (!$users): ?>
-        <tr class="admin-table__empty">
-          <td colspan="6"><?= $tr('common.admin.empty') ?></td>
-        </tr>
-      <?php endif; ?>
-    </tbody>
+    <tbody data-users-rows></tbody>
   </table>
 </div>
+
+<div class="admin-users__more">
+  <button type="button" class="btn btn--secondary" data-users-more hidden>
+    <?= $tx('common.admin.users_load_more', 'Show more') ?>
+  </button>
+</div>
+
+<!-- Модалка «Добавить роль пользователю» -->
+<?php $view->include('admin-user-role-modal'); ?>
 
 <?php $view->endBlock('content'); ?>
 
