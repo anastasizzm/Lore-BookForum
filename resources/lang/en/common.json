@@ -13,7 +13,8 @@
         "prev": "Previous",
         "next": "Next",
         "pagination": "Pagination",
-        "close": "Close"
+        "close": "Close",
+        "show_more": "Show more"
     },
     "sidebar": {
         "profile": "Profile",
