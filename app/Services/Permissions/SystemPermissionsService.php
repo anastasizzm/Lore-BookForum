@@ -16,7 +16,7 @@ use App\Exceptions\Translators\PermissionExceptionTranslator;
 use App\Extensions\EnumExtensions;
 use App\Forms\Permissions\SystemPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditSystemPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Lib\I18n\Translator;
@@ -86,7 +86,7 @@ final class SystemPermissionsService
         }
     }
 
-    public function editRole(int $roleId, EditPermissionForm $form, int $expectedVersion): int
+    public function editRole(int $roleId, EditSystemPermissionForm $form, int $expectedVersion): int
     {
         $bag = new ErrorBag();
         if ($form->pubPermissions === NULL)

@@ -18,101 +18,84 @@ use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Forms\Form;
 use App\Models\RowModel;
 
-readonly class PublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
+readonly class PublicationAccessRules extends ShortPublicationAccessRules
 {
     public function __construct(
-        public bool $create,
-        public bool $updateMeta,
-        public bool $updateContent,
+        bool $create,
+        bool $updateMeta,
+        bool $updateContent,
+        bool $read,
+        bool $managePeople,
+        bool $manageRoles,
         public bool $delete,
-        public bool $read,
-        public bool $managePeople,
-        public bool $manageRoles
     ){}
 
     public function hasAny() : bool 
     {
-        return $this->create || $this->updateMeta 
-            || $this->updateContent || $this->updateMeta
-            || $this->delete || $this->read
-            || $this->managePeople || $this->manageRoles;
+        return parent::hasAny() || $this->delete;
     }
 
     public function allows(AccessOperation $operation) : bool
     {
         return match(true) {
-            !($operation instanceof PublicationAccessOperation) => false,
-            $operation instanceof CreatePublicationOperation => $this->create,
-            $operation instanceof UpdateMetaPublicationOperation => $this->updateMeta,
-            $operation instanceof UpdateContentPublicationOperation => $this->updateContent,
             $operation instanceof DeletePublicationOperation => $this->delete,
-            $operation instanceof ReadPublicationOperation => $this->read,
-            $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
-            $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
-            $operation instanceof AnyPublicationOperation => $this->hasAny(),
-            default => false,
+            default => parent::allows($operation),
         };
     }
-
-    public function hasManagePeople() : bool { return $this->managePeople; }
-    public function hasManageRoles() : bool { return $this->manageRoles; }
 
     public static function fromEmpty() : self 
     {
         return new self(
-            false, false, false, false , false, false, false
+            false, false, false, false, false, false, false
         );
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
+        $parent = parent::fromRow($row, $prefix);
         return new self(
-            create: self::bool($row, $prefix . 'create'),
-            updateMeta: self::bool($row, $prefix . 'update_meta'),
-            updateContent: self::bool($row, $prefix . 'update_content'),
+            create: $parent->create,
+            updateMeta: $parent->updateMeta,
+            updateContent: $parent->updateContent,
             delete: self::bool($row, $prefix . 'delete'),
-            read: self::bool($row, $prefix . 'read'),
-            managePeople: self::bool($row, $prefix . 'manage_ppl'),
-            manageRoles: self::bool($row, $prefix . 'manage_roles'),
+            read: $parent->read,
+            managePeople: $parent->managePeople,
+            manageRoles: $parent->manageRoles,
         );
     }
 
     public static function fromInput(array $form) : self 
     {
+        $parent = parent::fromInput($form);
         return new self(
-            create: QueryParser::optionalBool($form, 'create') ?? false,
-            updateMeta: QueryParser::optionalBool($form, 'updateMeta') ?? false,
-            updateContent: QueryParser::optionalBool($form, 'updateContent') ?? false,
+            create: $parent->create,
+            updateMeta: $parent->updateMeta,
+            updateContent: $parent->updateContent,
+            read: $parent->read,
+            managePeople: $parent->managePeople,
+            manageRoles: $parent->manageRoles,
             delete: QueryParser::optionalBool($form, 'delete') ?? false,
-            read: QueryParser::optionalBool($form, 'read') ?? false,
-            manageRoles: QueryParser::optionalBool($form, 'manageRoles') ?? false,
-            managePeople: QueryParser::optionalBool($form, 'managePeople') ?? false,
         );
     }
 
     public function toArray(): array
     {
-        return [
-            'create' => $this->create,
-            'updateMeta' => $this->updateMeta,
-            'updateContent' => $this->updateContent,
+        return parent::toArray() + [
             'delete' => $this->delete,
-            'read' => $this->read,
-            'managePeople' => $this->managePeople,
-            'manageRoles' => $this->manageRoles
         ];
     }
 
     public static function fromArray(array $data): static
     {
+        $parent = parent::fromArray($data);
         return new self (
-            create: (bool)($data['create'] ?? false),
-            updateMeta: (bool)($data['updateMeta'] ?? false),
-            updateContent: (bool)($data['updateContent'] ?? false),
+            create: $parent->create,
+            updateMeta: $parent->updateMeta,
+            updateContent: $parent->updateContent,
+            read: $parent->read,
+            managePeople: $parent->managePeople,
+            manageRoles: $parent->manageRoles,
             delete: (bool)($data['delete'] ?? false),
-            read: (bool)($data['read'] ?? false),
-            managePeople: (bool)($data['managePeople'] ?? false),
-            manageRoles: (bool)($data['manageRoles'] ?? false)
         );
     }
 }

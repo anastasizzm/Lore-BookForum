@@ -59,7 +59,8 @@ final class ArticlesService extends PublicationsService
         private readonly ArticleContentFormValidator $contentValidator,
         private readonly PublicationContextEnricher $enricher,
     ){
-        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, 
+            $progressValidator, $rateValidator, $translator, $uow);
     }
 
     public function getList(ArticlesListQuery $query) : PaginatedList

@@ -1,4 +1,6 @@
 {
+    "yes": "Yes",
+    "no": "No",
     "save": "Save",
     "revert": "Revert",
     "cancel": "Cancel",
@@ -32,6 +34,10 @@
     "language": {
         "label": "Language",
         "switch": "Switch language"
+    },
+    "publication":{
+        "delete_question": "Do you want to delete the publication?",
+        "delete_page_title": "Delete publication"
     },
     "filter": {
         "books": "Books",
@@ -372,7 +378,15 @@
         "reset_text": "We received a request to reset the password for your Lore BookForum account. Click the button below to choose a new password.",
         "reset_button": "Reset password",
         "reset_warning": "If you didn't request this, just ignore this email — your password will stay the same. The link works for a limited time.",
-        "signature": "Best regards,"
+        "signature": "Best regards,",
+        "delete_request_title": "Publication deletion request",
+        "delete_request_heading": "Publication deletion request",
+        "delete_request_hello": "Hello!",
+        "delete_request_text": "A user has requested the deletion of your publication. If you agree, confirm the deletion using the button below.",
+        "delete_request_publication": "Publication",
+        "delete_request_requester": "Requested by",
+        "delete_request_button": "Delete publication",
+        "delete_request_footer": "If you do not want to delete this publication, simply ignore this email. Nothing will be changed."
     },
     "reader": {
         "title": "Read",

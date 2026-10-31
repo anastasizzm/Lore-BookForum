@@ -36,8 +36,8 @@ use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Extensions\EnumExtensions;
-
 use App\Services\Configuration\UnitOfWork;
+
 use App\Exceptions\Translators\BookExceptionTranslator;
 use App\Exceptions\ValidationException;
 use App\Exceptions\NotFoundException;
@@ -62,7 +62,8 @@ final class BooksService extends PublicationsService
         private readonly BookPatchFormValidator $patchValidator,
         private readonly FileService $fileService
     ){
-        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, $progressValidator, $rateValidator, $translator, $uow);
+        parent::__construct($repository, $usersReadRepo, $exceptionTranslator, 
+            $progressValidator, $rateValidator, $translator, $uow);
     }
 
     public function getList(BooksListQuery $query) : PaginatedList

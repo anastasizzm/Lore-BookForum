@@ -43,7 +43,7 @@ final class TokenBlockerMiddleware implements Middleware
 
         $response = $ctx->isApi()
             ? Response::json(ResponseTemplates::error(new Error(ErrorCodes::UNAUTHORIZED, $this->translator->t("errors.common.unauthorized"))), 401)
-            : Response::redirect($this->url->url('login'));
+            : Response::redirect($this->url->url('login', query: ['redirect' => $ctx->request->path]));
 
         return $this->cookies->clear($response, Constants::TOKEN_COOKIE);
     }

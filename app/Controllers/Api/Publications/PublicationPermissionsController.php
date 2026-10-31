@@ -21,7 +21,7 @@ use App\Constants;
 use App\ErrorCodes;
 use App\Forms\Permissions\PublicationPermissionForm;
 use App\Forms\Permissions\PositionForm;
-use App\Forms\Permissions\EditPermissionForm;
+use App\Forms\Permissions\EditPublicationPermissionForm;
 use App\Forms\Assignments\RoleUserAssignmentForm;
 use App\Forms\Assignments\RoleToUserAssignmentForm;
 use App\Services\Permissions\PublicationPermissionsService;
@@ -74,7 +74,7 @@ final class PublicationPermissionsController extends Controller
 
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
         $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
-        $form = EditPermissionForm::fromInput($context->request->body());
+        $form = EditPublicationPermissionForm::fromInput($context->request->body());
         $expectedVersion = $this->requireVersion($context);
 
         if (!$this->permissionsService->canManageRole($userId, $roleId, $publicationId))

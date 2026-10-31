@@ -12,6 +12,7 @@ use App\Models\Publications\PublicationShort;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Http\UrlGenerator;
 
 use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PaginationQuery;
@@ -32,13 +33,14 @@ final class ArticlesController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
-        private readonly ArticlesService $articlesService
+        private readonly ArticlesService $articlesService,
+        private readonly UrlGenerator $url
     ){}
 
     public function list(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -78,7 +80,7 @@ final class ArticlesController extends Controller
     public function draftList(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -119,7 +121,7 @@ final class ArticlesController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $q = $context->request->query;
         $filterState = QueryParser::optionalString($q, 'f') ?? 'closed';
@@ -162,7 +164,7 @@ final class ArticlesController extends Controller
         
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $propsQ = PropertiesQuery::fromRaw("creator+genre+type");
 
@@ -201,7 +203,7 @@ final class ArticlesController extends Controller
     {
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect($this->url->url('login'));
+            return Response::redirect($this->url->url($this->url->url('login', query: ['redirect' => $context->request->path])));
 
         $formData = $context->request->body();
         try{

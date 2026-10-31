@@ -10,6 +10,7 @@ use App\Services\Publications\PostsService;
 
 use App\Http\HttpContext;
 use App\Http\Response;
+use App\Http\UrlGenerator;
 
 use App\Models\Queries\Publications\PostsListQuery;
 use App\Models\Filters\Publications\PostsFilters;
@@ -25,13 +26,14 @@ final class FeedController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
-        private readonly PostsService $postsService
+        private readonly PostsService $postsService,
+        private readonly UrlGenerator $url
     ){}
 
     public function list(HttpContext $context){
         $userId = $context->attribute(Constants::USER_ID_ATTR);
         if (empty($userId))
-            return Response::redirect('login');
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
         $userContext = $this->usersService->loadContext($userId);
         $q = $context->request->query;

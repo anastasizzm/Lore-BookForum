@@ -65,7 +65,6 @@ return function(Router $router)
 
 
     $router->get('/api/publications/rules', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getCommonRules'], 'api.publication.rules', AuthPolicy::Auth);
-
     $router->get('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getRoles'], 'api.publication.roles', AnyPublicationOperation::class);
     $router->post('/api/publications/{publicationId}/roles', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'addRole'], 'api.publication.roles.add', ManageRolesPublicationOperation::class);
     $router->put('/api/publications/{publicationId}/roles/{roleId}', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'editRole'], 'api.publication.roles.edit', ManageRolesPublicationOperation::class);

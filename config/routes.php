@@ -6,6 +6,7 @@ use App\Http\Response;
 
 use App\Lib\Auth\AuthPolicy;
 use App\Lib\View;
+use App\Extensions\Parsers\RouteParamParser;
 
 use App\Models\Access\Operations\Publications\CreatePublicationOperation;
 use App\Models\Access\Operations\Publications\DeletePublicationOperation;
@@ -80,7 +81,7 @@ return function(Router $router)
     $router->post('/articles/new', [App\Controllers\Publications\ArticlesController::class, 'create'], 'articles.create.submit', CreatePublicationOperation::class);
     $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
     
-
+    
     // Profile
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
     $router->get('/users/{userId}', [App\Controllers\Users\UsersController::class, 'retrieve'], 'users.profile', AuthPolicy::Auth);
