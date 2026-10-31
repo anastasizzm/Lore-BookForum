@@ -34,7 +34,7 @@ window.LoreRoles = (function () {
 
   /** Ключи pubPermissions (бэк: PublicationAccessRules::toArray). */
   var PUB_PERMS = [
-    'create', 'updateMeta', 'updateContent', 'delete',
+    'create', 'updateMeta', 'updateContent',
     'read', 'managePeople', 'manageRoles'
   ];
 
@@ -115,8 +115,11 @@ window.LoreRoles = (function () {
     error: '',
     roles: [],
     users: [],
+    expanded: {},          // раскрытые строки пользователей (экран 2): userId -> true
     page: 'users',         // страница экрана 1: users | roles
     screen: 1,             // экран 1 | 2
+    context: 'create',     // create | edit — флоу создания (Create → Continue → Publish)
+                            // или редактирования (Edit → без Continue / без Publish)
     dndReady: true,        // ручки перетаскивания и точки вставки активны
     publishing: false,
     lastFocus: null,
@@ -142,6 +145,7 @@ window.LoreRoles = (function () {
       roleOpen: false,
       q: '',               // строка поиска людей
       roleQ: '',
+      selectedRoleId: '', // выбранная роль в модалке «роль + пользователь»
       status: '',
       saving: false,
       lastFocus: null,
@@ -339,6 +343,15 @@ window.LoreRoles = (function () {
       st.error = '';
       st.roles = MOCK.roles.map(function (one) { return Object.assign({}, one); });
       st.users = MOCK.users.map(function (one) { return Object.assign({}, one); });
+      var addMock = st.add;
+      addMock.catalogUsers = MOCK.catalogUsers.map(function (one) { return Object.assign({}, one); });
+      addMock.catalogRoles = MOCK.catalogRoles.map(function (one) { return Object.assign({}, one); });
+      addMock.userPage = 1;
+      addMock.userHasNext = false;
+      addMock.loadingUsers = false;
+      addMock.loadingRoles = false;
+      addMock.userOpen = false;
+      addMock.roleOpen = false;
       render();
       return Promise.resolve();
     }
@@ -369,6 +382,13 @@ window.LoreRoles = (function () {
         st.api = 'mock';
         st.roles = MOCK.roles.map(function (one) { return Object.assign({}, one); });
         st.users = MOCK.users.map(function (one) { return Object.assign({}, one); });
+        var addMock2 = st.add;
+        addMock2.catalogUsers = MOCK.catalogUsers.map(function (one) { return Object.assign({}, one); });
+        addMock2.catalogRoles = MOCK.catalogRoles.map(function (one) { return Object.assign({}, one); });
+        addMock2.userPage = 1;
+        addMock2.userHasNext = false;
+        addMock2.loadingUsers = false;
+        addMock2.loadingRoles = false;
         st.loading = false;
         render();
         return;
@@ -521,11 +541,47 @@ window.LoreRoles = (function () {
     list.innerHTML = html;
   }
 
+  /** Наивысшая по рангу роль — роль с минимальным индексом в порядке st.roles (ранги). */
+  function topRoleOf(user) {
+    var roles = user.roles || [];
+    if (!roles.length) return null;
+    var best = roles[0];
+    var bestIndex = Infinity;
+    roles.forEach(function (role) {
+      st.roles.forEach(function (rank, index) {
+        if (String(rank.id) === String(role.id) && index < bestIndex) {
+          bestIndex = index;
+          best = role;
+        }
+      });
+    });
+    return best;
+  }
+
+  var CHEVRON_SVG = '<svg class="roles-users__chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"' +
+    ' stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 6l4 4 4-4"/></svg>';
+
+  var TRASH_SVG = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor"' +
+    ' stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M2.5 4h11M6 4V2.8A.8.8 0 0 1 6.8 2h2.4a.8.8 0 0 1 .8.8V4M4 4l.6 9a.9.9 0 0 0 .9.8h5.2a.9.9 0 0 0 .9-.8l.5-9"/>' +
+    '<path d="M6.5 7v4M9.5 7v4"/></svg>';
+
+  /** Индекс высшей роли пользователя в списке рангов (∞ — ролей нет). */
+  function topRankIndex(user) {
+    var top = topRoleOf(user);
+    if (!top) return Infinity;
+    var idx = Infinity;
+    st.roles.forEach(function (rank, i) { if (String(rank.id) === String(top.id)) idx = i; });
+    return idx;
+  }
+
   function renderUsers() {
     var list = q('[data-roles-users]');
     var empty = q('[data-roles-empty="users"]');
     var hint = q('[data-roles-empty-hint="users"]');
     if (!list) return;
+    list.hidden = false;
 
     if (!st.users.length) {
       list.innerHTML = '';
@@ -536,26 +592,50 @@ window.LoreRoles = (function () {
     show(empty, false);
     show(hint, false);
 
-    list.innerHTML = st.users.map(function (user) {
-      var chips = user.roles.length
-        ? user.roles.map(function (role) {
-            return '<li class="roles-chip">' +
-              '<span class="roles-chip__dot" style="background:' + esc(role.color || '#5876A6') + '"></span>' +
-              '<span class="roles-chip__title">' + esc(role.title) + '</span>' +
-            '</li>';
-          }).join('')
-        : '<li class="roles-chip roles-chip--muted">' + esc(t('roles.no_roles')) + '</li>';
+    // Порядок по рангу: чем выше роль в списке rank'ов, тем раньше пользователь;
+    // люди без ролей — в конец, при равенстве — по алфавиту.
+    var users = st.users.slice().sort(function (a, b) {
+      var diff = topRankIndex(a) - topRankIndex(b);
+      if (diff) return diff;
+      return String(a.username).localeCompare(String(b.username));
+    });
 
-      return '<li class="roles-users__item" data-user-id="' + esc(user.id) + '">' +
-        '<span class="roles-users__name">' + esc(user.username) + '</span>' +
-        '<ul class="roles-users__roles">' + chips + '</ul>' +
-        '<span class="roles-users__actions">' +
-          '<button type="button" class="roles-row__btn" data-user-edit="' + esc(user.id) + '"' +
-            (user.canManage ? '' : ' disabled') + '>' + esc(t('roles.edit')) + '</button>' +
-          '<button type="button" class="roles-row__btn" data-user-remove="' + esc(user.id) + '"' +
-            ' aria-label="' + esc(t('roles.remove_user_aria', { name: user.username })) + '"' +
-            (user.canManage ? '' : ' disabled') + '>&times;</button>' +
-        '</span>' +
+    list.innerHTML = users.map(function (user) {
+      var expanded = !!st.expanded[String(user.id)];
+      var top = topRoleOf(user);
+      var label = user.username + ' — ' + (top ? top.title : t('roles.no_roles'));
+
+      var rolesHtml;
+      if (user.roles && user.roles.length) {
+        rolesHtml = user.roles.map(function (role) {
+          return '<li class="roles-users__role">' +
+            '<span class="roles-chip__dot" style="background:' + esc(role.color || '#5876A6') + '"></span>' +
+            '<span class="roles-users__role-title">' + esc(role.title) + '</span>' +
+            '<button type="button" class="roles-users__trash"' +
+              ' data-user-role-remove="' + esc(String(role.id)) + '"' +
+              ' data-user-id="' + esc(user.id) + '"' +
+              ' aria-label="' + esc(t('roles.remove_role_from_user', { name: user.username, role: role.title })) + '"' +
+              (user.canManage ? '' : ' disabled') + '>' + TRASH_SVG + '</button>' +
+          '</li>';
+        }).join('');
+      } else {
+        rolesHtml = '<li class="roles-users__role roles-users__role--muted">' + esc(t('roles.no_roles')) + '</li>';
+      }
+
+      return '<li class="roles-users__item' + (expanded ? ' is-expanded' : '') + '" data-user-id="' + esc(user.id) + '">' +
+        '<button type="button" class="roles-users__row" data-user-expand="' + esc(user.id) + '"' +
+          ' aria-expanded="' + (expanded ? 'true' : 'false') + '"' +
+          ' aria-label="' + esc(expanded ? t('roles.collapse') : t('roles.expand')) + '">' +
+          '<span class="roles-users__name">' + esc(label) + '</span>' +
+          CHEVRON_SVG +
+        '</button>' +
+        '<div class="roles-users__detail"' + (expanded ? '' : ' hidden') + '>' +
+          '<ul class="roles-users__roles">' + rolesHtml + '</ul>' +
+          '<button type="button" class="roles-users__add"' +
+            ' data-user-add-role="' + esc(user.id) + '"' +
+            ' aria-label="' + esc(t('roles.add_role_aria', { name: user.username })) + '"' +
+            (user.canManage ? '' : ' disabled') + '>+</button>' +
+        '</div>' +
       '</li>';
     }).join('');
   }
@@ -576,64 +656,34 @@ window.LoreRoles = (function () {
       var no = screen.getAttribute('data-roles-screen');
       screen.hidden = (no !== String(st.screen));
     });
-    if (st.screen === 2) renderSummary();
   }
 
   function updateGate() {
     var hasUsers = st.users.length > 0;
-    show(q('[data-roles-gate]'), !hasUsers);
     var next = q('[data-roles-next]');
-    if (next) next.disabled = !hasUsers;
-  }
-
-  /** Экран 2: сводка «люди + роли». */
-  function renderSummary() {
-    var usersBox = q('[data-roles-summary="users"]');
-    var rolesBox = q('[data-roles-summary="roles"]');
-
-    if (usersBox) {
-      usersBox.innerHTML = st.users.length
-        ? st.users.map(function (user) {
-            var chips = user.roles.map(function (role) {
-              return '<li class="roles-chip">' +
-                '<span class="roles-chip__dot" style="background:' + esc(role.color || '#5876A6') + '"></span>' +
-                '<span class="roles-chip__title">' + esc(role.title) + '</span>' +
-              '</li>';
-            }).join('');
-            return '<li class="roles-summary__item">' +
-              '<span>' + esc(user.username) + '</span>' +
-              '<ul class="roles-summary__roles">' + (chips || '<li class="roles-chip roles-chip--muted">' +
-                esc(t('roles.no_roles')) + '</li>') + '</ul>' +
-            '</li>';
-          }).join('')
-        : '<li class="roles-summary__item">' + esc(t('roles.users_empty')) + '</li>';
-    }
-
-    if (rolesBox) {
-      rolesBox.innerHTML = st.roles.length
-        ? st.roles.map(function (role) {
-            return '<li class="roles-summary__item">' +
-              '<span class="roles-chip">' +
-                '<span class="roles-chip__dot" style="background:' + esc(role.color || '#5876A6') + '"></span>' +
-                '<span class="roles-chip__title">' + esc(role.title) + '</span>' +
-              '</span>' +
-              '<span class="roles-summary__roles">' +
-                esc(t('roles.users_count', { count: countRoleUsers(role.id) })) +
-              '</span>' +
-            '</li>';
-          }).join('')
-        : '<li class="roles-summary__item">' + esc(t('roles.roles_empty')) + '</li>';
-    }
+    // Continue на экране 1 есть только при создании (редактирование идёт дальше
+    // через экран 2 / управление ролями напрямую).
+    if (next) next.hidden = st.context !== 'create';
+    // Экран 2: Publish требует хотя бы одного пользователя.
+    var pub = q('[data-roles-publish]');
+    if (pub) pub.disabled = !hasUsers;
+    show(q('[data-roles-gate]'), !hasUsers);
   }
 
   function render() {
     renderStates();
     if (q('[data-roles-body]') && q('[data-roles-body]').hidden) return;
-    renderRoles();
-    renderUsers();
-    renderPage();
-    updateGate();
+    if (st.screen === 1) {
+      // Экран 1 — страница ролей публикации.
+      renderRoles();
+    } else {
+      // Экран 2 — страница пользователей публикации.
+      var usersBody = q('[data-roles-users-body]');
+      if (usersBody) show(usersBody, true);
+      renderUsers();
+    }
     renderScreen();
+    updateGate();
   }
 
   /* ============================================================
@@ -701,6 +751,20 @@ window.LoreRoles = (function () {
     if (user) user.roles = user.roles.filter(function (one) { return one.id !== roleId; });
   }
 
+  /** Локальное создание роли (мок / оптимистично): роль добавляется в конец списка. */
+  function addLocalRole(id, picked, perms) {
+    var newId = String(id != null && id !== '' ? id : ('local-' + Date.now()));
+    if (findRole(newId)) return;
+    st.roles.push({
+      id: newId,
+      title: picked.title,
+      color: picked.color || '',
+      version: 1,
+      canManage: true,
+      perms: Object.assign({}, perms || {})
+    });
+  }
+
   /* ---------- жизненный цикл оверлея ---------- */
 
   function resetAdd() {
@@ -717,83 +781,177 @@ window.LoreRoles = (function () {
     add.saving = false;
     add.userOpen = false;
     add.roleOpen = false;
+    add.selectedRoleId = '';
     add.userPage = 1;
     add.userHasNext = false;
   }
 
   function setAddStatus(text) {
     st.add.status = text || '';
-    var status = q('[data-roles-add-status]');
+    var status = q('[data-roles-create-status]') || q('[data-roles-create-user-status]');
     if (status) {
       status.textContent = st.add.status;
       status.hidden = !st.add.status;
     }
   }
 
-  function openAddOverlay() {
+  function closeCreateModals() {
+    st.add.open = false;
+    st.add.userOpen = false;
+    st.add.roleOpen = false;
+    if (st.perms.source === 'create') st.perms.open = false;
+    var a = q('[data-roles-create-role]');
+    if (a) a.hidden = true;
+    var u = q('[data-roles-create-user]');
+    if (u) u.hidden = true;
+    if (st.add.lastFocus && st.add.lastFocus.focus) {
+      try { st.add.lastFocus.focus(); } catch (_) {}
+    }
+    st.add.lastFocus = null;
+  }
+
+  /* ---------- МОДАЛКА: создание роли (экран 1, «+») ---------- */
+
+  function openCreateRole() {
     var add = st.add;
     add.open = true;
     add.lastFocus = document.activeElement;
-    var overlay = q('[data-roles-add]');
+
+    var overlay = q('[data-roles-create-role]');
+    if (overlay) overlay.hidden = false;
+
+    // права для новой роли: все выключены (роль создаётся «с нуля»)
+    st.perms.source = 'create';
+    st.perms.open = true;
+    st.perms.roleId = '';
+    st.perms.title = t('roles.create_title');
+    st.perms.version = 1;
+    st.perms.saving = false;
+    st.perms.status = '';
+    st.perms.draft = {};
+    PUB_PERMS.forEach(function (key) { st.perms.draft[key] = false; });
+    st.perms.lastFocus = document.activeElement;
+
+    var pickerInput = q('[data-roles-create-role-search]');
+    if (pickerInput) { pickerInput.value = ''; add.roleQ = ''; add.roleOpen = true; }
+    add.roles = []; // выбор роли не переносится между открытиями модалки
+
+    // Заполняем модалку «создание роли» явно: список чекбоксов прав публикации.
+    var createList = q('[data-roles-create-perms-list="pub"]');
+    if (createList) {
+      createList.innerHTML = PUB_PERMS.map(function (key) {
+        var id = 'roles-perm-' + key;
+        return '<label class="roles-perm" for="' + id + '">' +
+          '<input type="checkbox" id="' + id + '" data-perm-key="' + key + '"' +
+            (st.perms.draft[key] ? ' checked' : '') +
+            (st.perms.saving ? ' disabled' : '') + '>' +
+          '<span>' + esc(t('roles.perm_' + key)) + '</span>' +
+        '</label>';
+      }).join('');
+    }
+    show(q('[data-perms-group="pub"]'), true);
+    var createTitle = q('[data-roles-create-title]');
+    if (createTitle) createTitle.textContent = t('roles.create_title');
+    var createSave = q('[data-roles-create-add]');
+    if (createSave) createSave.disabled = false;
+    var createCancel = q('[data-roles-create-cancel]');
+    if (createCancel) createCancel.disabled = false;
+    setPermsStatus('');
+
+    renderPerms();
+    if (pickerInput && pickerInput.focus) { try { pickerInput.focus(); } catch (_) {} }
+    renderAddResults();
+  }
+
+  function saveCreateRole() {
+    var perms = st.perms;
+    var add = st.add;
+    if (perms.saving) return;
+
+    // название новой роли — выбранная в списке кандидатов роль каталога
+    var picked = add.roles[0];
+    if (!picked) { setAddStatus(t('roles.need_roles')); return; }
+    setAddStatus('');
+    perms.saving = true;
+
+    if (st.api === 'mock') {
+      // роутов нет — роль создаётся локально (мок)
+      addLocalRole('', picked, perms.draft);
+      perms.saving = false;
+      closeCreateModals();
+      render();
+      notify(t('roles.saved'), 'success');
+      return;
+    }
+
+    // создание роли + сразу её права (POST /roles может быть ещё не развёрнут бэком)
+    request('POST', base() + '/roles', JSON.stringify({ title: picked.title }))
+      .then(function (res) {
+        if (res.kind === 'ok' || res.kind === 'missing') {
+          var data = res.data || {};
+          var newId = data.id != null ? data.id : (data.data && data.data.id != null ? data.data.id : '');
+          if (res.kind === 'ok' && newId !== '') {
+            addLocalRole(newId, picked, perms.draft);
+            perms.roleId = String(newId);
+            applyPermsLocally();
+          }
+          perms.saving = false;
+          closeCreateModals();
+          render();
+          notify(t('roles.saved'), 'success');
+        } else {
+          perms.saving = false;
+          notify(describe(res, t('roles.save_failed', { status: res.status })));
+        }
+      });
+  }
+
+  /* ---------- МОДАЛКА: создание «роль + пользователь» ---------- */
+
+  function openCreateUserModal(userId) {
+    var add = st.add;
+    add.open = true;
+    st.perms.source = null; // модалка «роль + пользователь» не трогает права
+    add.lastFocus = document.activeElement;
+    add.userId = userId || '';
+    // Вариант с конкретным человеком («+» в раскрытой строке) — только ДОБАВЛЕНИЕ ролей:
+    // выбор начинается пустым, уже привязанные роли в saveAdd пропускаются.
+    add.mode = 'add';
+    add.userLocked = !!userId;
+    add.users = userId ? [{ id: userId, username: ((findUser(userId) || { username: '' }).username) || ('#' + userId) }] : [];
+    add.roles = [];
+    add.original = [];
+    add.status = '';
+    add.saving = false;
+    add.userOpen = !userId; // add — сразу показываем каталог людей; edit — после «retrieve»
+    add.roleOpen = false;   // дропдаун роли закрыт — раскрывается по клику по триггеру
+    add.q = '';
+    add.roleQ = '';
+    add.selectedRoleId = add.roles[0] ? add.roles[0].id : '';
+
+    var overlay = q('[data-roles-create-user]');
     if (overlay) overlay.hidden = false;
     renderAdd();
-    if (!add.loadedOnce) {
-      add.loadedOnce = true;
-      loadUserCatalog(1, false);
-      loadRoleCatalog();
-    }
-    var input = q('[data-roles-user-search]');
-    if (input && !add.userLocked) { try { input.focus(); } catch (_) {} }
+
+    // фокус: человек ещё не выбран — в поиск людей, иначе — в дропдаун ролей
+    var focusTarget = add.userLocked
+      ? q('[data-roles-create-user-role-trigger]')
+      : q('[data-roles-create-user-user-search]');
+    if (focusTarget && focusTarget.focus) { try { focusTarget.focus(); } catch (_) {} }
   }
 
-  function closeAddOverlay() {
-    var add = st.add;
-    if (!add.open) return;
-    add.open = false;
-    add.userOpen = false;
-    add.roleOpen = false;
-    var overlay = q('[data-roles-add]');
-    if (overlay) overlay.hidden = true;
-    if (add.lastFocus && add.lastFocus.focus) {
-      try { add.lastFocus.focus(); } catch (_) {}
-    }
-    add.lastFocus = null;
+  function closeCreateUserModal() { closeCreateModals(); }
+
+  function saveCreateUser() {
+    // create (пользователь + роль) и edit (смена ролей пользователя) — одна сохранёнка
+    saveAdd(false);
   }
 
-  function openAdd() {
-    resetAdd();
-    st.add.mode = 'add';
-    openAddOverlay();
-  }
-
-  /** Режим редактирования: retrieve текущих ролей → предзаполненная форма. */
+  /** Редактирование ролей пользователя (кнопка «Изменить» в списке). */
   function openEdit(userId) {
     var user = findUser(userId);
-    if (!user) return;
-
-    resetAdd();
-    var add = st.add;
-    add.mode = 'edit';
-    add.userId = user.id;
-    add.userLocked = true;
-    add.users = [{ id: user.id, username: user.username }];
-    add.roles = user.roles.map(function (role) {
-      return { id: role.id, title: role.title, color: role.color };
-    });
-    add.original = add.roles.map(function (role) { return role.id; });
-    openAddOverlay();
-
-    // Мок-режим: форма уже предзаполнена локальными данными, retrieve не нужен
-    if (st.api === 'mock') return;
-
-    // retrieve с сервера: текущие роли пользователя публикации
-    request('GET', base() + '/users/' + user.id + '/roles?ps=50').then(function (res) {
-      if (res.kind !== 'ok') return;               // роута нет — форма уже предзаполнена
-      var items = mapList(res.data, normalizeRoleLite) || [];
-      add.roles = items;
-      add.original = items.map(function (role) { return role.id; });
-      renderAdd();
-    });
+    if (!user) { notify(t('roles.users_empty'), 'warning'); return; }
+    openCreateUserModal(user.id);
   }
 
   /* ---------- каталоги для поиска ---------- */
@@ -901,122 +1059,169 @@ window.LoreRoles = (function () {
       '<span class="roles-chip__title">' + esc(title) + '</span>' + remove + '</li>';
   }
 
+  /* ---------- рендер модалок: создание «роль + пользователь» / «роль + …» ---------- */
+
+  function createUserModalOpen() {
+    var overlay = q('[data-roles-create-user]');
+    return !!(overlay && !overlay.hidden);
+  }
+
   function renderAdd() {
     var add = st.add;
-    if (!add.open) return;
 
-    var title = q('[data-roles-add-title]');
-    if (title) title.textContent = t(add.mode === 'edit' ? 'roles.edit_title' : 'roles.add_title');
-
-    show(q('[data-roles-add-save-more]'), add.mode === 'add');
-
-    var userChips = q('[data-roles-user-chips]');
-    if (userChips) {
-      userChips.innerHTML = add.users.map(function (user) {
-        return chipHtml(user.username, '',
-          'data-add-user-remove="' + esc(user.id) + '"', add.userLocked);
-      }).join('');
-    }
-
-    var roleChips = q('[data-roles-role-chips]');
-    if (roleChips) {
-      roleChips.innerHTML = add.roles.map(function (role) {
-        return chipHtml(role.title, role.color,
-          'data-add-role-remove="' + esc(role.id) + '"', false);
-      }).join('');
-    }
-
-    var userSearch = q('[data-roles-user-search]');
-    if (userSearch) {
-      userSearch.disabled = add.userLocked || add.saving;
-      if (add.userLocked) userSearch.value = '';
-    }
-    var roleSearch = q('[data-roles-role-search]');
-    if (roleSearch) roleSearch.disabled = add.saving;
-
-    var saveBtn = q('[data-roles-add-save]');
-    var saveMoreBtn = q('[data-roles-add-save-more]');
-    if (saveBtn) saveBtn.disabled = add.saving;
-    if (saveMoreBtn) saveMoreBtn.disabled = add.saving;
+    var modalU = q('[data-roles-create-user]');
+    var modalR = q('[data-roles-create-role]');
+    // одновременно открыты быть не могут: source === 'create' — модалка создания роли
+    var showCreateRole = add.open && st.perms.source === 'create';
+    var showUserModal = add.open && !showCreateRole;
+    if (modalU) modalU.hidden = !showUserModal;
+    if (modalR) modalR.hidden = !showCreateRole;
 
     setAddStatus(add.status);
+
+    if (showUserModal) {
+      var statusU = q('[data-roles-create-user-status]');
+      if (statusU) { statusU.textContent = add.status; statusU.hidden = !add.status; }
+
+      // Вариант «добавить роль конкретному человеку»: блок выбора пользователя скрыт целиком.
+      var userPicker = q('[data-roles-create-user-user-picker]');
+      if (userPicker) userPicker.hidden = !!add.userLocked;
+
+      var titleU = q('[data-roles-create-user-title]');
+      var hintU = q('[data-roles-create-user-hint]');
+      if (titleU) titleU.textContent = add.userLocked ? t('roles.create_title') : t('roles.create_user_title');
+      if (hintU) hintU.textContent = add.userLocked ? t('roles.add_role_hint') : t('roles.create_user_hint');
+
+      var userInput = q('[data-roles-create-user-user-search]');
+      if (userInput) {
+        if (add.userLocked) { userInput.disabled = true; userInput.value = add.users[0] ? (add.users[0].username || '') : ''; }
+        else { userInput.disabled = add.saving; userInput.value = add.q || ''; }
+      }
+
+      // Дропдаун роли: триггер показывает выбранную роль (роль только одна),
+      // панель с поиском раскрывается по клику по триггеру.
+      var roleTrigger = q('[data-roles-create-user-role-trigger]');
+      var roleLabel = q('[data-roles-create-user-role-label]');
+      var rolePanel = q('[data-roles-create-user-role-panel]');
+      var roleInput = q('[data-roles-create-user-role-search]');
+      if (roleTrigger) {
+        roleTrigger.disabled = add.saving;
+        roleTrigger.setAttribute('aria-expanded', add.roleOpen ? 'true' : 'false');
+      }
+      if (roleLabel) {
+        var picked = add.roles[0];
+        if (picked) {
+          var pickedDot = picked.color
+            ? '<span class="roles-chip__dot" style="background:' + esc(picked.color) + '"></span>'
+            : '';
+          roleLabel.innerHTML = pickedDot + '<span>' + esc(picked.title) + '</span>';
+          roleLabel.classList.remove('is-placeholder');
+        } else {
+          roleLabel.textContent = t('roles.choose_role');
+          roleLabel.classList.add('is-placeholder');
+        }
+      }
+      if (rolePanel) rolePanel.hidden = !add.roleOpen;
+      if (roleInput) { roleInput.disabled = add.saving; roleInput.value = add.roleQ || ''; }
+    }
+
     renderAddResults();
   }
 
   function renderAddResults() {
     var add = st.add;
 
-    var userBox = q('[data-roles-user-results]');
+    // --- модалка «роль + пользователь» (экран 2): пользователи + роли ---
+    var userBox = q('[data-roles-create-user-user-results]');
+    var roleBox = q('[data-roles-create-user-role-results]');
     if (userBox) {
-      if (!add.userOpen) {
-        userBox.hidden = true;
-        userBox.innerHTML = '';
-      } else {
+      if (!add.userOpen) { userBox.hidden = true; userBox.innerHTML = ''; }
+      else {
         var users = filteredUsers();
-        var html = users.map(function (user) {
+        var userHtml = users.map(function (user) {
           var selected = add.users.some(function (one) { return one.id === user.id; });
-          return '<li><button type="button" class="roles-picker__option' +
-            (selected ? ' is-selected' : '') + '" data-add-user-opt="' + esc(user.id) + '"' +
-            ' data-username="' + esc(user.username) + '">' +
-            '<span>' + esc(user.username) + '</span></button></li>';
+          return '<li><button type="button" class="roles-picker__option' + (selected ? ' is-selected' : '') + '" data-add-user-opt="' + esc(user.id) + '" data-username="' + esc(user.username) + '">' + '<span>' + esc(user.username) + '</span></button></li>';
         }).join('');
-        if (!users.length) {
-          html = '<li class="roles-picker__option" aria-disabled="true">' +
-            esc(add.loadingUsers ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
-        }
-        userBox.innerHTML = html;
+        if (!users.length) userHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(add.loadingUsers ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
+        userBox.innerHTML = userHtml;
         userBox.hidden = false;
       }
     }
 
-    var roleBox = q('[data-roles-role-results]');
     if (roleBox) {
-      if (!add.roleOpen) {
-        roleBox.hidden = true;
-        roleBox.innerHTML = '';
-      } else {
+      if (!add.roleOpen) { roleBox.hidden = true; roleBox.innerHTML = ''; }
+      else {
         var roles = filteredRoles();
+        var selectedIds = {};
+        add.roles.forEach(function (one) { selectedIds[String(one.id)] = true; });
         var roleHtml = roles.map(function (role) {
-          var selected = add.roles.some(function (one) { return one.id === role.id; });
-          var dot = role.color
-            ? '<span class="roles-chip__dot" style="background:' + esc(role.color) + '"></span>'
-            : '';
-          return '<li><button type="button" class="roles-picker__option' +
-            (selected ? ' is-selected' : '') + '" data-add-role-opt="' + esc(role.id) + '"' +
-            ' data-roletitle="' + esc(role.title) + '" data-rolecolor="' + esc(role.color || '') + '">' +
-            dot + '<span>' + esc(role.title) + '</span></button></li>';
+          var selected = !!selectedIds[String(role.id)];
+          var dot = role.color ? '<span class="roles-chip__dot" style="background:' + esc(role.color) + '"></span>' : '';
+          return '<li><button type="button" class="roles-picker__option' + (selected ? ' is-selected' : '') + '" data-add-role-opt="' + esc(String(role.id)) + '" data-roletitle="' + esc(role.title) + '" data-rolecolor="' + esc(role.color || '') + '">' + dot + '<span>' + esc(role.title) + '</span></button></li>';
         }).join('');
-        if (!roles.length) {
-          roleHtml = '<li class="roles-picker__option" aria-disabled="true">' +
-            esc(t('roles.nothing_found')) + '</li>';
-        }
+        if (!roles.length) roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(add.loadingRoles ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
         roleBox.innerHTML = roleHtml;
         roleBox.hidden = false;
       }
     }
+
+    // --- модалка «создание роли» (экран 1): список кандидатов для вставки ---
+    var createRoleBox = q('[data-roles-create-role-results]');
+    if (createRoleBox) {
+      if (!add.roleOpen) { createRoleBox.hidden = true; createRoleBox.innerHTML = ''; }
+      else {
+        var candidatesSource = (st.add.catalogRoles && st.add.catalogRoles.length)
+          ? st.add.catalogRoles
+          : (st.insert.catalog || []);
+        var candidates = candidatesSource.filter(function (role) {
+          return !st.roles.some(function (one) { return String(one.id) === String(role.id); });
+        });
+        var pickedIds = {};
+        add.roles.forEach(function (one) { pickedIds[String(one.id)] = true; });
+        var createHtml = candidates.map(function (role) {
+          var selected = pickedIds[String(role.id)] ? ' is-selected' : '';
+          var dot = role.color ? '<span class="roles-chip__dot" style="background:' + esc(role.color) + '"></span>' : '';
+          return '<li><button type="button" class="roles-picker__option' + selected + '" data-add-role-opt="' + esc(String(role.id)) + '" data-roletitle="' + esc(role.title) + '" data-rolecolor="' + esc(role.color || '') + '">' + dot + '<span>' + esc(role.title) + '</span></button></li>';
+        }).join('');
+        if (!candidates.length) createHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(add.loadingRoles ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
+        createRoleBox.innerHTML = createHtml;
+        createRoleBox.hidden = false;
+      }
+    }
   }
 
-  /* ---------- выбор чипов ---------- */
+  /* ---------- выбор чипов / опций ---------- */
 
   function toggleAddUser(id, username) {
     var add = st.add;
     if (add.userLocked) return;
-    var exists = add.users.some(function (one) { return one.id === String(id); });
-    if (exists) add.users = add.users.filter(function (one) { return one.id !== String(id); });
-    else add.users.push({ id: String(id), username: String(username || ('#' + id)) });
+    var userId = String(id);
+    var exists = add.users.some(function (one) { return one.id === userId; });
+    // Один человек за раз: выбор заменяет предыдущего, повторный клик снимает выбор.
+    add.users = exists ? [] : [{ id: userId, username: String(username || ('#' + id)) }];
+    if (!exists && createUserModalOpen()) {
+      // в поле поиска остаётся выбранный человек, список закрывается
+      add.q = String(username || ('#' + id));
+      add.userOpen = false;
+    }
     renderAdd();
   }
 
   function toggleAddRole(id, title, color) {
     var add = st.add;
     var roleId = String(id);
-    var exists = add.roles.some(function (one) { return one.id === roleId; });
-    if (exists) add.roles = add.roles.filter(function (one) { return one.id !== roleId; });
-    else add.roles.push({ id: roleId, title: String(title || ('#' + id)), color: String(color || '') });
+    var exists = add.roles.some(function (one) { return String(one.id) === roleId; });
+    // Одна роль за раз: выбор заменяет предыдущую роль, повторный клик снимает выбор.
+    add.roles = exists
+      ? []
+      : [{ id: roleId, title: String(title || ('#' + id)), color: String(color || '') }];
+    // В модалке «роль + пользователь» выбор закрывает дропдаун; в модалке
+    // создания роли список остаётся открытым — там видна отметка выбранного.
+    if (!exists && createUserModalOpen()) add.roleOpen = false;
     renderAdd();
   }
 
-  /* ---------- сохранение ---------- */
+  /* ---------- сохранение (create user+role / edit user roles) ---------- */
 
   function makeAddRoleStep(userId, role) {
     return function () {
@@ -1033,6 +1238,19 @@ window.LoreRoles = (function () {
       return request('DELETE', base() + '/users/' + userId + '/roles/' + roleId)
         .then(function (res) {
           if (okKind(res)) localRemoveRoleFromUser(userId, roleId);
+          return res;
+        });
+    };
+  }
+
+  function makeRemoveUserStep(userId) {
+    return function () {
+      return request('DELETE', base() + '/users/' + userId + '/roles')
+        .then(function (res) {
+          if (okKind(res)) {
+            var user = findUser(userId);
+            if (user) user.roles = [];
+          }
           return res;
         });
     };
@@ -1070,10 +1288,10 @@ window.LoreRoles = (function () {
       var userId = add.userId;
       var current = add.original.slice();
       add.roles.forEach(function (role) {
-        if (current.indexOf(role.id) < 0) steps.push(makeAddRoleStep(userId, role));
+        if (current.indexOf(String(role.id)) < 0) steps.push(makeAddRoleStep(userId, role));
       });
       current.forEach(function (roleId) {
-        var stillHas = add.roles.some(function (role) { return role.id === roleId; });
+        var stillHas = add.roles.some(function (one) { return String(one.id) === String(roleId); });
         if (!stillHas) steps.push(makeRemoveRoleStep(userId, roleId));
       });
     } else {
@@ -1095,7 +1313,7 @@ window.LoreRoles = (function () {
           return;
         }
         add.roles.forEach(function (role) {
-          var already = bound.roles.some(function (one) { return one.id === role.id; });
+          var already = bound.roles.some(function (one) { return String(one.id) === String(role.id); });
           if (!already) steps.push(makeAddRoleStep(person.id, role));
         });
       });
@@ -1108,7 +1326,7 @@ window.LoreRoles = (function () {
         var res = outcome.res;
         setAddStatus(describe(res, t('roles.save_failed', { status: res.status })));
         renderAdd();
-        render();   // частично сохранённое уже видно в списках экрана 1
+        render();
         return;
       }
 
@@ -1116,30 +1334,23 @@ window.LoreRoles = (function () {
       render();
 
       if (andMore && add.mode === 'add') {
-        // «Сохранить и создать ещё»: форма обнуляется для следующей записи
         add.users = [];
         add.roles = [];
+        add.original = [];
         add.q = '';
         add.roleQ = '';
         add.status = '';
-        var usersInput = q('[data-roles-user-search]');
-        var rolesInput = q('[data-roles-role-search]');
-        if (usersInput) usersInput.value = '';
-        if (rolesInput) rolesInput.value = '';
         add.userOpen = true;
         renderAdd();
-        var search = q('[data-roles-user-search]');
+        var search = q('[data-roles-create-user-user-search]');
         if (search) { try { search.focus(); } catch (_) {} }
         return;
       }
 
-      closeAddOverlay();
+      // Сохранение из модалки (create / edit) завершено — закрываем окно.
+      closeCreateModals();
     });
   }
-
-  /* ============================================================
-     ЭКРАН 4. Права роли (сетка чекбоксов в две колонки, If-Match)
-     ============================================================ */
 
   function findRole(roleId) {
     var found = null;
@@ -1161,6 +1372,7 @@ window.LoreRoles = (function () {
 
   function resetPerms() {
     st.perms.open = false;
+    st.perms.source = null;
     st.perms.roleId = '';
     st.perms.title = '';
     st.perms.draft = {};
@@ -1175,6 +1387,7 @@ window.LoreRoles = (function () {
     if (!role) return;
 
     var perms = st.perms;
+    perms.source = 'edit';
     perms.open = true;
     perms.roleId = role.id;
     perms.title = role.title;
@@ -1198,6 +1411,7 @@ window.LoreRoles = (function () {
   function closePerms() {
     if (!st.perms.open) return;
     st.perms.open = false;
+    if (st.perms.source === 'create') { closeCreateModals(); return; }
     var overlay = q('[data-roles-perms]');
     if (overlay) overlay.hidden = true;
     if (st.perms.lastFocus && st.perms.lastFocus.focus) {
@@ -1210,12 +1424,16 @@ window.LoreRoles = (function () {
     var perms = st.perms;
     if (!perms.open) return;
 
-    var title = q('[data-roles-perms-title]');
-    if (title) title.textContent = t('roles.perms_title') + ' — ' + perms.title;
+    var title = q('[data-roles-perms-title]') || q('[data-roles-create-title]');
+    if (title) title.textContent = perms.source === 'create'
+      ? t('roles.create_title')
+      : (t('roles.perms_title') + ' — ' + perms.title);
 
     show(q('[data-perms-group="pub"]'), true);
 
-    var list = q('[data-perms-list="pub"]');
+    var list = (perms.source === 'create')
+      ? q('[data-roles-create-perms-list="pub"]')
+      : q('[data-perms-list="pub"]');
     if (list) {
       list.innerHTML = PUB_PERMS.map(function (key) {
         var id = 'roles-perm-' + key;
@@ -1228,9 +1446,13 @@ window.LoreRoles = (function () {
       }).join('');
     }
 
-    var save = q('[data-roles-perms-save]');
+    var save = (perms.source === 'create')
+      ? q('[data-roles-create-add]')
+      : q('[data-roles-perms-save]');
     if (save) save.disabled = perms.saving;
-    var cancel = q('[data-roles-perms-cancel]');
+    var cancel = (perms.source === 'create')
+      ? q('[data-roles-create-cancel]')
+      : q('[data-roles-perms-cancel]');
     if (cancel) cancel.disabled = perms.saving;
 
     setPermsStatus(perms.status);
@@ -1246,6 +1468,8 @@ window.LoreRoles = (function () {
 
   function savePerms() {
     var perms = st.perms;
+    // «Создание роли» (модалка экрана 1) — отдельная сохранёнка POST /roles
+    if (perms.source === 'create') { saveCreateRole(); return; }
     if (perms.saving || !perms.roleId) return;
 
     perms.saving = true;
@@ -1579,13 +1803,15 @@ window.LoreRoles = (function () {
     st.forceMock = opts.mock === true;
     st.onPublish = typeof opts.onPublish === 'function' ? opts.onPublish : null;
     st.onCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
-    st.screen = 1;
+    st.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
     st.page = 'users';
+    st.expanded = {};
+    st.context = opts.context === 'edit' ? 'edit' : 'create';
     st.error = '';
     st.publishing = false;
     st.lastFocus = document.activeElement;
 
-    closeAddOverlay();
+    closeCreateModals();
     resetAdd();
     closePerms();
     resetPerms();
@@ -1604,7 +1830,7 @@ window.LoreRoles = (function () {
   function reset(root) {
     var target = root || st.root;
     if (!target) return;
-    closeAddOverlay();
+    closeCreateModals();
     resetAdd();
     closePerms();
     resetPerms();
@@ -1617,6 +1843,7 @@ window.LoreRoles = (function () {
     st.users = [];
     st.screen = 1;
     st.page = 'users';
+    st.context = 'create';
     st.error = '';
     st.publishing = false;
     st.onPublish = null;
@@ -1635,7 +1862,7 @@ window.LoreRoles = (function () {
       window.ConfirmModal.confirm({
         title: t(titleKey, params),
         message: t(textKey, params),
-        confirmText: t('common.js.delete'),
+        confirmText: t('js.delete'),
         cancelText: t('common.cancel'),
         danger: true
       }).then(function (yes) { if (yes) onYes(); });
@@ -1644,16 +1871,28 @@ window.LoreRoles = (function () {
     onYes();
   }
 
-  function removeUser(userId) {
-    var user = null;
-    st.users.some(function (one) { if (one.id === userId) { user = one; return true; } return false; });
-    if (!user) return;
+  function toggleUserExpand(userId) {
+    var key = String(userId);
+    st.expanded[key] = !st.expanded[key];
+    renderUsers();
+  }
 
-    confirmAction('roles.remove_user_title', 'roles.remove_user_text',
-      { name: user.username }, function () {
-        request('DELETE', base() + '/users/' + user.id).then(function (res) {
-          if (res.kind === 'ok' || res.kind === 'missing') {
-            st.users = st.users.filter(function (one) { return one.id !== user.id; });
+  /** Удаление одной роли пользователя (иконка корзины в раскрытой строке). */
+  function removeUserRole(userId, roleId) {
+    var user = findUser(userId);
+    if (!user) return;
+    var role = null;
+    (user.roles || []).some(function (one) {
+      if (String(one.id) === String(roleId)) { role = one; return true; }
+      return false;
+    });
+    if (!role) return;
+
+    confirmAction('roles.remove_role_from_user_title', 'roles.remove_role_from_user_text',
+      { name: user.username, role: role.title }, function () {
+        request('DELETE', base() + '/users/' + user.id + '/roles/' + role.id).then(function (res) {
+          if (okKind(res)) {
+            localRemoveRoleFromUser(user.id, role.id);
             render();
             notify(t('roles.saved'), 'success');
             return;
@@ -1713,7 +1952,13 @@ window.LoreRoles = (function () {
       }
 
       if (target.closest('[data-roles-next]')) {
+        // Экран 1 → экран 2 (пользователи) — только при создании.
+        if (st.context !== 'create') return;
         st.screen = 2;
+        var usersBody = q('[data-roles-users-body]');
+        if (usersBody) show(usersBody, true);
+        renderUsers();
+        updateGate();
         renderScreen();
         return;
       }
@@ -1721,8 +1966,18 @@ window.LoreRoles = (function () {
       if (target.closest('[data-roles-retry]')) { reload(); return; }
       if (target.closest('[data-roles-publish]')) { publish(); return; }
 
-      var userRemove = target.closest('[data-user-remove]');
-      if (userRemove) { removeUser(userRemove.getAttribute('data-user-remove')); return; }
+      var userExpand = target.closest('[data-user-expand]');
+      if (userExpand) { toggleUserExpand(userExpand.getAttribute('data-user-expand')); return; }
+
+      var userRoleRemove = target.closest('[data-user-role-remove]');
+      if (userRoleRemove) {
+        removeUserRole(userRoleRemove.getAttribute('data-user-id'),
+          userRoleRemove.getAttribute('data-user-role-remove'));
+        return;
+      }
+
+      var userAddRole = target.closest('[data-user-add-role]');
+      if (userAddRole) { openEdit(userAddRole.getAttribute('data-user-add-role')); return; }
 
       var roleRemove = target.closest('[data-role-remove]');
       if (roleRemove) { removeRole(roleRemove.getAttribute('data-role-remove')); return; }
@@ -1732,18 +1987,7 @@ window.LoreRoles = (function () {
       var permsBtn = target.closest('[data-role-perms]');
       if (permsBtn) { openPerms(permsBtn.getAttribute('data-role-perms')); return; }
 
-      if (target.closest('[data-roles-perms-cancel]') ||
-          target.closest('[data-roles-perms-dismiss]')) {
-        closePerms();
-        return;
-      }
-
-      if (target.closest('[data-roles-perms-save]')) { savePerms(); return; }
-
-      /* --- вставка роли («+» между строками, оверлей) --- */
-
-      var gapAdd = target.closest('[data-gap-add]');
-      if (gapAdd) { openInsert(parseInt(gapAdd.getAttribute('data-gap-add'), 10) || 0); return; }
+      if (target.closest('[data-gap-add]')) { openInsert(parseInt(target.getAttribute('data-gap-add'), 10) || 0); return; }
 
       if (target.closest('[data-roles-insert-cancel]') ||
           target.closest('[data-roles-insert-dismiss]')) {
@@ -1759,21 +2003,50 @@ window.LoreRoles = (function () {
         return;
       }
 
-      /* --- экран 3: добавление / редактирование --- */
+      /* --- модалки создания (экран 1 / экран 2, кнопка «+») --- */
 
-      if (target.closest('[data-roles-add-open]')) { openAdd(); return; }
-
-      if (target.closest('[data-roles-add-cancel]') ||
-          target.closest('[data-roles-add-dismiss]')) {
-        closeAddOverlay();
+      if (target.closest('[data-roles-add-open]')) {
+        // «+»: экран 1 — модалка создания роли; экран 2 — модалка «роль + пользователь».
+        if (st.screen === 2) { openCreateUserModal(); return; }
+        openCreateRole();
         return;
       }
 
-      if (target.closest('[data-roles-add-save]')) { saveAdd(false); return; }
-      if (target.closest('[data-roles-add-save-more]')) { saveAdd(true); return; }
+      var roleTrigger = target.closest('[data-roles-create-user-role-trigger]');
+      if (roleTrigger) {
+        // дропдаун «Choose a role»: раскрытие/скрытие панели с поиском ролей
+        st.add.roleOpen = !st.add.roleOpen;
+        renderAdd();
+        if (st.add.roleOpen) {
+          var roleSearchInput = q('[data-roles-create-user-role-search]');
+          if (roleSearchInput && roleSearchInput.focus) {
+            try { roleSearchInput.focus(); } catch (_) {}
+          }
+        }
+        return;
+      }
 
-      var userEdit = target.closest('[data-user-edit]');
-      if (userEdit) { openEdit(userEdit.getAttribute('data-user-edit')); return; }
+      if (target.closest('[data-roles-perms-cancel]') ||
+          target.closest('[data-roles-perms-dismiss]')) {
+        // оверлей прав роли; при source 'create' closePerms сам закроет модалку создания
+        closePerms();
+        return;
+      }
+
+      if (target.closest('[data-roles-create-cancel]') ||
+          target.closest('[data-roles-create-role-dismiss]') ||
+          target.closest('[data-roles-create-user-cancel]') ||
+          target.closest('[data-roles-create-user-dismiss]') ||
+          target.closest('[data-roles-add-cancel]') ||
+          target.closest('[data-roles-add-dismiss]')) {
+        // модалки создания (роль / «роль + пользователь») — закрыть без сохранения
+        closeCreateModals();
+        return;
+      }
+
+      if (target.closest('[data-roles-create-add]')) { saveCreateRole(); return; }
+      if (target.closest('[data-roles-perms-save]')) { savePerms(); return; }
+      if (target.closest('[data-roles-create-user-add]')) { saveCreateUser(); return; }
 
       var userOpt = target.closest('[data-add-user-opt]');
       if (userOpt) {
@@ -1855,7 +2128,7 @@ window.LoreRoles = (function () {
       var target = e.target && e.target.closest ? e.target : null;
       if (!target) return;
 
-      if (target.matches('[data-roles-user-search]')) {
+      if (target.matches('[data-roles-user-search]') || target.matches('[data-roles-create-user-user-search]')) {
         st.add.q = target.value.trim();
         st.add.userOpen = true;
         clearTimeout(searchTimer);
@@ -1864,7 +2137,9 @@ window.LoreRoles = (function () {
         return;
       }
 
-      if (target.matches('[data-roles-role-search]')) {
+      if (target.matches('[data-roles-role-search]') ||
+          target.matches('[data-roles-create-user-role-search]') ||
+          target.matches('[data-roles-create-role-search]')) {
         st.add.roleQ = target.value.trim();
         st.add.roleOpen = true;
         renderAddResults();
@@ -1875,8 +2150,8 @@ window.LoreRoles = (function () {
     root.addEventListener('focusin', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
       if (!target) return;
-      if (target.matches('[data-roles-user-search]')) { st.add.userOpen = true; renderAddResults(); }
-      if (target.matches('[data-roles-role-search]')) { st.add.roleOpen = true; renderAddResults(); }
+      if (target.matches('[data-roles-user-search]') || target.matches('[data-roles-create-user-user-search]')) { st.add.userOpen = true; renderAddResults(); }
+      if (target.matches('[data-roles-role-search]') || target.matches('[data-roles-create-user-role-search]') || target.matches('[data-roles-create-role-search]')) { st.add.roleOpen = true; renderAddResults(); }
     });
 
     root.addEventListener('focusout', function (e) {
@@ -1887,8 +2162,10 @@ window.LoreRoles = (function () {
       // даём фокусу переехать внутрь списка результатов (клик по опции)
       setTimeout(function () {
         if (picker.contains(document.activeElement)) return;
-        if (target.matches('[data-roles-user-search]')) { st.add.userOpen = false; renderAddResults(); }
-        if (target.matches('[data-roles-role-search]')) { st.add.roleOpen = false; renderAddResults(); }
+        var isUser = target.matches('[data-roles-user-search]') || target.matches('[data-roles-create-user-user-search]');
+        if (isUser) { st.add.userOpen = false; renderAddResults(); }
+        // у дропдауна роли закрывается и панель с поиском — её скрывает renderAdd
+        else { st.add.roleOpen = false; renderAdd(); }
       }, 140);
     });
   }
@@ -1912,7 +2189,14 @@ window.LoreRoles = (function () {
 
   function overlayInFocus() {
     if (st.insert.open) return q('[data-roles-insert]');
-    if (st.add.open) return q('[data-roles-add]');
+    if (st.add.open) {
+      // модалка «роль + пользователь» (screen 2) или модалка «создание роли» (screen 1)
+      var addOverlay = q('[data-roles-create-user]');
+      if (addOverlay && !addOverlay.hidden) return addOverlay;
+      var createOverlay = q('[data-roles-create-role]');
+      if (createOverlay && !createOverlay.hidden) return createOverlay;
+      return null;
+    }
     if (st.perms.open) return q('[data-roles-perms]');
     return null;
   }
@@ -1926,7 +2210,7 @@ window.LoreRoles = (function () {
       e.stopPropagation();
       e.stopImmediatePropagation();
       if (st.insert.open) closeInsert();
-      else if (st.add.open) closeAddOverlay();
+      else if (st.add.open) closeCreateModals();
       else if (st.perms.open) closePerms();
       return;
     }

@@ -42,6 +42,8 @@
     mode: 'after-publish',
     bookId: 0,
     redirect: '',
+    screen: 1,            // стартовый экран модуля: 1 — роли | 2 — пользователи
+    context: 'create',    // create — Create → Continue → Publish; edit — «Изменить…»
     loading: false,
     saving: false,
     lastFocus: null,
@@ -360,6 +362,10 @@
       : (opts.mode === 'roles' ? 'roles' : 'publish');
     state.bookId = parseInt(opts.bookId !== undefined ? opts.bookId : r.getAttribute('data-book-id'), 10) || 0;
     state.redirect = opts.redirect || r.getAttribute('data-redirect') || '';
+    // 'screen' — стартовый экран модуля (1 — роли, 2 — пользователи);
+    // 'context' — create (Create → Continue → Publish) | edit (без Continue).
+    state.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
+    state.context = opts.context === 'edit' ? 'edit' : 'create';
 
     r.setAttribute('data-rights-mode', state.mode);
     r.setAttribute('data-book-id', String(state.bookId));
@@ -397,6 +403,8 @@
     window.LoreRoles.open(mod, {
       publicationId: state.bookId,
       mode: rolesMode,
+      screen: state.screen,
+      context: state.context,
       // Publish экрана 2: в режиме 'roles' просто сохраняем роли (модуль
       // сохранил их сам) и закрываем; иначе — права + публикация хоста.
       onPublish: function (done) {

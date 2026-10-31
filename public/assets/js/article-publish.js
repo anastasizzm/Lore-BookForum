@@ -29,6 +29,8 @@ window.LoreArticlePublish = (function () {
     articleId: 0,
     onInvalid: null,
     mode: 'publish',               // publish | roles
+    screen: 1,                     // стартовый экран модуля: 1 — роли | 2 — пользователи
+    context: 'create',             // create — Create → Continue → Publish; edit — «Изменить…»
     selected: Object.create(null),   // id (string) -> true
     users: [],
     page: 1,
@@ -317,6 +319,8 @@ window.LoreArticlePublish = (function () {
     // 'roles' — только модуль ролей (Publish просто сохраняет роли и закрывает);
     // иначе — привычный publish (Publish публикует статью).
     state.mode = (opts && opts.mode === 'roles') ? 'roles' : 'publish';
+    state.screen = (opts && opts.screen) ? (parseInt(opts.screen, 10) || 1) : 1;
+    state.context = (opts && opts.context) === 'edit' ? 'edit' : 'create';
     state.selected = Object.create(null);
     state.users = [];
     state.page = 1;
@@ -355,6 +359,8 @@ window.LoreArticlePublish = (function () {
     window.LoreRoles.open(mod, {
       publicationId: state.articleId,
       mode: rolesMode,
+      screen: state.screen,
+      context: state.context,
       // Publish экрана 2: в режиме 'roles' просто сохраняем роли (модуль
       // сохранил их сам) и закрываем; иначе — публикуем статью (submit хоста).
       onPublish: function (done) {

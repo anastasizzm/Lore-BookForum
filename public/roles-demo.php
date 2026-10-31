@@ -190,8 +190,6 @@ $payload = json_encode(
 
     <div class="demo-dialog">
         <h1>Book / Article — publish</h1>
-        <p class="demo-sub">Stand-in for rights-modal / article-rights-dialog. The roles module drives it.</p>
-
         <!-- Реальный partial модуля (корень [data-roles-module]) -->
         <?= $moduleHtml ?>
     </div>
