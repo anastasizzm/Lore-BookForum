@@ -694,13 +694,13 @@
             ' aria-label="' + esc(tx('admin.role_drag', 'Drag to reorder')) + '">' + GRIP + '</button>';
 
       return '<tr class="' + rowClass + '" data-role-row-id="' + id + '" data-search="' + esc(search) + '">' +
-          '<td class="admin-table__drag">' + handle + '</td>' +
-          '<td class="admin-table__id">' + id + '</td>' +
-          '<td><span class="admin-role__title">' +
+          '<td class="admin-table__drag" data-col="drag">' + handle + '</td>' +
+          '<td class="admin-table__id" data-col="id">' + id + '</td>' +
+          '<td data-col="title"><span class="admin-role__title">' +
             (item.color ? '<span class="admin-role__dot" style="background:' + esc(item.color) + '"></span>' : '') +
             esc(item.title) +
           '</span></td>' +
-          '<td><div class="admin-actions">' +
+          '<td data-col="perms"><div class="admin-actions">' +
             '<span class="admin-badge admin-badge--accent" data-role-syscount>' +
               esc(permsLabel(totalPerms(item))) +
             '</span>' +
@@ -708,10 +708,11 @@
               esc(t('admin.action_permissions')) +
             '</button>' +
           '</div></td>' +
-          '<td><div class="admin-actions">' +
-            '<button type="button" class="btn btn--danger" data-role-delete data-role-id="' + id + '"' +
+          '<td data-col="delete"><div class="admin-actions">' +
+            '<button type="button" class="btn btn--danger admin-icon-btn" data-role-delete data-role-id="' + id + '"' +
+              ' title="' + esc(t('admin.action_delete')) + '" aria-label="' + esc(t('admin.action_delete')) + '"' +
               (item.canManage === false ? ' disabled' : '') + '>' +
-              esc(t('admin.action_delete')) +
+              TRASH +
             '</button>' +
           '</div></td>' +
         '</tr>';
@@ -1253,6 +1254,9 @@
   var DND_SCROLL_ZONE = 64;
   var DND_SCROLL_STEP = 14;
   var GRIP = '\u283F';
+  /** Иконка мусорки для кнопок удаления (текст остаётся в title/aria-label). */
+  var TRASH = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">' +
+    '<path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9L12 4M6.5 7v4M9.5 7v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   var dnd = {
     wrap: null, line: null, plus: null,
@@ -1508,7 +1512,9 @@
   function wrapTop(y, half) {
     var rect = dnd.wrap.getBoundingClientRect();
     var top = y - rect.top - dnd.wrap.clientTop + dnd.wrap.scrollTop;
-    var max = dnd.wrap.scrollHeight - half * 2;
+    var table = dnd.wrap.querySelector('table');
+    var content = table ? table.offsetTop + table.offsetHeight : dnd.wrap.clientHeight;
+    var max = content - half; // граница ≤ низа таблицы, так что кружок стоит по центру линии
     return Math.max(0, Math.min(max, top - half));
   }
 
@@ -1527,11 +1533,18 @@
       dnd.plus.style.display = 'none'; 
     }
     dnd.insertAt = null;
+    if (dnd.wrap) dnd.wrap.classList.remove('is-insert-tail');
     if (!dnd.active) hideLine();
+  }
+
+  /** Вставка роли «в это место» отключена на мобильной раскладке (≤720px) — там карточки. */
+  function insertDisabled() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
   }
 
   function onWrapPointerMove(e) {
     if (dnd.active || e.pointerType !== 'mouse') return;
+    if (insertDisabled()) { hideInsert(); return; }
     if (e.target.closest && e.target.closest('[data-role-insert]')) return;
     if (!dndOn()) { hideInsert(); return; }
 
@@ -1550,8 +1563,10 @@
       aboveId: best > 0 ? Number(rows[best - 1].getAttribute('data-role-row-id')) : null,
       belowId: best < rows.length ? Number(rows[best].getAttribute('data-role-row-id')) : null
     };
+    // нижняя граница: добавляем место под таблицей, чтобы кружок «+» влез целиком
+    dnd.wrap.classList.toggle('is-insert-tail', best === rows.length);
     dnd.plus.style.top = wrapTop(boundaryY(rows, best), 12) + 'px';
-    dnd.plus.style.left = (dnd.wrap.scrollLeft + 8) + 'px';
+    dnd.plus.style.left = (dnd.wrap.scrollLeft + Math.max(0, (dnd.wrap.clientWidth - 24) / 2)) + 'px';
     dnd.plus.style.display = 'flex';
     dnd.plus.hidden = false;
     showLine(rows, best);
@@ -1717,7 +1732,8 @@
     dnd.plus.setAttribute('data-role-insert', '');
     dnd.plus.setAttribute('aria-label', tx('admin.role_insert_here', 'Add a role here'));
     dnd.plus.title = tx('admin.role_insert_here', 'Add a role here');
-    dnd.plus.textContent = '+';
+    dnd.plus.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false">' +
+      '<path d="M6 1.5v9M1.5 6h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
     dnd.plus.style.display = 'none'; 
     dnd.plus.hidden = true;
     wrap.appendChild(dnd.plus);
@@ -3174,7 +3190,7 @@
       list: function (query, statusFilter) {
         var parts = [];
         if (query) parts.push('q=' + encodeURIComponent(query));
-        if (statusFilter && statusFilter !== 'all') parts.push('visibility=' + encodeURIComponent(statusFilter));
+        if (statusFilter && statusFilter !== 'all') parts.push('status=' + encodeURIComponent(statusFilter));
         var qs = parts.length ? '?' + parts.join('&') : '';
         return request('GET', qs).then(function (r) {
           var kind = classify(r);
@@ -3250,12 +3266,13 @@
           '</span>';
 
       return '<tr data-allroles-row-id="' + id + '" data-search="' + esc(item.title.toLowerCase()) + '" data-status="' + esc(item.visibility) + '">' +
-          '<td class="admin-table__id">' + id + '</td>' +
-          '<td><span class="admin-role__title">' + titleHtml + '</span></td>' +
-          '<td>' + visHtml + '</td>' +
-          '<td><div class="admin-actions">' + 
-            '<button type="button" class="btn btn--danger" data-allroles-delete data-allroles-row-id="' + id + '">' + 
-              esc(t('admin.action_delete') || 'Delete') + 
+          '<td class="admin-table__id" data-col="id">' + id + '</td>' +
+          '<td data-col="title"><span class="admin-role__title">' + titleHtml + '</span></td>' +
+          '<td data-col="vis">' + visHtml + '</td>' +
+          '<td data-col="delete"><div class="admin-actions">' + 
+            '<button type="button" class="btn btn--danger admin-icon-btn" data-allroles-delete data-allroles-row-id="' + id + '"' +
+              ' title="' + esc(t('admin.action_delete') || 'Delete') + '" aria-label="' + esc(t('admin.action_delete') || 'Delete') + '">' +
+              TRASH +
             '</button>' +
           '</div></td>' +
         '</tr>';
@@ -3891,19 +3908,19 @@
     var rolesLabel = tx('admin.user_roles_toggle', 'Roles');
 
     return '<tr data-user-id="' + id + '">' +
-        '<td class="admin-table__id">' + id + '</td>' +
-        '<td>' + esc(u.username) + '</td>' +
-        '<td><span class="admin-table__clip" title="' + esc(u.email) + '">' + esc(u.email) + '</span></td>' +
-        '<td>' + roleCell + '</td>' +
-        '<td data-status-cell>' + statusCell + '</td>' +
-        '<td><div class="admin-actions">' +
+        '<td class="admin-table__id" data-col="id">' + id + '</td>' +
+        '<td data-col="name">' + esc(u.username) + '</td>' +
+        '<td data-col="email"><span class="admin-table__clip" title="' + esc(u.email) + '">' + esc(u.email) + '</span></td>' +
+        '<td data-col="role">' + roleCell + '</td>' +
+        '<td data-col="status" data-status-cell>' + statusCell + '</td>' +
+        '<td data-col="actions"><div class="admin-actions">' +
           '<a class="btn btn--secondary" href="/users/' + id + '">' + esc(t('admin.action_view')) + '</a>' +
           '<button type="button" class="btn btn--secondary" data-admin-block' +
             ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (u.blocked ? ' disabled' : '') + '>' +
             esc(t('admin.action_block')) +
           '</button>' +
         '</div></td>' +
-        '<td class="admin-table__expand">' +
+        '<td class="admin-table__expand" data-col="expand">' +
           '<button type="button" class="admin-expand" data-user-expand' +
             ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' +
             ' aria-expanded="false" title="' + esc(rolesLabel) + '" aria-label="' + esc(rolesLabel) + '">' +
@@ -4023,6 +4040,7 @@
 
     // --- «+» между строками списка ролей (ROLES DND) ---
     if (e.target.closest('[data-role-insert]')) {
+      if (insertDisabled()) { hideInsert(); return; }
       var at = dnd.insertAt;
       hideInsert();
       openRoleNew(at);
