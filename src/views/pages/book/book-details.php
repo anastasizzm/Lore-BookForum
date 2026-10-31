@@ -418,6 +418,34 @@ $isDraft   = $status === 'draft';
     </div>
   </div>
 
+  <!-- Контент книги (файлы): прикрепление/удаление через API.
+       Контракт (develop):
+         GET    /api/books/{id}/contents              → { items: File[] }
+         POST   /api/books/{id}/contents              { contentId: uuid }
+         DELETE /api/books/{id}/contents/{contentId}  → 204
+         POST   /api/files/upload                     multipart { file, category:'book' }
+       Блок скрыт по умолчанию — показывает permissions.js по праву
+       publication.updateContent (владелец — owner-override). Реальный
+       доступ держит бэк (UpdateContentPublicationOperation). -->
+  <section class="card-base book-contents"
+           data-book-contents
+           data-book-id="<?= (int) $bookId ?>"
+           data-requires="publication.updateContent"
+           data-requires-kind="book"
+           data-requires-owner="<?= $isOwnerPub ? '1' : '0' ?>"
+           hidden>
+    <div class="book-contents__head">
+      <h3 class="book-contents__title"><?= $tr('common.book.contents_title') ?></h3>
+      <button type="button" class="btn btn--secondary" data-contents-add>
+        <?= $tr('common.book.contents_add') ?>
+      </button>
+    </div>
+    <p class="book-contents__hint"><?= $tr('common.book.contents_hint') ?></p>
+    <p class="book-contents__empty" data-contents-empty hidden><?= $tr('common.book.contents_empty') ?></p>
+    <ul class="book-contents__list" data-contents-list></ul>
+    <input type="file" hidden multiple data-contents-input>
+  </section>
+
   <!-- Блок комментариев.
        data-me-username = логин, как его отдаёт API (creator.username): оптимистично
        вставленный комментарий/ответ должен совпадать с тем, что покажет перезагрузка. -->
@@ -704,4 +732,7 @@ $isDraft   = $status === 'draft';
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>
   <script src="/assets/js/book.js"></script>
+  <!-- book-contents.js — контент книги: список файлов, прикрепление и
+       удаление (POST/DELETE /api/books/{id}/contents) -->
+  <script src="/assets/js/book-contents.js"></script>
 <?php $view->endBlock('scripts'); ?>
