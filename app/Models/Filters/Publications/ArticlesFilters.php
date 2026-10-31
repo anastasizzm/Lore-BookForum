@@ -33,6 +33,18 @@ final readonly class ArticlesFilters extends PublicationsFilters
         return self::fromParent($q, $parent);
     }
 
+    public static function fromDraft(array $q) : self
+    {
+        $parent = parent::fromDraft($q);
+        return self::fromParent($q, $parent);
+    }
+
+    public static function fromPublic(array $q) : self
+    {
+        $parent = parent::fromPublic($q);
+        return self::fromParent($q, $parent);
+    }
+
     private static function fromParent(array $q, parent $parent) : self 
     {
         return new self(

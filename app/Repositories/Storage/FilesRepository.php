@@ -25,6 +25,7 @@ final class FilesRepository extends Repository
     public function create(
         Uuid $id,
         string $path,
+        string $hash,
         FileCategory $category,
         FileStatus $status,
         string $originalName,
@@ -34,13 +35,14 @@ final class FilesRepository extends Repository
         int $uploadedBy,
     ): void {
         $stmt = $this->pdo()->prepare(
-            'INSERT INTO files (id, path, category, status, original_name, format, mime_type, size_bytes, uploaded_by)
-             VALUES (:id, :path, :category, :status, :name, :format, :mimeType, :size, :uploadedBy)'
+            'INSERT INTO files (id, path, hash, category, status, original_name, format, mime_type, size_bytes, uploaded_by)
+             VALUES (:id, :path, :hash, :category, :status, :name, :format, :mimeType, :size, :uploadedBy)'
         );
 
         $stmt->execute([
             ':id' => $id->toString(),
             ':path' => $path,
+            ':hash' => $hash,
             ':status' => $status->value,
             ':category' => $category->value,
             ':name' => $originalName,
@@ -53,7 +55,7 @@ final class FilesRepository extends Repository
 
     public function findById(Uuid $id): ?File
     {
-        $stmt = $this->db->pdo()->prepare(
+        $stmt = $this->pdo()->prepare(
             'SELECT id, path, category, status, original_name, format, mime_type, size_bytes, uploaded_by, created_at
              FROM files WHERE id = :id'
         );
@@ -63,9 +65,35 @@ final class FilesRepository extends Repository
         return $row === false ? null : File::fromRow($row);
     }
 
+    public function findByHash(string $hash): ?File
+    {
+        $stmt = $this->pdo()->prepare(
+            'SELECT id, path, category, status, original_name, format, mime_type, size_bytes, uploaded_by, created_at
+             FROM files WHERE hash = :hash LIMIT 1'
+        );
+        $stmt->execute([':hash' => $hash]);
+        $row = $stmt->fetch();
+
+        return $row === false ? null : File::fromRow($row);
+    }
+
     public function delete(Uuid $id): void
     {
-        $pdo->prepare('DELETE FROM files WHERE id = :id')
+        $this->pdo()->prepare('DELETE FROM files WHERE id = :id')
             ->execute([':id' => $id->toString()]);
+    }
+
+    public function activate(Uuid $id) : void 
+    {
+        $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = :fileId::uuid")
+            ->execute([':fileId' => $id->toString()]);
+    }
+
+    /** @param array<Uuid> $ids */
+    public function activateMany(array $ids) : void 
+    {
+        $fileIdsArray = '{' . implode(',', $ids) . '}';
+        $stmt = $this->pdo()->prepare("UPDATE files SET status = 'active' WHERE id = ANY(:fileIds::uuid[])");
+        $stmt->execute([':fileIds' => $fileIdsArray]);
     }
 }

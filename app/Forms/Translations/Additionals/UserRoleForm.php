@@ -14,6 +14,7 @@ final readonly class UserRoleForm implements TranslationsForm
     /** @param array<string, string> $translations */
     public function __construct(
         public string $color,
+        public bool $isPublic,
         public array $translations
     ){}
 
@@ -21,6 +22,7 @@ final readonly class UserRoleForm implements TranslationsForm
     {
         return new self(
             color: QueryParser::string($form, 'color'),
+            isPublic: QueryParser::bool($form, 'isPublic'),
             translations: self::parseTranslations($form)
         );
     }

@@ -60,7 +60,8 @@ final class PostsRepository extends Repository
     {
         $stmt = $this->pdo()->prepare(
             'INSERT INTO comments_likes (user_id, comment_id)
-            VALUES (:userId, :commentId)
+            SELECT :userId::bigint, id FROM comments
+            WHERE id = :commentId and is_active
             RETURNING comment_id'
         );
         $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
@@ -72,9 +73,12 @@ final class PostsRepository extends Repository
     ) : void
     {
         $stmt = $this->pdo()->prepare(
-            'DELETE FROM comments_likes WHERE user_id = :userId AND comment_id = :commentId'
+            'DELETE FROM comments_likes 
+            WHERE user_id = :userId 
+            AND comment_id = :commentIdOuter
+            AND EXISTS (SELECT 1 FROM comments WHERE id = :commentIdInner AND is_active)'
         );
-        $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
+        $stmt->execute([':userId' => $userId, ':commentIdOuter' => $commentId, ':commentIdInner' => $commentId]);
     }
 
     public function addComment(int $creatorId, int $publicationId, string $content, ?int $parentId = null) : ?int
@@ -93,20 +97,8 @@ final class PostsRepository extends Repository
     public function removeComment(int $commentId) : void
     {
         $stmt = $this->pdo()->prepare(
-            'UPDATE comments SET is_active = false WHERE id = :commentId'
+            'UPDATE comments SET deleted_at = NOW() WHERE id = :commentId AND is_active'
         );
         $stmt->execute([':commentId' => $commentId]);
-    }
-
-    public function hasAccess(int $userId, int $commentId) : bool
-    {
-        $stmt = $this->pdo()->prepare(
-            'SELECT id
-            FROM comments 
-            WHERE id = :commentId AND creator_id = :userId'
-        );
-        $stmt->execute([':commentId' => $commentId, ':userId' => $userId]);
-
-        return $stmt->fetchColumn() !== false;
     }
 }

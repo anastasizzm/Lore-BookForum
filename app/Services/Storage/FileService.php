@@ -5,6 +5,8 @@ namespace App\Services\Storage;
 
 use App\Repositories\Storage\FilesRepository;
 use App\Exceptions\ValidationException;
+use App\Exceptions\ConflictException;
+use App\Exceptions\Translators\FileExceptionTranslator;
 use App\Storage\FileStorage;
 use App\Lib\Settings\StorageSettings;
 use App\Lib\I18n\Translator;
@@ -28,14 +30,11 @@ final class FileService
         private readonly FilesRepository $files,
         private readonly FilesValidator $validator,
         private readonly UnitOfWork $uow,
-        private readonly Translator $translator
+        private readonly Translator $translator,
+        private readonly FileExceptionTranslator $exceptionTranslator
     ) {}
 
-    public function storePending(
-        UploadedFile $upload,
-        FileCategory $category,
-        int $creatorId
-    ) : File 
+    public function storePending(UploadedFile $upload, FileCategory $category, int $creatorId): File 
     {
         return $this->store($upload, $category, $creatorId, FileStatus::Pending);
     }
@@ -51,6 +50,14 @@ final class FileService
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
 
         $tmpPath = $upload->tmpPath;
+        
+        $hash = hash_file('sha256', $tmpPath);
+        $existingFile = $this->files->findByHash($hash);
+        
+        if ($existingFile !== null) {
+            return $existingFile; 
+        }
+
         $mime = $upload->mime ?? $this->detectMime($tmpPath, $category);
         $ext = $this->settings->fileAllowedMimes($category)[$mime];
         $uuid = Uuid::generate();
@@ -63,12 +70,14 @@ final class FileService
         );
 
         try {
+            // 3. Save to database
             return $this->uow->transactional(function (PDO $pdo) use (
-                $uuid, $stored, $category, $upload, $creatorId, $status, $ext
+                $uuid, $stored, $hash, $category, $upload, $creatorId, $status, $ext
             ): File {
                 $this->files->create(
                     id: $uuid,
                     path: $stored->path,
+                    hash: $hash,
                     category: $category,
                     status: $status,
                     originalName: $upload->originalName,
@@ -91,13 +100,35 @@ final class FileService
                     createdAt: new \DateTimeImmutable(),
                 );
             });
+        } catch (\PDOException $e) {
+            $this->storage->delete($stored->path);
+
+            if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'files_hash_uq')) {
+                $existingFile = $this->files->findByHash($hash);
+                if ($existingFile !== null) {
+                    return $existingFile;
+                }
+            }
+
+            throw $this->exceptionTranslator->translate($e);
         } catch (\Throwable $e) {
             $this->storage->delete($stored->path);
             throw $e;
         }
     }
 
-    public function retrieve(Uuid $fileId) : ?File 
+    public function activate(Uuid $id) : void
+    {
+        $this->files->activate($id);
+    }
+
+    /** @param array<Uuid> $ids */
+    public function activateMany(array $ids) : void
+    {
+        $this->files->activateMany($ids);
+    }
+
+    public function retrieve(Uuid $fileId): ?File 
     {
         return $this->files->findById($fileId);
     }
@@ -105,23 +136,28 @@ final class FileService
     public function delete(Uuid $id): void
     {
         $file = $this->files->findById($id);
+        if ($file === null) return;
 
-        if ($file === null) {
-            return;
+        try {
+            $this->uow->transactional(function () use ($id): void {
+                $this->files->delete($id);
+            });
+        } catch (\PDOException $e) {
+            if ($e->getCode() === '23001' || $e->getCode() === '23503') {
+                throw new ConflictException($this->translator->t('errors.common.in_use'));
+            }
+            
+            throw $this->exceptionTranslator->translate($e);
         }
-
-        $this->uow->transactional(function (PDO $pdo) use ($id): void {
-            $this->files->delete($id);
-        });
 
         try {
             $this->storage->delete($file->path);
         } catch (\Throwable $e) {
-            error_log("[files] failed to delete {$file->path}: {$e->getMessage()}");
+            error_log("[files] failed to delete physical file {$file->path}: {$e->getMessage()}");
         }
     }
 
-    private function detectMime(string $path, string $category): string
+    private function detectMime(string $path, FileCategory $category): string
     {
         $mime = mime_content_type($path);
         $allowed = $this->settings->fileAllowedMimes($category);

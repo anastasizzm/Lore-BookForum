@@ -34,21 +34,30 @@ return function(Router $router)
 
     // Publications
     $router->get('/api/books', [App\Controllers\Api\Publications\BooksController::class, 'list'], 'api.books', AuthPolicy::Auth);
-    $router->post('/api/books/new', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
-    $router->post('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
-    $router->delete('/api/books/{bookId}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
-    $router->put('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
-    $router->delete('/api/books/{bookId}/rate', [App\Controllers\Api\Publications\BooksController::class, 'unrate'], 'api.books.unrate', ReadPublicationOperation::class);
-    $router->post('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', ReadPublicationOperation::class);
-    $router->post('/api/books/{bookId}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
-    $router->delete('/api/books/{bookId}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
-
+    $router->get('/api/books/{id}/authors', [App\Controllers\Api\Publications\BooksController::class, 'getAuthors'], 'api.books.authors', ReadPublicationOperation::class);
+    $router->delete('/api/books/{id}', [App\Controllers\Api\Publications\BooksController::class, 'delete'], 'api.books.delete', DeletePublicationOperation::class);
+    $router->post('/api/books/', [App\Controllers\Api\Publications\BooksController::class, 'create'], 'api.books.create.submit', CreatePublicationOperation::class);
+    $router->post('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'save'], 'api.books.save', ReadPublicationOperation::class);
+    $router->delete('/api/books/{id}/save', [App\Controllers\Api\Publications\BooksController::class, 'deleteSave'], 'api.books.unsave', ReadPublicationOperation::class);
+    $router->put('/api/books/{id}/rate', [App\Controllers\Api\Publications\BooksController::class, 'rate'], 'api.books.rate', ReadPublicationOperation::class);
+    $router->delete('/api/books/{id}/rate', [App\Controllers\Api\Publications\BooksController::class, 'unrate'], 'api.books.unrate', ReadPublicationOperation::class);
+    $router->post('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'upsert'], 'api.books.progress', ReadPublicationOperation::class);
+    $router->post('/api/books/{id}/progress/finish', [App\Controllers\Api\Publications\BooksController::class, 'finish'], 'api.books.progress.finish', ReadPublicationOperation::class);
+    $router->delete('/api/books/{id}/progress', [App\Controllers\Api\Publications\BooksController::class, 'reset'], 'api.books.progress.reset', ReadPublicationOperation::class);
+    $router->patch('/api/books/{id}', [App\Controllers\Api\Publications\BooksController::class, 'update'], 'api.books.update', UpdateMetaPublicationOperation::class);
+    $router->get('/api/books/{id}/contents',[App\Controllers\Api\Publications\BooksController::class, 'listContents'], 'api.books.contents', ReadPublicationOperation::class);
+    $router->post('/api/books/{id}/contents', [App\Controllers\Api\Publications\BooksController::class, 'addContent'], 'api.books.contents.add', UpdateContentPublicationOperation::class);
+    $router->delete('/api/books/{id}/contents/{contentId}', [App\Controllers\Api\Publications\BooksController::class, 'removeContent'], 'api.books.contents.remove', UpdateContentPublicationOperation::class);
+    $router->post('/api/books/{id}/publish', [App\Controllers\Api\Publications\BooksController::class, 'publish'], 'api.books.publish', UpdateMetaPublicationOperation::class);
 
     $router->get('/api/articles', [App\Controllers\Api\Publications\ArticlesController::class, 'list'], 'api.articles', AuthPolicy::Auth);
-    $router->post('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
-    $router->delete('/api/articles/{articleId}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
-    $router->put('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
-    $router->delete('/api/articles/{articleId}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
+    $router->delete('/api/articles/{id}', [App\Controllers\Api\Publications\ArticlesController::class, 'delete'], 'api.articles.delete', DeletePublicationOperation::class);
+    $router->post('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'save'], 'api.articles.save', ReadPublicationOperation::class);
+    $router->delete('/api/articles/{id}/save', [App\Controllers\Api\Publications\ArticlesController::class, 'deleteSave'], 'api.articles.unsave', ReadPublicationOperation::class);
+    $router->put('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'rate'], 'api.articles.rate', ReadPublicationOperation::class);
+    $router->delete('/api/articles/{id}/rate', [App\Controllers\Api\Publications\ArticlesController::class, 'unrate'], 'api.articles.unrate', ReadPublicationOperation::class);
+    $router->post('/api/articles/{id}/publish', [App\Controllers\Api\Publications\ArticlesController::class, 'publish'], 'api.articles.publish', UpdateMetaPublicationOperation::class);
+
 
     $router->get('/api/publications/rules', [App\Controllers\Api\Publications\PublicationPermissionsController::class, 'getCommonRules'], 'api.publication.rules', AuthPolicy::Auth);
 
@@ -103,9 +112,9 @@ return function(Router $router)
 
     $router->get('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'list'], 'api.roles', AuthPolicy::Auth);
     $router->get('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'retrieve'], 'api.roles.retrieve', AuthPolicy::Auth);
-    $router->post('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'create'], 'api.roles.create', ManageAdditionalsSystemOperation::class);
-    $router->put('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'update'], 'api.roles.update', ManageAdditionalsSystemOperation::class);
-    $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageAdditionalsSystemOperation::class);
+    $router->post('/api/additional/roles', [App\Controllers\Api\Additional\RolesController::class, 'create'], 'api.roles.create', ManageRolesSystemOperation::class);
+    $router->put('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'update'], 'api.roles.update', ManageRolesSystemOperation::class);
+    $router->delete('/api/additional/roles/{roleId}', [App\Controllers\Api\Additional\RolesController::class, 'delete'], 'api.roles.delete', ManageRolesSystemOperation::class);
 
     // Users
     $router->get('/api/users', [App\Controllers\Api\Users\UsersController::class, 'list'], 'api.users', AuthPolicy::Auth);
@@ -116,6 +125,7 @@ return function(Router $router)
     $router->post('/api/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);
     $router->get('/api/files/{fileId}/download', [App\Controllers\Api\Files\FileController::class, 'download'], 'files.download', AuthPolicy::Public);
     $router->get('/api/files/{fileId}/preview', [App\Controllers\Api\Files\FileController::class, 'preview'], 'files.preview', AuthPolicy::Public);
+    $router->delete('/api/files/{fileId}', [App\Controllers\Api\Files\FileController::class, 'delete'], 'files.delete', AuthPolicy::Verified);
 
     // System
     $router->get('/api/system/rules', [App\Controllers\Api\System\SystemPermissionsController::class, 'getCommonRules'], 'api.system.rules', AuthPolicy::Auth);

@@ -66,6 +66,7 @@ return function(Router $router)
 
     // Publications
     $router->get('/books', [App\Controllers\Publications\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
+    $router->get('/books/drafts', [App\Controllers\Publications\BooksController::class, 'draftList'], 'books.drafts', AuthPolicy::Auth);
     $router->get('/books/saved', [App\Controllers\Publications\BooksController::class, 'savedList'], 'books.saved', AuthPolicy::Auth);
     $router->get('/books/new', [App\Controllers\Publications\BooksController::class, 'getCreate'], 'books.create', CreatePublicationOperation::class);
     $router->post('/books/new', [App\Controllers\Publications\BooksController::class, 'create'], 'books.create.submit', CreatePublicationOperation::class);
@@ -73,6 +74,7 @@ return function(Router $router)
     $router->get('/books/{bookId}/read', [App\Controllers\Publications\BooksController::class, 'read'], 'books.read', ReadPublicationOperation::class);
 
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
+    $router->get('/articles/drafts', [App\Controllers\Publications\ArticlesController::class, 'draftList'], 'articles.drafts', AuthPolicy::Auth);
     $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
     $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
     

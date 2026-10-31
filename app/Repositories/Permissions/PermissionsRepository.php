@@ -207,6 +207,7 @@ class PermissionsRepository extends Repository
     public function getUsers(
         ?int $publicationId, 
         UsersSortBy $sort,
+        ?int $roleId,
         int $page, 
         int $pageSize,
         array $includeObjects) : array 
@@ -218,6 +219,9 @@ class PermissionsRepository extends Repository
 
         if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
         else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        if(!empty($roleId))
+            $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");
         $builder->addWithBuilder("users_ids", $innerBuilder)
@@ -310,15 +314,14 @@ class PermissionsRepository extends Repository
         return (int)$stmt->fetchColumn();
     }
 
-    public function removeUser(int $userId, ?int $roleId, ?int $publicationId): array
+    public function removeUser(int $userId, ?int $roleId, ?int $publicationId): bool
     {
         $sql = "UPDATE roles_users
-                SET valid_to = NOW(), version = version + 1
+                SET valid_to = NOW()
                 WHERE user_id = :userId
                   AND (CAST(:roleIdCheck AS int) IS NULL OR role_id = :roleIdValue)
                   AND publication_id IS NOT DISTINCT FROM :pubId
-                  AND is_valid
-                RETURNING version";
+                  AND is_valid";
 
         $stmt = $this->execute($sql, [
             ':userId'      => ScriptParam::asInt($userId),
@@ -327,7 +330,7 @@ class PermissionsRepository extends Repository
             ':roleIdValue' => ScriptParam::asInt($roleId),
         ]);
 
-        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+        return $stmt->rowCount() > 0;
     }
 
     public function countUserRoles(?int $publicationId, int $userId) : int 

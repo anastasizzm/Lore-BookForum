@@ -9,7 +9,7 @@ use App\Models\Uuid;
 use App\Models\Enums\BookFormat;
 use App\Forms\Form;
 
-final readonly class BookProgressForm implements Form
+final readonly class ReadProgressForm implements Form
 {
     public function __construct(
         public BookFormat $format,

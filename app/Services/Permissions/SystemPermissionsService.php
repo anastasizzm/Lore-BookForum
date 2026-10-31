@@ -197,7 +197,7 @@ final class SystemPermissionsService
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers(NULL, $sortEnum, $page, $pageSize, $query->properties->getProps());
+        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps());
         return PaginatedList::fromArray($items, $page, $pageSize);
     }
 
@@ -231,8 +231,8 @@ final class SystemPermissionsService
 
     public function removeUser(int $userId): void
     {
-        $versions = $this->repository->removeUser($userId, null, null);
-        if ($versions === []) {
+        $removed = $this->repository->removeUser($userId, null, null);
+        if (!$removed) {
             throw new NotFoundException($this->translator->t('errors.common.not_found'));
         }
     }
@@ -260,18 +260,17 @@ final class SystemPermissionsService
         }
     }
 
-    public function removeUserRole(int $userId, int $roleId): int
+    public function removeUserRole(int $userId, int $roleId): void
     {
-        return $this->uow->transactional(function () use ($userId, $roleId) : int {
+        $this->uow->transactional(function () use ($userId, $roleId) {
             $rolesCount = $this->repository->countUserRoles(NULL, $userId);
             if ($rolesCount < 2)
                 throw new ConflictException($this->translator->t('errors.roles.last_role'));
         
-            $versions = $this->repository->removeUser($userId, $roleId, null);
-            if ($versions === []) {
+            $removed = $this->repository->removeUser($userId, $roleId, null);
+            if (!$removed) {
                 throw new NotFoundException($this->translator->t('errors.common.not_found'));
             }
-            return $versions[0];
         });
     }
 

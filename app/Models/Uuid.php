@@ -4,8 +4,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use InvalidArgumentException;
+use JsonSerializable;
 
-final readonly class Uuid
+final readonly class Uuid implements JsonSerializable
 {
     private function __construct(public string $value) {}
 
@@ -44,6 +45,11 @@ final readonly class Uuid
     }
 
     public function __toString(): string
+    {
+        return $this->value;
+    }
+
+    public function jsonSerialize(): mixed
     {
         return $this->value;
     }
