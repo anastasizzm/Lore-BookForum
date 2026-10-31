@@ -45,6 +45,12 @@
  *   data-requires (см. шапку book-details.php).
  *
  * Стили — public/assets/css/rights-modal.css (каркас .modal — modal.css).
+ *
+ * МОДУЛЬ РОЛЕЙ (roles-module.php / roles-module.js): встроен в плашку и
+ * управляет ею — родной контент (справочник прав) скрыт, когда у корня
+ * data-rights-view="roles". Экран 2 «Publish» модуля зовёт onPublish
+ * хоста (rights-modal.js → confirm(): POST rights[] + publish). Отмена
+ * модуля (стрелка «назад») зовёт onCancel → cancel() хоста.
  */
 ?>
 <div class="modal rights-modal" data-rights-modal hidden
@@ -85,9 +91,11 @@
             <p class="rights-modal__save-error" data-rights-save-error hidden aria-live="polite"></p>
         </div>
 
-        <!-- Плашка ролей и людей публикации (id книги уже известен):
-             publication-roles.js грузит /api/publications/{id}/roles и /users -->
-        <?php $view->include('publication-roles-panel'); ?>
+        <!-- Модуль «назначение ролей» (roles-module.php). Заменяет родной
+             контент плашки: управляет процессом публикации: экран 2 «Publish»
+             зовёт логику хоста (rights-modal.js). Активен, когда у корня
+             data-rights-view="roles" (см. rights-modal.css). -->
+        <?php $view->include('roles-module'); ?>
 
         <div class="modal__actions">
             <button type="button" class="btn btn--secondary" data-rights-cancel>

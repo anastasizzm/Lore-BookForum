@@ -1490,6 +1490,16 @@
           .then(function (response) {
             if (response.ok) {
               notify(t('js.book_published'), 'success');
+              // Открываем плашку с модулем ролей ( rights-modal.js ):
+              // назначаем роли, Publish ведёт на страницу книги.
+              if (window.RightsModal) {
+                window.RightsModal.open({
+                  mode: 'after-publish',
+                  bookId: createdId,
+                  redirect: redirect,
+                });
+                return;
+              }
             } else {
               notify(t('js.book_publish_failed'), 'warning');
             }

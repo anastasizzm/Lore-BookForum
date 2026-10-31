@@ -42,6 +42,8 @@
     mode: 'after-publish',
     bookId: 0,
     redirect: '',
+    screen: 1,            // стартовый экран модуля: 1 — роли | 2 — пользователи
+    context: 'create',    // create — Create → Continue → Publish; edit — «Изменить…»
     loading: false,
     saving: false,
     lastFocus: null,
@@ -265,26 +267,53 @@
   }
 
   function confirm() {
-    if (state.saving) return;
+    if (state.saving) return Promise.resolve(false);
 
     // Справочник ещё не догрузился — подтверждать нечего
-    if (!state.items) { load(); return; }
+    if (!state.items) { load(); return Promise.resolve(false); }
 
     setSaving(true);
 
-    postRights().then(function (rightsOk) {
-      if (!rightsOk) { setSaving(false); return; }
+    return postRights().then(function (rightsOk) {
+      if (!rightsOk) { setSaving(false); return false; }
 
       if (state.mode === 'publish') {
         // Черновик на book-details или форма редактирования: права
         // сохранены — publishBook сам уводит на страницу книги
         return publishBook().then(function (publishOk) {
-          if (!publishOk) setSaving(false);
+          if (!publishOk) { setSaving(false); return false; }
+          return true;   // ушли на страницу книги
         });
       }
 
       // Книга уже опубликована (форма) — уходим на её страницу
       goToBook();
+      return true;
+    });
+  }
+
+  /**
+   * Publish из модуля ролей (экран 2): родной выбор прав заменён модулем,
+   * поэтому гейт справочника не нужен — только права + публикация.
+   * Роли модуль сохраняет сам (отдельными запросами при каждом изменении).
+   */
+  function modulePublish() {
+    if (state.saving) return Promise.resolve(false);
+
+    setSaving(true);
+
+    return postRights().then(function (rightsOk) {
+      if (!rightsOk) { setSaving(false); return false; }
+
+      if (state.mode === 'publish') {
+        return publishBook().then(function (publishOk) {
+          if (!publishOk) { setSaving(false); return false; }
+          return true;
+        });
+      }
+
+      goToBook();
+      return true;
     });
   }
 
@@ -293,13 +322,23 @@
      -------------------------------------------------------- */
   function close() {
     var r = root();
-    if (r) r.hidden = true;
+    if (r) {
+      // Сбрасываем модуль ролей и убираем режим
+      var mod = r.querySelector('[data-roles-module]');
+      if (mod && window.LoreRoles) window.LoreRoles.reset(mod);
+      r.removeAttribute('data-rights-view');
+      r.hidden = true;
+    }
     document.body.classList.remove('is-modal-open');
     saveError('');
     if (state.lastFocus && state.lastFocus.focus) {
       try { state.lastFocus.focus(); } catch (_) {}
     }
     state.lastFocus = null;
+  }
+
+  function notifySaved() {
+    if (window.Messages) window.Messages.show(t('roles.saved'), { type: 'success' });
   }
 
   function cancel() {
@@ -328,13 +367,22 @@
     if (!r) return;
 
     opts = opts || {};
-    state.mode = opts.mode === 'after-publish' ? 'after-publish' : 'publish';
+    // 'roles' — только модуль ролей (Publish просто сохраняет роли и закрывает);
+    // иначе — привычные 'after-publish' | 'publish' (Publish ведёт публикацию).
+    state.mode = opts.mode === 'after-publish' ? 'after-publish'
+      : (opts.mode === 'roles' ? 'roles' : 'publish');
     state.bookId = parseInt(opts.bookId !== undefined ? opts.bookId : r.getAttribute('data-book-id'), 10) || 0;
     state.redirect = opts.redirect || r.getAttribute('data-redirect') || '';
+    // 'screen' — стартовый экран модуля (1 — роли, 2 — пользователи);
+    // 'context' — create (Create → Continue → Publish) | edit (без Continue).
+    state.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
+    state.context = opts.context === 'edit' ? 'edit' : 'create';
 
     r.setAttribute('data-rights-mode', state.mode);
     r.setAttribute('data-book-id', String(state.bookId));
     r.setAttribute('data-redirect', state.redirect);
+    // Модуль ролей берёт управление плашкой на себя
+    r.setAttribute('data-rights-view', 'roles');
 
     var label = q('[data-rights-confirm-label]');
     if (label) {
@@ -352,8 +400,36 @@
     if (first && first.focus) first.focus();
 
     render();
-    load();   // асинхронная подгрузка справочника (кэш — state.items)
-    loadRolesPanel();   // плашка ролей и людей (publication-roles.js)
+
+    openRoles(r);
+  }
+
+  /** Открывает модуль ролей внутри плашки (экран 1). */
+  function openRoles(r) {
+    var mod = r.querySelector('[data-roles-module]');
+    if (!mod || !window.LoreRoles) return;
+
+    var rolesMode = state.mode === 'roles' ? 'roles' : 'publish';
+
+    window.LoreRoles.open(mod, {
+      publicationId: state.bookId,
+      mode: rolesMode,
+      screen: state.screen,
+      context: state.context,
+      // Publish экрана 2: в режиме 'roles' просто сохраняем роли (модуль
+      // сохранил их сам) и закрываем; иначе — права + публикация хоста.
+      onPublish: function (done) {
+        if (rolesMode === 'roles') {
+          notifySaved();
+          close();
+          done();
+          return;
+        }
+        modulePublish().then(function (ok) { if (ok) close(); done(); });
+      },
+      // Стрелка «назад»/отмена модуля → закрыть плашку (after-publish ведёт на книгу)
+      onCancel: function () { cancel(); }
+    });
   }
 
   /* --------------------------------------------------------
