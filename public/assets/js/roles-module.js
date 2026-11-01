@@ -24,6 +24,13 @@
  * Недоступные роуты (404/HTML/сеть) гасятся: статус data-api у корня
  * становится 'mock' и список рисуется на встроенных данных — так же,
  * как в publication-roles.js и admin.js.
+ *
+ * Каталоги модалок (GET /api/users, GET /api/additional/roles) грузятся
+ * лениво при первом открытии модалки — ensureCatalogs(); open() сбрасывает
+ * флаги, поэтому каждое открытие диалога получает свежие списки.
+ * Состояния загрузки/ошибки/демо рисуются в блок data-roles-states
+ * (см. src/partials/roles-module.php): при 403/419/сетевой ошибке модуль
+ * показывает текст и кнопку «Повторить», а не пустой список.
  */
 window.LoreRoles = (function () {
   'use strict';
@@ -696,13 +703,24 @@ window.LoreRoles = (function () {
     if (next) next.hidden = st.context !== 'create';
     // Экран 2: Publish требует хотя бы одного пользователя.
     var pub = q('[data-roles-publish]');
-    if (pub) pub.disabled = !hasUsers;
+    if (pub) { pub.disabled = !hasUsers; show(pub, true); }
     show(q('[data-roles-gate]'), !hasUsers);
   }
 
   function render() {
     renderStates();
-    if (q('[data-roles-body]') && q('[data-roles-body]').hidden) return;
+
+    // Загрузка или ошибка — контент обоих экранов и кнопки скрыты:
+    // состояние рисует блок data-roles-states над экранами.
+    if (st.loading || st.error) {
+      show(q('[data-roles-users-body]'), false);
+      show(q('[data-roles-next]'), false);
+      show(q('[data-roles-publish]'), false);
+      show(q('[data-roles-gate]'), false);
+      renderScreen();
+      return;
+    }
+
     if (st.screen === 1) {
       // Экран 1 — страница ролей публикации.
       renderRoles();
@@ -871,6 +889,9 @@ window.LoreRoles = (function () {
     }
     add.roles = []; // выбор роли не переносится между открытиями модалки
 
+    // Каталог ролей (GET /api/additional/roles) — иначе список кандидатов пуст
+    ensureCatalogs({ roles: true });
+
     // Список чекбоксов прав публикации заполняет renderPerms() (ниже).
     var createSave = q('[data-roles-create-add]');
     if (createSave) createSave.disabled = true; // до выбора роли кнопка неактивна
@@ -954,6 +975,11 @@ window.LoreRoles = (function () {
 
     var overlay = q('[data-roles-create-user]');
     if (overlay) overlay.hidden = false;
+
+    // Каталоги людей (GET /api/users) и ролей (GET /api/additional/roles)
+    // нужны для обоих выпадающих списков этой модалки.
+    ensureCatalogs({ users: true, roles: true });
+
     renderAdd();
 
     // фокус: человек ещё не выбран — в поиск людей, иначе — в поиск ролей
@@ -978,6 +1004,27 @@ window.LoreRoles = (function () {
   }
 
   /* ---------- каталоги для поиска ---------- */
+
+  /**
+   * Каталоги людей и ролей грузятся лениво — при первом открытии модалки.
+   * Без этого выпадающие списки остаются пустыми («Nothing found»), а Add
+   * не активируется. Флаги сбрасывает open(), поэтому каждое открытие
+   * диалога получает свежие каталоги.
+   *
+   * which: { users?: true, roles?: true }
+   */
+  function ensureCatalogs(which) {
+    var add = st.add;
+    which = which || {};
+
+    if (which.users && !add.loadedOnce && !add.catalogFallback) {
+      add.loadedOnce = true;
+      loadUserCatalog(1, false);
+    }
+    if (which.roles && !add.catalogRoles.length && !add.roleFallback) {
+      loadRoleCatalog();
+    }
+  }
 
   function loadUserCatalog(page, append) {
     var add = st.add;
@@ -1030,13 +1077,18 @@ window.LoreRoles = (function () {
 
     // Мок-режим: каталог ролей без сети
     if (st.api === 'mock') {
+      add.loadingRoles = false;
       add.catalogRoles = MOCK.catalogRoles.map(function (one) { return Object.assign({}, one); });
       add.roleFallback = false;
       renderAddResults();
       return Promise.resolve();
     }
 
+    add.loadingRoles = true;
+    renderAddResults();
+
     return request('GET', ROLES_CATALOG_URL).then(function (res) {
+      add.loadingRoles = false;
       if (res.kind === 'ok') {
         add.catalogRoles = mapList(res.data, normalizeRole) || [];
         add.roleFallback = false;
@@ -1421,6 +1473,15 @@ window.LoreRoles = (function () {
     PUB_PERMS.forEach(function (key) {
       perms.draft[key] = !!(role.perms && role.perms[key]);
     });
+    // 'delete' в UI не показывается, но приходит в pubPermissions (бэк:
+    // PublicationAccessRules::toArray). Ключ отправляется обратно без
+    // изменений, чтобы PUT не сбрасывал его в false.
+    // NB: текущий PublicationPermissionForm парсит только PUB_PERMS —
+    // значение всё равно теряется на бэке (см. roles-module.php, «Известные
+    // ограничения бэка»).
+    if (role.perms && 'delete' in role.perms) {
+      perms.draft['delete'] = !!role.perms['delete'];
+    }
     perms.lastFocus = document.activeElement;
 
     var overlay = q('[data-roles-perms]');
@@ -1768,16 +1829,10 @@ window.LoreRoles = (function () {
     ins.loading = true;
     renderInsert();
 
-    request('GET', ROLES_CATALOG_URL).then(function (res) {
+    // Каталог ролей — тот же, что у модалки создания роли (грузится один раз).
+    loadRoleCatalog().then(function () {
+      ins.catalog = st.add.catalogRoles.slice();
       ins.loading = false;
-      if (res.kind === 'ok') {
-        ins.catalog = mapList(res.data, normalizeRole) || [];
-      } else {
-        // Каталога нет — предложим роли публикации (дубликаты отфильтруются)
-        ins.catalog = st.roles.map(function (role) {
-          return { id: role.id, title: role.title, color: role.color };
-        });
-      }
       renderInsert();
     });
   }
@@ -1852,6 +1907,9 @@ window.LoreRoles = (function () {
     if (usersSearch) usersSearch.value = '';
     st.context = opts.context === 'edit' ? 'edit' : 'create';
     st.error = '';
+    // Сбрасываем классификацию прошлой сессии: иначе после демо-режима
+    // (st.api === 'mock') request() пропустит все сетевые запросы.
+    st.api = 'unknown';
     st.publishing = false;
     st.lastFocus = document.activeElement;
 
@@ -1863,6 +1921,12 @@ window.LoreRoles = (function () {
     resetInsert();
     st.add.loadedOnce = false;
     st.add.loadedFallback = false;
+    st.add.catalogFallback = false;
+    st.add.roleFallback = false;
+    st.add.catalogUsers = [];
+    st.add.catalogRoles = [];
+    st.add.loadingUsers = false;
+    st.add.loadingRoles = false;
 
     root.setAttribute('data-mode', st.mode);
     renderScreen();

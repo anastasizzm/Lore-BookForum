@@ -34,11 +34,60 @@
  *
  * mode: 'publish' — Publish завершает публикацию (onPublish хоста);
  *       'roles'   — Publish просто сохраняет роли (notify + закрыть).
+ *
+ * КОНТРАКТ С БЭКОМ (config/endpoints.php → PublicationPermissionsController):
+ *
+ *   GET    /api/publications/{id}/roles                     → { items: [ { role, pubPermissions, canManage, version } ], meta }
+ *   POST   /api/publications/{id}/roles                     { roleId, pubPermissions, aboveId?, belowId? } → 201 + ETag
+ *   PUT    /api/publications/{id}/roles/{roleId}            { pubPermissions } + If-Match: "<version>" → 200 + ETag
+ *   PATCH  /api/publications/{id}/roles/{roleId}/position   { aboveId?, belowId? } + If-Match → 200 + ETag
+ *   DELETE /api/publications/{id}/roles/{roleId}
+ *   GET    /api/publications/{id}/users?include=roles&ps=50 → { items: [ { user, roles, canManage } ], meta }
+ *   POST   /api/publications/{id}/users                     { userId, roleId }
+ *   DELETE /api/publications/{id}/users/{userId}
+ *   POST   /api/publications/{id}/users/{userId}/roles      { roleId }
+ *   DELETE /api/publications/{id}/users/{userId}/roles/{roleId}
+ *
+ *   Каталоги для модалок (Auth-роуты, доступны любому вошедшему):
+ *   GET    /api/users?ps=50&page=N          → { items: [UserShortData], meta }
+ *   GET    /api/additional/roles?ps=50      → { items: [ { id, title, color } ], meta }
+ *
+ *   Классификация ответов (roles-module.js::request):
+ *   401/403 → denied, 404/405 без JSON или HTML-страница → missing,
+ *   сеть → network. Если ОБА роута публикации ответили missing —
+ *   data-api="mock": список рисуется на встроенных данных (демо).
+ *
+ * ИЗВЕСТНОЕ ОГРАНИЧЕНИЕ БЭКА: pubPermissions.delete приходит в ответе
+ * (PublicationAccessRules::toArray), но PublicationPermissionForm парсит
+ * только PUB_PERMS — при PUT значение сбрасывается в false. Фронт
+ * отправляет ключ обратно без изменений, однако бэк его пока игнорирует.
  */
 
 $tr = static fn(string $key, array $params = []): string => $view->e($view->t($key, $params));
 ?>
 <div class="roles-module" data-roles-module data-api="unknown" data-mode="publish">
+
+    <!-- ============ ОБЩИЕ СОСТОЯНИЯ: загрузка / ошибка / демо-данные ============
+         Рисуются roles-module.js (renderStates) над экранами. Без них при
+         403/419/сетевой ошибке модуль выглядел бы пустым: data-api у корня
+         принимает live | mock | denied | error. -->
+    <div class="roles-module__states" data-roles-states>
+        <p class="roles-module__loading" data-roles-loading hidden aria-live="polite">
+            <span class="roles-module__spinner" aria-hidden="true"></span>
+            <span><?= $tr('common.roles.loading') ?></span>
+        </p>
+
+        <div class="roles-module__error" data-roles-error hidden role="alert">
+            <p class="roles-module__error-text" data-roles-error-text></p>
+            <button type="button" class="btn btn--secondary" data-roles-retry>
+                <?= $tr('common.roles.retry') ?>
+            </button>
+        </div>
+
+        <p class="roles-module__note" data-roles-mock-note hidden>
+            <?= $tr('common.roles.mock_note') ?>
+        </p>
+    </div>
 
     <!-- ================= ЭКРАН 1. Страница ролей публикации ================= -->
     <section class="roles-module__screen" data-roles-screen="1" aria-label="<?= $tr('common.roles.title') ?>">
@@ -126,6 +175,7 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
         </div>
 
         <footer class="roles-module__foot">
+            <p class="roles-module__gate" data-roles-gate hidden><?= $tr('common.roles.gate_hint') ?></p>
             <button type="button" class="btn btn--primary" data-roles-publish>
                 <?= $tr('common.roles.publish') ?>
             </button>

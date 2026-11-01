@@ -52,9 +52,9 @@
    *                Отдельного флага `publish` бэк не отдаёт, поэтому по
    *                договорённости маппим на updateMeta || updateContent.
    * publish_new  — публикация НОВОЙ публикации прямо из формы создания
-   *                (POST /api/books/new + POST /books/{id}/publish). Здесь
+   *                (POST /api/books/ + POST /api/books/{id}/publish). Здесь
    *                права на обновление ещё нет — публикация и есть создание,
-   *                поэтому опираемся на create (роут /books/new бэк и так
+   *                поэтому опираемся на create (роут /api/books/ бэк и так
    *                закрывает политикой CreatePublicationOperation).
    */
   var PUBLICATION_ACTIONS = {

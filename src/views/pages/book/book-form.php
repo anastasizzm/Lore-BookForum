@@ -28,7 +28,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        после 422 от веб-роута: $form (значения полей) и
  *        $errors (['title' => ['msg'], ...]).
  *
- *   POST /api/books/new → роут api.books.create.submit (config/
+ *   POST /api/books/ → роут api.books.create.submit (config/
  *        endpoints.php), AuthPolicy::Verified + CSRF (поле _token или
  *        заголовок X-CSRF-Token). Accept: application/json.
  *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
@@ -64,13 +64,13 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   БИНАРНЫЕ ФАЙЛЫ — НЕ в этом POST: обложка и файлы книги грузятся
  *   отдельно через POST /api/files/upload (file + category →
  *   201 { createdId: uuid }), id подставляются в iconId / contentIds[].
- *   Поэтому payload /api/books/new собирается из полей формы, а файлы
+ *   Поэтому payload /api/books/ собирается из полей формы, а файлы
  *   book-form.js передаст отдельным запросом (см. F2-02 ниже).
  *
  *   РЕЖИМ РЕДАКТИРОВАНИЯ: разметка зарезервирована ($book передаёт
  *   контроллер, когда появится GET /books/{id}/edit и endpoint
  *   обновления); отправка в edit-режиме блокируется в book-form.js —
- *   POST /api/books/new только создаёт и дубликат не увидит.
+ *   POST /api/books/ только создаёт и дубликат не увидит.
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
@@ -111,7 +111,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
  *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
  *   внутри <form> (sticky, видна на всех шагах); «Назад» скрыта на
- *   шаге 1. Publish: POST /api/books/new → 201 { createdId } →
+ *   шаге 1. Publish: POST /api/books/ → 201 { createdId } →
  *   POST /books/{id}/publish; при неудаче publish — черновик уже
  *   создан, редирект на страницу книги (см. book-form.js).
  *
@@ -308,11 +308,11 @@ $categoryValue = $val('categoryId', $bookCategoryId);
        ============================================================ -->
   <section class="book-form card-base">
 
-    <!-- Форма шлёт JSON-эндпоинт бэка: POST /api/books/new (роут
+    <!-- Форма шлёт JSON-эндпоинт бэка: POST /api/books/ (роут
          api.books.create.submit в config/endpoints.php), multipart +
          CSRF (_token / X-CSRF-Token), Accept: application/json.
          ?lang= в action — чтобы бэк вернул ответ в той же локали. -->
-    <form action="<?= $view->e($withLang('/api/books/new')) ?>"
+    <form action="<?= $view->e($withLang('/api/books/')) ?>"
           method="POST"
           id="bookForm"
           data-book-form
@@ -466,7 +466,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
 
         <!-- ОБЛОЖКА: превью показывает book-form.js (object URL).
-             У input НЕТ name: бинарник не входит в payload /api/books/new —
+             У input НЕТ name: бинарник не входит в payload /api/books/ —
              book-form.js грузит его отдельным POST /api/files/upload
              (category=cover) и кладёт uuid в скрытое поле iconId. -->
         <div class="form-field book-form__cover">
@@ -535,7 +535,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
 
         <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/new. Обязательное (бэк требует
+             имя уходит в POST /api/books/. Обязательное (бэк требует
              непустые 1..2000) — required + клиентская проверка на пустоту
              и длину (11.2, см. RULES в book-form.js). -->
         <div class="form-field">
@@ -621,10 +621,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            шагах. «Назад» скрыта на шаге 1 (book-form.js, initSteps).
 
            СОЗДАНИЕ («Отмена» + Create draft / Publish):
-             Create draft → POST /api/books/new → 201 { createdId } →
+             Create draft → POST /api/books/ → 201 { createdId } →
                           редирект на страницу книги: бэк создаёт
                           только черновик.
-             Publish → тот же POST /api/books/new (черновик), затем
+             Publish → тот же POST /api/books/ (черновик), затем
                        POST /books/{id}/publish (P0-маршрут, см.
                        rights-modal.php). Если publish не прошёл —
                        черновик уже создан, поэтому уводим на страницу
@@ -633,7 +633,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
            РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
            блокируется в book-form.js — endpoint'а обновления нет,
-           а /api/books/new только создаёт.
+           а /api/books/ только создаёт.
            ============================================================ -->
       <div class="book-form__actions">
         <button type="button" class="btn btn--secondary" data-step-prev hidden>

@@ -2,20 +2,24 @@
  * rights-modal.js — плашка публикации книги с выбором прав
  * (src/partials/rights-modal.php, стили rights-modal.css).
  *
- * Два режима (data-rights-mode):
- *   'after-publish' — книга УЖЕ опубликована (форма книги, POST /books/store
- *                     ответил успехом): плашка досылает rights[] и ведёт на
- *                     страницу книги (data-redirect). Отмена — тоже ведёт
- *                     на книгу (создана она уже).
- *   'publish'       — книга-черновик на book-details: подтверждение сначала
- *                     сохраняет права (POST /api/publications/{id}/rights),
- *                     затем публикует (POST /books/{id}/publish) и
- *                     перезагружает страницу (бейдж и кнопка исчезают).
+ * Плашка всегда открывается в режиме модуля ролей (data-rights-view="roles"):
+ * родной справочник прав и его футер скрыты, процессом управляет
+ * roles-module.js. Режимы (data-rights-mode):
+ *   'after-publish' — книга УЖЕ опубликована (форма книги, POST /api/books
+ *                     ответил успехом): Publish модуля ведёт на страницу
+ *                     книги (data-redirect). Отмена — тоже ведёт на книгу.
+ *   'publish'       — книга-черновик на book-details: Publish модуля
+ *                     публикует (POST /api/books/{id}/publish) и уводит на
+ *                     страницу книги (бейдж и кнопка исчезают).
+ *   'roles'         — только управление ролями: Publish сохраняет их
+ *                     (модуль делает это сам) и закрывает плашку.
  *
- * Справочник прав грузится АСИНХРОННО при открытии:
- *   GET /api/additional/rights → { items: [ { id, title, description? } ] }
- *   Есть состояния: загрузка (спиннер), ошибка (текст + «Повторить»),
- *   пусто (подсказка), список (чекбоксы). Отказ сервера плашку не ломает.
+ * Роли и люди сохраняются модулем отдельными запросами
+ * (GET/POST/PUT/PATCH/DELETE /api/publications/{id}/roles|users).
+ *
+ * Справочник прав (GET /api/additional/rights) ещё грузится при открытии —
+ * он больше не участвует в сохранении, но состояния загрузки/ошибки
+ * оставлены для совместимости разметки.
  *
  * Контракт целиком — в шапке src/partials/rights-modal.php.
  * Использование из book-form.js: window.RightsModal.open({mode, bookId, redirect}).
@@ -187,9 +191,15 @@
      -------------------------------------------------------- */
   function saveError(text) {
     var box = q('[data-rights-save-error]');
-    if (!box) return;
-    box.textContent = text || '';
-    show(box, !!text);
+    if (box) {
+      box.textContent = text || '';
+      show(box, !!text);
+    }
+    // В режиме модуля ролей родное тело плашки скрыто (data-rights-view
+    // ="roles") — там ошибку иначе не увидеть, поэтому дублируем тостом.
+    if (text && (!box || box.offsetParent === null) && window.Messages) {
+      window.Messages.show(text, { type: 'error' });
+    }
   }
 
   function setSaving(saving) {
@@ -200,37 +210,14 @@
     });
   }
 
-  function postRights() {
-    var body = new FormData();
-    Object.keys(state.selected).forEach(function (id) { body.append('rights[]', id); });
-
-    return csrfFetch('/api/publications/' + state.bookId + '/rights', {
-      method: 'POST',
-      body: body,
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    }).then(function (res) {
-      if (!res.ok) {
-        var fallback = t('rights.save_failed', { status: res.status });
-        return res.text().then(function (raw) {
-          var data = null;
-          try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
-          if (window.Messages) saveError(window.Messages.describe(res.status, data, raw, fallback));
-          else saveError(fallback);
-          return false;
-        });
-      }
-      saveError('');
-      return true;
-    }).catch(function (err) {
-      console.warn('[rights-modal] save failed', err);
-      saveError(t('errors.common.network_error'));
-      return false;
-    });
-  }
-
+  /**
+   * Публикация черновика: POST /api/books/{id}/publish
+   * (config/endpoints.php → BooksController::publish, ответ — пустое тело).
+   * Успех уводит на страницу книги (бейдж «Черновик» и кнопка публикации
+   * исчезают). Работает и из book-details, и из формы редактирования.
+   */
   function publishBook() {
-    return csrfFetch('/books/' + state.bookId + '/publish', {
+    return csrfFetch('/api/books/' + state.bookId + '/publish', {
       method: 'POST',
       body: new FormData(),
       credentials: 'same-origin',
@@ -242,11 +229,9 @@
         else saveError(fallback);
         return false;
       }
-      // Успех: уходим на страницу книги (бейдж «Черновик» и кнопка
-      // публикации исчезают — статус уже published). Работает и из
-      // book-details, и из формы редактирования книги. Данные на
-      // сервере — снимаем защиту «несохранённых изменений» книжной
-      // формы (она слушает событие 'bookform:leave').
+      // Успех: уходим на страницу книги. Данные на сервере — снимаем
+      // защиту «несохранённых изменений» книжной формы (она слушает
+      // событие 'bookform:leave').
       window.dispatchEvent(new Event('bookform:leave'));
       window.location.href = '/books/' + state.bookId;
       return true;
@@ -258,63 +243,35 @@
   }
 
   function goToBook() {
-    // Данные уже сохранены сервером (книга опубликована/права отправлены) —
-    // снимаем защиту «несохранённых изменений», если книжная форма рядом
-    // (она слушает событие 'bookform:leave').
+    // Данные уже сохранены сервером (книга опубликована) — снимаем защиту
+    // «несохранённых изменений», если книжная форма рядом (слушает
+    // событие 'bookform:leave').
     window.dispatchEvent(new Event('bookform:leave'));
     var target = state.redirect || (state.bookId ? '/books/' + state.bookId : '/books');
     window.location.href = target;
   }
 
-  function confirm() {
-    if (state.saving) return Promise.resolve(false);
-
-    // Справочник ещё не догрузился — подтверждать нечего
-    if (!state.items) { load(); return Promise.resolve(false); }
-
-    setSaving(true);
-
-    return postRights().then(function (rightsOk) {
-      if (!rightsOk) { setSaving(false); return false; }
-
-      if (state.mode === 'publish') {
-        // Черновик на book-details или форма редактирования: права
-        // сохранены — publishBook сам уводит на страницу книги
-        return publishBook().then(function (publishOk) {
-          if (!publishOk) { setSaving(false); return false; }
-          return true;   // ушли на страницу книги
-        });
-      }
-
-      // Книга уже опубликована (форма) — уходим на её страницу
-      goToBook();
-      return true;
-    });
-  }
-
   /**
-   * Publish из модуля ролей (экран 2): родной выбор прав заменён модулем,
-   * поэтому гейт справочника не нужен — только права + публикация.
-   * Роли модуль сохраняет сам (отдельными запросами при каждом изменении).
+   * Publish из модуля ролей (экран 2). Родной выбор прав заменён модулем,
+   * поэтому POST /api/publications/{id}/rights здесь НЕ вызывается: роли и
+   * люди модуль сохраняет сам, отдельными запросами при каждом изменении
+   * (см. roles-module.js). Хосту остаётся завершить публикацию.
    */
   function modulePublish() {
     if (state.saving) return Promise.resolve(false);
 
     setSaving(true);
 
-    return postRights().then(function (rightsOk) {
-      if (!rightsOk) { setSaving(false); return false; }
+    if (state.mode === 'publish') {
+      return publishBook().then(function (publishOk) {
+        if (!publishOk) { setSaving(false); return false; }
+        return true;   // ушли на страницу книги
+      });
+    }
 
-      if (state.mode === 'publish') {
-        return publishBook().then(function (publishOk) {
-          if (!publishOk) { setSaving(false); return false; }
-          return true;
-        });
-      }
-
-      goToBook();
-      return true;
-    });
+    // Режим 'roles' / 'after-publish': книга уже опубликована — только уход.
+    goToBook();
+    return Promise.resolve(true);
   }
 
   /* --------------------------------------------------------
@@ -417,7 +374,7 @@
       screen: state.screen,
       context: state.context,
       // Publish экрана 2: в режиме 'roles' просто сохраняем роли (модуль
-      // сохранил их сам) и закрываем; иначе — права + публикация хоста.
+      // сохранил их сам) и закрываем; иначе — публикация хоста.
       onPublish: function (done) {
         if (rolesMode === 'roles') {
           notifySaved();
@@ -459,7 +416,7 @@
 
       if (!root() || root().hidden) return;
 
-      if (target.closest('[data-rights-confirm]')) { confirm(); return; }
+      if (target.closest('[data-rights-confirm]')) { modulePublish(); return; }
       if (target.closest('[data-rights-cancel]')) { cancel(); return; }
       if (target.closest('[data-rights-dismiss]')) { cancel(); return; }
       if (target.closest('[data-rights-retry]')) { state.items = null; load(); return; }

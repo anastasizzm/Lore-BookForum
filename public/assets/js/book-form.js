@@ -12,7 +12,7 @@
  *   4. выпадающие списки жанра и категории (одиночный выбор) из
  *      /api/additional/* — <select name="genreId|categoryId">;
  *   5. клиентскую валидацию (RULES ниже) до отправки;
- *   6. отправку через fetch + FormData (multipart) на POST /api/books/new
+ *   6. отправку через fetch + FormData (multipart) на POST /api/books/
  *      с Accept: application/json; обложка и файлы книги перед этим
  *      уходят отдельными запросами POST /api/files/upload (category
  *      cover|book) → iconId / contentIds[];
@@ -27,8 +27,8 @@
  *      ключ bookform:v2:new) + плашку «Восстановить / Отбросить»
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
- *   10. публикацию (11.4): кнопка Publish → POST /api/books/new
- *      (черновик) → 201 { createdId } → POST /books/{id}/publish;
+ *   10. публикацию (11.4): кнопка Publish → POST /api/books/
+ *      (черновик) → 201 { createdId } → POST /api/books/{id}/publish;
  *      при неудаче publish черновик уже создан — редирект на его
  *      страницу с предупреждением (опубликовать можно и оттуда).
  *   11. окно публикации (11.3): списки авторов/редакторов переехали
@@ -40,8 +40,8 @@
  * редактор (определяет бэк по сессии).
  *
  * Контракт с бэком (подробно — в шапке book-form.php):
- *   POST /api/books/new, Accept: application/json →
- *   201 { createdId } → Publish? вторая фаза POST /books/{id}/publish,
+ *   POST /api/books/, Accept: application/json →
+ *   201 { createdId } → Publish? вторая фаза POST /api/books/{id}/publish,
  *   иначе уходим на /books/{createdId}; либо
  *   422 { error: { details: { field: [msg] } } } — ошибки рисуем на
  *   полях и возвращаем пользователя на шаг с первой из них;
@@ -1259,10 +1259,10 @@
     if (loadErrors.length) notify(loadErrors.join('\n'));
 
     // --------------------------------------------------------
-    // Отправка: fetch + FormData (multipart) → POST /api/books/new.
+    // Отправка: fetch + FormData (multipart) → POST /api/books/.
     // Ответ (Accept: application/json):
     //   201 { createdId } → Publish (11.4): вторая фаза
-    //        POST /books/{id}/publish, иначе — как раньше, уходим
+    //        POST /api/books/{id}/publish, иначе — как раньше, уходим
     //        на /books/{createdId} с уведомлением «черновик создан»;
     //   422/400 → error.details: { field: [msg] } — рисуем на полях и
     //        возвращаем пользователя на шаг с первой ошибкой;
@@ -1292,7 +1292,7 @@
           : publishRequested);
 
       // edit-режим заблокирован: endpoint'а обновления нет, а
-      // POST /api/books/new только создаёт — не плодим дубликаты.
+      // POST /api/books/ только создаёт — не плодим дубликаты.
       if (editId) {
         notify(t('js.book_edit_unavailable'));
         return;
@@ -1307,7 +1307,7 @@
         return;
       }
 
-      var action = form.getAttribute('action') || '/api/books/new';
+      var action = form.getAttribute('action') || '/api/books/';
 
       // ISBN: бэк принимает ТОЛЬКО канонический вид с дефисами
       // (#^\d{3}-\d{1}-\d{3}-\d{5}-\d{1}$#), а значение могло прийти
@@ -1404,7 +1404,7 @@
         return Promise.all(tasks);
       }
 
-      // ---- Создание книги: POST /api/books/new ----
+      // ---- Создание книги: POST /api/books/ ----
       function sendCreate() {
         if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
 
@@ -1435,7 +1435,7 @@
                   : (locationHeader || (response.redirected ? response.url : '/books'));
 
                 // Publish (11.4): черновик создан — вторая фаза
-                // POST /books/{id}/publish; иначе уходим как раньше.
+                // POST /api/books/{id}/publish; иначе уходим как раньше.
                 if (wantPublish && createdId) {
                   return publishPhase(createdId, redirect);
                 }
@@ -1471,15 +1471,15 @@
           });
       }
 
-      // ---- Публикация (11.4): POST /books/{id}/publish после создания ----
-      // P0-роут (см. rights-modal.php): переводит черновик в published.
-      // Бэкенд-контракт фронта заморожен — при 404/прочем ошибке
-      // НЕ роняем процесс: черновик уже создан, уводим на его страницу
-      // с предупреждением (опубликовать можно и оттуда, rights-modal).
+      // ---- Публикация (11.4): POST /api/books/{id}/publish после создания ----
+      // Роут API (config/endpoints.php → BooksController::publish) переводит
+      // черновик в published. При ошибке НЕ роняем процесс: черновик уже
+      // создан, уводим на его страницу с предупреждением (опубликовать можно
+      // и оттуда, rights-modal).
       function publishPhase(createdId, redirect) {
         if (activeBtn) activeBtn.textContent = t('js.bookform_publishing');
 
-        return csrfFetch('/books/' + createdId + '/publish', {
+        return csrfFetch('/api/books/' + createdId + '/publish', {
           method: 'POST',
           credentials: 'same-origin',
           headers: {
