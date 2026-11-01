@@ -1055,8 +1055,9 @@
     var dirty = false;
 
     // edit-режим: скрытое поле id (контракт — в шапке book-form.php).
-    // id > 0 → POST /books/store обновляет книгу; локальная копия
-    // («Восстановить») в edit-режиме не пишется.
+    // id > 0 → отправка заблокирована: эндпоинта обновления у формы пока
+    // нет (POST /api/books/ только создаёт), см. submit ниже. Локальная
+    // копия («Восстановить») в edit-режиме не пишется.
     var idField = form.querySelector('input[name="id"]');
     var editId = idField ? (parseInt(idField.value, 10) || 0) : 0;
 

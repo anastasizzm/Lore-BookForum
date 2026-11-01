@@ -75,12 +75,12 @@ $langField = $langQuery !== null && $langQuery !== ''
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
  *        и на book-details, и здесь. Из формы (11.4) публикация идёт второй
- *        фазой после создания черновика — POST /books/{id}/publish, затем
+ *        фазой после создания черновика — POST /api/books/{id}/publish, затем
  *        открывается плашка с модулем ролей ( RightsModal.open(
  *        { mode:'after-publish', bookId, redirect } ) ): назначаем роли и
  *        Publish ведёт на страницу книги. Права (rights-modal) из формы
  *        не выбираются — только модуль ролей.
- *   POST /books/{id}/publish            — черновик → published; используется
+ *   POST /api/books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
  *        также кнопкой Publish в форме создания
@@ -112,7 +112,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
  *   внутри <form> (sticky, видна на всех шагах); «Назад» скрыта на
  *   шаге 1. Publish: POST /api/books/ → 201 { createdId } →
- *   POST /books/{id}/publish; при неудаче publish — черновик уже
+ *   POST /api/books/{id}/publish; при неудаче publish — черновик уже
  *   создан, редирект на страницу книги (см. book-form.js).
  *
  *   ОКНО ПУБЛИКАЦИИ (11.3): списки авторов/редакторов переехали из
@@ -625,7 +625,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
                           редирект на страницу книги: бэк создаёт
                           только черновик.
              Publish → тот же POST /api/books/ (черновик), затем
-                       POST /books/{id}/publish (P0-маршрут, см.
+                       POST /api/books/{id}/publish (P0-маршрут, см.
                        rights-modal.php). Если publish не прошёл —
                        черновик уже создан, поэтому уводим на страницу
                        книги с предупреждением (публикация возможна
@@ -690,7 +690,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
   </section>
 
   <!-- Плашка публикации с модулем ролей: открывается book-form.js после
-       успеха POST /books/{id}/publish ( RightsModal.open({mode:'after-publish'}) ) -->
+       успеха POST /api/books/{id}/publish ( RightsModal.open({mode:'after-publish'}) ) -->
   <?php $view->include('rights-modal'); ?>
 
 </div>
