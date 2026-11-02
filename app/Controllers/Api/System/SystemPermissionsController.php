@@ -77,7 +77,7 @@ final class SystemPermissionsController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
         $form = EditSystemPermissionForm::fromInput($context->request->body());
         $expectedVersion = $this->requireVersion($context);
 

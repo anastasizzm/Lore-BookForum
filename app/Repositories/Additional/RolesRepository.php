@@ -119,7 +119,7 @@ final class RolesRepository extends Repository
 
             $sql = "
                 WITH locked AS (
-                    SELECT id FROM user_roles WHERE id = :id FOR UPDATE
+                    SELECT id FROM user_roles WHERE id = :id AND NOT is_system FOR UPDATE
                 ),
                 updated AS (
                     UPDATE user_roles SET color = :color, is_public = :isPublic
