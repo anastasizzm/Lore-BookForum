@@ -12,7 +12,7 @@ readonly class SystemPermissions extends Dto
 {
     public function __construct(
         public ?UserRole $role,
-        private int $roleId,
+        public int $roleId,
         public SystemAccessRules $systemPermissions,
         public PostAccessRules $postPermissions,
         public PublicationAccessRules $pubPermissions
@@ -32,8 +32,6 @@ readonly class SystemPermissions extends Dto
             pubPermissions: PublicationAccessRules::fromRow($row, $prefix . 'pub_'),
         );
     }
-
-    public function getRoleId() : int { return $this->roleId; }
 
     public function toArray() : array 
     {

@@ -73,16 +73,16 @@ return function(Router $router)
     $router->get('/books', [App\Controllers\Publications\BooksController::class, 'list'], 'books', AuthPolicy::Auth);
     $router->get('/books/drafts', [App\Controllers\Publications\BooksController::class, 'draftList'], 'books.drafts', AuthPolicy::Auth);
     $router->get('/books/saved', [App\Controllers\Publications\BooksController::class, 'savedList'], 'books.saved', AuthPolicy::Auth);
-    $router->get('/books/new', [App\Controllers\Publications\BooksController::class, 'getCreate'], 'books.create', CreatePublicationOperation::class);
-    $router->post('/books/new', [App\Controllers\Publications\BooksController::class, 'create'], 'books.create.submit', CreatePublicationOperation::class);
+    $router->get('/books/create', [App\Controllers\Publications\BooksController::class, 'getCreate'], 'books.create', CreatePublicationOperation::class);
+    $router->post('/books/create', [App\Controllers\Publications\BooksController::class, 'create'], 'books.create.submit', CreatePublicationOperation::class);
     $router->get('/books/{bookId}', [App\Controllers\Publications\BooksController::class, 'retrieve'], 'books.retrieve', ReadPublicationOperation::class);
     $router->get('/books/{bookId}/read', [App\Controllers\Publications\BooksController::class, 'read'], 'books.read', ReadPublicationOperation::class);
 
     $router->get('/articles', [App\Controllers\Publications\ArticlesController::class, 'list'], 'articles', AuthPolicy::Auth);
     $router->get('/articles/drafts', [App\Controllers\Publications\ArticlesController::class, 'draftList'], 'articles.drafts', AuthPolicy::Auth);
     $router->get('/articles/saved', [App\Controllers\Publications\ArticlesController::class, 'savedList'], 'articles.saved', AuthPolicy::Auth);
-    $router->get('/articles/new', [App\Controllers\Publications\ArticlesController::class, 'getCreate'], 'articles.create', CreatePublicationOperation::class);
-    $router->post('/articles/new', [App\Controllers\Publications\ArticlesController::class, 'create'], 'articles.create.submit', CreatePublicationOperation::class);
+    $router->get('/articles/create', [App\Controllers\Publications\ArticlesController::class, 'getCreate'], 'articles.create', CreatePublicationOperation::class);
+    $router->post('/articles/create', [App\Controllers\Publications\ArticlesController::class, 'create'], 'articles.create.submit', CreatePublicationOperation::class);
     $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
     
     
@@ -107,7 +107,7 @@ return function(Router $router)
     $router->get('/admin/categories', [App\Controllers\Additional\AdminPanelController::class, 'categories'], 'admin.categories', ManageAdditionalsSystemOperation::class);
     $router->get('/admin/genres', [App\Controllers\Additional\AdminPanelController::class, 'genres'], 'admin.genres', ManageAdditionalsSystemOperation::class);
     $router->get('/admin/types', [App\Controllers\Additional\AdminPanelController::class, 'types'], 'admin.types', ManageAdditionalsSystemOperation::class);
-    $router->get('/admin/posts', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.posts', ControlPostOperation::class);
+    $router->get('/admin/posts', [App\Controllers\Additional\PostsController::class, 'adminList'], 'admin.posts', ControlPostOperation::class);
     $router->get('/admin/users', [App\Controllers\Additional\AdminPanelController::class, 'getUsers'], 'admin.users', ManagePeopleSystemOperation::class);
     $router->get('/admin/roles', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.roles', ManageRolesSystemOperation::class);
 };
