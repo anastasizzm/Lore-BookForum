@@ -182,3 +182,46 @@
     text-align: center;
   }
 }
+
+/* ===== Кнопки действий черновика (publish / delete) ===== */
+.card-draft__manage {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.card-draft__manage .btn {
+  flex: 1 1 auto;
+}
+
+.card-draft.is-busy {
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* ===== Переключатель «Книги / Статьи» ===== */
+.drafts-switch {
+  margin-bottom: 16px;
+}
+
+/* ===== Кнопки действий черновика (publish / delete) ===== */
+.card-draft__manage {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.card-draft__manage .btn {
+  flex: 1 1 auto;
+}
+
+/* Карточка занята запросом (publish/delete) — блокируем повторные клики */
+.card-draft.is-busy {
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* В сетке черновиков карточки чуть плотнее, чем в библиотеке */
+.drafts-grid .card-draft__manage {
+  margin-top: 10px;
+}

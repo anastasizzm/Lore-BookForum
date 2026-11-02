@@ -1,23 +1,23 @@
 <?php
 /**
- * admin/comments — каркас таблицы комментариев админки.
+ * admin/comments — таблица комментариев (постов) админки.
  *
- * Статус: ЗАГЛОВКА без проверок прав (имена разрешений от бэка ждём)
- * и без запросов к API — API админки ещё нет.
+ * Строки рисует public/assets/js/admin/features/comments/list.js:
+ *   GET    /api/posts?include=creator&page=N&q=…
+ *   DELETE /api/posts/{postId}
+ * Поиск уходит в API только по Enter (и при очистке поля крестиком),
+ * «Показать ещё» подгружает следующую страницу.
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
- * .admin-actions — кнопки модерации).
+ * .admin-actions).
  */
 
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
-
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/comments ----
-$comments = [
-    ['id' => 1, 'author' => 'reader_one',    'text' => 'The excerpt from chapter 3 is exactly what I needed.', 'publication' => 'Chapter 3 excerpt', 'created' => '2026-10-13'],
-    ['id' => 2, 'author' => 'anastasizzm',   'text' => 'Thanks! Updated the annotation.',                       'publication' => 'The Silent Library', 'created' => '2026-10-13'],
-    ['id' => 3, 'author' => 'spam_bot',      'text' => 'Check out my channel!!!',                               'publication' => 'Notes on Reading',   'created' => '2026-10-14'],
-];
+$tx = static function (string $key, string $fallback) use ($view): string {
+    $value = $view->t($key);
+    return $view->e(($value === '' || $value === $key) ? $fallback : $value);
+};
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -35,20 +35,22 @@ $comments = [
     'subtitle' => $view->t('common.admin.comments_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<p class="admin-toolbar__status" data-comments-status role="status" aria-live="polite"><?= $tx('common.admin.comments_loading', 'Loading comments…') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
          type="search"
          name="q"
+         data-comments-search
          placeholder="<?= $tr('common.admin.search_comments_ph') ?>"
          aria-label="<?= $tr('common.admin.search_comments_ph') ?>"
+         enterkeyhint="search"
          autocomplete="off">
-  <span class="admin-toolbar__count"><?= count($comments) ?></span>
+  <span class="admin-toolbar__count" data-comments-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-admin-table="comments">
+  <table class="admin-table" data-admin-table="comments" data-comments-table>
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
@@ -59,40 +61,18 @@ $comments = [
         <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
       </tr>
     </thead>
-    <tbody>
-      <?php foreach ($comments as $commentRow): $commentRow['id'] = (int) $commentRow['id']; ?>
-        <tr data-comment-id="<?= $commentRow['id'] ?>">
-          <td class="admin-table__id"><?= $commentRow['id'] ?></td>
-          <td><?= $view->e($commentRow['author']) ?></td>
-          <td><span class="admin-table__clip" title="<?= $view->e($commentRow['text']) ?>"><?= $view->e($commentRow['text']) ?></span></td>
-          <td><span class="admin-table__clip" title="<?= $view->e($commentRow['publication']) ?>"><?= $view->e($commentRow['publication']) ?></span></td>
-          <td><?= $view->e($commentRow['created']) ?></td>
-          <td>
-            <div class="admin-actions">
-              <!-- TODO(api): удаление/скрытие комментария — API админки ещё нет,
-                   проверок прав не добавляем (имена разрешений ждём от бэка). -->
-              <button type="button"
-                      class="btn btn--danger"
-                      data-admin-delete
-                      data-comment-id="<?= $commentRow['id'] ?>">
-                <?= $tr('common.admin.action_delete') ?>
-              </button>
-            </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-
-      <?php if (!$comments): ?>
-        <tr class="admin-table__empty">
-          <td colspan="6"><?= $tr('common.admin.empty') ?></td>
-        </tr>
-      <?php endif; ?>
-    </tbody>
+    <tbody data-comments-rows></tbody>
   </table>
+</div>
+
+<div class="admin-users__more">
+  <button type="button" class="btn btn--secondary" data-comments-more hidden>
+    <?= $tx('common.admin.users_load_more', 'Show more') ?>
+  </button>
 </div>
 
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script src="<?= $view->asset('js/admin.js') ?>" defer></script>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

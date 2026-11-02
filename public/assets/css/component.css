@@ -565,7 +565,8 @@ textarea.form-field__input {
    ============================================ */
 .tabs--segmented {
   position: relative;
-  display: inline-flex;
+  display: inline-flex; /* БЫЛО inline-flex — из-за этого не работала ширина 100% */
+  width: 100%;   /* ДОБАВЛЕНО — чтобы на мобилке контейнер растягивался */
   align-items: center;
   flex-wrap: nowrap;
   gap: 0;
@@ -1015,7 +1016,6 @@ textarea.form-field__input {
   }
 }
 
-/* Узкий экран — всё в столбик, аккуратно */
 @media (max-width: 768px) {
   .filter-panel {
     padding: var(--space-2);
@@ -1027,28 +1027,32 @@ textarea.form-field__input {
     gap: var(--space-2);
   }
 
-  /* Сегмент-контролы — на всю ширину, сегменты растягиваются поровну */
+  /* Контейнер табов на всю ширину */
   .filter-panel__row .tabs--segmented {
     display: flex;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
+  /* Кнопки внутри делят ширину поровну и центрируют текст */
   .filter-panel__row .tabs--segmented .tab {
     flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 0 var(--space-2);
   }
 
-  /* Дропдауны — на всю ширину */
-  .filter-panel__row .dropdown {
-    display: block;
-    width: 100%;
-  }
-
-  .filter-panel__row .dropdown__trigger {
+  /* Дропдауны, инпуты, reset — на всю ширину */
+  .filter-panel__row .dropdown,
+  .filter-panel__row .filter-input,
+  .filter-panel__row .filter-reset {
+    display: flex;
     width: 100%;
     justify-content: space-between;
   }
 
-  /* Инпут и reset — на всю ширину */
+  .filter-panel__row .dropdown__trigger,
   .filter-panel__row .filter-input,
   .filter-panel__row .filter-reset {
     width: 100%;
@@ -1060,26 +1064,57 @@ textarea.form-field__input {
   }
 }
 
+/* Очень маленькие экраны (не даём кнопкам переполнить контейнер) */
 @media (max-width: 420px) {
   .filter-panel__row .tabs--segmented {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .filter-panel__row .tabs--segmented::-webkit-scrollbar {
-    display: none;
+    overflow: visible; /* убираем горизонтальный скролл */
   }
 
   .filter-panel__row .tabs--segmented .tab {
-    flex: 0 0 auto;
-    padding: 0 12px;
+    flex: 1 1 auto;
+    padding: 0 4px; /* уменьшаем отступы */
     font-size: 12px;
-    gap: 6px;
+    gap: 2px;
   }
 
   .filter-panel__row .tabs--segmented .tab__icon {
-    width: 14px;
-    height: 14px;
+    display: none; /* на самых узких экранах скрываем иконки, чтобы не ломать текст */
+  }
+}
+
+/* ============================================
+   FILTER PANEL — десктоп: всё в одну строку
+   (мобильная версия ≤768px не затрагивается)
+   ============================================ */
+@media (min-width: 769px) {
+  .filter-panel:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;          /* страховка: если не влезает — перенос, а не поломка */
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* Видимая строка не создаёт свой блок — её контролы встают в ряд панели.
+     :not([hidden]) важен, чтобы скрытые строки оставались скрытыми */
+  .filter-panel > .filter-panel__row:not([hidden]) {
+    display: contents;
+  }
+
+  /* Сегментированные табы: не на всю ширину, а по содержимому */
+  .filter-panel .tabs--segmented {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  /* Инпуты могут чуть сжиматься, чтобы строка вмещалась */
+  .filter-panel .filter-input {
+    flex: 0 1 200px;
+    min-width: 120px;
+  }
+
+  /* Reset — в правый край (перебивает margin-left: 0 из блока ≤1024px) */
+  .filter-panel .filter-panel__row .filter-reset {
+    margin-left: auto;
   }
 }
 
@@ -2112,4 +2147,51 @@ html[data-comments-denied] [data-comment-toggle] {
 
   color: var(--color-text-muted);
   white-space: nowrap;
+.card-book__status--draft {
+  top: var(--space-2);
+  bottom: auto;
+  left: var(--space-2);
+  z-index: 1;
+
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Кнопка "Показать ещё" внутри выпадающего списка (filters.js) */
+.dropdown__load-more-wrap {
+  padding: 4px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.dropdown__load-more {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--color-border, #e0e0e0);
+  color: var(--color-primary, #1c7ed6);
+  font-size: var(--fs-small, 14px);
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.dropdown__load-more:hover {
+  background: var(--color-overlay, #f5f5f5);
+}
+
+.dropdown__load-more:disabled {
+  color: var(--color-text-muted, #888);
+  cursor: default;
+  background: transparent;
 }

@@ -2,56 +2,106 @@
 /**
  * card-book - vertical book card.
  *
- * @param string $saveType - 'book' | 'article' — куда уходит Save (/api/books|articles/{id}/save)
- * @param string $readingStatus - 'none' | 'reading' | 'ended' (ReadingStatus из контекста юзера);
- *                   бейдж на обложке только у книг, 'none' — без бейджа
- * @param string $pubStatus - 'draft' | '' — значение фильтра ?p_status= активной
- *                   вкладки (All/Public/Draft), а не поле модели: API статус
- *                   не отдаёт. Бейдж «Draft» рисуется только у статей.
+ * Используется:
+ *   - SSR-списком library-list.php (передаёт $item, $detailBase, $isArticles);
+ *   - старыми местами, где передаются плоские $id/$cover/$title/...
+ *
+ * Поддерживает оба варианта: если передан $item — читаем из него,
+ * иначе берём плоские переменные (обратная совместимость).
  */
-$id       = (int)($id       ?? 0);
-$cover    = (string)($cover    ?? '');
-$title    = (string)($title    ?? '');
-$authorId = (int)($authorId ?? 0);
-$author   = (string)($author   ?? '');
-$saved    = (bool)($saved    ?? false);
 
-// Тип публикации для кнопки Save: книги и статьи сохраняются на разные эндпоинты
-$saveType = ($saveType ?? 'book') === 'article' ? 'article' : 'book';
-$isArticle = $saveType === 'article';
+$get = static function ($src, string $key, $default = null) {
+    if ($src === null) return $default;
+    if (is_array($src)) return $src[$key] ?? $default;
+    if (is_object($src)) {
+        if (isset($src->$key)) return $src->$key;
+        if ($src instanceof \ArrayAccess && $src->offsetExists($key)) return $src[$key];
+    }
+    return $default;
+};
+
+// --- Источник данных: $item (новый SSR) или плоские переменные (старый) ---
+$item       = $item       ?? null;
+$isArticles = (bool) ($isArticles ?? false);
+$detailBase = (string) ($detailBase ?? ($isArticles ? '/articles' : '/books'));
+
+if ($item !== null) {
+    $id     = (int) $get($item, 'id', 0);
+    $title  = (string) $get($item, 'title', '');
+
+    // Обложка: cover / iconUrl / iconId (Uuid-объект или строка)
+    $cover = (string) $get($item, 'cover', '');
+    if ($cover === '') {
+        $cover = (string) $get($item, 'iconUrl', '');
+    }
+    if ($cover === '') {
+        $icon = $get($item, 'iconId');
+        $uuid = is_object($icon) ? ($icon->uuid ?? $icon->value ?? '') : (string) $icon;
+        if ($uuid !== '') $cover = '/uploads/' . $uuid;
+    }
+
+    // Автор
+    $creator    = $get($item, 'creator') ?? $get($item, 'author');
+    $authorName = '';
+    $authorId   = 0;
+    if ($creator) {
+        $name = trim((string) $get($creator, 'name', '') . ' ' . (string) $get($creator, 'surname', ''));
+        $authorName = $name !== '' ? $name : (string) $get($creator, 'username', '');
+        $authorId   = (int) $get($creator, 'id', 0);
+    }
+
+    $saved = (bool) ($get($item, 'isSaved') ?? $get($item, 'saved') ?? false);
+
+    // Статус чтения
+    $rsRaw = $get($item, 'readingStatus');
+    if (is_object($rsRaw)) $rsRaw = $rsRaw->value ?? null;
+    $readingStatus = $isArticles ? 'none' : (string) ($rsRaw ?: 'none');
+
+    // Бейдж «Draft» — только если активен фильтр ?p_status=draft
+    $pubStatus = (($_GET['p_status'] ?? '') === 'draft') ? 'draft' : '';
+
+} else {
+    // Старый плоский интерфейс
+    $id            = (int)    ($id            ?? 0);
+    $cover         = (string) ($cover         ?? '');
+    $title         = (string) ($title         ?? '');
+    $authorId      = (int)    ($authorId      ?? 0);
+    $authorName    = (string) ($author        ?? '');
+    $saved         = (bool)   ($saved         ?? false);
+    $readingStatus = (string) ($readingStatus ?? 'none');
+    $pubStatus     = (string) ($pubStatus     ?? '');
+}
+
+// --- Тип публикации для Save ---
+$saveType  = $isArticles ? 'article' : 'book';
+$isArticle = $isArticles;
 $saveAttr  = $isArticle ? 'data-save-article' : 'data-save-book';
 $idAttr    = $isArticle ? 'data-article-id'   : 'data-book-id';
 $saveLabel = $saved ? 'Remove from saved' : 'Save ' . $saveType;
 
-// Нет обложки -> <img> не выводим: сразу рисуем CSS-заглушку (.cover--empty).
-// Файла-картинки для заглушки нет, запрос за ним только давал 404 в консоли.
 $hasCover = $cover !== '';
 
-// P1-6: карточка ведёт на страницу публикации (раньше было href="#",
-// из-за чего клик по карточке ничего не делал)
+// --- Ссылки ---
 $bookUrl = $id > 0
-    ? '/' . ($isArticle ? 'articles' : 'books') . '/' . $id
+    ? $detailBase . '/' . $id
     : '#';
 
 $authorUrl = $authorId > 0 ? '/users/' . $authorId : '#';
 
-$readingStatus = $isArticle ? 'none' : (string) ($readingStatus ?? 'none');
-$statusLabel   = match ($readingStatus) {
+// --- Бейдж статуса чтения ---
+$statusLabel = match ($readingStatus) {
     'reading' => $view->t('common.filter.reading'),
     'ended'   => $view->t('common.filter.finished'),
     default   => '',
 };
 
-// Черновик статьи: бейдж «Draft» — светлая плашка, как на странице Drafts
-// (src/partials/card-draft.php / drafts.css .card-draft__badge).
-// $pubStatus приходит из вида-вызывающего = активный фильтр ?p_status=.
-$isDraft = $isArticle && (string) ($pubStatus ?? '') === 'draft';
+// --- Бейдж «Черновик» ---
+$isDraft = (string) $pubStatus === 'draft';
 ?>
 <article class="card-base card-book">
 
   <div class="card-book__cover<?= $hasCover ? '' : ' cover--empty' ?>">
     <?php if ($hasCover): ?>
-      <?php /* обложка есть, но не загрузилась — app.js сам включит .cover--empty */ ?>
       <img src="<?= $view->e($cover) ?>"
            alt="<?= $view->e($title) ?>"
            loading="lazy">
@@ -64,8 +114,6 @@ $isDraft = $isArticle && (string) ($pubStatus ?? '') === 'draft';
     <?php endif; ?>
   </div>
 
-  <!-- Кнопка закладки — в правом верхнем углу самой карточки (белое поле),
-       а не поверх обложки: `.card-book` имеет position:relative -->
   <button type="button"
           class="btn-icon btn-icon--circle card-book__save<?= $saved ? ' is-active' : '' ?>"
           <?= $saveAttr ?>
@@ -86,12 +134,12 @@ $isDraft = $isArticle && (string) ($pubStatus ?? '') === 'draft';
     </a>
   </h3>
 
-  <?php if ($author !== ''): ?>
+  <?php if ($authorName !== ''): ?>
     <p class="card-book__author">
       <a class="card-book__author-link"
          href="<?= $view->e($authorUrl) ?>"
-         aria-label="Open author profile: <?= $view->e($author) ?>">
-        <?= $view->e($author) ?>
+         aria-label="Open author profile: <?= $view->e($authorName) ?>">
+        <?= $view->e($authorName) ?>
       </a>
     </p>
   <?php endif; ?>

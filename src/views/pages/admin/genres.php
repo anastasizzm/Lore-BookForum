@@ -15,7 +15,7 @@
  *                                  ['langCode' => 'ru', 'title' => 'Фэнтези']]]
  *
  * Поиск — клиентский, по всем переводам сразу (data-search у строки).
- * Таблица/тулбар — partial dictionary-table; модалка формы — dictionary-form.
+ * Таблица и тулбар — прямо в этой странице; модалка формы — partial dictionary-form.
  *
  * Тест: GET /pages/test?page=admin/genres
  *
@@ -26,30 +26,9 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// ---- МОК-строки: сюда придёт GET /api/admin/genres (dictApi в admin.js) ----
-$genres = [
-    ['id' => 1, 'translations' => [
-        ['langCode' => 'en', 'title' => 'Fantasy'],
-        ['langCode' => 'ru', 'title' => 'Фэнтези'],
-        ['langCode' => 'es', 'title' => 'Fantasía'],
-    ]],
-    ['id' => 2, 'translations' => [
-        ['langCode' => 'en', 'title' => 'Detective'],
-        ['langCode' => 'ru', 'title' => 'Детектив'],
-    ]],
-    ['id' => 3, 'translations' => [
-        ['langCode' => 'en', 'title' => 'Science Fiction'],
-        ['langCode' => 'ru', 'title' => 'Научная фантастика'],
-        ['langCode' => 'es', 'title' => 'Ciencia ficción'],
-    ]],
-    ['id' => 4, 'translations' => [
-        ['langCode' => 'en', 'title' => 'Poetry'],
-        ['langCode' => 'ru', 'title' => 'Поэзия'],
-    ]],
-    ['id' => 5, 'translations' => [
-        ['langCode' => 'ru', 'title' => 'Фольклор'],
-    ]],
-];
+// Данные контроллера (если он их передал) — до того, как переменную перезапишет мок ниже
+$serverItems = $genres ?? $items ?? null;
+
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -67,23 +46,75 @@ $genres = [
     'subtitle' => $view->t('common.admin.genres_subtitle'),
 ]); ?>
 
-<!-- Прячется admin.js, когда GET /api/admin/genres реально отвечает -->
-<p class="admin-note" data-dict-stub><?= $tr('common.admin.stub_note') ?></p>
+<div class="admin-toolbar">
+  <!-- form="dictSearchDetached" (формы с таким id нет): поле не отправляется обычным submit-ом, если страница обёрнута в <form> -->
+  <input class="admin-toolbar__search"
+         type="search"
+         form="dictSearchDetached"
+         data-dict-search
+         placeholder="<?= $view->e($view->t('common.admin.search_dict_ph')) ?>"
+         aria-label="<?= $view->e($view->t('common.admin.search_dict_ph')) ?>"
+         enterkeyhint="search"
+         autocomplete="off">
 
-<?php $view->include('dictionary-table', [
-    'resource' => 'genres',
-    'items'    => $genres,
-    'searchPh' => $view->t('common.admin.search_dict_ph'),
-    'addLabel' => $view->t('common.admin.action_add'),
-]); ?>
+  <button type="button"
+          class="btn btn--primary admin-toolbar__add admin-toolbar__add--icon"
+          data-admin-dict-add
+          title="<?= $view->e($view->t('common.admin.action_add')) ?>"
+          aria-label="<?= $view->e($view->t('common.admin.action_add')) ?>">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="9" y1="3" x2="9" y2="15"></line>
+      <line x1="3" y1="9" x2="15" y2="9"></line>
+    </svg>
+  </button>
+
+  <span class="admin-toolbar__count" data-dict-count>0</span>
+</div>
+
+<div class="admin-table-wrap">
+  <table class="admin-table" data-dict-table data-dict-resource="genres">
+    <thead>
+      <tr>
+        <th scope="col"><?= $tr('common.admin.col_id') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_title') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
+      </tr>
+    </thead>
+    <tbody data-dict-rows>
+      <tr class="admin-table__empty" data-admin-empty hidden>
+        <td colspan="3"><?= $tr('common.admin.empty') ?></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Служебные данные для admin.js (ресурс; строки приходят из данных страницы / API) -->
+<script type="application/json" data-dict-data>{"resource":"genres","items":[]}</script>
 
 <?php $view->include('dictionary-form', [
     'resource' => 'genres',
     'nameOne'  => $view->t('common.admin.genre_one'),
 ]); ?>
 
+<?php
+/*
+ * Данные страницы уже есть у контроллера — отдаём их в разметку, чтобы первая
+ * загрузка таблицы не делала запрос к API (JS читает блок один раз и удаляет;
+ * поиск, фильтры и «Показать ещё» дальше идут через API как раньше).
+ * Нет данных / не сериализуются — блок не выводится, JS сам сходит в API.
+ */
+$adminBoot = static function (string $name, mixed $data): void {
+    if ($data === null || $data === []) return;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+        | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    if (!is_string($json)) return;
+    echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
+};
+$adminBoot('dictionary', $serverItems);
+?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script src="<?= $view->asset('js/admin.js') ?>" defer></script>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -1,7 +1,9 @@
 <?php
 /**
  * library-filters - filter panel (library + profile publications).
- * Optional vars: $isArticles, $basePath, $bookHref, $articleHref
+ * Optional vars: $isArticles, $basePath, $bookHref, $articleHref,
+ *   $mode ('library' | 'drafts'; по умолчанию library).
+ * В режиме drafts: одна строка без табов статуса чтения, переключатель Все/Книги/Статьи (?ctype=).
  * Открыта ли панель - определяется по ?f= (по умолчанию открыта).
  */
 // Состояние панели задаёт только ?f=: f=closed - закрыта, всё остальное
@@ -14,7 +16,9 @@ $bookIcon = '<svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h5v16H5a2 2 0 0
 $postIcon = '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
 
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$isArticles  = $isArticles  ?? str_contains($currentPath, '/articles');
+$mode        = $mode ?? 'library';
+$isDrafts    = $mode === 'drafts';
+$isArticles  = $isDrafts ? false : ($isArticles ?? str_contains($currentPath, '/articles'));
 $basePath    = $basePath    ?? $currentPath;
 $bookHref    = $bookHref    ?? '/books';
 $articleHref = $articleHref ?? '/articles';
@@ -50,22 +54,6 @@ $str = static fn(string $key): string => is_string($params[$key] ?? null) ? $par
 
 $status = strtolower($str('status'));
 
-// Публикация (draft/public) — параметр БЭКА ?p_status= (PublicationStatus:
-// any | public | draft). НЕ путать со ?status= — это статус ЧТЕНИЯ
-// (ReadingStatus: reading | ended), он в табах ниже.
-// Пустой ?p_status= бэк трактует как public, поэтому «Все» шлём явно.
-$pStatus = strtolower($str('p_status'));
-if (!in_array($pStatus, ['any', 'public', 'draft'], true)) $pStatus = 'all';
-
-$pubStatusTabs = [
-    'type'    => 'tabs',
-    'variant' => 'segmented',
-    'items'   => [
-        ['label' => $view->t('common.filter.all'),      'href' => $link([], ['p_status']),                 'key' => 'p_status', 'value' => 'all',   'active' => $pStatus === 'all'],
-        ['label' => $view->t('common.filter.published'), 'href' => $link(['p_status' => 'public']),          'key' => 'p_status', 'value' => 'public', 'active' => $pStatus === 'public'],
-        ['label' => $view->t('common.filter.draft'),     'href' => $link(['p_status' => 'draft']),           'key' => 'p_status', 'value' => 'draft',  'active' => $pStatus === 'draft'],
-    ],
-];
 $genre  = $str('genre');
 $kind   = strtolower($str('kind'));
 $isbn   = $str('isbn');
@@ -99,7 +87,7 @@ $typeDropdown = [
 ];
 
 // Reset clears filters but keeps search (q), panel state (f) and locale (lang)
-$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort']);
+$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype']);
 
 $filter_rows = [
     [
@@ -107,7 +95,6 @@ $filter_rows = [
         'hidden' => $isArticles,
         'controls' => [
             $switcher,
-            $pubStatusTabs,
             $genreDropdown,
             [
                 'type'    => 'tabs',
@@ -135,7 +122,6 @@ $filter_rows = [
         'hidden' => !$isArticles,
         'controls' => [
             $switcher,
-            $pubStatusTabs,
             $genreDropdown,
             $typeDropdown,
             [
@@ -151,6 +137,36 @@ $filter_rows = [
         ],
     ],
 ];
+
+// Черновики: книги и статьи вместе. Фильтра по статусу чтения здесь нет —
+// у черновиков его не бывает. Переключатель Все / Книги / Статьи — параметр ?ctype=.
+if ($isDrafts) {
+    $ctype = strtolower($str('ctype'));
+    if (!in_array($ctype, ['book', 'article'], true)) $ctype = '';
+
+    $draftsSwitcher = [
+        'type'    => 'tabs',
+        'variant' => 'segmented',
+        'items'   => [
+            ['label' => $view->t('common.filter.all'),      'href' => $link([], ['ctype']),                 'icon' => '',        'key' => 'ctype', 'value' => 'all',     'active' => $ctype === ''],
+            ['label' => $view->t('common.filter.books'),    'href' => $link(['ctype' => 'book']),           'icon' => $bookIcon, 'key' => 'ctype', 'value' => 'book',    'active' => $ctype === 'book'],
+            ['label' => $view->t('common.filter.articles'), 'href' => $link(['ctype' => 'article']),        'icon' => $postIcon, 'key' => 'ctype', 'value' => 'article', 'active' => $ctype === 'article'],
+        ],
+    ];
+
+    $filter_rows = [
+        [
+            'id'       => 'drafts',
+            'hidden'   => false,
+            'controls' => [
+                $draftsSwitcher,
+                $genreDropdown,
+                $typeDropdown,
+                ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
+            ],
+        ],
+    ];
+}
 
 $view->include('filter-panel', [
     'filter_rows' => $filter_rows,
