@@ -84,9 +84,6 @@ $tr = static fn(string $key, array $params = []): string => $view->e($view->t($k
             </button>
         </div>
 
-        <p class="roles-module__note" data-roles-mock-note hidden>
-            <?= $tr('common.roles.mock_note') ?>
-        </p>
     </div>
 
     <!-- ================= ЭКРАН 1. Страница ролей публикации ================= -->

@@ -823,7 +823,6 @@
         "loading": "Loading roles…",
         "load_failed": "Could not load roles and people.",
         "retry": "Retry",
-        "mock_note": "The roles API is not available yet — demo data is shown.",
         "gate_hint": "Add at least one user to continue.",
         "drag_hint": "Drag a handle to reorder roles; press “+” to insert a role.",
         "roles_empty": "This publication has no roles yet.",
