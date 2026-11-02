@@ -158,26 +158,31 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const menu = dropdown.querySelector('.dropdown__menu');
     if (!menu) return;
 
+    // Имя query-параметра можно переопределить на самом dropdown
+    // (data-param): страницы с серверным рендером читают в бэке другое
+    // имя, чем ссылки библиотеки (?kind= → ?type= на черновиках статей).
+    const param = dropdown.dataset.param || src.param;
+
     menu.innerHTML = '<li class="dropdown__loading">' + escapeHtml(tFilter('common.loading')) + '</li>';
 
     try {
       const list = await fetchAll(src.url);
 
       const params  = new URLSearchParams(window.location.search);
-      const current = params.get(src.param);
+      const current = params.get(param);
       const isAll   = !current;
 
       const items = [
         {
           id:     'all',
           title:  tFilter(src.allLabelKey),
-          href:   stripParam(src.param),
+          href:   stripParam(param),
           active: isAll,
         },
         ...list.map(entry => ({
           id:     String(entry.id ?? entry.value ?? ''),
           title:  String(entry.title ?? entry.label ?? entry.id ?? ''),
-          href:   appendParam(src.param, String(entry.id ?? entry.value ?? '')),
+          href:   appendParam(param, String(entry.id ?? entry.value ?? '')),
           active: String(entry.id ?? entry.value ?? '') === current,
         })),
       ];

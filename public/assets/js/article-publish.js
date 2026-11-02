@@ -36,6 +36,9 @@ window.LoreArticlePublish = (function () {
     articleId: 0,
     onInvalid: null,
     onConflict: null,
+    // Колбэк публикации для страницы черновиков (drafts.js): вместо
+    // перехода на /articles/{id} вызывается он (карточка уходит из списка).
+    onPublished: null,
     mode: 'publish',               // publish | roles
     screen: 1,                     // стартовый экран модуля: 1 — роли | 2 — пользователи
     context: 'create',             // create — Create → Continue → Publish; edit — «Изменить…»
@@ -252,6 +255,14 @@ window.LoreArticlePublish = (function () {
 
         if (res.ok && !isHtml) {
           var payload = (data && data.data) || data || {};
+          // Страница черновиков: карточка уходит из списка (drafts.js);
+          // иначе — переход на опубликованную статью.
+          if (typeof state.onPublished === 'function') {
+            var cb = state.onPublished;
+            state.onPublished = null;
+            cb();
+            return true;
+          }
           window.location.href = payload.redirect
             || (state.articleId ? '/articles/' + state.articleId : '/articles');
           return true;
@@ -349,6 +360,7 @@ window.LoreArticlePublish = (function () {
     state.articleId = Number(articleId) || 0;
     state.onInvalid = (opts && opts.onInvalid) || null;
     state.onConflict = (opts && opts.onConflict) || null;
+    state.onPublished = (opts && typeof opts.onPublished === 'function') ? opts.onPublished : null;
     // 'roles' — только модуль ролей (Publish просто сохраняет роли и закрывает);
     // иначе — привычный publish (Publish публикует статью).
     state.mode = (opts && opts.mode === 'roles') ? 'roles' : 'publish';

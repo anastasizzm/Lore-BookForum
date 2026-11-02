@@ -1,7 +1,7 @@
 <?php
 /**
- * library-filters - filter panel (library + profile publications).
- * Optional vars: $isArticles, $basePath, $bookHref, $articleHref
+ * library-filters - filter panel (library + profile publications + drafts).
+ * Optional vars: $isArticles, $basePath, $bookHref, $articleHref, $draftMode
  * Открыта ли панель - определяется по ?f= (по умолчанию открыта).
  */
 // Состояние панели задаёт только ?f=: f=closed - закрыта, всё остальное
@@ -18,6 +18,12 @@ $isArticles  = $isArticles  ?? str_contains($currentPath, '/articles');
 $basePath    = $basePath    ?? $currentPath;
 $bookHref    = $bookHref    ?? '/books';
 $articleHref = $articleHref ?? '/articles';
+
+// Режим черновиков (drafts.php): бэк принудительно фильтрует по
+// PublicationStatus::Draft (BooksFilters/ArticlesFilters::fromDraft), поэтому
+// вкладки «Все / Опубликовано / Черновик» и статус ЧТЕНИЯ (ReadingStatus,
+// контекст читателя) на такой странице бессмысленны — их не рисуем.
+$draftMode = !empty($draftMode);
 
 // Текущая локаль — чтобы не потерять ?lang= при переходах (Books ↔ Articles,
 // Reset, табы статуса). Бэк определяет язык именно по этому параметру.
@@ -40,7 +46,11 @@ $link = static function (array $set = [], array $drop = []) use ($params, $baseP
 
 // When switching Books/Articles keep only shared params — ВАЖНО: lang тоже сохраняем,
 // иначе при переходе на /articles бэк сбросит локаль на фолбэк.
-$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'p_status', 'lang']));
+// В режиме черновиков (draftMode) не тащим ни ?p_status= (статус всегда draft),
+// ни контекст читателя (?status=): переключатель ведёт на /books|/articles/drafts
+// с чистыми общими параметрами (поиск, жанр, панель, локаль).
+$keepKeys  = $draftMode ? ['f', 'q', 'genre', 'lang'] : ['f', 'q', 'genre', 'p_status', 'lang'];
+$keep      = array_intersect_key($params, array_flip($keepKeys));
 $tabHref = static function (string $href) use ($keep): string {
     if (!$keep) return $href;
     return $href . (str_contains($href, '?') ? '&' : '?') . http_build_query($keep);
@@ -89,27 +99,33 @@ $genreDropdown = [
     'options' => [],
 ];
 
-// Type dropdown — статический, значения совпадают с enum ArticleType
+// Type dropdown — статический, значения совпадают с enum ArticleType.
+// В режиме черновиков ссылки строятся с параметром ?type= (а не ?kind=):
+// рендер страницы серверный, а ArticlesFilters::fromDraft читает именно
+// 'type' — см. data-param в dropdown.php и filters.js.
 $typeDropdown = [
     'type'    => 'dropdown',
     'label'   => $view->t('common.filter.type'),
     'key'     => 'kind',
     'dynamic' => 'types',
+    'param'   => $draftMode ? 'type' : null,
     'options' => [],
 ];
 
 // Reset clears filters but keeps search (q), panel state (f) and locale (lang)
-$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort']);
+$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'type', 'sort']);
 
 $filter_rows = [
     [
         'id'     => 'books',
         'hidden' => $isArticles,
-        'controls' => [
+        'controls' => array_values(array_filter([
             $switcher,
-            $pubStatusTabs,
+            // Черновики: статус публикации задаёт бэк (всегда draft)
+            $draftMode ? null : $pubStatusTabs,
             $genreDropdown,
-            [
+            // Статус ЧТЕНИЯ — контекст читателя, на черновиках не нужен
+            $draftMode ? null : [
                 'type'    => 'tabs',
                 'variant' => 'segmented',
                 'items' => [
@@ -128,14 +144,14 @@ $filter_rows = [
                 'inputmode'   => 'text',
             ],
             ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
-        ],
+        ])),
     ],
     [
         'id'     => 'articles',
         'hidden' => !$isArticles,
-        'controls' => [
+        'controls' => array_values(array_filter([
             $switcher,
-            $pubStatusTabs,
+            $draftMode ? null : $pubStatusTabs,
             $genreDropdown,
             $typeDropdown,
             [
@@ -148,7 +164,7 @@ $filter_rows = [
                 'inputmode'   => 'text',
             ],
             ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
-        ],
+        ])),
     ],
 ];
 

@@ -324,7 +324,9 @@
         "none_page": "There are no drafts on this page.",
         "pagination": "Drafts pagination",
         "prev": "Previous",
-        "next": "Next"
+        "next": "Next",
+        "publish": "Publish",
+        "deleted": "Draft deleted."
     },
     "rights": {
         "title": "Publication rights",
