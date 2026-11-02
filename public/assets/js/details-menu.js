@@ -13,10 +13,14 @@
  *   DELETE /api/articles/{id}     403/404 — нет прав или уже удалена.
  *   Пункт «Редактировать» — ссылка на /books/{id}/edit (роут тоже ждём).
  *
- * Права на показ пунктов Edit / Delete — permissions.js (data-requires,
- * пункты рендерятся скрытыми; data-edit-btn остался хуком разметки);
- * 404 от DELETE фронт показывает как обычную ошибку — эффект один:
- * книга не удаляется.
+ * Права на показ пунктов «Изменить» / Delete — permissions.js (data-requires,
+ * пункты рендерятся скрытыми); 404 от DELETE фронт показывает как обычную
+ * ошибку — эффект один: книга не удаляется.
+ *
+ * КАРАДАШ «ИЗМЕНИТЬ»: data-edit-toggle раскрывает подменю
+ * (data-edit-submenu: мета / содержание / роли). Пункт «Роли»
+ * (data-roles-open) открывает publish-диалог с модулем ролей
+ * (window.RightsModal / window.LoreArticlePublish, mode:'roles').
  */
 (function () {
   'use strict';
@@ -33,6 +37,8 @@
         menu.hidden = true;
         var btn = menu.parentNode && menu.parentNode.querySelector('[data-details-menu-toggle]');
         if (btn) btn.setAttribute('aria-expanded', 'false');
+        // Заодно закрываем подменю карандаша внутри этой выпадашки
+        closeSubmenus();
       }
     );
   }
@@ -55,6 +61,73 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeAll();
+  });
+
+  // ---- Карандаш «Изменить»: раскрытие подменю (мета / содержание / роли) ----
+  function closeSubmenus(except) {
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-edit-submenu]:not([hidden])'),
+      function (sub) {
+        if (sub === except) return;
+        sub.hidden = true;
+        var btn = sub.parentNode && sub.parentNode.querySelector('[data-edit-toggle]');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    );
+  }
+
+  document.addEventListener('click', function (e) {
+    var pencil = e.target.closest && e.target.closest('[data-edit-toggle]');
+    if (pencil) {
+      var group = pencil.closest('[data-edit-group]');
+      var sub = group && group.querySelector('[data-edit-submenu]');
+      if (!sub) return;
+      var open = sub.hidden;
+      closeSubmenus(open ? sub : null);
+      sub.hidden = !open;
+      pencil.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    // Клик мимо подменю — закрыть его (но не саму выпадашку «три точки»)
+    if (e.target.closest && e.target.closest('[data-edit-submenu]')) return;
+    if (e.target.closest && e.target.closest('[data-edit-group]')) return;
+    closeSubmenus();
+  });
+
+  // ---- Пункт «Роли»: открыть publish-диалог с модулем ролей (mode:'roles') ----
+  // ---- Пункты «Изменить роли» / «Изменить пользователей»: открыть модуль
+  //      публикации (экран 1 — роли, экран 2 — пользователи; context 'edit') ----
+  function openRolesModule(btn) {
+    var kind = btn.getAttribute('data-pub-type') || 'book';
+    var id   = parseInt(btn.getAttribute('data-pub-id'), 10) || 0;
+    if (!id) return;
+
+    closeAll();
+    closeSubmenus();
+
+    var screen = btn.getAttribute('data-roles-open-users') ? 2 : 1;
+
+    if (kind === 'article') {
+      if (window.LoreArticlePublish && typeof window.LoreArticlePublish.open === 'function') {
+        window.LoreArticlePublish.open(id, { mode: 'roles', screen: screen, context: 'edit' });
+      }
+      return;
+    }
+    if (window.RightsModal && typeof window.RightsModal.open === 'function') {
+      window.RightsModal.open({ mode: 'roles', bookId: id, screen: screen, context: 'edit' });
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var rolesBtn = e.target.closest && e.target.closest('[data-roles-open]');
+    if (!rolesBtn) return;
+    openRolesModule(rolesBtn);
+  });
+
+  document.addEventListener('click', function (e) {
+    var usersBtn = e.target.closest && e.target.closest('[data-roles-open-users]');
+    if (!usersBtn) return;
+    openRolesModule(usersBtn);
   });
 
   // ---- Удаление публикации ----

@@ -34,11 +34,12 @@
  *               на /books. Роут добавит бэк (см. шапку details-menu.php).
  *   Статус draft: у книги внизу страницы ВСЕГДА есть кнопка «Опубликовать
  *               книгу» (бейдж «Черновик» в шапке), она открывает плашку
- *               выбора прав (rights-modal.php; справочник грузится
- *               асинхронно, контракт — в шапке partial):
- *                 GET  /api/additional/rights
- *                 POST /api/publications/{id}/rights  (rights[])
- *                 POST /books/{id}/publish            (черновик → published)
+ *               с модулем ролей (rights-modal.php + roles-module.php;
+ *               роли и люди сохраняются отдельными запросами, контракт —
+ *               в шапке roles-module.php):
+ *                 GET  /api/publications/{id}/roles|users
+ *                 POST/PUT/PATCH/DELETE /api/publications/{id}/roles|users...
+ *                 POST /api/books/{id}/publish            (черновик → published)
  *   ДОСТУП К ЧЕРНОВИКУ: видит только создатель — политику держит бэк
  *               (BooksController::retrieve: черновой публикации для
  *               посторонних отдаёт 404); вьюха в этом участвует только
@@ -244,8 +245,8 @@ $isDraft   = $status === 'draft';
   <link rel="stylesheet" href="/assets/css/book.css">
   <!-- плашка выбора прав (кнопка публикации у черновика) -->
   <link rel="stylesheet" href="/assets/css/rights-modal.css">
-  <!-- плашка ролей и людей публикации (publication-roles.js) -->
-  <link rel="stylesheet" href="/assets/css/publication-roles.css">
+  <!-- модуль «назначение ролей» внутри плашки публикации -->
+  <link rel="stylesheet" href="/assets/css/roles-module.css">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -664,9 +665,10 @@ $isDraft   = $status === 'draft';
     <!-- ============================================================
          КНОПКА ПУБЛИКАЦИИ — внизу страницы, видна ВСЕГДА, пока у книги
          статус draft (черновик открывает только создатель — политика
-         бэка, см. шапку файла). Кликом открывается плашка выбора прав
-         (rights-modal.php): справочник грузится асинхронно, затем
-         POST rights[] и POST /books/{id}/publish → перезагрузка.
+         бэка, см. шапку файла). Кликом открывается плашка с модулем
+         ролей (rights-modal.php + roles-module.php): роли и люди
+         сохраняются модулем, затем POST /api/books/{id}/publish →
+         перезагрузка.
          ============================================================ -->
     <section class="publish-bar" data-publish-bar>
       <div class="publish-bar__text">
@@ -700,6 +702,9 @@ $isDraft   = $status === 'draft';
        у черновика); подключается до book.js, но порядок не важен —
        обработчики вешаются делегированием на document -->
   <script src="/assets/js/rights-modal.js"></script>
+  <!-- roles-module.js — модуль «назначение ролей» (управляет плашкой
+       публикации: window.LoreRoles; подключается после rights-modal.js) -->
+  <script src="/assets/js/roles-module.js" defer></script>
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); book.js подключается после неё -->
   <script src="/assets/js/comments.js"></script>

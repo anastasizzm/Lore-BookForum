@@ -623,6 +623,63 @@ html:has(.reader) body {
   color: var(--color-error, #EF4444);
 }
 
+/* ---- Карандаш «Изменить»: подменю (мета / содержание / роли) ---- */
+.details-menu__group {
+  position: relative;
+}
+
+.details-menu__item--parent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.details-menu__pencil {
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+/* Стрелка-индикатор раскрытия у пункта-родителя */
+.details-menu__item--parent::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  opacity: 0.6;
+}
+
+.details-menu__item--parent[aria-expanded="true"]::after {
+  transform: rotate(45deg);
+}
+
+/* Подменю раскрывается ВПРАВО от пункта-родителя (второй уровень) */
+.details-menu__submenu {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
+  z-index: 40;
+  min-width: 176px;
+  padding: 6px;
+  background: var(--color-bg-elevated, #FFFFFF);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+/* На узких экранах подменю уходит ПОД родителя, а не вправо */
+@media (max-width: 480px) {
+  .details-menu__submenu {
+    left: 0;
+    right: auto;
+    top: calc(100% + 4px);
+  }
+}
+
 /* Панель публикации внизу страницы — видна, пока статус draft */
 .publish-bar {
   display: flex;

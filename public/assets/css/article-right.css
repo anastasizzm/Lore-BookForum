@@ -212,3 +212,24 @@ body.is-modal-open {
     width: 100%;
   }
 }
+/* ============================================================
+   РЕЖИМ МОДУЛЯ РОЛЕЙ (data-rights-view="roles"): родной контент
+   окна (подсказка, поиск, список редакторов, футер) скрыт —
+   управление берёт модуль roles-module (у него свои шапка и
+   футер). Активацию ставит article-publish.js при открытии.
+   ============================================================ */
+.article-rights[data-rights-view="roles"] .article-rights__hint,
+.article-rights[data-rights-view="roles"] .article-rights__search,
+.article-rights[data-rights-view="roles"] .article-rights__list,
+.article-rights[data-rights-view="roles"] .article-rights__foot {
+  display: none !important;
+}
+
+/* Модуль показывается только в этом режиме */
+.article-rights .roles-module {
+  display: none;
+}
+
+.article-rights[data-rights-view="roles"] .roles-module {
+  display: flex;
+}
