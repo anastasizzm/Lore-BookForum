@@ -12,6 +12,28 @@ import { finishNewRole, newRoleRequest } from './create/submit.js';
 import { findRole, roleState } from './state.js';
 import { updateRoleRow } from './table.js';
 
+/* ---------- права текущего пользователя: что он вправе выдавать ----------
+   Бэк не даёт выдать право, которого нет у самого редактора (403 «Пользователь должен
+   иметь доступ к системе»). Снять право можно всегда. Поэтому недоступные для выдачи
+   чекбоксы блокируем заранее. Правила: /api/system|publications|posts/rules (rules.js). */
+var myRules = null;
+
+function loadMyRules() {
+  if (myRules || !window.LoreRules || typeof window.LoreRules.load !== 'function') return Promise.resolve();
+  return Promise.all([
+    window.LoreRules.load('system'),
+    window.LoreRules.load('posts'),
+    window.LoreRules.load('books')
+  ]).then(function (r) { myRules = { system: r[0], posts: r[1], pubs: r[2] }; });
+}
+
+/** false — права нет и выдать нельзя; true — можно или не знаем (не гадаем). */
+function canGrant(group, key) {
+  var g = myRules && myRules[group];
+  if (!g || typeof g !== 'object' || !(key in g)) return true;
+  return !!g[key];
+}
+
 function roleRoot() { return roleState.modal; }
 
 export function isRoleOpen() { return !!(roleState.modal && !roleState.modal.hidden); }
@@ -39,12 +61,15 @@ export function renderRoleLists() {
     var draftGroup = (roleState.draft && roleState.draft[group]) || {};
     list.innerHTML = ROLE_GROUPS[group].map(function (key) {
       var id = 'role_' + group + '_' + key;
-      return '<label class="admin-role__perm" for="' + id + '">' +
+      var locked = !draftGroup[key] && !canGrant(group, key);
+      return '<label class="admin-role__perm' + (locked ? ' is-locked' : '') + '" for="' + id + '"' +
+          (locked ? ' style="opacity:.55;cursor:not-allowed" title="' + esc(tx('admin.perm_locked', 'You do not have this permission, so you cannot grant it')) + '"' : '') + '>' +
           '<input type="checkbox" id="' + id + '"' +
             ' data-role-perm' +
             ' data-role-group="' + group + '"' +
             ' data-role-key="' + key + '"' +
-            (draftGroup[key] ? ' checked' : '') + '>' +
+            (draftGroup[key] ? ' checked' : '') +
+            (locked ? ' disabled' : '') + '>' +
           '<span>' + esc(t('admin.perm_' + key)) + '</span>' +
         '</label>';
     }).join('');
@@ -81,6 +106,8 @@ export function openRoleModal(id, stub) {
   setRoleLoading(true);
   renderRoleLists();
   setRoleSaveEnabled(true);
+  // права текущего пользователя приходят отдельно — после них перерисовываем чекбоксы
+  loadMyRules().then(function () { if (isRoleOpen()) renderRoleLists(); });
 
   roleState.lastFocus = document.activeElement;
   roleState.modal.hidden = false;
@@ -128,7 +155,7 @@ function renderRoleDdValue() {
   var valueEl = ddEl('[data-role-dd-value]');
   if (!valueEl) return;
   var cur = roleState.current;
-  if (cur && cur.chosen) {
+  if (cur && cur.id) {
     valueEl.classList.remove('is-placeholder');
     valueEl.innerHTML = (cur.color ? '<span class="admin-role__dot" style="background:' + esc(cur.color) + '"></span>' : '') +
       '<span class="admin-role__dd-text">' + esc(cur.title) + '</span>';
@@ -149,7 +176,7 @@ function renderRoleDdMenu() {
   var list = ddEl('[data-role-dd-list]');
   if (!list) return;
   var shown = roleState.ddOptions || [];
-  var curId = (roleState.current && roleState.current.chosen) ? Number(roleState.current.id) : -1;
+  var curId = roleState.current ? Number(roleState.current.id) : 0;
   if (!shown.length) {
     var msg = roleState.ddSearching
       ? tx('common.common.loading', 'Loading...')
@@ -196,7 +223,6 @@ export function pickRoleDd(id) {
   var picked = (roleState.ddOptions || []).filter(function (r) { return Number(r.id) === Number(id); })[0];
   if (!picked) return;
   cur.id = Number(picked.id);
-  cur.chosen = true;
   cur.title = picked.title;
   cur.color = picked.color || '';
   renderRoleDdValue();
@@ -211,7 +237,7 @@ export function openRoleAttach() {
 
   var stub = {
     id: 0, title: '', color: '', canManage: true, status: '', version: null,
-    isNew: true, attach: true, chosen: false, insertAt: null,
+    isNew: true, attach: true, insertAt: null,
     systemPermissions: {}, postPermissions: {}, pubPermissions: {}
   };
   roleState.current = stub;
@@ -285,14 +311,8 @@ export function closeRoleModal() {
 export function saveRole() {
   var item = roleState.current;
   if (!item || roleState.submitting) return;
-  if (item.attach && !item.chosen) {
+  if (item.attach && !item.id) {
     notify(tx('admin.role_select_placeholder', 'Choose a role'), 'error');
-    return;
-  }
-  // id = 0 допустим (роль «User»); не годятся только null / NaN
-  if (!item.isNew && (item.id == null || isNaN(Number(item.id)))) {
-    console.error('[admin] role without id, save aborted', item);
-    notify(tx('admin.role_no_id', 'Role id is missing. Reload the page and try again'), 'error');
     return;
   }
   roleState.submitting = true;
@@ -314,7 +334,7 @@ export function saveRole() {
     : rolesApi.save(item.id, item.version, body);
 
   call.then(function (result) {
-    if (result.mode === 'forbidden') { notify(t('js.no_rights'), 'error'); return; }
+    if (result.mode === 'forbidden') { notify(result.message || t('js.no_rights'), 'error'); return; }
     if (result.mode === 'conflict')  { notify(t('admin.role_conflict'), 'error'); return; }
     if (result.mode === 'error')     { notify(result.message, 'error'); return; }
     if (item.isNew) return finishNewRole(item, body, result);
@@ -336,6 +356,6 @@ export function saveRole() {
   })
   .then(function () {
     roleState.submitting = false;
-    setRoleSaveEnabled(!(roleState.current && roleState.current.attach && !roleState.current.chosen));
+    setRoleSaveEnabled(!(roleState.current && roleState.current.attach && !roleState.current.id));
   });
 }

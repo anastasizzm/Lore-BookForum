@@ -12,17 +12,8 @@ function normalizeRole(raw) {
   raw = unwrapItem(raw);
   if (!raw || typeof raw !== 'object') return null;
   var role = (raw.role && typeof raw.role === 'object') ? raw.role : raw;
-
-  // id роли может быть 0 (базовая роль «User») — это валидное значение.
-  var rawId = role.id != null ? role.id
-            : role.roleId != null ? role.roleId
-            : raw.roleId != null ? raw.roleId
-            : raw.id;
-  var id = Number(rawId);
-  if (rawId == null || rawId === '' || isNaN(id)) {
-    console.warn('[admin] system role without valid id, keys:', Object.keys(raw), '| role:', JSON.stringify(role));
-    return null;
-  }
+  var id = Number(role.id);
+  if (!id && id !== 0) return null;
   return {
     id: id,
     title: String(role.title || ''),
@@ -89,6 +80,13 @@ export var rolesApi = (function () {
     return fallback || ('HTTP ' + r.status);
   }
 
+  /** Текст ошибки, который прислал бэк: { error: { message } } (иначе пусто). */
+  function serverMessage(r) {
+    var d = r && r.data;
+    var m = d && d.error && typeof d.error === 'object' ? d.error.message : (d && d.message);
+    return typeof m === 'string' ? m : '';
+  }
+
   var lastError = '';
 
   return {
@@ -133,7 +131,7 @@ export var rolesApi = (function () {
           return { mode: 'api', data: r.data, location: location, status: r.status };
         }
         if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
         return { mode: 'error', status: r.status, message: errorText(r), fields: parseFieldErrors(r.data) };
       });
     },
@@ -147,7 +145,7 @@ export var rolesApi = (function () {
           return { mode: 'api', data: r.data, etag: etag, status: r.status };
         }
         if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
         return { mode: 'error', status: r.status, message: errorText(r) };
       });
     },
@@ -162,7 +160,7 @@ export var rolesApi = (function () {
             return { mode: 'api', etag: etag, status: r.status };
           }
           if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-          if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+          if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
           if (r.status === 412) return { mode: 'conflict', status: r.status };
           return { mode: 'error', status: r.status, message: errorText(r) };
         });
@@ -178,7 +176,7 @@ export var rolesApi = (function () {
           return { mode: 'api', etag: etag, status: r.status };
         }
         if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
         if (r.status === 412) return { mode: 'conflict', status: r.status };
         return { mode: 'error', status: r.status, message: errorText(r) };
       });
@@ -190,7 +188,7 @@ export var rolesApi = (function () {
         var kind = classify(r);
         if (kind === 'ok') { setStatus('live'); return { mode: 'api', status: r.status }; }
         if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
+        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
         if (r.status === 412) return { mode: 'conflict', status: r.status };
         return { mode: 'error', status: r.status, message: errorText(r) };
       });
