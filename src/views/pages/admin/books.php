@@ -1,22 +1,23 @@
 <?php
 /**
- * admin/books — каркас таблицы книг админки.
+ * admin/books — таблица книг админки.
  *
- * Статус: ЗАГЛОВКА без проверок прав (имена разрешений от бэка ждём)
- * и без запросов к API — API админки ещё нет.
+ * Строки рисует public/assets/js/admin/features/books/list.js:
+ *   GET    /api/books?include=creator&page=N&q=…
+ *   DELETE /api/books/{id}
+ * Поиск уходит в API только по Enter (и при очистке поля крестиком),
+ * «Показать ещё» подгружает следующую страницу.
  *
- * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar).
+ * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
+ * .admin-badge, .admin-actions).
  */
 
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
-
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/books ----
-$books = [
-    ['id' => 1, 'title' => 'The Silent Library',   'author' => 'anastasizzm', 'genre' => 'Fantasy',  'created' => '2026-10-01'],
-    ['id' => 2, 'title' => 'Notes on Reading',     'author' => 'reader_one',  'genre' => 'Non-fiction', 'created' => '2026-10-05'],
-    ['id' => 3, 'title' => 'Archive of Borders',   'author' => 'anastasizzm', 'genre' => 'Sci-Fi',   'created' => '2026-10-12'],
-];
+$tx = static function (string $key, string $fallback) use ($view): string {
+    $value = $view->t($key);
+    return $view->e(($value === '' || $value === $key) ? $fallback : $value);
+};
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -34,20 +35,22 @@ $books = [
     'subtitle' => $view->t('common.admin.books_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<p class="admin-toolbar__status" data-books-status role="status" aria-live="polite"><?= $tx('common.admin.books_loading', 'Loading books…') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
          type="search"
          name="q"
+         data-books-search
          placeholder="<?= $tr('common.admin.search_books_ph') ?>"
          aria-label="<?= $tr('common.admin.search_books_ph') ?>"
+         enterkeyhint="search"
          autocomplete="off">
-  <span class="admin-toolbar__count"><?= count($books) ?></span>
+  <span class="admin-toolbar__count" data-books-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-admin-table="books">
+  <table class="admin-table" data-admin-table="books" data-books-table>
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
@@ -58,30 +61,18 @@ $books = [
         <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
       </tr>
     </thead>
-    <tbody>
-      <?php foreach ($books as $bookRow): $bookRow['id'] = (int) $bookRow['id']; ?>
-        <tr data-book-id="<?= $bookRow['id'] ?>">
-          <td class="admin-table__id"><?= $bookRow['id'] ?></td>
-          <td><span class="admin-table__clip" title="<?= $view->e($bookRow['title']) ?>"><?= $view->e($bookRow['title']) ?></span></td>
-          <td><?= $view->e($bookRow['author']) ?></td>
-          <td><span class="admin-badge"><?= $view->e($bookRow['genre']) ?></span></td>
-          <td><?= $view->e($bookRow['created']) ?></td>
-          <td>
-            <div class="admin-actions">
-              <!-- TODO(роуты): url('books.retrieve', ['bookId' => $bookRow['id']]) -->
-              <a class="btn btn--secondary" href="/books/<?= $bookRow['id'] ?>"><?= $tr('common.admin.action_view') ?></a>
-            </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-
-      <?php if (!$books): ?>
-        <tr class="admin-table__empty">
-          <td colspan="6"><?= $tr('common.admin.empty') ?></td>
-        </tr>
-      <?php endif; ?>
-    </tbody>
+    <tbody data-books-rows></tbody>
   </table>
 </div>
 
+<div class="admin-users__more">
+  <button type="button" class="btn btn--secondary" data-books-more hidden>
+    <?= $tx('common.admin.users_load_more', 'Show more') ?>
+  </button>
+</div>
+
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>
