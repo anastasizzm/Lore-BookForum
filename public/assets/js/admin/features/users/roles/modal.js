@@ -78,9 +78,15 @@ function urAvailable(names) {
   var cur = userRoles.current;
   var owned = {};
   ((cur && userRoles.cache[cur.id]) || []).forEach(function (r) { owned[r.id] = true; });
+  // Пустой systemIds ({}) = список системных ролей не распознан: фильтр не применяем,
+  // иначе отфильтруются все роли. Недопустимую роль отклонит бэк при сохранении.
+  var hasSystemIds = !!(userRoles.systemIds && Object.keys(userRoles.systemIds).length);
+  if (userRoles.systemIds && !hasSystemIds) {
+    console.warn('[admin] user roles: system role ids are empty, the system-role filter is skipped');
+  }
   return names.filter(function (r) {
     if (owned[Number(r.id)]) return false;
-    return userRoles.systemIds ? userRoles.systemIds[Number(r.id)] === true : true;
+    return hasSystemIds ? userRoles.systemIds[Number(r.id)] === true : true;
   });
 }
 
