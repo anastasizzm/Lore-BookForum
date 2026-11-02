@@ -14,28 +14,25 @@
  *   data-book-id      — id книги
  *   data-redirect     — куда вести после успеха/отмены (режим after-publish)
  *
- * КОНТРАКТ С БЭКОМ (P0 — роуты добавит бэк: config/ и app/ заморожены):
+ * КОНТРАКТ С БЭКОМ:
  *
  *   GET  /api/additional/rights         — справочник прав (грузится АСИНХРОННО
  *        при открытии плашки; по аналогии с /api/additional/genres,
  *        формат ResponseTemplates::list):
  *        200 { items: [ { id: int, title: string, description?: string } ] }
  *        401/404/5xx → состояние ошибки + «Повторить» (плашка не ломается).
+ *        В режиме модуля ролей справочник скрыт и в сохранении не участвует.
  *
- *   POST /api/publications/{id}/rights  — сохранение выбранных прав:
- *        enctype form, поля: rights[] (array<int>), _token (CSRF);
- *        успех: 200/204, ошибки: 422 { errors: { rights: [msg] } }.
- *
- *   POST /books/{id}/publish            — перевод черновика в published;
+ *   POST /api/books/{id}/publish        — перевод черновика в published
+ *        (config/endpoints.php → BooksController::publish, пустое тело);
  *        используется ТОЛЬКО в режиме data-rights-mode="publish"
  *        (кнопка «Опубликовать книгу» на book-details и кнопка
  *        «Опубликовать» в форме редактирования книги): после успеха
- *        rights[] и publish страница уходит на /books/{id} — статус
- *        меняется на published, бейдж и кнопка исчезают.
+ *        страница уходит на /books/{id} — статус меняется на published,
+ *        бейдж и кнопка исчезают.
  *
  *   Режим after-publish (из формы создания): книга УЖЕ опубликована
- *   ответом POST /books/store — плашка только досылает rights[] и ведёт
- *   на страницу книги (data-redirect).
+ *   ответом POST /api/books — плашка ведёт на страницу книги (data-redirect).
  *
  * Статус черновика и права доступа (для book-details):
  *   черновик виден только создателю — политику держит бэк ( BooksController );
@@ -45,6 +42,14 @@
  *   data-requires (см. шапку book-details.php).
  *
  * Стили — public/assets/css/rights-modal.css (каркас .modal — modal.css).
+ *
+ * МОДУЛЬ РОЛЕЙ (roles-module.php / roles-module.js): встроен в плашку и
+ * управляет ею — родной контент (справочник прав) скрыт, когда у корня
+ * data-rights-view="roles". Роли и людей модуль сохраняет сам, отдельными
+ * запросами. Экран 2 «Publish» модуля зовёт onPublish хоста
+ * (rights-modal.js → modulePublish(): POST /api/books/{id}/publish в режиме
+ * 'publish', иначе — только уход на страницу книги). Отмена модуля
+ * (стрелка «назад») зовёт onCancel → cancel() хоста.
  */
 ?>
 <div class="modal rights-modal" data-rights-modal hidden
@@ -85,9 +90,11 @@
             <p class="rights-modal__save-error" data-rights-save-error hidden aria-live="polite"></p>
         </div>
 
-        <!-- Плашка ролей и людей публикации (id книги уже известен):
-             publication-roles.js грузит /api/publications/{id}/roles и /users -->
-        <?php $view->include('publication-roles-panel'); ?>
+        <!-- Модуль «назначение ролей» (roles-module.php). Заменяет родной
+             контент плашки: управляет процессом публикации: экран 2 «Publish»
+             зовёт логику хоста (rights-modal.js). Активен, когда у корня
+             data-rights-view="roles" (см. rights-modal.css). -->
+        <?php $view->include('roles-module'); ?>
 
         <div class="modal__actions">
             <button type="button" class="btn btn--secondary" data-rights-cancel>

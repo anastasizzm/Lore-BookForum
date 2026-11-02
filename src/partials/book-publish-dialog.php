@@ -13,7 +13,7 @@
  * поле authors/editors пока не принимает, см. шапку book-form.php).
  *
  * Кнопка Publish внутри окна — type=submit data-submit-publish:
- * book-form.js уходит на POST /api/books/new, затем POST /books/{id}/publish.
+ * book-form.js уходит на POST /api/books, затем POST /api/books/{id}/publish.
  *
  * Стили: каркас .modal — modal.css; размеры/скролл — book-form.css
  * (.book-publish-dialog__*).

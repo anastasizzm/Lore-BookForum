@@ -41,9 +41,11 @@ $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p));
       <p class="article-rights__empty" data-rights-status><?= $tr('common.common.loading') ?></p>
     </div>
 
-    <!-- Плашка ролей и людей публикации (id статьи уже известен):
-         publication-roles.js грузит /api/publications/{id}/roles и /users -->
-    <?php $view->include('publication-roles-panel'); ?>
+    <!-- Модуль «назначение ролей» (roles-module.php). Заменяет родной
+         список редакторов: управляет публикацией, экран 2 «Publish» зовёт
+         submit() хоста (article-publish.js). Активен, когда у корня
+         data-rights-view="roles" (см. article-right.css). -->
+    <?php $view->include('roles-module'); ?>
 
     <footer class="article-rights__foot">
       <button type="button" class="btn btn--secondary" data-rights-cancel>

@@ -196,3 +196,24 @@
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ============================================================
+   РЕЖИМ МОДУЛЯ РОЛЕЙ (data-rights-view="roles"): родное тело
+   плашки (справочник прав) и её футер скрыты — управление
+   процессом берёт модуль roles-module (у него свои шапка и
+   футер). Активацию ставит rights-modal.js при открытии.
+   ============================================================ */
+.rights-modal[data-rights-view="roles"] .rights-modal__body,
+.rights-modal[data-rights-view="roles"] > .modal__dialog > .modal__text,
+.rights-modal[data-rights-view="roles"] > .modal__dialog > .modal__actions {
+  display: none !important;
+}
+
+/* Модуль показывается только в этом режиме */
+.rights-modal .roles-module {
+  display: none;
+}
+
+.rights-modal[data-rights-view="roles"] .roles-module {
+  display: flex;
+}

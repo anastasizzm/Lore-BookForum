@@ -28,6 +28,9 @@ window.LoreArticlePublish = (function () {
   var state = {
     articleId: 0,
     onInvalid: null,
+    mode: 'publish',               // publish | roles
+    screen: 1,                     // стартовый экран модуля: 1 — роли | 2 — пользователи
+    context: 'create',             // create — Create → Continue → Publish; edit — «Изменить…»
     selected: Object.create(null),   // id (string) -> true
     users: [],
     page: 1,
@@ -216,7 +219,7 @@ window.LoreArticlePublish = (function () {
 
   /* ---------- публикация ---------- */
   function submit() {
-    if (state.busy) return;
+    if (state.busy) return Promise.resolve(false);
     state.busy = true;
 
     var btn = $('[data-rights-submit]');
@@ -228,7 +231,7 @@ window.LoreArticlePublish = (function () {
       if (state.selected[id]) body.append('editor_ids[]', id);
     });
 
-    csrfFetch('/api/articles/' + state.articleId + '/publish', {
+    return csrfFetch('/api/articles/' + state.articleId + '/publish', {
       method: 'POST',
       body: body,
       credentials: 'same-origin',
@@ -243,7 +246,7 @@ window.LoreArticlePublish = (function () {
           var payload = (data && data.data) || data || {};
           window.location.href = payload.redirect
             || (state.articleId ? '/articles/' + state.articleId : '/articles');
-          return;
+          return true;
         }
 
         if ((res.status === 400 || res.status === 422) && data) {
@@ -251,17 +254,19 @@ window.LoreArticlePublish = (function () {
             || (data.error && typeof data.error === 'object' ? data.error.details : null);
           close();
           if (typeof state.onInvalid === 'function') state.onInvalid(errors);
-          return;
+          return false;
         }
 
         var fallback = t('errors.common.save_failed', { status: res.status });
         notify(window.Messages
           ? window.Messages.describe(res.status, data, raw, fallback)
           : fallback);
+        return false;
       });
     }).catch(function (err) {
       console.error('[article-publish] publish failed', err);
       notify(t('errors.common.network_error'));
+      return false;
     }).finally(function () {
       state.busy = false;
       if (btn) { btn.disabled = false; btn.textContent = prev; }
@@ -320,6 +325,11 @@ window.LoreArticlePublish = (function () {
 
     state.articleId = Number(articleId) || 0;
     state.onInvalid = (opts && opts.onInvalid) || null;
+    // 'roles' — только модуль ролей (Publish просто сохраняет роли и закрывает);
+    // иначе — привычный publish (Publish публикует статью).
+    state.mode = (opts && opts.mode === 'roles') ? 'roles' : 'publish';
+    state.screen = (opts && opts.screen) ? (parseInt(opts.screen, 10) || 1) : 1;
+    state.context = (opts && opts.context) === 'edit' ? 'edit' : 'create';
     state.selected = Object.create(null);
     state.users = [];
     state.page = 1;
@@ -334,6 +344,8 @@ window.LoreArticlePublish = (function () {
     if (search) search.value = '';
 
     root.hidden = false;
+    // Модуль ролей берёт управление окном на себя
+    root.setAttribute('data-rights-view', 'roles');
     document.body.classList.add('is-modal-open');
     document.addEventListener('keydown', onKey, true);
 
@@ -343,10 +355,43 @@ window.LoreArticlePublish = (function () {
     loadRolesPanel();
 
     if (search) { try { search.focus(); } catch (_) {} }
+
+    openRoles();
+  }
+
+  /** Открывает модуль ролей внутри окна (экран 1). */
+  function openRoles() {
+    var mod = root.querySelector('[data-roles-module]');
+    if (!mod || !window.LoreRoles) return;
+
+    var rolesMode = state.mode === 'roles' ? 'roles' : 'publish';
+
+    window.LoreRoles.open(mod, {
+      publicationId: state.articleId,
+      mode: rolesMode,
+      screen: state.screen,
+      context: state.context,
+      // Publish экрана 2: в режиме 'roles' просто сохраняем роли (модуль
+      // сохранил их сам) и закрываем; иначе — публикуем статью (submit хоста).
+      onPublish: function (done) {
+        if (rolesMode === 'roles') {
+          if (window.Messages) window.Messages.show(t('roles.saved'), { type: 'success' });
+          close();
+          done();
+          return;
+        }
+        submit().then(function (ok) { if (ok) close(); done(); });
+      },
+      onCancel: function () { close(); }
+    });
   }
 
   function close() {
     if (!root) return;
+    // Сбрасываем модуль ролей и убираем режим
+    var mod = root.querySelector('[data-roles-module]');
+    if (mod && window.LoreRoles) window.LoreRoles.reset(mod);
+    root.removeAttribute('data-rights-view');
     root.hidden = true;
     document.body.classList.remove('is-modal-open');
     document.removeEventListener('keydown', onKey, true);
