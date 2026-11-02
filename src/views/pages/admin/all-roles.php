@@ -93,7 +93,6 @@ $adminBoot = static function (string $name, mixed $data): void {
     echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
 };
 $adminBoot('all-roles', $allRoles ?? $names ?? null);
-$adminBoot('roles', $roles ?? $systemRoles ?? null);
 ?>
 
 <?php $view->endBlock('content'); ?>

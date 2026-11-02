@@ -41,11 +41,7 @@ $cards = [
     ['route' => 'admin.genres',     'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint'),     'count' => '—'],
     ['route' => 'admin.categories', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint'), 'count' => '—'],
     ['route' => 'admin.types',      'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint'),      'count' => '—'],
-    // Жалобы — роута нет (TODO выше)
-    ['href'  => '/pages/test?page=admin/reports',
-     'title' => $tr('common.admin.card_reports'),
-     'hint'  => $tr('common.admin.card_reports_hint'),
-     'count' => '—'],
+    // «Жалобы» скрыты, пока нет раздела: вернуть карточку admin.reports, когда появится роут
 
     // Системные роли → admin/roles.php
     ['route' => 'admin.roles',
