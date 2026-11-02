@@ -188,11 +188,68 @@
     saving: false,
     coverDirty: false,
     articleId: 0,
-    version: 1,          // articles.version: нужен для If-Match при PUT content
+    // articles.version: нужен для If-Match при PUT content. Захардкоженная 1
+    // годилась только для новой статьи — для правки версию подтягивает
+    // syncVersion() (GET content → ETag / version), см. ниже.
+    version: 1,
   };
 
   var idField = $('[name="id"]');
   state.articleId = idField ? (parseInt(idField.value, 10) || 0) : 0;
+
+  /* ============================================================
+     ВЕРСИЯ СТАТЬИ (If-Match для PUT content)
+     ============================================================ */
+  /** Запоминает версию из ETag ответа (формат бэка: ETag: "N"). */
+  function rememberVersion(response) {
+    var etag = response.headers.get('ETag');
+    var m = etag ? etag.match(/\d+/) : null;
+    if (m) state.version = parseInt(m[0], 10);
+  }
+
+  /**
+   * Подтягивает серверную версию контента статьи (articles.version).
+   *
+   * Источник — GET /api/articles/{id}/content: сначала ETag (так отвечает
+   * бэк на PUT content и так же должен отвечать на GET), затем version в
+   * теле ответа (страховка, если бэк добавит его в payload). Если бэк
+   * версию пока не отдаёт — state.version не меняется (поведение как раньше).
+   *
+   * Нужно до первой отправки правки: с версией по умолчанию (1) любая
+   * статья с articles.version ≠ 1 уходит с If-Match: "1" → 409/428.
+   *
+   * @return {Promise<boolean>} true — версия с сервера отличается от текущей
+   *                             (значит, её можно использовать для повтора).
+   */
+  function syncVersion() {
+    if (!state.articleId) return Promise.resolve(false);
+    return csrfFetch(API.content(state.articleId), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function (response) {
+      if (!response.ok) return false;
+
+      var etag = response.headers.get('ETag');
+      var m = etag ? etag.match(/\d+/) : null;
+      var next = m ? parseInt(m[0], 10) : NaN;
+      if (next > 0) {
+        var changed = next !== state.version;
+        state.version = next;
+        return changed;
+      }
+
+      return readJson(response).then(function (parsed) {
+        var data = parsed.data || {};
+        var source = data.version != null ? data.version
+          : (data.article && data.article.version != null ? data.article.version : null);
+        var v = parseInt(source, 10);
+        if (!(v > 0) || v === state.version) return false;
+        state.version = v;
+        return true;
+      });
+    }).catch(function () { return false; });
+  }
 
   var editor = null;
   var coverValidator = null;
@@ -1580,6 +1637,34 @@
       });
     }
 
+    /* PUT content с текущей версией (If-Match). Если версия не совпала,
+       бэк отвечает 404 (NotFoundException в updateContent), 409 или 428 —
+       в этом случае перечитываем версию с сервера и повторяем PUT один раз. */
+    function putContent(payload) {
+      return sendJson(API.content(state.articleId), 'PUT', payload, {
+        'If-Match': '"' + state.version + '"',
+      }).then(function (r) {
+        if (r.ok) {
+          rememberVersion(r.response);
+          return onSaved(r.data, r.response);
+        }
+        if ([404, 409, 412, 428].indexOf(r.response.status) === -1) {
+          return onFailed(r.data, r.response);
+        }
+        return syncVersion().then(function (updated) {
+          // Версия не изменилась — повтор дал бы тот же ответ, не дублируем запрос.
+          if (!updated) return onFailed(r.data, r.response);
+          return sendJson(API.content(state.articleId), 'PUT', payload, {
+            'If-Match': '"' + state.version + '"',
+          }).then(function (r2) {
+            if (!r2.ok) return onFailed(r2.data, r2.response);
+            rememberVersion(r2.response);
+            return onSaved(r2.data, r2.response);
+          });
+        });
+      });
+    }
+
     var prepare = coverFile ? uploadCover(coverFile) : Promise.resolve(undefined);
 
     return prepare.then(function (iconId) {
@@ -1609,15 +1694,7 @@
       // правка: PATCH метаданных, затем PUT content с текущей версией
       return sendJson(API.article(state.articleId), 'PATCH', patchMeta).then(function (r) {
         if (!r.ok) return onFailed(r.data, r.response);
-        return sendJson(API.content(state.articleId), 'PUT', content, {
-          'If-Match': '"' + state.version + '"',
-        }).then(function (r2) {
-          if (!r2.ok) return onFailed(r2.data, r2.response);
-          var etag = r2.response.headers.get('ETag');
-          var m = etag ? etag.match(/\d+/) : null;
-          if (m) state.version = parseInt(m[0], 10);
-          return onSaved(r2.data, r2.response);
-        });
+        return putContent(content);
       });
     }).catch(function (err) {
       console.error('[article-form] save failed', err);
@@ -1786,6 +1863,10 @@
     if (!Text) return;
 
     stepsApi = initSteps();
+
+    // Правка существующей статьи: серверную версию контента читаем заранее,
+    // чтобы первый PUT content ушёл с корректным If-Match (см. syncVersion).
+    syncVersion();
 
     $$('[data-dynamic-select]').forEach(populateSelect);
 
