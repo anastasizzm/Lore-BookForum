@@ -37,6 +37,20 @@
     types:  '/api/additional/types',
   };
 
+  /* Роуты develop, к которым подключается форма. Веб-роута /articles/save
+     в бэкенде нет — сохраняем напрямую в API:
+       POST   /api/articles               — создание (JSON)
+       PATCH  /api/articles/{id}          — метаданные (JSON)
+       PUT    /api/articles/{id}/content  — текст/отрывок (JSON + If-Match)
+       POST   /api/articles/{id}/publish  — публикация (article-publish.js)
+       POST   /api/files/upload           — обложка (multipart, category=cover) */
+  var API = {
+    articles: '/api/articles',
+    article: function (id) { return '/api/articles/' + id; },
+    content: function (id) { return '/api/articles/' + id + '/content'; },
+    upload:  '/api/files/upload',
+  };
+
   var DEV_SRC = (function () {
     var s = new URLSearchParams(location.search).get('src');
     return s && s.charAt(0) === '/' && s.charAt(1) !== '/' ? s : '';
@@ -78,6 +92,90 @@
       : fetch(url, opts);
   }
 
+  /** JSON-ответ API: { data, raw } (raw нужен для Messages.describe). */
+  function readJson(response) {
+    return response.text().then(function (raw) {
+      var data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+      return { data: data, raw: raw };
+    });
+  }
+
+  /** Запрос к API с JSON-телом (CSRF-заголовок добавит LoreCsrf). */
+  function jsonFetch(url, method, payload, extraHeaders) {
+    var headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    };
+    if (extraHeaders) {
+      Object.keys(extraHeaders).forEach(function (k) { headers[k] = extraHeaders[k]; });
+    }
+    return csrfFetch(url, {
+      method: method,
+      body: JSON.stringify(payload),
+      credentials: 'same-origin',
+      headers: headers,
+    });
+  }
+
+  /** Обложка → POST /api/files/upload (category=cover) → uuid (iconId). */
+  function uploadCover(file) {
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('category', 'cover');
+    return csrfFetch(API.upload, {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function (response) {
+      return readJson(response).then(function (parsed) {
+        var id = parsed.data && parsed.data.createdId;
+        if (response.ok && id) return String(id);
+        throw new Error('cover upload failed: HTTP ' + response.status);
+      });
+    });
+  }
+
+  /** Метаданные статьи для POST/PATCH (ArticleForm / ArticlePatchForm). */
+  function collectMeta() {
+    var doi = valueOf('doi');
+    return {
+      title: valueOf('title'),
+      description: valueOf('annotation'),
+      authorNotes: valueOf('author_note'),
+      genreId: parseInt(valueOf('genre'), 10) || 0,
+      typeId: parseInt(valueOf('type'), 10) || 0,
+      doi: doi !== '' ? doi : null,
+    };
+  }
+
+  /** PATCH: бэк валидирует присланные поля (min len 1) — пустые не шлём,
+      иначе правка падала бы на пустой аннотации/заметке. */
+  function collectPatchMeta() {
+    var meta = collectMeta();
+    if (meta.description === '') delete meta.description;
+    if (meta.authorNotes === '') delete meta.authorNotes;
+    if (meta.genreId < 1) delete meta.genreId;
+    if (meta.typeId < 1) delete meta.typeId;
+    return meta;
+  }
+
+  /** Контент статьи: отрывок из книги либо собственный текст (ArticleContentForm). */
+  function collectContent() {
+    if (state.mode === 'excerpt') {
+      return {
+        book: {
+          bookId: parseInt(valueOf('book'), 10) || 0,
+          pageStart: parseInt(valueOf('page_start'), 10) || 0,
+          pageEnd: parseInt(valueOf('page_end'), 10) || 0,
+        },
+      };
+    }
+    return { content: editor ? editor.getHtml() : '' };
+  }
+
   /* ============================================================
      СОСТОЯНИЕ
      ============================================================ */
@@ -90,10 +188,68 @@
     saving: false,
     coverDirty: false,
     articleId: 0,
+    // articles.version: нужен для If-Match при PUT content. Захардкоженная 1
+    // годилась только для новой статьи — для правки версию подтягивает
+    // syncVersion() (GET content → ETag / version), см. ниже.
+    version: 1,
   };
 
   var idField = $('[name="id"]');
   state.articleId = idField ? (parseInt(idField.value, 10) || 0) : 0;
+
+  /* ============================================================
+     ВЕРСИЯ СТАТЬИ (If-Match для PUT content)
+     ============================================================ */
+  /** Запоминает версию из ETag ответа (формат бэка: ETag: "N"). */
+  function rememberVersion(response) {
+    var etag = response.headers.get('ETag');
+    var m = etag ? etag.match(/\d+/) : null;
+    if (m) state.version = parseInt(m[0], 10);
+  }
+
+  /**
+   * Подтягивает серверную версию контента статьи (articles.version).
+   *
+   * Источник — GET /api/articles/{id}/content: сначала ETag (так отвечает
+   * бэк на PUT content и так же должен отвечать на GET), затем version в
+   * теле ответа (страховка, если бэк добавит его в payload). Если бэк
+   * версию пока не отдаёт — state.version не меняется (поведение как раньше).
+   *
+   * Нужно до первой отправки правки: с версией по умолчанию (1) любая
+   * статья с articles.version ≠ 1 уходит с If-Match: "1" → 409/428.
+   *
+   * @return {Promise<boolean>} true — версия с сервера отличается от текущей
+   *                             (значит, её можно использовать для повтора).
+   */
+  function syncVersion() {
+    if (!state.articleId) return Promise.resolve(false);
+    return csrfFetch(API.content(state.articleId), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function (response) {
+      if (!response.ok) return false;
+
+      var etag = response.headers.get('ETag');
+      var m = etag ? etag.match(/\d+/) : null;
+      var next = m ? parseInt(m[0], 10) : NaN;
+      if (next > 0) {
+        var changed = next !== state.version;
+        state.version = next;
+        return changed;
+      }
+
+      return readJson(response).then(function (parsed) {
+        var data = parsed.data || {};
+        var source = data.version != null ? data.version
+          : (data.article && data.article.version != null ? data.article.version : null);
+        var v = parseInt(source, 10);
+        if (!(v > 0) || v === state.version) return false;
+        state.version = v;
+        return true;
+      });
+    }).catch(function () { return false; });
+  }
 
   var editor = null;
   var coverValidator = null;
@@ -1333,7 +1489,9 @@
     start_line: 'fragment', end_line: 'fragment',
     start_char: 'fragment', end_char: 'fragment',
     start_quote: 'fragment', end_quote: 'fragment',
+    pageStart: 'fragment', pageEnd: 'fragment', book: 'fragment',
     description: 'annotation', authorNotes: 'author_note',
+    genreId: 'genre', typeId: 'type', iconId: 'cover',
   };
 
   function renderServerErrors(errors) {
@@ -1362,10 +1520,8 @@
   /**
    * kind:
    *   'draft'   — «Create draft»: сохраняем черновик и открываем страницу статьи;
-   *   'publish' — «Publish»: сохраняем черновик и просим бэк проверить статью как для
-   *               публикации (check_publish=1). Не готова — возвращаем пользователя на
-   *               шаг с ошибками; готова — открывается окно выбора прав, а публикует
-   *               уже кнопка в окне (POST /api/articles/{id}/publish).
+   *   'publish' — «Publish»: сохраняем черновик, затем открываем окно выбора прав;
+   *               публикует уже кнопка в окне (POST /api/articles/{id}/publish).
    * silent — автосохранение: без плашек, без перехода и без подсветки ошибок.
    */
   function openRights() {
@@ -1420,79 +1576,125 @@
       if (!silent) buttons.forEach(function (b, i) { b.disabled = false; b.textContent = labels[i]; });
     }
 
-    var body = new FormData(form);
-    body.set('status', 'draft');                       // публикует только окно прав
-    if (forPublish) body.set('check_publish', '1');
-    else body.delete('check_publish');
-    if (!state.coverDirty) body.delete('cover');
+    /* Сохранение идёт напрямую в API (веб-роута /articles/save нет):
+       создание — POST /api/articles; правка — PATCH метаданных и
+       PUT /api/articles/{id}/content (If-Match) для текста/отрывка.
+       Обложка грузится отдельно: POST /api/files/upload → iconId. */
+    var coverInput = $('[data-cover-input]');
+    var coverFile = (state.coverDirty && coverInput && coverInput.files)
+      ? coverInput.files[0]
+      : null;
+    var removeFlag = fieldByName('remove_cover');
+    var removeCover = !coverFile && !!removeFlag && removeFlag.value === '1';
 
-    return csrfFetch(form.getAttribute('action') || location.href, {
-      method: 'POST',
-      body: body,
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    }).then(function (response) {
-      return response.text().then(function (raw) {
-        var data = null;
-        try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
-        var ok = response.ok && !/^\s*</.test(raw);
+    function onSaved(data, response) {
+      clearBackup();
+      state.dirty = false;
+      state.coverDirty = false;
+      if (removeFlag) removeFlag.value = '';
 
-        if (ok) {
-          if (response.status === 403) {
-           if (window.Messages) window.Messages.show(t('errors.common.forbidden'), { type: 'error' });
-           release();
-           return false;
-          }
-          var payload = (data && data.data) || data || {};
-          if (payload.id) {
-            state.articleId = parseInt(payload.id, 10) || state.articleId;
-            if (idField) idField.value = String(state.articleId);
-          }
-          clearBackup();
-          state.dirty = false;
-          state.coverDirty = false;
-          var removeFlagReset = fieldByName('remove_cover');
-          if (removeFlagReset) removeFlagReset.value = '';
-
-          // адрес страницы редактирования: если окно прав закроют, перезагрузка вернёт в форму
-          if (payload.edit_url && window.history && history.replaceState) {
-            history.replaceState(null, '', withLang(payload.edit_url));
-          }
-
-          if (silent) {
-            setDraftStatus(t('articleform.draft_saved_at', { time: formatTime(new Date()) }));
-            release();
-            return true;
-          }
-
-          if (forPublish) {
-            // статья прошла проверку бэка — выбираем права и публикуем
-            release();
-            openRights();
-            return true;
-          }
-
-          // «Create draft»: открываем страницу статьи (там пометка «Черновик» и кнопка «Publish»)
-          notify(t('js.article_draft_saved'), 'success');
-          window.location.href = withLang(payload.redirect
-            || (state.articleId ? '/articles/' + state.articleId : (response.headers.get('Location') || '/articles')));
-          return true;
-        }
-
-        if ((response.status === 400 || response.status === 422) && data) {
-          var errors = data.errors || (data.error && typeof data.error === 'object' ? data.error.details : null);
-          if (!silent) renderServerErrors(errors);
-        }
-
-        if (silent) {
-          setDraftStatus(t('errors.article.article_draft_failed'));
-        } else {
-          var fallback = t('errors.common.save_failed', { status: response.status });
-          if (window.Messages) notify(window.Messages.describe(response.status, data, raw, fallback));
-          else notify(fallback);
-        }
+      if (silent) {
+        setDraftStatus(t('articleform.draft_saved_at', { time: formatTime(new Date()) }));
         release();
-        return false;
+        return true;
+      }
+
+      if (forPublish) {
+        // черновик сохранён — выбираем права и публикуем (article-publish.js)
+        release();
+        openRights();
+        return true;
+      }
+
+      // «Create draft»: открываем страницу статьи (там пометка «Черновик» и кнопка «Publish»)
+      notify(t('js.article_draft_saved'), 'success');
+      window.location.href = withLang(state.articleId ? '/articles/' + state.articleId : '/articles');
+      return true;
+    }
+
+    function onFailed(data, response, raw) {
+      if ((response.status === 400 || response.status === 422) && data) {
+        var errors = data.errors || (data.error && typeof data.error === 'object' ? data.error.details : null);
+        if (!silent) renderServerErrors(errors);
+      }
+
+      if (silent) {
+        setDraftStatus(t('errors.article.article_draft_failed'));
+      } else {
+        var fallback = t('errors.common.save_failed', { status: response.status });
+        if (window.Messages) notify(window.Messages.describe(response.status, data, raw, fallback));
+        else notify(fallback);
+      }
+      release();
+      return false;
+    }
+
+    function sendJson(url, method, payload, extraHeaders) {
+      return jsonFetch(url, method, payload, extraHeaders).then(function (response) {
+        return readJson(response).then(function (parsed) {
+          return { ok: response.ok, data: parsed.data, response: response };
+        });
+      });
+    }
+
+    /* PUT content с текущей версией (If-Match). Если версия не совпала,
+       бэк отвечает 404 (NotFoundException в updateContent), 409 или 428 —
+       в этом случае перечитываем версию с сервера и повторяем PUT один раз. */
+    function putContent(payload) {
+      return sendJson(API.content(state.articleId), 'PUT', payload, {
+        'If-Match': '"' + state.version + '"',
+      }).then(function (r) {
+        if (r.ok) {
+          rememberVersion(r.response);
+          return onSaved(r.data, r.response);
+        }
+        if ([404, 409, 412, 428].indexOf(r.response.status) === -1) {
+          return onFailed(r.data, r.response);
+        }
+        return syncVersion().then(function (updated) {
+          // Версия не изменилась — повтор дал бы тот же ответ, не дублируем запрос.
+          if (!updated) return onFailed(r.data, r.response);
+          return sendJson(API.content(state.articleId), 'PUT', payload, {
+            'If-Match': '"' + state.version + '"',
+          }).then(function (r2) {
+            if (!r2.ok) return onFailed(r2.data, r2.response);
+            rememberVersion(r2.response);
+            return onSaved(r2.data, r2.response);
+          });
+        });
+      });
+    }
+
+    var prepare = coverFile ? uploadCover(coverFile) : Promise.resolve(undefined);
+
+    return prepare.then(function (iconId) {
+      var meta = collectMeta();
+      var patchMeta = collectPatchMeta();
+      if (iconId !== undefined) {
+        meta.iconId = iconId;
+        patchMeta.iconId = iconId;
+      } else if (removeCover && state.articleId) {
+        meta.iconId = null;        // снять обложку
+        patchMeta.iconId = null;
+      }
+      var content = collectContent();
+
+      if (!state.articleId) {
+        // создание: текст/отрывок передаём в том же запросе (ArticleForm)
+        Object.keys(content).forEach(function (k) { meta[k] = content[k]; });
+        return sendJson(API.articles, 'POST', meta).then(function (r) {
+          var created = r.ok && r.data && r.data.createdId;
+          if (!created) return onFailed(r.data, r.response);
+          state.articleId = parseInt(created, 10) || 0;
+          if (idField) idField.value = String(state.articleId);
+          return onSaved(r.data, r.response);
+        });
+      }
+
+      // правка: PATCH метаданных, затем PUT content с текущей версией
+      return sendJson(API.article(state.articleId), 'PATCH', patchMeta).then(function (r) {
+        if (!r.ok) return onFailed(r.data, r.response);
+        return putContent(content);
       });
     }).catch(function (err) {
       console.error('[article-form] save failed', err);
@@ -1661,6 +1863,10 @@
     if (!Text) return;
 
     stepsApi = initSteps();
+
+    // Правка существующей статьи: серверную версию контента читаем заранее,
+    // чтобы первый PUT content ушёл с корректным If-Match (см. syncVersion).
+    syncVersion();
 
     $$('[data-dynamic-select]').forEach(populateSelect);
 

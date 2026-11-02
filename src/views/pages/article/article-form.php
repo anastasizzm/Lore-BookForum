@@ -20,7 +20,7 @@ $langField = $langQuery !== null && $langQuery !== ''
 /*
  * КОНТРАКТ С БЭКОМ (фронт готов — роуты добавляет команда бэка):
  *
- *   GET  /articles/create      → articles.create,     AuthPolicy::Verified
+ *   GET  /articles/new         → articles.create,     AuthPolicy::Verified
  *   GET  /articles/{id}/edit   → articles.edit,       только автор статьи
  *        Обе страницы рендерят эту вьюху. Переменные:
  *          $user        — UserContext текущего пользователя (сайдбар);
@@ -31,21 +31,18 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          $bookTitle   — название книги-источника (для режима «отрывок»);
  *          $coverUrl    — адрес уже загруженной обложки или '' (редактирование).
  *
- *   POST /articles/save        → articles.save,       AuthPolicy::Verified
- *        ОДИН адрес на создание, редактирование, черновик и автосохранение.
- *        multipart/form-data. Поля: id, status, mode ('standalone'|'excerpt'), title,
- *        genre, type, doi, annotation, author_note, content, cover, remove_cover, book,
- *        page_start, …, anchor_version, check_publish.
- *        status ВСЕГДА 'draft': статья сохраняется как черновик, публикует её только
- *        POST /api/articles/{id}/publish (окно выбора прав, article-publish.js).
- *          • «Create draft»  → status=draft, обязательно только название (title);
- *          • «Publish»       → status=draft + check_publish=1: бэк сохраняет черновик И
- *            проверяет статью как для публикации (жанр, тип, текст/фрагмент…). Не готова →
- *            422 { errors: { field: [msg] } } и фронт возвращает пользователя на шаг с
- *            ошибками; готова → 200, затем открывается окно прав.
- *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
- *        «Create draft» после успеха ведёт на страницу статьи (redirect): там пометка
- *        «Черновик» и кнопка «Publish» внизу.
+ *   POST /api/articles         → api.articles.create.submit, AuthPolicy::Verified
+ *        ФОЛБЭК action формы (см. $action ниже): без JS нативный POST уходит сюда,
+ *        а не на несуществующий веб-роут /articles/save (его в config/routes.php
+ *        нет — 404). Сохранение этим роутом не обслуживается: статья всегда уходит
+ *        в API напрямую (article-form.js, JSON + CSRF-заголовок):
+ *          • «Create draft»  → POST /api/articles, обязательно только название (title);
+ *          • «Publish»       → POST /api/articles (черновик) → POST /api/articles/{id}/publish
+ *            (окно выбора прав, article-publish.js); статья не готова к публикации →
+ *            422 { errors: { field: [msg] } } и фронт возвращает пользователя на шаг
+ *            с ошибками.
+ *        «Create draft» после успеха ведёт на страницу статьи (/articles/{id}): там
+ *        пометка «Черновик» и кнопка «Publish» внизу.
  *
  *   POST /api/articles/{id}/publish  → api.articles.publish, AuthPolicy::Verified
  *        multipart: editor_ids[] (ID соавторов-редакторов, можно пусто). Повторно проверяет
@@ -127,7 +124,11 @@ if (!in_array($mode, ['standalone', 'excerpt'], true)) $mode = 'standalone';
 $genreValue = $val('genre');
 $typeValue  = $val('type');
 
-$action = $withLang('/articles/save');
+/* Форма сохраняется через API (см. article-form.js): POST /api/articles —
+   создание, PATCH /api/articles/{id} + PUT /api/articles/{id}/content — правка.
+   action — фолбэк для нативного submit без JS: раньше здесь был несуществующий
+   веб-роут /articles/save (его нет в config/routes.php) → 404. */
+$action = $withLang('/api/articles');
 
 /* ---------- панель редактора ---------- */
 $toolbarButtons = [

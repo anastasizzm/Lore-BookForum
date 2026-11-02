@@ -14,8 +14,9 @@
  * Запасной вариант без правки страницы — data-hide-on ниже (fab.js прячет кнопку,
  * если на странице есть такой элемент).
  *
- * Ссылки: книга — $view->url('books.create'); статья — /articles/create
- * (маршрута в config/routes.php пока нет — его добавляет бэк).
+ * Ссылки: книга — $view->url('books.create'); статья — $view->url('articles.create').
+ * Оба named-роута уже есть в config/routes.php: books.create → GET /books/new,
+ * articles.create → GET /articles/new. /articles/create не существует (403/404).
  */
 if (empty($is_verified) || !empty($view->block('hideFab'))) {
     return;
@@ -34,7 +35,7 @@ $fabUrl = static function (string $base) use ($fabLang): string {
 
 $fabItems = [
     [
-        'href'  => $fabUrl('/articles/create'),
+        'href'  => $fabUrl($view->url('articles.create')),
         'label' => $tr('common.fab.article'),
         'icon'  => '<path d="M5 2.5h7l3 3v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 9h5M7.5 12h5M7.5 15h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
     ],
