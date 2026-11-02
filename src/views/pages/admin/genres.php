@@ -26,6 +26,9 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
+// Данные контроллера (если он их передал) — до того, как переменную перезапишет мок ниже
+$serverItems = $genres ?? $items ?? null;
+
 // ---- МОК-строки: сюда придёт GET /api/admin/genres (dictApi в admin.js) ----
 $genres = [
     ['id' => 1, 'translations' => [
@@ -82,8 +85,25 @@ $genres = [
     'nameOne'  => $view->t('common.admin.genre_one'),
 ]); ?>
 
+<?php
+/*
+ * Данные страницы уже есть у контроллера — отдаём их в разметку, чтобы первая
+ * загрузка таблицы не делала запрос к API (JS читает блок один раз и удаляет;
+ * поиск, фильтры и «Показать ещё» дальше идут через API как раньше).
+ * Нет данных / не сериализуются — блок не выводится, JS сам сходит в API.
+ */
+$adminBoot = static function (string $name, mixed $data): void {
+    if ($data === null || $data === []) return;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+        | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    if (!is_string($json)) return;
+    echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
+};
+$adminBoot('dictionary', $serverItems);
+?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script src="<?= $view->asset('js/admin.js') ?>" defer></script>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>
