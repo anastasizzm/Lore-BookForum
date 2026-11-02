@@ -3,6 +3,7 @@
  */
 import { apiFetch } from '../../../core/http.js';
 import { normalizeColor } from '../../../core/utils.js';
+import { listFrom } from '../../../core/payload.js';
 import { rolesApi } from '../../roles/api.js';
 import { userRoles } from './state.js';
 
@@ -40,8 +41,7 @@ export function urLoad(userId) {
   return Promise.all([apiFetch('GET', '/api/system/users/' + encodeURIComponent(userId) + '/roles'), urCatalog()]).then(function (res) {
     var r = res[0], catalog = res[1];
     if (!r.ok) return null;
-    var inner = (r.data && r.data.data && typeof r.data.data === 'object') ? r.data.data : r.data;
-    var list = Array.isArray(inner) ? inner : (inner && Array.isArray(inner.items)) ? inner.items : [];
+    var list = listFrom(r.data, ['roles']) || [];
     if (list.length) console.debug('[admin] user roles, raw item:', list[0]);
     return list.map(function (x) { return urNormalize(x, catalog); }).filter(function (x) { return x !== null; });
   });

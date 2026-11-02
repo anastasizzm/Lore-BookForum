@@ -3,8 +3,10 @@
  */
 import { apiError, apiFetch } from '../../core/http.js';
 import { t, tx } from '../../core/i18n.js';
-import { esc } from '../../core/utils.js';
+import { esc, normalizeColor } from '../../core/utils.js';
 import { userRoles } from './roles/state.js';
+import { listFrom, unwrapItem } from '../../core/payload.js';
+import { takeBootstrap } from '../../core/bootstrap.js';
 
 var usersList = {
   tbody: null, status: null, count: null, search: null, more: null,
@@ -14,17 +16,11 @@ var usersList = {
 
 function usersParse(payload) {
   if (payload === null || payload === undefined) return null;
-  var inner = payload;
-  if (!Array.isArray(payload) && payload && typeof payload === 'object' &&
-      payload.data && typeof payload.data === 'object') {
-    inner = payload.data;
-  }
-  var list = Array.isArray(inner) ? inner
-           : (inner && Array.isArray(inner.items)) ? inner.items
-           : (inner && Array.isArray(inner.users)) ? inner.users
-           : (inner && Array.isArray(inner.data)) ? inner.data
-           : null;
+  var list = listFrom(payload, ['users']);
   if (!list) return null;
+  var inner = (!Array.isArray(payload) && payload && typeof payload === 'object' &&
+               payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data))
+    ? payload.data : payload;
 
   var total = null;
   [inner, payload].forEach(function (src) {
@@ -41,6 +37,7 @@ function usersParse(payload) {
 }
 
 function usersNormalize(u) {
+  u = unwrapItem(u);
   if (!u || typeof u !== 'object') return null;
   var id = Number(u.id !== undefined ? u.id : u.userId);
   if (!id && id !== 0) return null;
@@ -50,12 +47,26 @@ function usersNormalize(u) {
     var node = (r && r.role && typeof r.role === 'object') ? r.role : r;
     return node ? String(node.title || node.name || '') : '';
   }).filter(function (x) { return x !== ''; }) : [];
+  // Роли объектами с id (как отдаёт сервер) — сразу годятся для вложенного списка ролей,
+  // отдельный запрос при раскрытии строки не нужен.
+  var roleObjs = null;
+  if (Array.isArray(u.roles) && u.roles.every(function (r) {
+    var node = (r && r.role && typeof r.role === 'object') ? r.role : r;
+    return node && typeof node === 'object' && node.id != null && isFinite(Number(node.id));
+  })) {
+    roleObjs = u.roles.map(function (r) {
+      var node = (r && r.role && typeof r.role === 'object') ? r.role : r;
+      return { id: Number(node.id), title: String(node.title || node.name || ('#' + node.id)), color: normalizeColor(node.color || '') };
+    });
+  }
   return {
     id: id,
     username: String(u.username || u.name || u.login || u.nickname || ''),
     email: String(u.email || ''),
     blocked: u.blocked === true || u.isBlocked === true || /block|ban/.test(statusText),
-    roles: roles
+    canManage: u.canManage !== false,
+    roles: roles,
+    roleObjs: roleObjs
   };
 }
 
@@ -79,7 +90,7 @@ function usersRowHtml(u) {
       '<td data-col="actions"><div class="admin-actions">' +
         '<a class="btn btn--secondary" href="/users/' + id + '">' + esc(t('admin.action_view')) + '</a>' +
         '<button type="button" class="btn btn--secondary" data-admin-block' +
-          ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (u.blocked ? ' disabled' : '') + '>' +
+          ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (u.blocked || !u.canManage ? ' disabled' : '') + '>' +
           esc(t('admin.action_block')) +
         '</button>' +
       '</div></td>' +
@@ -118,12 +129,43 @@ function usersRender() {
   if (usersList.more) usersList.more.hidden = !usersList.hasMore;
 }
 
+/** Применяет разобранную страницу пользователей к состоянию и перерисовывает таблицу. */
+function usersApply(parsed, reset) {
+  var st = usersList;
+  var known = {};
+  var base = reset ? [] : st.items;
+  base.forEach(function (u) { known[u.id] = true; });
+  var fresh = parsed.items.filter(function (u) { return !known[u.id]; });
+
+  st.items = base.concat(fresh);
+  st.total = parsed.total;
+  // Страниц больше нет, если новых строк не пришло (бэк мог проигнорировать page)
+  st.hasMore = fresh.length > 0 && (parsed.total !== null ? st.items.length < parsed.total : parsed.items.length >= st.ps);
+  if (reset) userRoles.cache = {};
+  // Роли, пришедшие вместе с пользователями, кладём в кэш — раскрытие строки обойдётся без запросов
+  parsed.items.forEach(function (u) { if (u.roleObjs) userRoles.cache[u.id] = u.roleObjs; });
+  setUsersStatus('');
+  usersRender();
+}
+
 /** reset=true — новый запрос (поиск), иначе подгрузка следующей страницы. */
 function usersLoad(reset) {
   var st = usersList;
   if (!st.tbody) return Promise.resolve();
   if (reset) { st.page = 1; }
   var seq = ++st.seq;
+
+  // Первая страница без поиска — из данных, которые сервер положил в страницу (без запроса к API)
+  if (reset && !st.query) {
+    var boot = takeBootstrap('users');
+    var seeded = boot === null ? null : usersParse(boot);
+    if (seeded && seeded.items.length) {
+      st.loading = false;
+      usersApply(seeded, true);
+      return Promise.resolve();
+    }
+  }
+
   st.loading = true;
   if (st.more) st.more.disabled = true;
   setUsersStatus(tx('admin.users_loading', 'Loading users…'));
@@ -140,19 +182,7 @@ function usersLoad(reset) {
       if (reset) { st.items = []; st.total = null; st.hasMore = false; usersRender(); }
       return;
     }
-
-    var known = {};
-    var base = reset ? [] : st.items;
-    base.forEach(function (u) { known[u.id] = true; });
-    var fresh = parsed.items.filter(function (u) { return !known[u.id]; });
-
-    st.items = base.concat(fresh);
-    st.total = parsed.total;
-    // Страниц больше нет, если новых строк не пришло (бэк мог проигнорировать page)
-    st.hasMore = fresh.length > 0 && (parsed.total !== null ? st.items.length < parsed.total : parsed.items.length >= st.ps);
-    if (reset) userRoles.cache = {};
-    setUsersStatus('');
-    usersRender();
+    usersApply(parsed, reset);
   });
 }
 

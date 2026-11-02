@@ -80,8 +80,25 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 <!-- Модалка «Добавить роль пользователю» -->
 <?php $view->include('admin-user-role-modal'); ?>
 
+<?php
+/*
+ * Данные страницы уже есть у контроллера — отдаём их в разметку, чтобы первая
+ * загрузка таблицы не делала запрос к API (JS читает блок один раз и удаляет;
+ * поиск, фильтры и «Показать ещё» дальше идут через API как раньше).
+ * Нет данных / не сериализуются — блок не выводится, JS сам сходит в API.
+ */
+$adminBoot = static function (string $name, mixed $data): void {
+    if ($data === null || $data === []) return;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+        | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    if (!is_string($json)) return;
+    echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
+};
+$adminBoot('users', $users ?? $items ?? null);
+?>
+
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script src="<?= $view->asset('js/admin.js') ?>" defer></script>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

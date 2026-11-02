@@ -54,7 +54,9 @@ export function urToggle(btn) {
   row.hidden = !open;
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   btn.classList.toggle('is-open', open);
-  if (!open || userRoles.cache[id]) return;
+  if (!open) return;
+  // Роли уже есть (пришли вместе со списком или загружены раньше) — рисуем без запроса
+  if (userRoles.cache[id]) { urRender(id); return; }
 
   var body = urBody(id);
   if (body) body.innerHTML = '<p class="admin-user-roles__note">' + esc(tx('common.common.loading', 'Loading...')) + '</p>';
