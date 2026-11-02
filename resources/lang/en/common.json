@@ -607,7 +607,7 @@
         "book_publish_failed": "The draft was created, but publishing failed — you can publish it from the book page.",
         "book_rate_failed": "Rating is temporarily unavailable — please try again later.",
         "publish_dialog_hint": "Specify the authors and editors before publishing. The draft is saved before the publication check.",
-        "book_edit_unavailable": "Editing a book is not available yet — for now the form only creates new books.",
+        "book_edit_load_failed": "Failed to load the book data — check your connection and try again.",
         "book_published": "Book published.",
         "book_updated": "The book has been updated.",
         "comment_sent": "Comment sent.",

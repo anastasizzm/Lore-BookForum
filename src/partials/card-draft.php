@@ -29,11 +29,15 @@ $isArticle = $type === 'article';
 $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
-// TODO(backend): роутов books.edit / articles.edit в config/routes.php нет —
-// «Продолжить» пока даёт 404. Когда появятся — заменить на $view->url(...).
-// Роутов edit пока нет (см. шапку) — ссылка всё равно строится по шаблону,
-// чтобы вёрстка и локализация были готовы к моменту, когда бэк их добавит.
-$editUrl = $id > 0 ? $basePath . $id . '/edit' : '#';
+// Роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
+// заморожены) — раньше «Продолжить» давал 404. Книга правится на
+// /books/new?id={id}: книга-форма (book-form.js) подтягивает метаданные
+// из JSON-блоба страницы книги и сохраняет через PATCH /api/books/{id}.
+// У статей формы правки нет — их ссылка оставлена по шаблону и заработает,
+// когда бэк добавит роут.
+$editUrl = $id > 0
+    ? ($isArticle ? $basePath . $id . '/edit' : '/books/new?id=' . $id)
+    : '#';
 
 $hasCover = $cover !== '';
 

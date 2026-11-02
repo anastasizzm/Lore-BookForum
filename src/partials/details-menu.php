@@ -47,7 +47,13 @@ $isOwner  = !empty($isOwner);
 $title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
-$editHref  = ($isBook ? '/books/' : '/articles/') . $id . '/edit';
+// Веб-роута /books/{id}/edit в config/routes.php нет (роуты заморожены),
+// а GET /api/books/{id} тоже нет — правка книги живёт на /books/new?id={id}:
+// там книга-форма (book-form.js) подтягивает метаданные из JSON-блоба
+// страницы книги и сохраняет через PATCH /api/books/{id}.
+// У ссылки «Изменить» есть подпункты «Метаданные/Содержание» (#step-1/#step-2).
+// Статьи остаются на старом шаблоне — их форма правки в эту задачу не входит.
+$editHref  = $isBook ? '/books/new?id=' . $id : '/articles/' . $id . '/edit';
 $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
