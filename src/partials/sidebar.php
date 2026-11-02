@@ -48,9 +48,10 @@
   $meAvatar      = is_object($me ?? null) ? (string) ($me->avatar ?? '') : '';
   $mePreset      = $avatarPresets[$meAvatar] ?? null;
 
+  // Админка: роут 'admin' (AuthPolicy::Admin). Пункт в меню «Ещё» виден только админу;
+  // сам доступ всё равно проверяет роут.
   $canOpenAdmin = is_object($me ?? null) && !empty($me->isAdmin);
-  $adminUrl     = '/admin'
-      . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
+  $adminUrl     = $url('admin');
 
   // «Черновики» ведут на роут books.drafts — по умолчанию открываются книги.
   // Переключение на статьи — внутри страницы (articles.drafts).
