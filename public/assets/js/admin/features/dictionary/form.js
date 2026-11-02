@@ -1,13 +1,31 @@
 /**
  * Модалка добавления/редактирования записи справочника (переводы по языкам).
  */
-import { t } from '../../core/i18n.js';
+import { t, tx } from '../../core/i18n.js';
 import { notify } from '../../core/ui.js';
 import { currentLang, esc, langName } from '../../core/utils.js';
 import { dictApi } from './api.js';
 import { loadLanguages } from './languages.js';
 import { dict } from './state.js';
 import { applyLocal, findItem, renderRows, syncFromApi } from './table.js';
+
+/** Названия на этих языках обязательны (en и ru нельзя убрать и оставить пустыми). */
+var REQUIRED_LANGS = ['en', 'ru'];
+
+function isRequiredLang(code) {
+  return REQUIRED_LANGS.indexOf(String(code || '').toLowerCase()) !== -1;
+}
+
+/** Гарантирует, что в черновике есть строки en и ru (обязательные идут первыми). */
+function ensureRequiredRows() {
+  var byCode = {};
+  dict.draft.forEach(function (row) { byCode[String(row.langCode || '').toLowerCase()] = row; });
+  var required = REQUIRED_LANGS.map(function (code) {
+    return byCode[code] || { langCode: code, title: '' };
+  });
+  var rest = dict.draft.filter(function (row) { return !isRequiredLang(row.langCode); });
+  dict.draft = required.concat(rest);
+}
 
 export function setError(text) {
   if (!dict.error) return;
@@ -32,13 +50,15 @@ function renderLangs() {
         '<span class="admin-badge admin-dict__lang-code" title="' + esc(name) + '">' + esc(code) + '</span>' +
         '<div class="form-field admin-dict__lang-field">' +
           '<input class="form-field__input" type="text" data-lang-title autocomplete="off"' +
+            (isRequiredLang(code) ? ' required aria-required="true"' : '') +
             ' value="' + esc(row.title) + '"' +
             ' placeholder="' + esc(t('admin.col_title')) + '"' +
             ' aria-label="' + esc(name + ': ' + t('admin.col_title')) + '">' +
         '</div>' +
-        '<button type="button" class="admin-dict__lang-remove" data-dict-lang-remove' +
-          ' title="' + esc(t('admin.dict_lang_remove')) + '"' +
-          ' aria-label="' + esc(t('admin.dict_lang_remove')) + '">&times;</button>' +
+        (isRequiredLang(code) ? '' :
+          '<button type="button" class="admin-dict__lang-remove" data-dict-lang-remove' +
+            ' title="' + esc(t('admin.dict_lang_remove')) + '"' +
+            ' aria-label="' + esc(t('admin.dict_lang_remove')) + '">&times;</button>') +
       '</li>';
   }).join('');
 
@@ -93,7 +113,7 @@ export function addLanguage(code) {
 export function removeLanguage(btn) {
   var row = btn.closest('[data-lang-index]');
   var index = row ? Number(row.getAttribute('data-lang-index')) : -1;
-  if (index < 0 || !dict.draft[index]) return;
+  if (index < 0 || !dict.draft[index] || isRequiredLang(dict.draft[index].langCode)) return;
   dict.draft.splice(index, 1);
   renderLangs();
 }
@@ -104,11 +124,22 @@ export function openDictForm(id) {
   dict.editId = id ? Number(id) : null;
   var item = dict.editId ? findItem(dict.editId) : null;
 
-  dict.draft = item
-    ? (item.translations || []).map(function (row) {
-        return { langCode: String(row.langCode || ''), title: String(row.title || '') };
-      })
-    : [{ langCode: currentLang(), title: '' }];
+  function fill(source) {
+    var rows = source && source.translations ? source.translations : [];
+    if (source && !rows.length && source.title) {
+      // в списке пришло только название на текущем языке
+      rows = [{ langCode: source.lang || currentLang(), title: source.title }];
+    }
+    dict.draft = source
+      ? rows.map(function (row) {
+          return { langCode: String(row.langCode || ''), title: String(row.title || '') };
+        })
+      : [];
+    ensureRequiredRows();
+    renderLangs();
+  }
+
+  fill(item);
 
   if (dict.titleEl) {
     dict.titleEl.textContent = item
@@ -117,7 +148,6 @@ export function openDictForm(id) {
   }
 
   setError('');
-  renderLangs();
 
   dict.lastFocus = document.activeElement;
   dict.modal.hidden = false;
@@ -125,6 +155,22 @@ export function openDictForm(id) {
 
   var first = dict.list ? dict.list.querySelector('[data-lang-title]') : null;
   if (first) { first.focus(); try { first.select(); } catch (_) {} }
+
+  // Все переводы записи — отдельным запросом (в списке только текущий язык)
+  if (item && !(item.translations && item.translations.length > 1)) {
+    var editId = dict.editId;
+    dictApi.retrieve(dict.resource, editId).then(function (full) {
+      if (!full || dict.editId !== editId || !full.translations.length) return;
+      // не затираем то, что пользователь уже начал править
+      var touched = dict.draft.some(function (row, i) {
+        var base = (item.title || '');
+        return row.title !== base && row.title !== '';
+      });
+      if (touched) return;
+      item.translations = full.translations;
+      fill(item);
+    });
+  }
 
   loadLanguages();
 }
@@ -163,8 +209,18 @@ export function saveDictForm() {
     })
     .filter(function (row) { return row.langCode !== '' && row.title !== ''; });
 
-  if (!filled.length) {
-    setError(t('admin.dict_validation'));
+  var missing = REQUIRED_LANGS.filter(function (code) {
+    return !filled.some(function (row) { return row.langCode.toLowerCase() === code; });
+  });
+  if (missing.length) {
+    setError(tx('admin.dict_validation_required', 'Fill in the title in English and Russian.'));
+    Array.prototype.forEach.call(dict.list ? dict.list.querySelectorAll('[data-lang-index]') : [], function (row) {
+      var code = String(row.getAttribute('data-lang') || '').toLowerCase();
+      var input = row.querySelector('[data-lang-title]');
+      if (input) input.classList.toggle('form-field__input--invalid', missing.indexOf(code) !== -1);
+    });
+    var firstBad = dict.list && dict.list.querySelector('.form-field__input--invalid');
+    if (firstBad) firstBad.focus();
     return;
   }
   setError('');
@@ -174,11 +230,12 @@ export function saveDictForm() {
   setSaveBusy(true);
 
   var isEdit = !!dict.editId;
-  var payload = {
-    translations: filled.map(function (row) {
-      return { lang_code: row.langCode, title: row.title };
-    })
-  };
+  // Формат как у /api/additional/roles: translations — словарь { "en": "Fantasy", "ru": "Фэнтези" }.
+  // Массив [{lang_code, title}] сервер молча игнорировал: запись создавалась без названий
+  // и пропадала из списка после перезагрузки или смены языка.
+  var translations = {};
+  filled.forEach(function (row) { translations[row.langCode] = row.title; });
+  var payload = { translations: translations };
 
   dictApi.mutate(isEdit ? 'PUT' : 'POST', dict.resource, isEdit ? dict.editId : null, payload)
     .then(function (result) {
@@ -191,11 +248,14 @@ export function saveDictForm() {
         return;
       }
 
-      applyLocal(isEdit, filled, result.item);
-      renderRows();
       closeDictForm();
       notify(t('admin.dict_saved'), 'success');
-      if (result.mode === 'api' && !isEdit && !(result.item && result.item.id)) syncFromApi();
+      if (result.mode === 'api') {
+        syncFromApi();
+      } else {
+        applyLocal(isEdit, filled, result.item);
+        renderRows();
+      }
     })
     .catch(function (err) {
       console.warn('[admin] dictionary save failed', err);

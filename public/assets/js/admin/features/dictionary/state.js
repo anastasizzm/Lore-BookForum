@@ -21,5 +21,7 @@ export var dict = {
   languagesLoading: null,
   submitting: false,
   touched: false,
+  query: '',
+  searchSeq: 0,
   lastFocus: null
 };

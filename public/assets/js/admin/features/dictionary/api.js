@@ -1,12 +1,18 @@
 /**
- * Fetch-слой справочников: /api/additional/{resource}, фолбэк на мок.
+ * Fetch-слой справочников: /api/additional/{genres|categories|types}.
+ *
+ * Список приходит локализованным: у записи есть `title` на языке запроса (?lang=),
+ * поэтому в таблице показываем его. Все переводы (для формы правки) берём из
+ * GET /api/additional/{resource}/{id}, если их нет в списке.
  */
 import { httpRequest } from '../../core/http.js';
 import { listFrom, unwrapItem } from '../../core/payload.js';
 import { takeBootstrap } from '../../core/bootstrap.js';
+import { currentLang } from '../../core/utils.js';
 
 export var dictApi = (function () {
   var BASE = '/api/additional/';
+  var MAX_PAGES = 20;
   var status = 'unknown';
 
   function table() { return document.querySelector('[data-dict-table]'); }
@@ -44,22 +50,40 @@ export var dictApi = (function () {
     return payload;
   }
 
+  /** translations: [{langCode,title}] | {en:'..', ru:'..'} | [{lang_code,title}] → [{langCode,title}] */
+  function normalizeTranslations(raw) {
+    var rows = [];
+    if (Array.isArray(raw)) {
+      raw.forEach(function (row) {
+        if (!row || typeof row !== 'object') return;
+        var code = String(row.langCode || row.lang_code || row.lang || row.locale || row.code || '');
+        if (!code) return;
+        var title = row.title;
+        if (title == null) title = row.name;
+        rows.push({ langCode: code, title: String(title == null ? '' : title) });
+      });
+    } else if (raw && typeof raw === 'object') {
+      Object.keys(raw).forEach(function (code) {
+        var v = raw[code];
+        var title = v && typeof v === 'object' ? (v.title != null ? v.title : v.name) : v;
+        rows.push({ langCode: code, title: String(title == null ? '' : title) });
+      });
+    }
+    return rows;
+  }
+
   function normalizeItem(raw) {
     raw = unwrapItem(raw);
     if (!raw || typeof raw !== 'object') return null;
     var id = Number(raw.id);
     if (!id) return null;
-    var translations = Array.isArray(raw.translations) ? raw.translations : [];
-    var rows = [];
-    translations.forEach(function (row) {
-      if (!row || typeof row !== 'object') return;
-      var code = String(row.langCode || row.lang_code || row.lang || row.locale || '');
-      if (!code) return;
-      var title = row.title;
-      if (title == null) title = row.name;
-      rows.push({ langCode: code, title: String(title == null ? '' : title) });
-    });
-    return { id: id, translations: rows };
+    var title = raw.title != null ? raw.title : (raw.name != null ? raw.name : '');
+    return {
+      id: id,
+      title: String(title || ''),
+      lang: String(raw.langCode || raw.lang_code || raw.lang || ''),
+      translations: normalizeTranslations(raw.translations)
+    };
   }
 
   function itemsFrom(payload) {
@@ -69,6 +93,11 @@ export var dictApi = (function () {
     return items.length ? items : null;
   }
 
+  function hasNext(payload) {
+    var meta = payload && typeof payload === 'object' ? payload.meta : null;
+    return !!(meta && meta.hasNext);
+  }
+
   function errorText(r) {
     var fallback = null;
     if (window.LoreI18n) fallback = LoreI18n.t('errors.common.request_failed', { status: r.status });
@@ -76,23 +105,61 @@ export var dictApi = (function () {
     return fallback || ('HTTP ' + r.status);
   }
 
+  function queryString(query, page) {
+    var parts = ['lang=' + encodeURIComponent(currentLang()), 'page=' + page];
+    if (query) parts.push('q=' + encodeURIComponent(query));
+    return '?' + parts.join('&');
+  }
+
+  /** Все страницы подряд (справочники небольшие). Резолвится массивом или null. */
+  function fetchPages(resource, query, page, acc) {
+    return request('GET', resource + queryString(query, page)).then(function (r) {
+      var kind = classify(r);
+      if (kind === 'ok') {
+        setStatus('live');
+        var items = itemsFrom(r.data) || [];
+        acc = acc.concat(items);
+        if (hasNext(r.data) && page < MAX_PAGES) return fetchPages(resource, query, page + 1, acc);
+        return acc;
+      }
+      if (kind === 'mock') { setStatus('mock'); return null; }
+      setStatus('live');
+      console.warn('[admin] GET ' + BASE + resource + ' failed with HTTP ' + r.status);
+      return null;
+    });
+  }
+
   return {
     get status() { return status; },
     markUnknown: markUnknown,
 
-    list: function (resource) {
+    /**
+     * list(resource)        — первая загрузка: сперва данные страницы (без запроса к API);
+     * list(resource, query) — поиск на сервере (?q=), вызывается по Enter.
+     */
+    list: function (resource, query) {
+      query = String(query || '').trim();
       if (status === 'mock') return Promise.resolve(null);
-      // Первая загрузка — из данных, которые сервер отдал вместе со страницей
-      var boot = takeBootstrap('dictionary');
-      var seeded = boot === null ? null : itemsFrom(boot);
-      if (seeded && seeded.length) { setStatus('live'); return Promise.resolve(seeded); }
-      return request('GET', resource).then(function (r) {
-        var kind = classify(r);
-        if (kind === 'ok') { setStatus('live'); return itemsFrom(r.data); }
-        if (kind === 'mock') { setStatus('mock'); return null; }
-        setStatus('live');
-        console.warn('[admin] GET ' + BASE + resource + ' failed with HTTP ' + r.status);
-        return null;
+
+      if (!query) {
+        var boot = takeBootstrap('dictionary');
+        var seeded = boot === null ? null : itemsFrom(boot);
+        if (seeded && seeded.length) {
+          setStatus('live');
+          if (hasNext(boot)) {
+            return fetchPages(resource, '', 2, seeded).then(function (all) { return all || seeded; });
+          }
+          return Promise.resolve(seeded);
+        }
+      }
+      return fetchPages(resource, query, 1, []);
+    },
+
+    /** Все переводы одной записи: GET /api/additional/{resource}/{id}. */
+    retrieve: function (resource, id) {
+      return request('GET', resource + '/' + id).then(function (r) {
+        if (classify(r) !== 'ok') return null;
+        return normalizeItem(unwrap(r.data));
       });
     },
 
