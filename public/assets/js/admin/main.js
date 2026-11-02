@@ -1,6 +1,7 @@
 /**
  * Точка входа админки: инициализирует всё, что есть на странице.
  */
+import './core/events.js'; // глобальные click/keydown/change-обработчики (Permissions, Block, Delete, ...)
 import { initSearch } from './core/search.js';
 import { initAllRoles } from './features/all-roles/page.js';
 import { initDictionary } from './features/dictionary/index.js';
