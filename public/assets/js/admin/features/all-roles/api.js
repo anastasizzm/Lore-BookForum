@@ -65,18 +65,23 @@ export var allRolesApi = (function () {
   function normalize(raw) {
     raw = unwrapItem(raw);
     if (!raw || typeof raw !== 'object') return null;
-    var rawId = raw.id != null ? raw.id
+    // Элемент может быть плоским или вложенным: { role: { id, title, ... }, ... }
+    var src = (raw.role && typeof raw.role === 'object') ? raw.role : raw;
+    var rawId = src.id != null ? src.id
+              : src.roleId != null ? src.roleId
+              : raw.id != null ? raw.id
               : raw.roleId != null ? raw.roleId
-              : (raw.role && typeof raw.role === 'object' && raw.role.id != null) ? raw.role.id
               : null;
     var id = Number(rawId);
-    if (!id) {
+    // id = 0 допустим (роль «User»)
+    if (rawId == null || rawId === '' || isNaN(id)) {
       console.warn('[admin] all-roles: item without valid id, keys:', Object.keys(raw), raw);
       return null;
     }
-    
-    var title = raw.title || raw.name || '';
-    var translations = Array.isArray(raw.translations) ? raw.translations : [];
+
+    var title = src.title || src.name || raw.title || raw.name || '';
+    var rawTranslations = src.translations || raw.translations;
+    var translations = Array.isArray(rawTranslations) ? rawTranslations : [];
     
     if (!title && translations.length > 0) {
        var lang = currentLang().slice(0, 2).toLowerCase();
@@ -84,9 +89,9 @@ export var allRolesApi = (function () {
        title = found ? (found.title || found.name) : (translations[0].title || translations[0].name);
     }
     
-    if (!title && raw.translations && typeof raw.translations === 'object' && !Array.isArray(raw.translations)) {
-       var transKeys = Object.keys(raw.translations);
-       title = raw.translations[currentLang()] || (transKeys.length ? raw.translations[transKeys[0]] : '') || '';
+    if (!title && rawTranslations && typeof rawTranslations === 'object' && !Array.isArray(rawTranslations)) {
+       var transKeys = Object.keys(rawTranslations);
+       title = rawTranslations[currentLang()] || (transKeys.length ? rawTranslations[transKeys[0]] : '') || '';
     }
 
     var p = raw.permissions || {};
@@ -98,7 +103,7 @@ export var allRolesApi = (function () {
       id: id,
       title: String(title || ''),
       visibility: visibilityOf(raw),
-      color: normalizeColor(raw.color),
+      color: normalizeColor(src.color != null ? src.color : raw.color),
       canManage: raw.canManage !== false,
       version: raw.version != null ? raw.version : 1,
       systemPermissions: typeof systemPermissions === 'object' ? systemPermissions : {},

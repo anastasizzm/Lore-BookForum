@@ -4,6 +4,7 @@
 import { tx } from '../../core/i18n.js';
 import { notify } from '../../core/ui.js';
 import { esc } from '../../core/utils.js';
+import { rolesApi } from './api.js';
 import { roleState } from './state.js';
 
 export var roleUserAssign = {
@@ -57,6 +58,20 @@ function uncheckAllUserRoles() {
   });
 }
 
+function renderRolesMessage(text) {
+  if (!roleUserAssign.rolesList) return;
+  roleUserAssign.rolesList.innerHTML = '<p class="admin-role__loading">' + esc(text) + '</p>';
+}
+
+/** Роли могут быть не загружены (мы не на странице roles): подгружаем сами. */
+function ensureRoles() {
+  if (roleState.items.length) return Promise.resolve(roleState.items);
+  return rolesApi.list().then(function (items) {
+    if (items && items.length) roleState.items = items;
+    return roleState.items;
+  });
+}
+
 function renderModalRolesCheckboxes(preselectedRoleId) {
   if (!roleUserAssign.rolesList) return;
   roleUserAssign.rolesList.innerHTML = roleState.items.map(function (r) {
@@ -73,7 +88,10 @@ function fetchUsersList() {
   if (roleUserAssign.users.length) return Promise.resolve(roleUserAssign.users);
   var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
   return run('/api/users', { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function (data) {
       var items = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
       roleUserAssign.users = items.map(function (u) {
@@ -83,15 +101,28 @@ function fetchUsersList() {
         };
       });
       return roleUserAssign.users;
-    }).catch(function () { return []; });
+    }).catch(function (err) {
+      console.warn('[admin] users list load failed', err);
+      return [];
+    });
 }
 
 export function openRoleUserModal(preselectedRoleId) {
   if (!roleUserAssign.modal) return;
 
-  renderModalRolesCheckboxes(preselectedRoleId);
   if (roleUserAssign.errorEl) roleUserAssign.errorEl.hidden = true;
   if (roleUserAssign.saveBtn) roleUserAssign.saveBtn.disabled = true;
+
+  renderRolesMessage(tx('common.common.loading', 'Loading...'));
+  ensureRoles().then(function (items) {
+    if (!items.length) {
+      var reason = rolesApi.lastError || tx('admin.roles_load_error', 'Failed to load roles');
+      renderRolesMessage(reason);
+      notify(reason, 'error');
+      return;
+    }
+    renderModalRolesCheckboxes(preselectedRoleId);
+  });
 
   fetchUsersList().then(function (users) {
     if (!roleUserAssign.select) return;
@@ -116,17 +147,27 @@ function loadUserCurrentRoles(userId) {
   if (roleUserAssign.saveBtn) roleUserAssign.saveBtn.disabled = true;
   var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
   run('/api/system/users/' + userId + '/roles', { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function (res) {
       var roles = (res && res.items) ? res.items : (Array.isArray(res) ? res : []);
       roleUserAssign.initialUserRoles = roles.map(function (x) {
-        return Number(x.id !== undefined ? x.id : (x.roleId !== undefined ? x.roleId : x));
+        var src = (x && typeof x === 'object' && x.role && typeof x.role === 'object') ? x.role : x;
+        if (src && typeof src === 'object') {
+          return Number(src.id !== undefined ? src.id : src.roleId);
+        }
+        return Number(src);
       });
       Array.prototype.forEach.call(roleUserAssign.rolesList.querySelectorAll('input[type="checkbox"]'), function (cb) {
         cb.checked = roleUserAssign.initialUserRoles.indexOf(Number(cb.value)) !== -1;
       });
     })
-    .catch(function () {})
+    .catch(function (err) {
+      console.warn('[admin] user roles load failed', err);
+      notify(tx('admin.roles_load_error', 'Failed to load roles'), 'error');
+    })
     .then(function () {
       if (roleUserAssign.loading) roleUserAssign.loading.hidden = true;
       if (roleUserAssign.saveBtn) roleUserAssign.saveBtn.disabled = false;
@@ -162,7 +203,14 @@ function saveUserRoles() {
     }));
   });
 
-  Promise.all(requests).then(function () {
+  Promise.all(requests).then(function (responses) {
+    var failed = responses.filter(function (r) { return !r.ok; })[0];
+    if (failed) {
+      notify(failed.status === 403
+        ? tx('js.no_rights', 'You do not have permission to do this')
+        : tx('errors.common.request_failed', 'Request failed') + ' (HTTP ' + failed.status + ')', 'error');
+      return;
+    }
     notify(tx('admin.role_saved', 'Roles updated'), 'success');
     closeRoleUserModal();
   }).catch(function () {

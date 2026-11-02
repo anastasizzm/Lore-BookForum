@@ -13,14 +13,14 @@ function normalizeRole(raw) {
   if (!raw || typeof raw !== 'object') return null;
   var role = (raw.role && typeof raw.role === 'object') ? raw.role : raw;
 
-  // id роли может прийти под разными именами; 0 / null / '' / NaN — не id.
+  // id роли может быть 0 (базовая роль «User») — это валидное значение.
   var rawId = role.id != null ? role.id
             : role.roleId != null ? role.roleId
             : raw.roleId != null ? raw.roleId
             : raw.id;
   var id = Number(rawId);
-  if (!id) {
-    console.warn('[admin] system role without valid id, keys:', Object.keys(raw), raw);
+  if (rawId == null || rawId === '' || isNaN(id)) {
+    console.warn('[admin] system role without valid id, keys:', Object.keys(raw), '| role:', JSON.stringify(role));
     return null;
   }
   return {

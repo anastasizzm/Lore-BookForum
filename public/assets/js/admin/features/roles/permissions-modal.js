@@ -128,7 +128,7 @@ function renderRoleDdValue() {
   var valueEl = ddEl('[data-role-dd-value]');
   if (!valueEl) return;
   var cur = roleState.current;
-  if (cur && cur.id) {
+  if (cur && cur.chosen) {
     valueEl.classList.remove('is-placeholder');
     valueEl.innerHTML = (cur.color ? '<span class="admin-role__dot" style="background:' + esc(cur.color) + '"></span>' : '') +
       '<span class="admin-role__dd-text">' + esc(cur.title) + '</span>';
@@ -149,7 +149,7 @@ function renderRoleDdMenu() {
   var list = ddEl('[data-role-dd-list]');
   if (!list) return;
   var shown = roleState.ddOptions || [];
-  var curId = roleState.current ? Number(roleState.current.id) : 0;
+  var curId = (roleState.current && roleState.current.chosen) ? Number(roleState.current.id) : -1;
   if (!shown.length) {
     var msg = roleState.ddSearching
       ? tx('common.common.loading', 'Loading...')
@@ -196,6 +196,7 @@ export function pickRoleDd(id) {
   var picked = (roleState.ddOptions || []).filter(function (r) { return Number(r.id) === Number(id); })[0];
   if (!picked) return;
   cur.id = Number(picked.id);
+  cur.chosen = true;
   cur.title = picked.title;
   cur.color = picked.color || '';
   renderRoleDdValue();
@@ -210,7 +211,7 @@ export function openRoleAttach() {
 
   var stub = {
     id: 0, title: '', color: '', canManage: true, status: '', version: null,
-    isNew: true, attach: true, insertAt: null,
+    isNew: true, attach: true, chosen: false, insertAt: null,
     systemPermissions: {}, postPermissions: {}, pubPermissions: {}
   };
   roleState.current = stub;
@@ -284,12 +285,12 @@ export function closeRoleModal() {
 export function saveRole() {
   var item = roleState.current;
   if (!item || roleState.submitting) return;
-  if (item.attach && !item.id) {
+  if (item.attach && !item.chosen) {
     notify(tx('admin.role_select_placeholder', 'Choose a role'), 'error');
     return;
   }
-  // Существующая роль без id дала бы PUT /api/system/roles/0 → 404
-  if (!item.isNew && !item.id) {
+  // id = 0 допустим (роль «User»); не годятся только null / NaN
+  if (!item.isNew && (item.id == null || isNaN(Number(item.id)))) {
     console.error('[admin] role without id, save aborted', item);
     notify(tx('admin.role_no_id', 'Role id is missing. Reload the page and try again'), 'error');
     return;
@@ -335,6 +336,6 @@ export function saveRole() {
   })
   .then(function () {
     roleState.submitting = false;
-    setRoleSaveEnabled(!(roleState.current && roleState.current.attach && !roleState.current.id));
+    setRoleSaveEnabled(!(roleState.current && roleState.current.attach && !roleState.current.chosen));
   });
 }
