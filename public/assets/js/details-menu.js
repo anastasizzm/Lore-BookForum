@@ -8,19 +8,19 @@
  *      своими data-атрибутами, чтобы не смешивать с комментариями;
  *   2. удаление публикации: ConfirmModal → DELETE → редирект на список.
  *
- * КОНТРАКТ (бэк добавит роут; config/ и app/ заморожены):
+ * КОНТРАКТ:
  *   DELETE /api/books/{id}     → 204; 401 — нет сессии, 419 — CSRF,
  *   DELETE /api/articles/{id}     403/404 — нет прав или уже удалена.
- *   Пункт «Редактировать» — ссылка на /books/{id}/edit (роут тоже ждём).
  *
- * Права на показ пунктов «Изменить» / Delete — permissions.js (data-requires,
- * пункты рендерятся скрытыми); 404 от DELETE фронт показывает как обычную
+ * Права на показ пунктов меню — permissions.js (data-requires, пункты
+ * рендерятся скрытыми); 404 от DELETE фронт показывает как обычную
  * ошибку — эффект один: книга не удаляется.
  *
- * КАРАДАШ «ИЗМЕНИТЬ»: data-edit-toggle раскрывает подменю
- * (data-edit-submenu: мета / содержание / роли). Пункт «Роли»
- * (data-roles-open) открывает publish-диалог с модулем ролей
- * (window.RightsModal / window.LoreArticlePublish, mode:'roles').
+ * Меню ПЛОСКОЕ (без подменю): 4 кнопки правки + Delete + «Пожаловаться».
+ * Пункты 1–2 — ссылки на страницы правки (?part=meta|content), пункт 3–4
+ * (data-roles-open / data-roles-open-users) открывают модуль публикации
+ * (window.RightsModal / window.LoreArticlePublish, mode:'roles',
+ * screen 1|2, context 'edit').
  */
 (function () {
   'use strict';
@@ -37,8 +37,6 @@
         menu.hidden = true;
         var btn = menu.parentNode && menu.parentNode.querySelector('[data-details-menu-toggle]');
         if (btn) btn.setAttribute('aria-expanded', 'false');
-        // Заодно закрываем подменю карандаша внутри этой выпадашки
-        closeSubmenus();
       }
     );
   }
@@ -63,38 +61,6 @@
     if (e.key === 'Escape') closeAll();
   });
 
-  // ---- Карандаш «Изменить»: раскрытие подменю (мета / содержание / роли) ----
-  function closeSubmenus(except) {
-    Array.prototype.forEach.call(
-      document.querySelectorAll('[data-edit-submenu]:not([hidden])'),
-      function (sub) {
-        if (sub === except) return;
-        sub.hidden = true;
-        var btn = sub.parentNode && sub.parentNode.querySelector('[data-edit-toggle]');
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-      }
-    );
-  }
-
-  document.addEventListener('click', function (e) {
-    var pencil = e.target.closest && e.target.closest('[data-edit-toggle]');
-    if (pencil) {
-      var group = pencil.closest('[data-edit-group]');
-      var sub = group && group.querySelector('[data-edit-submenu]');
-      if (!sub) return;
-      var open = sub.hidden;
-      closeSubmenus(open ? sub : null);
-      sub.hidden = !open;
-      pencil.setAttribute('aria-expanded', String(open));
-      return;
-    }
-    // Клик мимо подменю — закрыть его (но не саму выпадашку «три точки»)
-    if (e.target.closest && e.target.closest('[data-edit-submenu]')) return;
-    if (e.target.closest && e.target.closest('[data-edit-group]')) return;
-    closeSubmenus();
-  });
-
-  // ---- Пункт «Роли»: открыть publish-диалог с модулем ролей (mode:'roles') ----
   // ---- Пункты «Изменить роли» / «Изменить пользователей»: открыть модуль
   //      публикации (экран 1 — роли, экран 2 — пользователи; context 'edit') ----
   function openRolesModule(btn) {
@@ -103,7 +69,6 @@
     if (!id) return;
 
     closeAll();
-    closeSubmenus();
 
     var screen = btn.getAttribute('data-roles-open-users') ? 2 : 1;
 

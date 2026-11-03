@@ -67,10 +67,26 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   Поэтому payload /api/books/ собирается из полей формы, а файлы
  *   book-form.js передаст отдельным запросом (см. F2-02 ниже).
  *
- *   РЕЖИМ РЕДАКТИРОВАНИЯ: разметка зарезервирована ($book передаёт
- *   контроллер, когда появится GET /books/{id}/edit и endpoint
- *   обновления); отправка в edit-режиме блокируется в book-form.js —
- *   POST /api/books/ только создаёт и дубликат не увидит.
+ *   РЕЖИМ РЕДАКТИРОВАНИЯ (?id=N): веб-роута /books/{id}/edit и
+ *   GET /api/books/{id} нет (роуты и app/ для фронта заморожены), поэтому
+ *   ссылки «Изменить» (details-menu) и «Продолжить» (card-draft) ведут на
+ *   /books/new?id=N#step-1|#step-2 — эта вьюха читает $_GET['id'] и
+ *   рендерит скрытое поле id + data-book-id, а $book по-прежнему не нужен.
+ *   Три блока правки (подменю «Изменить» на странице книги):
+ *     1. метаданные — шаг 1 этой формы (title, жанр, категория,
+ *        издательство, страницы, ISBN, обложка);
+ *     2. содержание — шаг 2 (аннотация, заметки автора, файлы);
+ *     3. роли — data-roles-open на странице книги (publication-roles.js),
+ *        в эту форму не входят.
+ *   Данные для префилла: book-form.js делает GET /books/{N} и читает
+ *   JSON-блоб [data-book-payload] (book-details.php); файлы — из
+ *   GET /api/books/{id}/contents. Сохранение — PATCH /api/books/{id}
+ *   (JSON + CSRF): title, description, authorNotes, genreId, categoryId,
+ *   publisher, pages, isbn, iconId — только метаданные, contentIds[] и
+ *   людей бэк не принимает. Новые файлы уходят POST /api/books/{id}/contents,
+ *   удалённые — DELETE /api/books/{id}/contents/{contentId}.
+ *   Публикация из формы в edit-режиме не показывается (Publish остаётся
+ *   со страницы книги), кнопки — «Отмена» / «Сохранить».
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
@@ -136,8 +152,13 @@ $form   = $form   ?? [];
 $errors = $errors ?? [];
 
 /**
- * Режим редактирования: контроллер /books/{id}/edit передаёт $book.
- * Тест-роут /pages/test отдаёт query-массивами — читаем поля и через
+ * Режим редактирования: GET /books/new?id={N}.
+ *
+ * Контроллер /books/new $book не передаёт (веб-роута /books/{id}/edit нет),
+ * поэтому id берём из query и рендерим скрытое поле + data-book-id —
+ * метаданные книга-форма подтянет сама из JSON-блоба страницы книги
+ * (см. шапку файла и book-details.php). $book остаётся нулём: его может
+ * передать тест-роут /pages/test (query-массивы) — читаем поля и через
  * объект, и через массив.
  */
 $book = $book ?? null;
@@ -150,6 +171,14 @@ $get  = static function ($src, string $key, $default = null) {
 $bookId     = (int) $get($book, 'id', 0);
 $isEdit     = $book !== null && $bookId > 0;
 $bookStatus = strtolower(trim((string) ($get($book, 'status', '') ?: 'draft')));
+
+// ?id=N → edit-режим без $book (данные придут из JSON-блоба, см. выше).
+$queryBookId = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
+if (!$isEdit && $queryBookId > 0) {
+    $bookId     = $queryBookId;
+    $isEdit     = true;
+    $bookStatus = 'draft';   // status в моделях Publication* нет — не выдумываем
+}
 
 /** Дефолт поля из книги (edit-режим); $form (после 422) всегда перебивает. */
 $fromBook = static function (string $key, string $default = '') use ($get, $book): string {
@@ -272,6 +301,25 @@ $genreValue    = $val('genreId', $bookGenreId);
 $categoryValue = $val('categoryId', $bookCategoryId);
 ?>
 
+<?php
+/*
+ * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ *
+ * GET /books/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
+ * (book-edit-meta.php / book-edit-content.php) и тут же прекращает
+ * рендер этой формы. Пункты меню «три точки» на странице книги
+ * (details-menu.php) ведут именно сюда.
+ *
+ * Страницы правки — пока только разметка: полей префилла и отправки
+ * в них нет, book-form.js не подключается (см. шапку book-edit-*.php).
+ */
+$editPart = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
+if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
+    require __DIR__ . '/book-edit-' . $editPart . '.php';
+    return;
+}
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -328,8 +376,8 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            contentIds[] JS добавляет сам — по одному на файл книги. -->
       <input type="hidden" name="iconId" value="<?= $view->e($val('iconId')) ?>">
       <?php if ($isEdit): ?>
-        <!-- edit-режим: id > 0; отправку блокирует book-form.js —
-             endpoint'а обновления пока нет (см. шапку файла) -->
+        <!-- edit-режим: id > 0 — book-form.js шлёт PATCH /api/books/{id}
+             (JSON + CSRF); в FormData поле не уходит (см. шапку файла) -->
         <input type="hidden" name="id" value="<?= $bookId ?>">
       <?php endif; ?>
 
@@ -611,6 +659,23 @@ $categoryValue = $val('categoryId', $bookCategoryId);
             <p class="book-form__hint"><?= $tr('common.bookform.file_hint') ?></p>
           </div>
 
+          <?php if ($isEdit): ?>
+            <!-- edit-режим: файлы, УЖЕ прикреплённые к книге. PATCH
+                 /api/books/{id} contentIds[] не принимает, поэтому список
+                 живёт отдельно: GET /api/books/{id}/contents, удаление —
+                 DELETE .../contents/{contentId}, добавление новых — POST
+                 .../contents после успешного сохранения (book-form.js).
+                 Пока список не загружен, поле «файлы» остаётся
+                 невалидным — отправка не пройдёт с пустым списком. -->
+            <div class="file-upload" data-attached-files>
+              <span class="form-field__label"><?= $tr('common.book.contents_title') ?></span>
+              <ul class="file-upload__list" data-attached-list></ul>
+              <p class="book-form__hint" data-attached-empty hidden>
+                <?= $tr('common.book.contents_empty') ?>
+              </p>
+            </div>
+          <?php endif; ?>
+
           <?= $errorBox('files') ?>
         </div>
 
@@ -631,9 +696,10 @@ $categoryValue = $val('categoryId', $bookCategoryId);
                        книги с предупреждением (публикация возможна
                        и с неё).
 
-           РЕДАКТИРОВАНИЕ (зарезервировано, см. шапку файла): отправка
-           блокируется в book-form.js — endpoint'а обновления нет,
-           а /api/books/ только создаёт.
+           РЕДАКТИРОВАНИЕ (?id=N): «Отмена» ведёт на страницу книги,
+           «Сохранить» (data-submit-save, скрыта до publication.edit от
+           permissions.js) шлёт PATCH /api/books/{id} — см. шапку файла
+           и book-form.js. Публикация из формы в edit-режиме не показана.
            ============================================================ -->
       <div class="book-form__actions">
         <button type="button" class="btn btn--secondary" data-step-prev hidden>

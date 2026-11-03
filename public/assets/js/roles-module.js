@@ -1473,15 +1473,13 @@ window.LoreRoles = (function () {
     PUB_PERMS.forEach(function (key) {
       perms.draft[key] = !!(role.perms && role.perms[key]);
     });
-    // 'delete' в UI не показывается, но приходит в pubPermissions (бэк:
-    // PublicationAccessRules::toArray). Ключ отправляется обратно без
-    // изменений, чтобы PUT не сбрасывал его в false.
-    // NB: текущий PublicationPermissionForm парсит только PUB_PERMS —
-    // значение всё равно теряется на бэке (см. roles-module.php, «Известные
+    // Право 'delete' НЕ копируется в draft: выставить флаг удаления
+    // через этот экран нельзя (в PUB_PERMS его нет, чекбокса в UI нет).
+    // Раньше ключ переносился из role.perms, чтобы PUT не сбрасывал его
+    // в false, — теперь он вообще не уходит в pubPermissions.
+    // NB: PublicationPermissionForm парсит только PUB_PERMS, так что на
+    // бэке значение и раньше терялось (см. roles-module.php, «Известные
     // ограничения бэка»).
-    if (role.perms && 'delete' in role.perms) {
-      perms.draft['delete'] = !!role.perms['delete'];
-    }
     perms.lastFocus = document.activeElement;
 
     var overlay = q('[data-roles-perms]');

@@ -46,6 +46,9 @@
     mode: 'after-publish',
     bookId: 0,
     redirect: '',
+    // Колбэк публикации для страницы черновиков (drafts.js): вместо
+    // перехода на /books/{id} вызывается он (карточка уходит из списка).
+    onPublished: null,
     screen: 1,            // стартовый экран модуля: 1 — роли | 2 — пользователи
     context: 'create',    // create — Create → Continue → Publish; edit — «Изменить…»
     loading: false,
@@ -214,7 +217,12 @@
    * Публикация черновика: POST /api/books/{id}/publish
    * (config/endpoints.php → BooksController::publish, ответ — пустое тело).
    * Успех уводит на страницу книги (бейдж «Черновик» и кнопка публикации
-   * исчезают). Работает и из book-details, и из формы редактирования.
+   * исчезают); на странице черновиков вместо перехода вызывается
+   * state.onPublished (drafts.js убирает карточку из списка).
+   * Работает и из book-details, и из формы редактирования.
+   *
+   * 409 «нет контента» (ConflictException, текст бэка уже локализован в
+   * errors.json): показываем его, а не общий save_failed.
    */
   function publishBook() {
     return csrfFetch('/api/books/' + state.bookId + '/publish', {
@@ -224,15 +232,27 @@
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     }).then(function (res) {
       if (!res.ok) {
-        var fallback = t('rights.save_failed', { status: res.status });
-        if (window.Messages) saveError(window.Messages.describe(res.status, null, '', fallback));
-        else saveError(fallback);
-        return false;
+        // 409 «нет контента» (ConflictException): бэк отдаёт уже
+        // локализованный текст в {error:{code,message}} — берём его,
+        // фолбэк — errors.books.content_pdf.
+        var fallback = res.status === 409
+          ? t('errors.books.content_pdf')
+          : t('rights.save_failed', { status: res.status });
+        var msgPromise = window.Messages && typeof window.Messages.readError === 'function'
+          ? window.Messages.readError(res, fallback)
+          : Promise.resolve(fallback);
+        return msgPromise.then(function (msg) { saveError(msg); return false; });
       }
-      // Успех: уходим на страницу книги. Данные на сервере — снимаем
-      // защиту «несохранённых изменений» книжной формы (она слушает
-      // событие 'bookform:leave').
+      // Успех: страница черновиков убирает карточку сама; иначе уходим на
+      // страницу книги. Данные на сервере — снимаем защиту «несохранённых
+      // изменений» книжной формы (она слушает событие 'bookform:leave').
       window.dispatchEvent(new Event('bookform:leave'));
+      if (typeof state.onPublished === 'function') {
+        var cb = state.onPublished;
+        state.onPublished = null;
+        cb();
+        return true;
+      }
       window.location.href = '/books/' + state.bookId;
       return true;
     }).catch(function (err) {
@@ -334,6 +354,7 @@
     // 'context' — create (Create → Continue → Publish) | edit (без Continue).
     state.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
     state.context = opts.context === 'edit' ? 'edit' : 'create';
+    state.onPublished = typeof opts.onPublished === 'function' ? opts.onPublished : null;
 
     r.setAttribute('data-rights-mode', state.mode);
     r.setAttribute('data-book-id', String(state.bookId));

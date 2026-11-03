@@ -2,21 +2,32 @@
 /**
  * card-draft — карточка черновика (книга или статья в статусе draft).
  *
- * Страница — src/views/pages/drafts/drafts.php (DR-02/DR-03/DR-08).
+ * Страница — src/views/pages/drafts/drafts.php (DR-02/DR-03/DR-08),
+ * действия — public/assets/js/drafts.js.
  *
  * @param int    $id      — id публикации
  * @param string $type    — 'book' | 'article' (определяет ссылки ниже)
  * @param string $title   — название
  * @param string $cover   — адрес обложки или '' (тогда CSS-заглушка .cover--empty)
  * @param string $date    — уже отформатированная дата изменения (д.m.Y)
+ * @param bool   $owner   — текущий пользователь — создатель: data-requires-owner
+ *                          для кнопок «Опубликовать»/«Удалить» (показывает
+ *                          permissions.js; чужие карточки гасятся до правил бэка)
  *
- * ССЫЛКИ (роуты books.edit / articles.edit добавит бэк — config/ и app/
- * заморожены; роуты books.retrieve / articles.retrieve УЖЕ ЕСТЬ):
- *   Продолжить → /books/{id}/edit или /articles/{id}/edit
+ * ССЫЛКИ:
+ *   Продолжить → /books/new?id={id} (форма правки книги) или
+ *                /articles/new?id={id}&part=meta (article-edit-meta,
+ *                пока только разметка)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
+ * ДЕЙСТВИЯ (drafts.js):
+ *   Опубликовать → окно ролей: RightsModal (книги) / LoreArticlePublish
+ *                  (статьи) → POST .../publish → карточка уходит из списка;
+ *   Удалить      → ConfirmModal → DELETE /api/{books|articles}/{id}
+ *                  → карточка уходит из списка.
+ *
  * Кнопки вместо ссылки-обёртки всего карточки (в отличие от card-book):
- * у черновика два взаимоисключающих действия, поэтому клик по обложке
+ * у черновика несколько взаимоисключающих действий, поэтому клик по обложке
  * или заголовку ведёт на «Открыть», а не на редактирование.
  */
 $id    = (int) ($id ?? 0);
@@ -24,16 +35,22 @@ $type  = ($type ?? 'book') === 'article' ? 'article' : 'book';
 $title = (string) ($title ?? '');
 $cover = (string) ($cover ?? '');
 $date  = (string) ($date ?? '');
+$owner = !empty($owner);
 
 $isArticle = $type === 'article';
 $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
-// TODO(backend): роутов books.edit / articles.edit в config/routes.php нет —
-// «Продолжить» пока даёт 404. Когда появятся — заменить на $view->url(...).
-// Роутов edit пока нет (см. шапку) — ссылка всё равно строится по шаблону,
-// чтобы вёрстка и локализация были готовы к моменту, когда бэк их добавит.
-$editUrl = $id > 0 ? $basePath . $id . '/edit' : '#';
+// Роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
+// заморожены) — раньше «Продолжить» давал 404. Правка живёт на
+// существующем роуте создания через query-параметр part=meta|content:
+//   книга  — /books/new?id={id} (book-form.php, edit-режим: префилл из
+//            JSON-блоба страницы книги, сохранение — PATCH /api/books/{id});
+//   статья — /articles/new?id={id}&part=meta → article-edit-meta.php
+//            (пока только разметка: префилла и отправки в ней ещё нет).
+$editUrl = $id > 0
+    ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
+    : '#';
 
 $hasCover = $cover !== '';
 
@@ -78,6 +95,31 @@ $typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts
        aria-label="<?= $view->e($view->t('common.drafts.open') . ': ' . $title) ?>">
       <?= $view->e($view->t('common.drafts.open')) ?>
     </a>
+  </div>
+
+  <!-- Публикация и удаление (drafts.js). Обе кнопки рендерятся скрытыми:
+       показывает permissions.js по правилам /api/publications/rules,
+       $owner — owner-override (создатель публикации). Доступ по-настоящему
+       всё равно проверяет бэк. -->
+  <div class="card-draft__actions card-draft__actions--secondary">
+    <button type="button"
+            class="btn btn--primary card-draft__publish"
+            data-draft-publish
+            data-requires="publication.publish"
+            data-requires-kind="<?= $view->e($type) ?>"
+            data-requires-owner="<?= $owner ? '1' : '0' ?>"
+            hidden>
+      <?= $view->e($view->t('common.drafts.publish')) ?>
+    </button>
+    <button type="button"
+            class="card-draft__delete"
+            data-draft-delete
+            data-requires="publication.delete"
+            data-requires-kind="<?= $view->e($type) ?>"
+            data-requires-owner="<?= $owner ? '1' : '0' ?>"
+            hidden>
+      <?= $view->e($view->t('js.delete')) ?>
+    </button>
   </div>
 
 </article>

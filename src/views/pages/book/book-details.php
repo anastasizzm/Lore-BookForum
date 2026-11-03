@@ -161,12 +161,16 @@ $tableOfContents = (array)  ($book->tableOfContents ?? []);
 // внешних файлов-плейсхолдеров больше нет.
 // iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
 $iconId = is_array($book) ? ($book['iconId'] ?? null) : ($book->iconId ?? null);
-$coverUrl = '';
+$coverUrl  = '';
+$iconIdStr = '';
 if (!empty($iconId)) {
     if ($iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $iconId;
+        $iconIdStr = (string) $iconId;
     } elseif (is_string($iconId)) {
-        $coverUrl = '/uploads/covers/' . $iconId;
+        $iconIdStr = $iconId;
+    }
+    if ($iconIdStr !== '') {
+        $coverUrl = '/uploads/covers/' . $iconIdStr;
     }
 }
 
@@ -234,6 +238,30 @@ $isDraft   = $status === 'draft';
 
 // Пункт «Редактировать» в меню «три точки» (шапка) рендерится скрытым;
 // показывает его permissions.js по data-requires — см. шапку файла.
+
+/* ---------- Данные книги для формы редактирования (book-form.js) ----------
+ *
+ * В API нет GET /api/books/{id}, а веб-роута /books/{id}/edit тоже нет —
+ * единственное полное место с метаданными — сама страница книги. Поэтому
+ * отдаём их блоком JSON: ссылка «Изменить» (details-menu.php) ведёт на
+ * /books/new?id={id}#step-1|#step-2, книга-форма забирает блок одним
+ * запросом страницы и префиллит поля; сохранение — PATCH /api/books/{id}.
+ *
+ * genre/category в модели — объекты, для <select> нужен id; pages в модели
+ * называется pagesCount. iconId — строка uuid (пусто, если обложки нет).
+ */
+$bookPayload = [
+    'id'          => $bookId,
+    'title'       => (string) $get($book, 'title', ''),
+    'description' => (string) $get($book, 'description', ''),
+    'authorNotes' => (string) $get($book, 'authorNotes', ''),
+    'genreId'     => (int) $get($get($book, 'genre', null), 'id', 0),
+    'categoryId'  => (int) $get($get($book, 'category', null), 'id', 0),
+    'publisher'   => (string) $get($book, 'publisher', ''),
+    'pages'       => (int) ($get($book, 'pagesCount', null) ?? $get($book, 'pages', 0)),
+    'isbn'        => (string) ($get($book, 'isbn', '') ?? ''),
+    'iconId'      => $iconIdStr,
+];
 ?>
 <?php $view->extends('main'); ?>
 
@@ -722,6 +750,13 @@ $isDraft   = $status === 'draft';
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- Метаданные книги для формы редактирования (book-form.js): book-form
+       открывается как /books/new?id={id}, находит блок через fetch этой же
+       страницы и префиллит поля. Контракт полей — в $bookPayload выше. -->
+  <script type="application/json" data-book-payload><?= json_encode(
+      $bookPayload,
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+  ) ?></script>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление книги (DELETE /api/books/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>

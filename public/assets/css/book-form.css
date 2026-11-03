@@ -463,6 +463,13 @@
   display: none !important;
 }
 
+/* «Сохранить» на страницах правки (book-edit-*) рендерится скрытой и
+   без data-requires — permissions.js её не трогает, поэтому прячем
+   правилом: .btn задаёт display и перебивал бы UA-правло [hidden]. */
+.book-form__actions [data-submit-save][hidden] {
+  display: none !important;
+}
+
 .book-form__actions-right {
   display: flex;
   align-items: center;

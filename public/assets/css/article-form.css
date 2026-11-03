@@ -686,6 +686,14 @@
   margin-left: auto;
 }
 
+/* «Сохранить» на страницах правки (article-edit-*) рендерится скрытой и
+   без data-requires — permissions.js её не трогает, поэтому прячем
+   правилом: .btn задаёт display и перебивал бы UA-правло [hidden]
+   (base.css глобально прячет [hidden] только на ≥1024px). */
+.article-form__actions [data-submit-save][hidden] {
+  display: none !important;
+}
+
 /* ============================================
    8. ОКНО ВЫБОРА ФРАГМЕНТА
    ============================================ */

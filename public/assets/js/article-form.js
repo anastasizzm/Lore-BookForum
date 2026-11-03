@@ -1532,6 +1532,14 @@
     window.LoreArticlePublish.open(state.articleId, {
       // бэк при самой публикации нашёл ошибки в статье — показываем их на форме
       onInvalid: function (errors) { renderServerErrors(errors); },
+      // 409: публикация запрещена (обычно у статьи нет контента) —
+      // подсвечиваем поле и возвращаем на шаг, где оно заполняется.
+      onConflict: function (message) {
+        var name = state.mode === 'excerpt' ? 'book' : 'content';
+        setError(name, message || t('errors.article.publish_no_content'));
+        revealInvalidStep();
+        focusFirstInvalid();
+      },
     });
   }
 

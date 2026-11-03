@@ -35,6 +35,13 @@
  *      из шага 2 в модалку book-publish-dialog — её открывает только
  *      Publish (когда форма валидна), Cancel/Esc/фон закрывают;
  *      отправка — кнопкой внутри окна (data-submit-publish).
+ *   12. режим редактирования (GET /books/new?id=N, ссылки «Изменить»
+ *      и «Продолжить»): метаданные подтягиваются из JSON-блоба
+ *      [data-book-payload] на странице книги (fetch /books/{N}), файлы —
+ *      из GET /api/books/{id}/contents; сохранение — PATCH /api/books/{id}
+ *      (JSON + CSRF, только метаданные), новые файлы прикрепляются
+ *      POST /api/books/{id}/contents, удалённые — DELETE .../contents/{id}.
+ *      Publish в edit-режиме не показывается.
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
@@ -46,6 +53,10 @@
  *   422 { error: { details: { field: [msg] } } } — ошибки рисуем на
  *   полях и возвращаем пользователя на шаг с первой из них;
  *   401 — нет сессии, 419 — CSRF (см. обработку ниже).
+ *   PATCH /api/books/{id}, JSON { title, description, authorNotes, genreId,
+ *   categoryId, publisher, pages, isbn, iconId } → 200 (пусто) — обновляются
+ *   ТОЛЬКО присланные ключи; пустой isbn шлём как null (сброс), остальные
+ *   обязательные поля всегда непустые после валидации. Ошибки те же.
  */
 (function () {
   'use strict';
@@ -500,6 +511,13 @@
 
     var objectUrl = null;
 
+    // EDIT-РЕЖИМ: обложка книги уже лежит на бэке (/uploads/covers/{iconId})
+    // — object URL для неё не построить, поэтому серверный src держим
+    // отдельно. Пока не выбран новый файл, превью — серверное; «Убрать
+    // обложку» зовёт dropServerCover(), и PATCH уходит с iconId: null
+    // (бэк обнуляет publications.icon_id).
+    var serverSrc = null;
+
     /** Текст под кнопкой: имя файла либо «Файл не выбран». */
     function syncState() {
       if (!stateEl) return;
@@ -516,11 +534,28 @@
       syncState();
     }
 
+    /** Показывает обложку книги (edit-режим) вместо плейсхолдера. */
+    function showServerCover() {
+      if (!serverSrc) return;
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+      preview.src = serverSrc;
+      preview.hidden = false;
+      if (placeholder) placeholder.hidden = true;
+      if (removeBtn) removeBtn.hidden = false;
+      syncState();
+    }
+
     /** Возвращает сообщение об ошибке или null, если файл валиден. */
-    return function () {
+    function validate() {
       var file = input.files && input.files[0];
 
-      if (!file) { clearPreview(); return null; }
+      // Локального файла нет: в edit-режиме держим обложку книги,
+      // иначе — чистое превью (плейсхолдер).
+      if (!file) {
+        if (serverSrc) showServerCover();
+        else clearPreview();
+        return null;
+      }
 
       if (COVER_MIMES.indexOf(file.type) === -1) {
         clearPreview();
@@ -541,7 +576,21 @@
       if (removeBtn) removeBtn.hidden = false;
       syncState();
       return null;
+    }
+
+    // API для book-form.js (edit-режим): показать обложку книги из
+    // JSON-блоба либо забыть её после кнопки «Убрать обложку».
+    validate.setServerCover = function (url) {
+      serverSrc = String(url || '');
+      if (serverSrc) showServerCover();
+      else clearPreview();
     };
+    validate.dropServerCover = function () {
+      serverSrc = null;
+      clearPreview();
+    };
+
+    return validate;
   }
 
   /* ============================================================
@@ -1055,11 +1104,147 @@
     var dirty = false;
 
     // edit-режим: скрытое поле id (контракт — в шапке book-form.php).
-    // id > 0 → отправка заблокирована: эндпоинта обновления у формы пока
-    // нет (POST /api/books/ только создаёт), см. submit ниже. Локальная
-    // копия («Восстановить») в edit-режиме не пишется.
+    // id > 0 → GET /books/new?id=N: метаданные подтягиваются из JSON-блоба
+    // страницы книги, сохранение — PATCH /api/books/{id} (см. submit ниже).
+    // Локальная копия («Восстановить») в edit-режиме не пишется.
     var idField = form.querySelector('input[name="id"]');
     var editId = idField ? (parseInt(idField.value, 10) || 0) : 0;
+
+    // Флаг «идёт первичная загрузка данных книги»: префилл меняет поля и
+    // перерисовывает справочники — без флага MutationObserver пометил бы
+    // форму изменённой, и браузер спросил бы «выйти?» на нетронутой форме.
+    var hydrating = false;
+
+    // Обложка: true — пользователь нажал «Убрать обложку» (PATCH уйдёт
+    // с iconId: null); новый файл отменяет это состояние.
+    var coverRemoved = false;
+
+    // id файлов, загруженных в /api/files/upload, но ещё не прикреплённых
+    // к книге. Переживают неудачный PATCH: повторная отправка не переливает
+    // файл (uploadCache) и не дублирует уже прикреплённое.
+    var pendingContentIds = [];
+
+    // --------------------------------------------------------
+    // Файлы, УЖЕ прикреплённые к книге (edit-режим)
+    // GET /api/books/{id}/contents → { items: File[] };
+    // DELETE /api/books/{id}/contents/{contentId} → 204.
+    // PATCH /api/books/{id} contentIds[] не принимает, поэтому список
+    // живёт отдельно от input [data-files-input]: выбор новых файлов
+    // прикрепляется POST .../contents после успешного сохранения.
+    // --------------------------------------------------------
+    var attachedList  = form.querySelector('[data-attached-list]');
+    var attachedEmpty = form.querySelector('[data-attached-empty]');
+    var attachedCount = 0;   // ≥1 → правило files («минимум один файл») выполнено
+    var attachedBusy  = false;
+
+    function renderAttached(items) {
+      if (!attachedList) return;
+      attachedList.innerHTML = '';
+      attachedCount = items.length;
+      if (attachedEmpty) attachedEmpty.hidden = items.length > 0;
+
+      items.forEach(function (item) {
+        var id = item && item.id;
+        if (id && typeof id === 'object' && id.value !== undefined) id = id.value;
+        id = id ? String(id) : '';
+        if (!id) return;
+
+        var li = document.createElement('li');
+        li.className = 'file-upload__item';
+        li.setAttribute('data-attached-id', id);
+
+        var name = document.createElement('span');
+        name.className = 'file-upload__name';
+        name.textContent = String(item.originalName || item.format || id);
+
+        var size = document.createElement('span');
+        size.className = 'file-upload__size';
+        var parts = [];
+        if (item.format) parts.push(String(item.format).toUpperCase());
+        if (item.size || item.size === 0) parts.push(formatSize(item.size));
+        if (item.status === 'pending') parts.push(t('book.contents_pending'));
+        size.textContent = parts.join(' · ');
+
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'file-upload__remove';
+        remove.textContent = '−';
+        remove.setAttribute('aria-label', t('book.contents_remove'));
+        remove.addEventListener('click', function () { removeAttached(id, li); });
+
+        li.appendChild(name);
+        li.appendChild(size);
+        li.appendChild(remove);
+        attachedList.appendChild(li);
+      });
+
+      // Список появился — старую ошибку «нет файлов» снимаем; пустой список
+      // ошибку не рисуем сам (форма не должна быть красной на входе).
+      if (items.length) clearError('files');
+    }
+
+    /** GET /api/books/{id}/contents → массив items (при сбое — null). */
+    function loadAttached() {
+      if (!editId || !attachedList) return Promise.resolve([]);
+
+      return csrfFetch('/api/books/' + editId + '/contents', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      })
+        .then(function (response) {
+          return response.text().then(function (raw) {
+            var data = null;
+            try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            if (Array.isArray(data && data.items)) return data.items;
+            return Array.isArray(data && data.data) ? data.data : [];
+          });
+        })
+        .then(function (items) { renderAttached(items); return items; })
+        .catch(function (err) {
+          console.error('[book-form] attached load failed', err);
+          notify(t('book.contents_load_failed'));
+          return null;
+        });
+    }
+
+    /** Удаление прикреплённого файла: ConfirmModal → DELETE .../contents/{id}. */
+    function removeAttached(id, row) {
+      if (!editId || attachedBusy) return;
+
+      var ask = (window.ConfirmModal && typeof window.ConfirmModal.confirm === 'function')
+        ? window.ConfirmModal.confirm({
+            title: t('book.contents_title'),
+            message: t('book.contents_remove_confirm'),
+            confirmText: t('js.delete'),
+            danger: true,
+          })
+        : Promise.resolve(window.confirm(t('book.contents_remove_confirm')));
+
+      Promise.resolve(ask).then(function (confirmed) {
+        if (!confirmed) return;
+
+        attachedBusy = true;
+        csrfFetch('/api/books/' + editId + '/contents/' + id, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            if (row && row.parentNode) row.parentNode.removeChild(row);
+            attachedCount = Math.max(0, attachedCount - 1);
+            if (attachedEmpty) attachedEmpty.hidden = attachedCount > 0;
+            validateField('files');
+            notify(t('book.contents_removed'), 'success');
+          })
+          .catch(function (err) {
+            console.error('[book-form] attached remove failed', err);
+            notify(t('book.contents_remove_failed'));
+          })
+          .then(function () { attachedBusy = false; });
+      });
+    }
 
     function getField(name)   {
       var el = form.querySelector('[name="' + name + '"]');
@@ -1115,7 +1300,11 @@
         var validateFile = fileValidators[rule.file];
         var fileError = validateFile ? validateFile() : null;
         if (fileError) { setError(name, fileError); return false; }
-        if (rule.required && !(field.files && field.files.length)) {
+        // edit-режим: у книги уже есть прикреплённые файлы (GET /contents),
+        // локальный input при этом пуст — правило «минимум один файл»
+        // всё равно выполнено (attachedCount см. выше).
+        var hasAttached = name === 'files' && attachedCount > 0;
+        if (rule.required && !(field.files && field.files.length) && !hasAttached) {
           setError(name, t(rule.msgKey));
           return false;
         }
@@ -1238,8 +1427,20 @@
       coverRemove.addEventListener('click', function () {
         var coverInput = getField('cover');
         if (coverInput) coverInput.value = '';
+        // edit-режим: обложка книги снимается — в PATCH уйдёт iconId: null
+        // (dropServerCover гасит серверное превью).
+        coverRemoved = true;
+        if (fileValidators.cover && fileValidators.cover.dropServerCover) {
+          fileValidators.cover.dropServerCover();
+        }
         validateField('cover');
       });
+    }
+
+    // Выбрали новый файл — снимаем пометку «обложку убрали».
+    var coverChangeTarget = getField('cover');
+    if (coverChangeTarget) {
+      coverChangeTarget.addEventListener('change', function () { coverRemoved = false; });
     }
 
     // --------------------------------------------------------
@@ -1292,13 +1493,6 @@
           ? e.submitter.hasAttribute('data-submit-publish')
           : publishRequested);
 
-      // edit-режим заблокирован: endpoint'а обновления нет, а
-      // POST /api/books/ только создаёт — не плодим дубликаты.
-      if (editId) {
-        notify(t('js.book_edit_unavailable'));
-        return;
-      }
-
       // Сначала клиентская валидация ВСЕХ полей (порядок полей в DOM:
       // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
       // дальше пользователь перейдёт на второй сам).
@@ -1341,6 +1535,228 @@
           b.disabled = false;
           if (labels[i] !== undefined) b.textContent = labels[i];
         });
+      }
+
+      // --------------------------------------------------------
+      // EDIT-РЕЖИМ: PATCH /api/books/{id} (JSON + CSRF) — только
+      // метаданные: contentIds[] и людей бэк не принимает (контракт —
+      // в шапке book-form.php). Обложка и файлы сначала уходят в
+      // POST /api/files/upload, затем новые файлы прикрепляются
+      // POST /api/books/{id}/contents.
+      // --------------------------------------------------------
+      function submitEdit() {
+        var url = '/api/books/' + editId;
+
+        var coverInput = getField('cover');
+        var filesInput = getField('files');
+        var coverFile = coverInput && coverInput.files && coverInput.files.length
+          ? coverInput.files[0]
+          : null;
+        var bookFiles = filesInput && filesInput.files
+          ? Array.prototype.slice.call(filesInput.files)
+          : [];
+
+        submitBtns.forEach(function (b) { b.disabled = true; });
+        if (activeBtn) {
+          activeBtn.textContent = t((coverFile || bookFiles.length)
+            ? 'js.bookform_uploading'
+            : 'js.bookform_saving');
+        }
+
+        var newIconId = null;
+
+        /** Обложка и новые файлы → POST /api/files/upload (кэш по файлу). */
+        function editUploadPhase() {
+          var tasks = [];
+
+          if (coverFile) {
+            tasks.push(uploadFile(coverFile, 'cover').then(function (uuid) {
+              newIconId = uuid;
+            }, function (err) {
+              err.field = 'cover';
+              throw err;
+            }));
+          }
+
+          if (bookFiles.length) {
+            tasks.push(
+              Promise.all(bookFiles.map(function (file) { return uploadFile(file, 'book'); }))
+                .then(function (ids) {
+                  ids.forEach(function (id) {
+                    if (pendingContentIds.indexOf(id) === -1) pendingContentIds.push(id);
+                  });
+                }, function (err) {
+                  err.field = 'files';
+                  throw err;
+                })
+            );
+          }
+
+          return Promise.all(tasks);
+        }
+
+        /** JSON-тело PATCH: бэк обновляет ТОЛЬКО присланные ключи. */
+        function patchBody() {
+          var payload = {};
+
+          ['title', 'description', 'authorNotes', 'publisher'].forEach(function (name) {
+            var el = getField(name);
+            payload[name] = el ? String(el.value || '').trim() : '';
+          });
+
+          ['genreId', 'categoryId', 'pages'].forEach(function (name) {
+            var el = getField(name);
+            payload[name] = el ? (parseInt(el.value, 10) || 0) : 0;
+          });
+
+          // Пустой ISBN шлём как null — бэк сбросит значение (форму шейпа
+          // валидирует только для непустых); ключ не шлём нельзя: тогда
+          // старый ISBN остался бы на книге.
+          var isbnEl = getField('isbn');
+          var isbn = isbnEl ? String(isbnEl.value || '').trim() : '';
+          payload.isbn = isbn === '' ? null : isbn;
+
+          if (newIconId) payload.iconId = newIconId;        // загрузили новую
+          else if (coverRemoved) payload.iconId = null;     // «Убрать обложку»
+
+          return payload;
+        }
+
+        /** PATCH; reject: err.validation | err.userMessage | err.field. */
+        function sendPatch() {
+          if (activeBtn) activeBtn.textContent = t('js.bookform_saving');
+
+          return csrfFetch(url, {
+            method: 'PATCH',
+            body: JSON.stringify(patchBody()),
+            credentials: 'same-origin',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          }).then(function (response) {
+            return response.text().then(function (raw) {
+              var data = null;
+              try { data = raw ? JSON.parse(raw) : null; } catch (_) { data = null; }
+
+              if (response.ok) return;
+
+              // 422/400: error.details → на поля + возврат к первой ошибке.
+              if (response.status === 400 || response.status === 422) {
+                var details = data && data.error && data.error.details
+                  ? data.error.details
+                  : (data && data.errors ? data.errors : null);
+                renderServerErrors(details);
+                var invalid = new Error('validation');
+                invalid.validation = true;
+                throw invalid;
+              }
+
+              var message;
+              if (response.status === 401) message = t('errors.common.unauthorized');
+              else if (response.status === 419) message = t('errors.common.csrf_fail');
+              else {
+                var fallback = t('errors.common.save_failed', { status: response.status });
+                message = window.Messages
+                  ? window.Messages.describe(response.status, data, raw, fallback)
+                  : fallback;
+              }
+              var fail = new Error(message);
+              fail.userMessage = true;   // текст уже локализован
+              throw fail;
+            });
+          });
+        }
+
+        /**
+         * Прикрепляет накопленные файлы по одному; резолвится true, когда
+         * всё прикреплено. Неудачные id остаются в pendingContentIds —
+         * повторная отправка доделает без повторной загрузки (uploadCache).
+         */
+        function attachPhase() {
+          if (!pendingContentIds.length) return Promise.resolve(true);
+
+          var queue = pendingContentIds.slice();
+          var failed = [];
+          var chain = Promise.resolve();
+
+          queue.forEach(function (id) {
+            chain = chain.then(function () {
+              return csrfFetch('/api/books/' + editId + '/contents', {
+                method: 'POST',
+                body: JSON.stringify({ contentId: id }),
+                credentials: 'same-origin',
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                  'X-Requested-With': 'XMLHttpRequest',
+                },
+              }).then(function (response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+              }).catch(function (err) {
+                console.error('[book-form] attach failed', id, err);
+                failed.push(id);
+              });
+            });
+          });
+
+          return chain.then(function () {
+            pendingContentIds = pendingContentIds.filter(function (id) {
+              return failed.indexOf(id) !== -1;
+            });
+            return failed.length === 0;
+          });
+        }
+
+        editUploadPhase()
+          .then(function () { return sendPatch(); })
+          .then(function () { return attachPhase(); })
+          .then(function (attachedOk) {
+            if (attachedOk) {
+              // Файлы прикреплены — очищаем input, чтобы повторная
+              // отправка (если понадобится) не прикрепила дубли.
+              if (filesInput) filesInput.value = '';
+              if (bookFiles.length) validateField('files');
+            }
+            dirty = false;
+            notify(t('js.book_updated'), 'success');
+            return loadAttached().then(function () { return attachedOk; });
+          })
+          .then(function (attachedOk) {
+            if (attachedOk) { leaveAndRedirect('/books/' + editId); return; }
+            // Метаданные сохранены, файлы прикрепить не вышло — остаёмся
+            // на форме: повторный «Сохранить» доделает прикрепление.
+            notify(t('book.contents_upload_failed'), 'warning');
+            resetButtons();
+          })
+          .catch(function (err) {
+            console.error('[book-form] edit save failed', err);
+            resetButtons();
+            if (err && err.validation) {
+              showFieldErrors();
+              // 422 пришёл, но ни одно поле формы не совпало с ключами
+              // (например, iconId) — сообщаем хотя бы общим текстом.
+              if (!form.querySelector('.form-field__input--invalid')) {
+                notify(t('errors.common.save_failed', { status: 422 }));
+              }
+              focusFirstInvalid();
+              return;
+            }
+            if (err && err.field) {
+              setError(err.field, err.message || t('errors.common.save_failed', { status: '' }));
+              showFieldErrors();
+              focusFirstInvalid();
+              return;
+            }
+            notify(err && err.userMessage ? err.message : t('errors.common.network_error'));
+          });
+      }
+
+      // edit-режим: JSON-PATCH вместо multipart-создания.
+      if (editId) {
+        submitEdit();
+        return;
       }
 
       // FormData(form) сам проставляет boundary и уносит поля; значение
@@ -1699,6 +2115,7 @@
     var BACKUP_FIELDS = ['title', 'description', 'authorNotes', 'publisher', 'pages', 'isbn', 'genreId', 'categoryId'];
 
     function markDirty() {
+      if (hydrating) return;   // префилл edit-режима — не правки пользователя
       dirty = true;
       scheduleBackup();
     }
@@ -1817,6 +2234,99 @@
     // --------------------------------------------------------
     initChapters();
     stepsApi = initSteps();
+
+    // --------------------------------------------------------
+    // EDIT: подтягиваем данные книги и её прикреплённые файлы
+    // --------------------------------------------------------
+    // Метаданных в API нет (GET /api/books/{id} не заведён) — единственный
+    // полный источник сама страница книги, где лежит JSON-блоб
+    // [data-book-payload] (book-details.php). То есть делаем один
+    // GET /books/{id} и разбираем блок из ответа.
+    function setFieldValue(name, value) {
+      var el = getField(name);
+      if (!el) return;
+      el.value = value === null || value === undefined ? '' : String(value);
+    }
+
+    function applyBookPayload(data) {
+      if (!data || typeof data !== 'object') return;
+
+      setFieldValue('title', data.title);
+      setFieldValue('description', data.description);
+      setFieldValue('authorNotes', data.authorNotes);
+      setFieldValue('publisher', data.publisher);
+      setFieldValue('pages', data.pages);
+      setFieldValue('isbn', data.isbn);
+
+      // Жанр/категория: у справочника «источник истины» — свой current,
+      // поэтому значение отдаём рендереру (тот же приём, что в applyBackup:
+      // option может ещё не существовать, пока список не загружен).
+      ['genreId', 'categoryId'].forEach(function (name) {
+        var id = data[name];
+        if (!id) return;
+        var rerender = catalogRenderers[name];
+        if (rerender) rerender(String(id));
+        else setFieldValue(name, id);
+      });
+
+      // Обложка: uuid в скрытое поле + серверное превью (object URL для
+      // уже удалённого файла построить нельзя).
+      if (data.iconId) {
+        var iconField = form.querySelector('input[name="iconId"]');
+        if (iconField) iconField.value = String(data.iconId);
+        if (fileValidators.cover && fileValidators.cover.setServerCover) {
+          fileValidators.cover.setServerCover('/uploads/covers/' + data.iconId);
+        }
+      }
+    }
+
+    function hydrateEdit() {
+      hydrating = true;
+
+      fetch('/books/' + editId, {
+        credentials: 'same-origin',
+        // no-store: страница могла быть закэширована ДО появления блока
+        // [data-book-payload] — тогда бы префилл молча не находил данные.
+        cache: 'no-store',
+        headers: { 'Accept': 'text/html' },
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.text();
+        })
+        .then(function (html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var node = doc.querySelector('[data-book-payload]');
+          if (!node || !node.textContent) throw new Error('book payload not found');
+          applyBookPayload(JSON.parse(node.textContent));
+          return loadAttached();
+        })
+        .then(function () { finishHydrating(0); })
+        .catch(function (err) {
+          console.error('[book-form] edit hydrate failed', err);
+          finishHydrating(0);
+          // Без данных форма всё равно не сохранится (валидация пустых
+          // обязательных полей), но сообщаем прямо, а не молча.
+          notify(t('js.book_edit_load_failed'));
+        });
+
+      /**
+       * Снимает флаг «идёт префилл». Справочники жанра/категория
+       * отрисовываются асинхронно и могли мутировать DOM уже после
+       * префилла — ждём их (не дольше ~2 с), иначе форма останется
+       * «изменённой» без единой правки пользователя.
+       */
+      function finishHydrating(attempt) {
+        if (catalogsPending > 0 && (attempt || 0) < 40) {
+          setTimeout(function () { finishHydrating((attempt || 0) + 1); }, 50);
+          return;
+        }
+        hydrating = false;
+        dirty = false;   // префилл — не правки пользователя
+      }
+    }
+
+    if (editId) hydrateEdit();
 
     form.addEventListener('input', markDirty);
     form.addEventListener('change', markDirty);

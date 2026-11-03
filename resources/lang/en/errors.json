@@ -184,6 +184,7 @@
         "article_draft_failed": "Autosave failed",
         "article_image": "The image must be a JPEG, PNG or WebP.",
         "article_image_size": "The image must be up to 5 MB.",
-        "article_image_failed": "Could not upload the image."
+        "article_image_failed": "Could not upload the image.",
+        "publish_no_content": "The article has no text yet — add the text before publishing."
     }
 }
