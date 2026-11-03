@@ -31,18 +31,16 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          $bookTitle   — название книги-источника (для режима «отрывок»);
  *          $coverUrl    — адрес уже загруженной обложки или '' (редактирование).
  *
- *   POST /articles/save        → articles.save,       AuthPolicy::Verified
- *        ОДИН адрес на создание, редактирование, черновик и автосохранение.
- *        multipart/form-data. Поля: id, status, mode ('standalone'|'excerpt'), title,
- *        genre, type, doi, annotation, author_note, content, cover, remove_cover, book,
- *        page_start, …, anchor_version, check_publish.
- *        status ВСЕГДА 'draft': статья сохраняется как черновик, публикует её только
- *        POST /api/articles/{id}/publish (окно выбора прав, article-publish.js).
- *          • «Create draft»  → status=draft, обязательно только название (title);
- *          • «Publish»       → status=draft + check_publish=1: бэк сохраняет черновик И
- *            проверяет статью как для публикации (жанр, тип, текст/фрагмент…). Не готова →
- *            422 { errors: { field: [msg] } } и фронт возвращает пользователя на шаг с
- *            ошибками; готова → 200, затем открывается окно прав.
+ *   Сохранение идёт через JSON/multipart API, формы-POST нет:
+ *     создание   POST  /api/articles              (api.articles.create.submit → data-create-url)
+ *                      title, description, authorNotes, genreId, typeId, doi?, iconId?,
+ *                      content? | book[bookId|pageStart|pageEnd]  → 201 { createdId }
+ *     правка     PATCH /api/articles/{id}         + PUT /api/articles/{id}/content (If-Match)
+ *     обложка    POST  /api/files/upload          (category=cover) → iconId
+ *     публикация POST  /api/articles/{id}/publish (окно выбора прав, article-publish.js)
+ *   Поля жанр/тип/аннотация/заметка автора обязательны уже для черновика (так у бэка).
+ *   data-version — текущая версия контента для If-Match (необязательно: иначе берём из
+ *   ETag ответа GET /api/articles/{id}/content).
  *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
  *        «Create draft» после успеха ведёт на страницу статьи (redirect): там пометка
  *        «Черновик» и кнопка «Publish» внизу.
@@ -127,7 +125,8 @@ if (!in_array($mode, ['standalone', 'excerpt'], true)) $mode = 'standalone';
 $genreValue = $val('genre');
 $typeValue  = $val('type');
 
-$action = $withLang('/articles/save');
+// Создание: POST /api/articles (api.articles.create.submit); правка — PATCH/PUT /api/articles/{id}.
+$action = $withLang($view->url('api.articles.create.submit'));
 
 /* ---------- панель редактора ---------- */
 $toolbarButtons = [
@@ -190,13 +189,14 @@ $richEditor = static function (
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.articleform.title_edit' : 'common.articleform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/cover-upload.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/forms/article-form.css') ?>">
   <!-- реальное имя файла article-right.css (article-rights.css не существует) -->
-  <link rel="stylesheet" href="<?= $view->asset('css/article-right.css') ?>">
-  <!-- модуль «назначение ролей» внутри окна публикации -->
-  <link rel="stylesheet" href="<?= $view->asset('css/roles-module.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
+  <!-- плашка ролей и людей публикации (publication-roles.js) -->
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/publication-roles.css') ?>">
+  <script src="<?= $view->asset('js/publication-roles.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
-  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
@@ -226,6 +226,8 @@ $richEditor = static function (
           method="POST"
           id="articleForm"
           data-article-form
+          data-create-url="<?= $view->e($action) ?>"
+          data-version="<?= $view->e($val('version')) ?>"
           data-initial-errors="<?= $view->e(implode(',', $dirtyFields)) ?>"
           data-book-title="<?= $view->e($bookTitle) ?>"
           enctype="multipart/form-data"

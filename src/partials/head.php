@@ -29,14 +29,14 @@
        и показывает тост «Нет прав». Держим ПОСЛЕ rules.js: он использует window.LoreRules. -->
   <script src="<?= $view->asset('js/rights-guard.js') ?>"></script>
 
-  <link rel="stylesheet" href="<?= $view->asset('css/variable.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/base.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/layout.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/component.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/base/variable.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/base/base.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/layout/layout.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/index.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/modal.css') ?>">
   <!-- Плашка «Пожаловаться» (report-modal.php подключается в layouts/main.php) -->
-  <link rel="stylesheet" href="<?= $view->asset('css/report-modal.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/fab.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/report-modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/fab.css') ?>">
 
   <?= $view->block('head_extra') ?>
 </head>

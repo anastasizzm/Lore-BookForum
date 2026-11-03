@@ -1,0 +1,28 @@
+/* ============================================
+   CARD — Book: кнопка «Сохранить» (закладка)
+   POST/DELETE /api/books/{id}/save — обработчик в app.js
+   ============================================ */
+/* Кнопка лежит прямо в карточке (не в .card-book__cover) и позиционируется
+   от неё: .card-book имеет position:relative и белое поле (padding 24px),
+   поэтому закладка видна в правом верхнем углу САМОЙ карточки. */
+.card-book__save {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;                 /* выше растянутой ссылки .card-book__link::after (z-index: 1) */
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.card-book__save:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.card-book__save:focus-visible {
+  outline: 2px solid var(--main-text-color);
+  outline-offset: 2px;
+}

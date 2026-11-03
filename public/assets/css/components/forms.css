@@ -1,0 +1,111 @@
+/* ============================================
+   FORM FIELD
+   ============================================ */
+.form-field__input {
+  box-sizing: border-box;   /* width: 100% + padding/border не вылезают за контейнер */
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  background-color: var(--color-field-bg);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+textarea.form-field__input {
+  height: auto;
+  resize: vertical;
+  line-height: var(--lh-normal);
+  font-family: inherit;
+}
+
+.form-field__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-field__input:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.form-field__input--invalid {
+  border-color: var(--color-error);
+}
+
+.form-field__error {
+  min-height: 1.125rem;
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-small);
+  color: var(--color-error);
+}
+
+/* ============================================
+   LINK
+   ============================================ */
+.link {
+  font-size: var(--fs-small);
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.link:hover {
+  color: var(--color-primary-hover);
+}
+
+/* ============================================
+   INPUTS (Изменено: добавлен Hover)
+   ============================================ */
+.input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-white, var(--color-white));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Добавлена анимация */
+}
+
+/* Эффект при наведении на поле */
+.input:hover {
+  border-color: var(--color-text-muted, #94A3B8);
+}
+
+/* Эффект при клике (когда мы пишем текст) */
+.input:focus-within {
+  border-color: var(--color-primary, var(--color-accent));
+  box-shadow: 0 0 0 2px rgba(88, 118, 166, 0.15);
+}
+
+.input--search {
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  height: 54px;
+  box-shadow: var(--shadow-card);
+}
+
+.input__icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 16px;
+}
+
+.input--search .input__icon {
+  color: var(--color-accent);   /* SVG в input.php рисует currentColor */
+}
+
+.input__field {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 16px;
+  min-width: 0;
+}
+
+.input__field::placeholder {
+  color: var(--color-text-muted);
+}

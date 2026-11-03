@@ -1,0 +1,50 @@
+/* ============================================
+   cover-upload — загрузка обложки (общее для book-form и article-form).
+   Подключается в обеих формах перед их собственным css.
+   Различающееся правило @media для .cover-upload__frame осталось в формах.
+   ============================================ */
+
+/* ============================================
+   ЗАГРУЗКА ОБЛОЖКИ
+   ============================================ */
+.cover-upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cover-upload__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.cover-upload__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: var(--color-field-bg);
+  border: 1px dashed var(--color-field-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.cover-upload__placeholder {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: var(--space-2);
+}
+
+.cover-upload__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}

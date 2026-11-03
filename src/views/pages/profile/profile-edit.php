@@ -24,7 +24,7 @@ $langField = $langQuery !== null && $langQuery !== ''
 <?php $view->startBlock('title'); ?><?= $tr('common.profile.edit') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/profile.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/profile.css') ?>">
   <script src="/assets/js/profile-edit.js" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 

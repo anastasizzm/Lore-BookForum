@@ -1,0 +1,737 @@
+/* ============================================
+   CARD — Feed: лениво подгружаемые комментарии
+   GET /api/posts?parent={postId} — card-feed.js
+   ============================================ */
+.feed-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* Блок вложен в колонку контента поста — отступ от ссылки «Show more» */
+  margin-top: var(--space-3);
+}
+
+.feed-comments[hidden] {
+  display: none;
+}
+
+.feed-comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.feed-comments__list:empty {
+  display: none;
+}
+
+/* Комментарий в ленте — та же карточка, что на details (book-компонент
+   перенесён в component.css): внешние отступы задаёт контейнер */
+.feed-comments__list .comment-card {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   ЛЕНТА — пост как корневой комментарий + комментарии под ним (макет):
+   * строка поста собирается из тех же .comment-card__*, что и комментарий:
+     32px аватар, синий ник, тёмно-синий текст, серая дата + синий Reply,
+     сердце справа на уровне ника; ввод — вшитая в строку форма, Reply;
+   * ОДНА сплошная вертикальная линия слева на весь блок — её рисует
+     border-left у .card-feed__body-section--with-book (он идёт от
+     заголовка книги через весь пост и все комментарии), поэтому у
+     самого комментария не должно быть своей рамки/фона/второй линии;
+   * комментарий — строка внутри карточки поста, а не мини-карточка;
+   * список вложен в колонку контента поста — уходит вправо под ник поста,
+     как ответы; у каждого комментария ответы ещё правее (аватар+gap),
+     на той же общей линии (без собственной линии слева).
+   Правила ниже — только лента: book/article details не трогаем.
+   ============================================ */
+.feed-comments__list .comment-card {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+
+/* Ответы: правее родителя, но без второй линии слева — общую линию
+   списка рисует body-section. Дополнительный padding-left не нужен:
+   ответ сдвигается сам за счёт аватара+gap родителя, в итоге аватар
+   ответа встаёт ровно под колонкой username корневого комментария */
+.feed-comments .comment-replies:not(:empty) {
+  margin-top: var(--space-3);
+  padding-left: 0;
+  border-left: none;
+}
+
+.feed-comments__status {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.feed-comments__status[hidden] {
+  display: none;
+}
+
+/* Пост = корневой комментарий: строка поста живёт на тех же .comment-card__*,
+   что и комментарии ниже (без своих рамок/фонов — их задаёт контекст ленты) */
+
+/* Сердце — на уровне ника (макет), а не по центру строки */
+.card-feed .comment-card__main,
+.card-feed .comment-reply__row {
+  align-items: flex-start;
+}
+
+/* Оптическое выравнивание сердечка по строке ника (padding 4px у кнопки,
+   высота кнопки 23px против строки ника 21px — центры совпадают при -1px) */
+.card-feed .comment-card__like,
+.card-feed .comment-reply__like {
+  margin-top: -1px;
+}
+
+/* Reply — синий, как ник (базово серый) */
+.card-feed .comment-card__reply {
+  color: var(--color-primary);
+}
+.card-feed .comment-card__reply:hover,
+.card-feed .comment-card__reply:focus-visible {
+  color: var(--color-primary-hover);
+}
+
+/* Единый ритм строки: автор/текст/дата — как у ответов */
+.card-feed .comment-card__author {
+  margin-bottom: 4px;
+}
+.card-feed .comment-card__text {
+  margin-bottom: 0;
+}
+.card-feed .comment-card__footer {
+  margin-top: 6px;
+}
+
+/* Ответы под постом — меньше: 28px (32px остаётся у строки поста) */
+.card-feed .feed-comments .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;   /* инициалы и пресет-эмодзи (span = 1.5em) */
+}
+.card-feed .feed-comments .avatar--emoji.avatar--sm {
+  font-size: 16px;
+}
+
+/* Пагинация списка — не пилюля, а маленькая серая ссылка (макет) */
+.card-feed .comments-section__more .btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.card-feed .comments-section__more .btn:hover {
+  background: none;
+  color: var(--color-primary);
+}
+
+/* Аватар: если картинка не загрузилась, наследуем инициалы */
+.avatar [hidden] {
+  display: none;
+}
+
+/* ============================================
+   Комментарии: ник автора и @упоминания ведут на профиль (/users/{id}).
+   Разметку делает users.js (без innerHTML — только textNode/ссылки).
+   ============================================ */
+.user-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.user-link:hover,
+.user-link:focus-visible {
+  text-decoration: underline;
+}
+
+.user-mention {
+  color: var(--main-text-color);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+a.user-mention:hover,
+a.user-mention:focus-visible {
+  text-decoration: underline;
+}
+
+/* Ссылка-заглушка: ответа API ещё не было, href появится после resolve */
+.user-mention:not([href]) {
+  color: inherit;
+  cursor: text;
+}
+
+
+/* ============================================
+   КОММЕНТАРИИ — общие стили для book details, article details
+   и ленты (feed): карточка, ответы, кнопки «View N more replies» /
+   «Show less», пагинация «Show more/less comments».
+   Лежат здесь, потому что book.css подключается только на страницах
+   публикаций, а в ленте комментарии есть тоже.
+   ============================================ */
+
+/* ---------------- comments ---------------- */
+
+.comments-section {
+  margin-top: 32px;
+}
+
+.comments-section__title {
+  margin: 0 0 24px;
+  font-size: var(--fs-h2, 20px);
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-primary, var(--color-text-strong));
+}
+
+.comments-section__empty {
+  padding: 32px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  text-align: center;
+  font-size: var(--fs-body, 14px);
+}
+
+/* Единый стиль карточки для формы ввода и самого комментария */
+.comment-card {
+  display: block;
+  background: var(--color-white);
+  border: 1px solid var(--color-border, var(--color-border-light));
+  border-radius: var(--radius-lg, 16px);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+/* Карточки в списке (details-страницы, .stack) расстояние между собой
+   берут от gap контейнера (16px, как в ленте и в ответах) — своя margin
+   удваивала отступ (16 + 16 = 32px). У формы ввода margin остаётся:
+   она — прямой потомок .comments-section, вне списка. */
+[data-comment-list] .comment-card {
+  margin-bottom: 0;
+}
+
+.comment-card__inner {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.comment-card__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.comment-card__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, var(--color-text-strong));
+  margin-bottom: 8px;
+}
+
+/* Поле ввода */
+.comment-card__input {
+  width: 100%;
+  background: var(--color-bg-subtle);
+  border: none;
+  border-radius: 9999px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-text, var(--color-text-strong));
+  outline: none;
+}
+
+.comment-card__input::placeholder {
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* Ряд «поле ввода + кнопка-галочка» (P0-2: раньше кнопки отправки не было) */
+.comment-card__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-card__row .comment-card__input {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-card__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 4px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #C5CFE0;                 /* серая, пока в поле нет текста */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease, background-color 0.2s ease;
+}
+
+.comment-card__send:not(:disabled) {
+  color: var(--color-primary, var(--color-text-strong));   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-card__send:not(:disabled):hover,
+.comment-card__send:not(:disabled):focus-visible {
+  transform: scale(1.1);
+  background: var(--color-overlay-hover);
+}
+
+.comment-card__send:focus-visible {
+  outline: 2px solid var(--color-primary, var(--color-text-strong));
+  outline-offset: 2px;
+}
+
+/* «Show more comments» / «Show less comments» — НАД списком: «more» подгружает
+   более старые (встают под ней — хронология: старые сверху), «less» убирает
+   уже подгруженные обратно */
+.comments-section__more {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
+.comments-section__more[hidden] {
+  display: none;             /* display:flex перебивал бы атрибут hidden */
+}
+
+/* Текст комментария */
+.comment-card__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, var(--color-text-strong));
+  margin-bottom: 16px;
+  word-wrap: break-word;
+}
+
+/* Подвал комментария (иконки, дата) */
+.comment-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.comment-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+.btn-icon-small {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: -4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted, var(--color-text-muted));
+  transition: color 0.2s ease;
+}
+
+.btn-icon-small:hover {
+  color: var(--color-primary, var(--color-text-strong));
+}
+
+/* Верхняя строка карточки комментария: текст слева, «три точки» справа
+   (на месте бывшего сердечка) — иконка прижата к первой строке текста */
+.comment-card__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.comment-card__head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- Меню «три точки» (пост/комментарий/ответ: удаление — автору,
+   «Пожаловаться» — всем; разметка — partials/comment-menu.php) ---------- */
+
+/* Контейнер относительно — меню позиционируется НАД кнопкой */
+.comment-card__actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.comment-card__menu-btn {
+  flex: 0 0 auto;
+  margin: 0;                     /* гасим общий margin:-4px у .btn-icon-small */
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+.comment-card__menu-btn[aria-expanded="true"] {
+  color: var(--color-primary, var(--color-text-strong));
+}
+
+/* Выпадашка с кнопкой Delete — раскрывается НАД иконкой */
+.comment-card__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  min-width: 148px;
+  padding: 6px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border, var(--color-border-light));
+  border-radius: var(--radius-md, 12px);
+  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.1));
+}
+
+.comment-card__menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text, var(--color-text-strong));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.comment-card__menu-item:hover,
+.comment-card__menu-item:focus-visible {
+  background: var(--color-bg-subtle);
+}
+
+/* [hidden] обязан побеждать author-правило display:block выше
+   (base.css глушит hidden только на >=1024px): так у не-автора
+   исчезает пункт «Удалить», а «Пожаловаться» остаётся. */
+.comment-card__menu-item[hidden] {
+  display: none;
+}
+
+.comment-card__menu-item--danger {
+  color: var(--color-error, #EF4444);
+}
+
+.comment-card__menu-item--danger:hover,
+.comment-card__menu-item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error, #EF4444);
+}
+
+/* Заглушка удалённого комментария/ответа (после 204 от API) */
+.comment-card__text--deleted {
+  color: var(--color-text-muted, var(--color-text-muted));
+  font-style: italic;
+}
+
+/* Дата написания — справа в футере, под «тремя точками»,
+   на одном уровне с лайком/кнопкой Reply */
+.comment-card__date {
+  font-size: 12px;
+  color: var(--color-text-muted, var(--color-text-muted));
+  white-space: nowrap;
+}
+
+.comment-card__like {
+  flex: 0 0 auto;
+  margin: 0;                    /* гасим общий margin:-4px у .btn-icon-small */
+}
+
+/* Кнопка «Reply» под текстом комментария */
+.comment-card__reply {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, var(--color-text-muted));
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.comment-card__reply:hover,
+.comment-card__reply:focus-visible {
+  color: var(--color-primary, var(--color-text-strong));
+}
+
+/* Ещё ниже: «View N more replies» — показывает скрытые ответы.
+   Кнопка живёт только у комментариев, у которых ответы есть (book.js). */
+.comment-card__more {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, var(--color-text-muted));
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.comment-card__more:hover,
+.comment-card__more:focus-visible {
+  color: var(--color-primary, var(--color-text-strong));
+}
+
+.comment-card__more[hidden] {
+  display: none;
+}
+
+/* ---------------- like + reply ---------------- */
+
+.btn-like {
+  gap: 6px;
+  font-size: var(--fs-small, 14px);
+}
+
+.btn-like svg {
+  flex-shrink: 0;
+  transition: fill 0.2s ease;
+}
+
+.btn-like.is-liked,
+.btn-like.is-liked:hover {
+  color: #EF4444;
+}
+
+.btn-like.is-liked svg {
+  fill: #EF4444;
+}
+
+.comment-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  background: var(--color-bg-subtle);
+}
+
+.comment-reply-form[hidden] {
+  display: none;
+}
+
+.comment-reply-form__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-text, var(--color-text-strong));
+  padding: 8px 0;
+}
+
+.comment-reply-form__input::placeholder {
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+.comment-reply-form__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #C5CFE0;                 /* серая, пока ничего не введено */
+  cursor: default;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.comment-reply-form__submit:not(:disabled) {
+  color: var(--color-primary, var(--color-text-strong));   /* как username, когда есть текст */
+  cursor: pointer;
+}
+
+.comment-reply-form__submit:not(:disabled):hover,
+.comment-reply-form__submit:not(:disabled):focus-visible {
+  transform: scale(1.12);
+}
+
+.comment-replies {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Ответы скрыты, пока пользователь не нажал «View N more replies»
+   (без этого правила display:flex перебивал бы атрибут hidden) */
+.comment-replies[hidden] {
+  display: none;
+}
+
+.comment-replies:not(:empty) {
+  margin-top: 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--color-border, var(--color-border-light));
+}
+
+.comment-reply {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+/* Строка ответа: текст слева, «три точки» справа (на месте бывшего
+   сердечка) — иконка на уровне первой строки текста */
+.comment-reply__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-reply__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.comment-reply__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.comment-reply__like {
+  flex: 0 0 auto;
+  margin: 0;                 /* гасим общий margin:-4px у .btn-icon-small */
+}
+
+/* Футер ответа: сердечко + Reply слева, дата справа — как у комментария */
+.comment-reply__footer {
+  margin-top: 6px;
+}
+
+.comment-reply__author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary, var(--color-text-strong));
+  margin-bottom: 4px;
+}
+
+.comment-reply__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text, var(--color-text-strong));
+  overflow-wrap: anywhere;
+}
+
+.btn--pill {
+  border-radius: 9999px;
+  padding: 10px 24px;
+}
+
+/* Права «create» на посты запрещены (rights-guard.js вешает атрибут при
+ * create:false из Common Rules). Гасим точки входа в комментирование —
+ * «Ответить» / «Комментировать». Правило живёт на <html>, поэтому действует
+ * и на карточки, клонированные из <template> после загрузки страницы.
+ * Сами формы не прячем: попытка отправить должна дать тост «Нет прав»,
+ * а не молчаливое «ничего не произошло». */
+html[data-comments-denied] [data-reply-toggle],
+html[data-comments-denied] [data-comment-toggle] {
+  display: none !important;
+}
+
+/* Бейджи на обложке карточки (library-filters.js / card-book.php).
+   Секция живёт здесь, а не в book.css: страницы списков (библиотека,
+   сохранённое, профиль) book.css не подключают, а карточки есть только там.
+   Обложка position:relative нужна абсолютному позиционированию бейджа. */
+.card-book__cover { position: relative; }
+
+.card-book__status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 2px 10px;
+  font-size: var(--fs-small, 13px);
+  font-weight: var(--fw-medium, 600);
+  line-height: 1.5;
+  border-radius: var(--radius-pill, 999px);
+  color: var(--color-white, var(--color-white));
+  background: var(--color-primary, #2f5bea);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.card-book__status--ended {
+  background: var(--color-success);
+}
+
+/* Бейдж «Draft» на карточках статей — светлая плашка с рамкой в левом
+   верхнем углу обложки, как .card-draft__badge на странице черновиков
+   (drafts.css). Меняет геометрию цветной пилюли статуса чтения: top-left
+   вместо bottom-left, фон/текст — surface/muted вместо primary/white. */
+.card-book__status--draft {
+  top: var(--space-2);
+  bottom: auto;
+  left: var(--space-2);
+  z-index: 1;
+
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Кнопка "Показать ещё" внутри выпадающего списка (filters.js) */
+.dropdown__load-more-wrap {
+  padding: 4px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.dropdown__load-more {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--color-border, #e0e0e0);
+  color: var(--color-primary, #1c7ed6);
+  font-size: var(--fs-small, 14px);
+  text-align: center;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.dropdown__load-more:hover {
+  background: var(--color-overlay, #f5f5f5);
+}
+
+.dropdown__load-more:disabled {
+  color: var(--color-text-muted, #888);
+  cursor: default;
+  background: transparent;
+}
