@@ -301,6 +301,25 @@ $genreValue    = $val('genreId', $bookGenreId);
 $categoryValue = $val('categoryId', $bookCategoryId);
 ?>
 
+<?php
+/*
+ * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ *
+ * GET /books/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
+ * (book-edit-meta.php / book-edit-content.php) и тут же прекращает
+ * рендер этой формы. Пункты меню «три точки» на странице книги
+ * (details-menu.php) ведут именно сюда.
+ *
+ * Страницы правки — пока только разметка: полей префилла и отправки
+ * в них нет, book-form.js не подключается (см. шапку book-edit-*.php).
+ */
+$editPart = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
+if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
+    require __DIR__ . '/book-edit-' . $editPart . '.php';
+    return;
+}
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>

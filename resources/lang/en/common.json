@@ -470,6 +470,7 @@
         "author_note_ph": "Anything the reader should know…",
         "field_content": "Article text",
         "content_ph": "Start writing…",
+        "save": "Save",
         "save_draft": "Save draft",
         "publish": "Publish",
         "picker_title": "Select a fragment",

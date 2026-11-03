@@ -15,7 +15,9 @@
  *                          permissions.js; чужие карточки гасятся до правил бэка)
  *
  * ССЫЛКИ:
- *   Продолжить → /books/new?id={id} (форма правки книги) или /articles/{id}/edit
+ *   Продолжить → /books/new?id={id} (форма правки книги) или
+ *                /articles/new?id={id}&part=meta (article-edit-meta,
+ *                пока только разметка)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
  * ДЕЙСТВИЯ (drafts.js):
@@ -40,13 +42,14 @@ $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
 // Роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
-// заморожены) — раньше «Продолжить» давал 404. Книга правится на
-// /books/new?id={id}: книга-форма (book-form.js) подтягивает метаданные
-// из JSON-блоба страницы книги и сохраняет через PATCH /api/books/{id}.
-// У статей формы правки нет — их ссылка оставлена по шаблону и заработает,
-// когда бэк добавит роут.
+// заморожены) — раньше «Продолжить» давал 404. Правка живёт на
+// существующем роуте создания через query-параметр part=meta|content:
+//   книга  — /books/new?id={id} (book-form.php, edit-режим: префилл из
+//            JSON-блоба страницы книги, сохранение — PATCH /api/books/{id});
+//   статья — /articles/new?id={id}&part=meta → article-edit-meta.php
+//            (пока только разметка: префилла и отправки в ней ещё нет).
 $editUrl = $id > 0
-    ? ($isArticle ? $basePath . $id . '/edit' : '/books/new?id=' . $id)
+    ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
     : '#';
 
 $hasCover = $cover !== '';

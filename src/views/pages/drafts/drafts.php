@@ -42,7 +42,8 @@
  *                 тост errors.books.content_pdf / errors.article.publish_no_content.
  *
  *   Ссылка «Продолжить»: книги → /books/new?id={id} (форма правки, book-form.js),
- *   статьи → /articles/{id}/edit (роута пока нет — см. card-draft).
+ *   статьи → /articles/new?id={id}&part=meta (article-edit-meta, пока только
+ *   разметка — см. card-draft).
  *   «Открыть» → /books/{id} или /articles/{id}.
  *
  * Стили — public/assets/css/drafts.css (.card-draft*).

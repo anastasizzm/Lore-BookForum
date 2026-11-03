@@ -188,6 +188,32 @@ $richEditor = static function (
 };
 ?>
 
+<?php
+/*
+ * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ *
+ * GET /articles/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
+ * (article-edit-meta.php / article-edit-content.php) и тут же
+ * прекращает рендер этой формы. Пункты меню «три точки» на странице
+ * статьи (details-menu.php) ведут именно сюда.
+ *
+ * Контроллер /articles/new $articleId не передаёт, поэтому id берём
+ * из $_GET (в create-режиме его нет — диспетчеризация не срабатывает).
+ *
+ * Страницы правки — пока только разметка: полей префилла и отправки
+ * в них нет, article-form.js не подключается (см. шапку
+ * article-edit-*.php).
+ */
+$editPart        = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
+$queryArticleId  = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
+    $articleId = $queryArticleId;
+    $isEdit    = true;
+    require __DIR__ . '/article-edit-' . $editPart . '.php';
+    return;
+}
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.articleform.title_edit' : 'common.articleform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
