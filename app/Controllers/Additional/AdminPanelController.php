@@ -11,6 +11,7 @@ use App\Http\HttpContext;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 use App\Models\Queries\Additional\BasicModelListQuery;
+use App\Models\Queries\Additional\UserRoleListQuery;
 use App\Models\Queries\Permissions\RolesUserListQuery;
 
 use App\Models\Queries\PaginationQuery;
@@ -21,6 +22,7 @@ use App\Models\Queries\PropertiesQuery;
 use App\Services\Additional\CategoriesService;
 use App\Services\Additional\GenresService;
 use App\Services\Additional\TypesService;
+use App\Services\Additional\RolesService;
 use App\Services\Permissions\SystemPermissionsService;
 
 use App\Constants;
@@ -32,6 +34,7 @@ final class AdminPanelController extends Controller
         private readonly CategoriesService $categoriesService,
         private readonly GenresService $genresService,
         private readonly TypesService $typesService,
+        private readonly RolesService $rolesService,
         private readonly SystemPermissionsService $permissionsService,
         private readonly UrlGenerator $url
     ){}
@@ -96,6 +99,34 @@ final class AdminPanelController extends Controller
         }
         catch(ValidationException $e){
             return $this->render('admin/genres', [
+                'innerMessages' => $e->toMessages(), 
+                'user' => $userContext,
+            ]);
+        }    
+    }
+
+    public function roles(HttpContext $context)
+    {
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $userContext = $this->usersService->loadContext($userId);
+        try{
+            $query = UserRoleListQuery::fromInput($context->request->query);
+            $paginatedList = $this->rolesService->getList($query);
+            return $this->render('admin/all-roles', [
+                'items' => $paginatedList->getArray(), 
+                'meta' => [
+                    'page' => $paginatedList->getPage(),
+                    'pageSize' => $paginatedList->getPageSize(),
+                    'hasNext' => $paginatedList->hasNext(),
+                ], 
+                'user' => $userContext,
+            ]);
+        }
+        catch(ValidationException $e){
+            return $this->render('admin/all-roles', [
                 'innerMessages' => $e->toMessages(), 
                 'user' => $userContext,
             ]);
