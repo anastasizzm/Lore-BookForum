@@ -14,8 +14,8 @@
  * Контент полностью в resources/lang/{en,ru}/common.json, секция help —
  * страница статическая, JS не нужен.
  *
- * Стили — public/assets/css/help.css (.help-*); каркас панели — общие
- * .books-panel (component.css), шапка — partial page-header.
+ * Стили — public/assets/css/pages/help.css (.help-*); каркас панели — общие
+ * .books-panel (components/books-panel.css), шапка — partial page-header.
  */
 
 $view->setBlock('selectedTab', 'help');
@@ -53,7 +53,7 @@ $sectionIcons = [
 <?php $view->startBlock('title'); ?><?= $tr('common.help.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/help.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/help.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

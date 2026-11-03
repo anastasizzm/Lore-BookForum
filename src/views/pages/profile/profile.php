@@ -64,7 +64,7 @@ if ($cuInitials === '') {
 <?php $view->startBlock('title'); ?><?= $tr('common.profile.tab_title', ['name' => $displayName]) ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="/assets/css/profile.css">
+  <link rel="stylesheet" href="/assets/css/pages/profile.css">
   <!-- comments.js — общая структура комментариев (карточка, ответы, кнопки
        Show more/less); нужна card-feed.js (defer в main.php), который вешает
        комментарии под пост — карточки постов тут те же, что в ленте -->

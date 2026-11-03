@@ -9,7 +9,7 @@
 
 .rights-modal__dialog {
   max-width: 480px;
-  max-height: calc(100vh - var(--space-6, 48px));
+  max-height: calc(100vh - var(--space-6));
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

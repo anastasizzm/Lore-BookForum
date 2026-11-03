@@ -1,10 +1,6 @@
 /* ============================================
    LAYOUT — base
    ============================================ */
-body {
-  min-height: 100vh;
-}
-
 body.is-menu-open,
 body.is-sidebar-expanded {
   overflow: hidden;
@@ -18,13 +14,13 @@ body.is-sidebar-expanded {
   top: 0;
   left: 0;
   bottom: 0;
-  width: var(--sidebar-width, 72px);
+  width: var(--sidebar-width);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 24px 0;
-  background: var(--color-surface, #fff);
-  border-right: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, var(--color-white));
+  border-right: 1px solid var(--color-border, var(--color-border-light));
   z-index: 40;
   transition: transform 0.25s ease;
   box-sizing: border-box;
@@ -54,7 +50,7 @@ body.is-sidebar-expanded {
   width: 48px;
   height: 48px;
   border-radius: 16px;
-  color: var(--color-text-muted, #5876A6);
+  color: var(--color-text-muted, var(--color-accent));
   text-decoration: none;
   background: transparent;
   border: none !important;
@@ -73,7 +69,7 @@ body.is-sidebar-expanded {
 
 .nav-item:hover,
 .nav-item.active {
-  background: var(--color-overlay-hover, #e2e8f0);
+  background: var(--color-overlay-hover);
   color: var(--color-primary, #1e293b);
 }
 
@@ -88,7 +84,7 @@ body.is-sidebar-expanded {
 }
 
 .sidebar .nav-profile .nav-icon {
-  background-color: var(--color-bg-subtle, #F3F6FB);
+  background-color: var(--color-bg-subtle);
   border-radius: 50%;
   width: 40px !important;
   height: 40px !important;
@@ -161,7 +157,7 @@ body.is-sidebar-expanded {
 
   .sidebar.is-expanded .nav-item:hover,
   .sidebar.is-expanded .nav-item.active {
-    background: #e2e8f0;
+    background: var(--color-border-light);
   }
 
   .sidebar.is-expanded .nav-icon {
@@ -181,7 +177,7 @@ body.is-sidebar-expanded {
    CONTENT
    ============================================ */
 .content {
-  margin-left: var(--sidebar-width, 72px);
+  margin-left: var(--sidebar-width);
   padding: 19px 46px 40px 46px;
   min-height: 100vh;
   box-sizing: border-box;
@@ -289,8 +285,8 @@ body.is-sidebar-expanded .sidebar-overlay {
      на очень узких вьюпортах. */
   width: max-content;
   max-width: calc(100vw - 32px);
-  background: var(--color-surface, #fff);
-  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border, var(--color-border-light));
   border-radius: var(--radius-md, 12px);
   padding: var(--space-2, 8px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -360,24 +356,24 @@ a.settings-menu__item {
 .settings-menu__divider {
   height: 1px;
   margin: var(--space-1, 4px) 0;
-  background: var(--color-border, #e2e8f0);
+  background: var(--color-border, var(--color-border-light));
   flex-shrink: 0;
 }
 
 /* Log out: акцентный «опасный» цвет, чтобы пункт не терялся среди остальных */
 .settings-menu__item--danger {
-  color: var(--color-error, #E5484D);
+  color: var(--color-error, var(--color-error));
   margin-top: var(--space-1, 4px);
 }
 
 .settings-menu__item--danger .settings-menu__icon {
-  color: var(--color-error, #E5484D);
+  color: var(--color-error, var(--color-error));
 }
 
 .settings-menu__item--danger:hover,
 .settings-menu__item--danger:focus-visible {
   background: rgba(239, 68, 68, 0.1);
-  color: var(--color-error, #E5484D);
+  color: var(--color-error, var(--color-error));
 }
 
 /* ---- Кнопка «Админ-панель» (фидбэк: «бордер, синий в цветах сайта,
@@ -399,18 +395,18 @@ a.settings-menu__item {
 a.settings-menu__item--admin {
   color: var(--color-blue-dark, #445B7B);
   background: transparent;              /* только обводка, без заливки */
-  border: 1px solid var(--color-accent, #5876A6);
+  border: 1px solid var(--color-accent, var(--color-accent));
   font-weight: 600;
   transition: background 0.15s, border-color 0.15s;
 }
 
 a.settings-menu__item--admin .settings-menu__icon {
-  color: var(--color-accent, #5876A6);
+  color: var(--color-accent, var(--color-accent));
 }
 
 a.settings-menu__item--admin:hover,
 a.settings-menu__item--admin:focus-visible {
-  background: var(--color-overlay, #E8EEF7);
+  background: var(--color-overlay, var(--color-bg-secondary));
 }
 
 /* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков.
@@ -524,7 +520,7 @@ a.settings-menu__item--admin:focus-visible {
   }
 
   .sidebar .mobile-nav-btn:hover {
-    background: #e2e8f0;
+    background: var(--color-border-light);
   }
 
   .sidebar .mobile-nav-btn .nav-text {
@@ -570,8 +566,8 @@ a.settings-menu__item--admin:focus-visible {
     height: 42px;
     min-width: 42px;
     border-radius: 12px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--color-white);
+    border: 1px solid var(--color-border-light);
     flex-direction: column;
     align-items: center;
     justify-content: center;

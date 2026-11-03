@@ -6,10 +6,6 @@
    Логика:   public/assets/js/modal.js (window.ConfirmModal)
    ============================================ */
 
-body.is-modal-open {
-  overflow: hidden;             /* фон не прокручивается, пока открыта плашка */
-}
-
 .modal {
   position: fixed;
   inset: 0;
@@ -78,8 +74,8 @@ body.is-modal-open {
 }
 
 .btn--danger:hover {
-  background: #d33b41;
-  border-color: #d33b41;
+  background: var(--color-error-hover);
+  border-color: var(--color-error-hover);
 }
 
 @media (max-width: 480px) {

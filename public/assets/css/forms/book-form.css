@@ -120,51 +120,6 @@
   color: var(--color-text-muted);
 }
 
-/* ============================================
-   ЗАГРУЗКА ОБЛОЖКИ
-   ============================================ */
-.cover-upload {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.cover-upload__frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2);
-  background: var(--color-field-bg);
-  border: 1px dashed var(--color-field-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.cover-upload__preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-sm);
-}
-
-.cover-upload__placeholder {
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
-  text-align: center;
-  padding: var(--space-2);
-}
-
-.cover-upload__controls {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  align-items: flex-start;
-}
-
 /* Нативный file input прикрыт локализованной кнопкой-лейблом
    (кнопка браузера «Choose file» не переводится). */
 .file-input-hidden {
@@ -188,13 +143,13 @@
 
 /* Фокус на скрытом input подсвечивает кнопку-лейбл */
 .file-input-hidden:focus-visible + .file-upload__button {
-  outline: 2px solid var(--color-link, #2f6feb);
+  outline: 2px solid var(--color-link);
   outline-offset: 2px;
 }
 
 /* Невыбранный файл — приглушённый текст состояния рядом с кнопкой */
 .file-upload__button-state {
-  font-weight: var(--fw-regular, 400);
+  font-weight: var(--fw-regular);
   color: var(--color-text-muted);
   max-width: 260px;
   overflow: hidden;
@@ -363,7 +318,7 @@
   padding: 2px var(--space-2);
   font: inherit;
   font-size: 11px;
-  color: var(--color-link, #2f6feb);
+  color: var(--color-link);
   background: none;
   border: 1px solid currentColor;
   border-radius: var(--radius-pill);

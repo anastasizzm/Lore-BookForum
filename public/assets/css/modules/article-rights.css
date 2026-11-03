@@ -14,10 +14,6 @@
   display: none !important;
 }
 
-body.is-modal-open {
-  overflow: hidden;
-}
-
 /* ============================================
    1. КАРКАС
    ============================================ */
@@ -61,7 +57,7 @@ body.is-modal-open {
 
 .article-rights__title {
   margin: 0;
-  font-size: var(--fs-h3, 1.1rem);
+  font-size: var(--fs-h3);
   font-weight: var(--fw-medium);
   color: var(--color-text);
 }

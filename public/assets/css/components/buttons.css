@@ -1,0 +1,80 @@
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;   /* <- главное исправление */
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-body);
+  line-height: 1.2;
+  text-decoration: none;           /* <a class="btn"> не должен выглядеть как ссылка */
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: opacity 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.btn--secondary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+/* Компактная кнопка (карточка черновика: «Опубликовать» / «Удалить») */
+.btn--sm {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-small);
+}
+
+.btn:active {
+  opacity: 0.7;
+}
+
+/* Фокус с клавиатуры: браузерное кольцо слишком незаметно на pill-кнопках,
+   рисуем своё — как у .admin-toolbar__search/.admin-card (outline-offset 2,
+   :focus-visible, чтобы мышь кольцо не оставляла) */
+.btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Busy-состояние: пока fetch не вернулся, кнопка гаснет и не принимает
+   клики (disabled ставит admin.js на Save/Delete, карусели и т.п.). */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn__icon {
+  display: inline-flex;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 18px;
+  transition: background 0.15s;
+}
+
+.btn-icon:hover {
+  background: var(--color-overlay);
+}

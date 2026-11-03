@@ -1,0 +1,124 @@
+/* ============================================
+   FILTER — TOGGLE
+   ============================================ */
+.filter-toggle {
+  width: 44px;
+  height: 44px;
+}
+
+.filter-toggle.is-active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+}
+
+/* ============================================
+   FILTER — PANEL (универсальная)
+   ============================================ */
+.filter-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2) var(--space-3);   /* было 12px 16px — стало 8px 12px */
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-card);
+}
+
+.filter-panel[hidden] { display: none; }
+
+.filter-panel__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.filter-panel__row > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+.filter-panel__row .tab {
+  height: 40px;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.filter-panel__row[hidden] { display: none; }
+
+.filter-panel__row .dropdown {
+  display: inline-flex;
+}
+
+.filter-panel__row .dropdown__trigger {
+  height: 40px;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.filter-input {
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  outline: none;
+}
+
+.filter-input:focus-visible {
+  border-color: var(--color-primary);
+}
+
+/* ISBN/DOI: is-invalid — ошибка, которая блокирует поиск (красный),
+   is-warning — предупреждение, поиск продолжит работать (янтарный) */
+.filter-input.is-invalid {
+  border-color: var(--color-error);
+}
+
+.filter-input.is-invalid:focus-visible {
+  border-color: var(--color-error);
+}
+
+.filter-input.is-warning {
+  border-color: var(--color-warning);
+}
+
+.filter-reset {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-reset:hover {
+  background: var(--color-overlay);
+  color: var(--color-text);
+}
+
+.filter-panel__row .filter-input {
+  height: 40px;
+  padding: 0 var(--space-4);
+  line-height: 40px;
+}
+
+.filter-panel__row .filter-reset {
+  height: 40px;
+  padding: 0 var(--space-4);
+  line-height: 1;
+}
+
+.filter-panel__row .filter-reset {
+  margin-left: auto;
+}

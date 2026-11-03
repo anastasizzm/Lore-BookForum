@@ -105,7 +105,7 @@ $searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '';
 <?php $view->startBlock('title'); ?><?= $tr('common.drafts.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/drafts.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/drafts.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

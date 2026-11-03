@@ -45,7 +45,7 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

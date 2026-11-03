@@ -6,7 +6,7 @@
   justify-content: center;
   padding: var(--space-4) var(--space-3);
   /* tiled book pattern exported from Figma */
-  background-image: url("../img/bg-pattern.avif");
+  background-image: url("../../img/bg-pattern.avif");
   background-repeat: repeat;
   background-size: 330px auto; /* the tile has 4 books; this gives ~2 per 330px like the mockup */
 }
@@ -55,7 +55,7 @@
   margin: calc(-1 * var(--space-3)) 0 var(--space-4);
   font-size: var(--fs-body, 14px);
   line-height: var(--lh-normal, 1.5);
-  color: var(--color-text-muted, #6F84A5);
+  color: var(--color-text-muted, var(--color-text-muted));
 }
 
 .login-form .form-field + .form-field {
@@ -147,10 +147,10 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: #FFFFFF;
-  border: 1px solid #D6E0EF;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
   border-radius: 999px;
-  color: #29466F;
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -160,8 +160,8 @@
 }
 
 .lang-switch__trigger::-webkit-details-marker { display: none; }
-.lang-switch__trigger:hover { background: #F3F6FB; border-color: #B9C9E1; }
-.lang-switch[open] .lang-switch__trigger { background: #F3F6FB; border-color: #B9C9E1; }
+.lang-switch__trigger:hover { background: var(--color-bg-main); border-color: #B9C9E1; }
+.lang-switch[open] .lang-switch__trigger { background: var(--color-bg-main); border-color: #B9C9E1; }
 
 .lang-switch__icon { display: inline-flex; }
 .lang-switch__current { letter-spacing: .02em; }
@@ -171,8 +171,8 @@
   margin: 0;
   padding: 6px;
   list-style: none;
-  background: #FFFFFF;
-  border: 1px solid #D6E0EF;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(41, 70, 111, .16);
   min-width: 140px;
@@ -185,14 +185,14 @@
   gap: 12px;
   padding: 8px 10px;
   border-radius: 8px;
-  color: #29466F;
+  color: var(--color-text);
   font-size: 13px;
   text-decoration: none;
   transition: background .12s;
 }
-.lang-switch__link:hover { background: #F3F6FB; }
+.lang-switch__link:hover { background: var(--color-bg-main); }
 .lang-switch__link.is-active { background: #EAF0FA; font-weight: 600; }
-.lang-switch__check { color: #5876A6; }
+.lang-switch__check { color: var(--color-accent); }
 
 /* --- Вариант: fab (плавающая иконка) --- */
 .lang-switch--fab {

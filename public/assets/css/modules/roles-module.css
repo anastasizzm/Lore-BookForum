@@ -457,7 +457,7 @@
 .roles-users__chevron {
   justify-self: end;
   color: var(--color-text-muted);
-  transition: transform var(--dur-fast, 150ms) ease;
+  transition: transform var(--dur-fast) ease;
 }
 
 .roles-users__item.is-expanded .roles-users__chevron {
@@ -501,7 +501,7 @@
   background: var(--color-accent);
   border: 0;
   border-radius: var(--radius-sm);
-  color: #fff;
+  color: var(--color-white);
   cursor: pointer;
 }
 
