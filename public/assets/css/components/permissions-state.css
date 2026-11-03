@@ -1,0 +1,31 @@
+/* ============================================
+   ПРАВА (permissions.js / Common Rules) — состояние неактивного элемента
+   ============================================
+   Контракт разметки: [data-requires] (+ data-requires-kind / -owner) с
+   data-requires-mode="disable": permissions.js (window.LorePermissions)
+   ставит aria-disabled="true" и .is-disabled, когда права нет.
+   Пока/если правила не подтвердились, элемент выглядит неактивным.
+
+   Правило живёт ЗДЕСЬ, а не в book.css: оно общее для страниц
+   book/article details И для форм (book-form.css / article-form.css
+   book.css не подключают, и кнопки Publish/Save остались бы
+   неактивными, но выглядящими рабочими). */
+[data-requires].is-disabled,
+[data-requires][aria-disabled='true'] {
+  color: var(--color-text-muted, var(--color-text-muted));
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[data-requires].is-disabled:hover,
+[data-requires].is-disabled:focus-visible,
+[data-requires][aria-disabled='true']:hover,
+[data-requires][aria-disabled='true']:focus-visible {
+  background: none;
+  color: var(--color-text-muted, var(--color-text-muted));
+}
+
+/* pointer-events: НЕ ставим — он бы убил подсказку title («Нет прав...»).
+   Нативные контролы глушит сам флаг disabled (permissions.js ставит его
+   в disable-режиме, браузер не даёт ни клика, ни submit); <a> остаются
+   кликабельными — итог всё равно проверяет бэкенд. */

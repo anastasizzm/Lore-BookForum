@@ -16,8 +16,8 @@
  * Контент полностью в resources/lang/{en,ru}/common.json, секция privacy —
  * страница статическая, JS не нужен.
  *
- * Стили — public/assets/css/privacy.css (.privacy-*); каркас панели — общие
- * .books-panel (component.css), шапка — partial page-header.
+ * Стили — public/assets/css/pages/privacy.css (.privacy-*); каркас панели — общие
+ * .books-panel (components/books-panel.css), шапка — partial page-header.
  */
 
 $view->setBlock('selectedTab', 'privacy');
@@ -53,7 +53,7 @@ $sectionIcons = [
 <?php $view->startBlock('title'); ?><?= $tr('common.privacy.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/privacy.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/privacy.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

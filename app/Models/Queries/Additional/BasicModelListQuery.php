@@ -8,7 +8,7 @@ use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\SortQuery;
 use App\Models\Queries\PropertiesQuery;
 
-final readonly class BasicModelListQuery
+readonly class BasicModelListQuery
 {
     public function __construct(
         public PaginationQuery $pagination,

@@ -2,32 +2,29 @@
 /**
  * card-draft — карточка черновика (книга или статья в статусе draft).
  *
- * Страница — src/views/pages/drafts/drafts.php (DR-02/DR-03/DR-08),
- * действия — public/assets/js/drafts.js.
+ * Страница — src/views/pages/drafts/drafts.php (DR-02/DR-03/DR-08).
  *
  * @param int    $id      — id публикации
  * @param string $type    — 'book' | 'article' (определяет ссылки ниже)
  * @param string $title   — название
  * @param string $cover   — адрес обложки или '' (тогда CSS-заглушка .cover--empty)
  * @param string $date    — уже отформатированная дата изменения (д.m.Y)
- * @param bool   $owner   — текущий пользователь — создатель: data-requires-owner
- *                          для кнопок «Опубликовать»/«Удалить» (показывает
- *                          permissions.js; чужие карточки гасятся до правил бэка)
  *
- * ССЫЛКИ:
- *   Продолжить → /books/new?id={id} (форма правки книги) или
- *                /articles/new?id={id}&part=meta (article-edit-meta,
- *                пока только разметка)
+ * ССЫЛКИ (роуты books.edit / articles.edit в config/routes.php нет —
+ * роуты заморожены, поэтому правка живёт на существующем роуте
+ * создания через query-параметр):
+ *   Продолжить → /books/new?id={id}                (book-form, edit-режим)
+ *                /articles/new?id={id}&part=meta    (article-edit-meta)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
- * ДЕЙСТВИЯ (drafts.js):
- *   Опубликовать → окно ролей: RightsModal (книги) / LoreArticlePublish
- *                  (статьи) → POST .../publish → карточка уходит из списка;
- *   Удалить      → ConfirmModal → DELETE /api/{books|articles}/{id}
- *                  → карточка уходит из списка.
+ * ДЕЙСТВИЯ (API уже существует в config/endpoints.php):
+ *   Опубликовать → POST   /api/{type}s/{id}/publish  (UpdateMetaPublicationOperation)
+ *   Удалить      → DELETE /api/{type}s/{id}          (DeletePublicationOperation)
+ *   Обрабатывает app.js (блок «Drafts: publish / delete»), делегирование по
+ *   [data-draft-publish] / [data-draft-delete] внутри [data-draft-id].
  *
  * Кнопки вместо ссылки-обёртки всего карточки (в отличие от card-book):
- * у черновика несколько взаимоисключающих действий, поэтому клик по обложке
+ * у черновика два взаимоисключающих действия, поэтому клик по обложке
  * или заголовку ведёт на «Открыть», а не на редактирование.
  */
 $id    = (int) ($id ?? 0);
@@ -35,19 +32,15 @@ $type  = ($type ?? 'book') === 'article' ? 'article' : 'book';
 $title = (string) ($title ?? '');
 $cover = (string) ($cover ?? '');
 $date  = (string) ($date ?? '');
-$owner = !empty($owner);
 
 $isArticle = $type === 'article';
 $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
-// Роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
-// заморожены) — раньше «Продолжить» давал 404. Правка живёт на
-// существующем роуте создания через query-параметр part=meta|content:
-//   книга  — /books/new?id={id} (book-form.php, edit-режим: префилл из
-//            JSON-блоба страницы книги, сохранение — PATCH /api/books/{id});
-//   статья — /articles/new?id={id}&part=meta → article-edit-meta.php
-//            (пока только разметка: префилла и отправки в ней ещё нет).
+// Роутов edit нет (см. шапку) — раньше «Продолжить» давал 404. Правка
+// размещена на роуте создания: книга — book-form.php в edit-режиме
+// (?id=N: префилл из JSON-блоба + PATCH /api/books/{id}), статья —
+// article-edit-meta.php (пока только разметка, без префилла и отправки).
 $editUrl = $id > 0
     ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
     : '#';
@@ -55,6 +48,11 @@ $editUrl = $id > 0
 $hasCover = $cover !== '';
 
 $typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts.type_book');
+
+// API-URL действий: собираются из $type и $id, чтобы JS не знал про типы.
+$apiBase    = '/api/' . ($isArticle ? 'articles' : 'books') . '/' . $id;
+$publishUrl = $id > 0 ? $apiBase . '/publish' : '';
+$deleteUrl  = $id > 0 ? $apiBase : '';
 ?>
 <article class="card-base card-draft<?= $hasCover ? '' : ' card-draft--no-cover' ?>"
          data-draft-type="<?= $view->e($type) ?>"
@@ -97,29 +95,24 @@ $typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts
     </a>
   </div>
 
-  <!-- Публикация и удаление (drafts.js). Обе кнопки рендерятся скрытыми:
-       показывает permissions.js по правилам /api/publications/rules,
-       $owner — owner-override (создатель публикации). Доступ по-настоящему
-       всё равно проверяет бэк. -->
-  <div class="card-draft__actions card-draft__actions--secondary">
+  <?php if ($id > 0): ?>
+  <div class="card-draft__manage">
     <button type="button"
-            class="btn btn--primary card-draft__publish"
+            class="btn btn--primary btn--sm card-draft__publish"
             data-draft-publish
-            data-requires="publication.publish"
-            data-requires-kind="<?= $view->e($type) ?>"
-            data-requires-owner="<?= $owner ? '1' : '0' ?>"
-            hidden>
+            data-draft-url="<?= $view->e($publishUrl) ?>"
+            aria-label="<?= $view->e($view->t('common.drafts.publish') . ': ' . $title) ?>">
       <?= $view->e($view->t('common.drafts.publish')) ?>
     </button>
     <button type="button"
-            class="card-draft__delete"
+            class="btn btn--danger btn--sm card-draft__delete"
             data-draft-delete
-            data-requires="publication.delete"
-            data-requires-kind="<?= $view->e($type) ?>"
-            data-requires-owner="<?= $owner ? '1' : '0' ?>"
-            hidden>
-      <?= $view->e($view->t('js.delete')) ?>
+            data-draft-url="<?= $view->e($deleteUrl) ?>"
+            data-confirm="<?= $view->e($view->t('common.drafts.delete_confirm', ['title' => $title])) ?>"
+            aria-label="<?= $view->e($view->t('common.drafts.delete') . ': ' . $title) ?>">
+      <?= $view->e($view->t('common.drafts.delete')) ?>
     </button>
   </div>
+  <?php endif; ?>
 
 </article>

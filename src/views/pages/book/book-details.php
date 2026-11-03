@@ -270,11 +270,9 @@ $bookPayload = [
 <?php $view->startBlock('title'); ?><?= $tr('common.book.page_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="/assets/css/book.css">
-  <!-- плашка выбора прав (кнопка публикации у черновика) -->
-  <link rel="stylesheet" href="/assets/css/rights-modal.css">
-  <!-- модуль «назначение ролей» внутри плашки публикации -->
-  <link rel="stylesheet" href="/assets/css/roles-module.css">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/rights-modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

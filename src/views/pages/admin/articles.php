@@ -1,25 +1,26 @@
 <?php
 /**
- * admin/articles — каркас таблицы статей админки.
+ * admin/articles — таблица статей админки.
  *
- * Статус: ЗАГЛОВКА без проверок прав (имена разрешений от бэка ждём)
- * и без запросов к API — API админки ещё нет.
+ * Строки рисует public/assets/js/admin/features/articles/list.js:
+ *   GET    /api/articles?include=creator&page=N&q=…
+ *   DELETE /api/articles/{id}
+ * Поиск уходит в API только по Enter (и при очистке поля крестиком),
+ * «Показать ещё» подгружает следующую страницу.
  *
- * Тип статьи — колонка articles.type ('content' — отдельная статья,
+ * Тип статьи — articles.type ('content' — отдельная статья,
  * 'book' — отрывок из книги; см. storage/db/schema.sql).
  *
- * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar).
+ * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
+ * .admin-badge, .admin-actions).
  */
 
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
-
-// ---- ЗАГЛУШКА: строки таблицы. Придут из GET /api/admin/articles ----
-$articles = [
-    ['id' => 1, 'title' => 'How to read slowly',   'type' => 'content', 'author' => 'anastasizzm', 'created' => '2026-10-02'],
-    ['id' => 2, 'title' => 'Chapter 3 excerpt',    'type' => 'book',    'author' => 'reader_one',  'created' => '2026-10-06'],
-    ['id' => 3, 'title' => 'Margins and memory',   'type' => 'content', 'author' => 'reader_one',  'created' => '2026-10-11'],
-];
+$tx = static function (string $key, string $fallback) use ($view): string {
+    $value = $view->t($key);
+    return $view->e(($value === '' || $value === $key) ? $fallback : $value);
+};
 ?>
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
@@ -37,20 +38,22 @@ $articles = [
     'subtitle' => $view->t('common.admin.articles_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+<p class="admin-toolbar__status" data-articles-status role="status" aria-live="polite"><?= $tx('common.admin.articles_loading', 'Loading articles…') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
          type="search"
          name="q"
+         data-articles-search
          placeholder="<?= $tr('common.admin.search_articles_ph') ?>"
          aria-label="<?= $tr('common.admin.search_articles_ph') ?>"
+         enterkeyhint="search"
          autocomplete="off">
-  <span class="admin-toolbar__count"><?= count($articles) ?></span>
+  <span class="admin-toolbar__count" data-articles-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-admin-table="articles">
+  <table class="admin-table" data-admin-table="articles" data-articles-table>
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
@@ -61,36 +64,18 @@ $articles = [
         <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
       </tr>
     </thead>
-    <tbody>
-      <?php foreach ($articles as $articleRow): $articleRow['id'] = (int) $articleRow['id']; ?>
-        <tr data-article-id="<?= $articleRow['id'] ?>">
-          <td class="admin-table__id"><?= $articleRow['id'] ?></td>
-          <td><span class="admin-table__clip" title="<?= $view->e($articleRow['title']) ?>"><?= $view->e($articleRow['title']) ?></span></td>
-          <td>
-            <?php if ($articleRow['type'] === 'book'): ?>
-              <span class="admin-badge admin-badge--accent"><?= $tr('common.admin.type_excerpt') ?></span>
-            <?php else: ?>
-              <span class="admin-badge"><?= $tr('common.admin.type_standalone') ?></span>
-            <?php endif; ?>
-          </td>
-          <td><?= $view->e($articleRow['author']) ?></td>
-          <td><?= $view->e($articleRow['created']) ?></td>
-          <td>
-            <div class="admin-actions">
-              <!-- TODO(роуты): url('articles.retrieve', ['articleId' => $articleRow['id']]) -->
-              <a class="btn btn--secondary" href="/articles/<?= $articleRow['id'] ?>"><?= $tr('common.admin.action_view') ?></a>
-            </div>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-
-      <?php if (!$articles): ?>
-        <tr class="admin-table__empty">
-          <td colspan="6"><?= $tr('common.admin.empty') ?></td>
-        </tr>
-      <?php endif; ?>
-    </tbody>
+    <tbody data-articles-rows></tbody>
   </table>
 </div>
 
+<div class="admin-users__more">
+  <button type="button" class="btn btn--secondary" data-articles-more hidden>
+    <?= $tx('common.admin.users_load_more', 'Show more') ?>
+  </button>
+</div>
+
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+<script type="module" src="<?= $view->asset('js/admin/main.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

@@ -10,7 +10,7 @@ readonly class PublicationPermissions extends Dto
 {
     public function __construct(
         public ?UserRole $role,
-        private int $roleId,
+        public int $roleId,
         public PublicationAccessRules $pubPermissions,
     ){}
 
@@ -26,8 +26,6 @@ readonly class PublicationPermissions extends Dto
             pubPermissions: PublicationAccessRules::fromRow($row, $prefix . 'pub_')
         );
     }
-
-    public function getRoleId() : int { return $this->roleId; }
 
     public function toArray() : array 
     {

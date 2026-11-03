@@ -1,0 +1,92 @@
+/* ============================================
+   DROPDOWN
+   ============================================ */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* Клавиатурный фокус: триггеры дропдаунов (в т.ч. «+ Add language»
+   в форме справочника) иначе почти не видны на светлом фоне */
+.dropdown__trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.dropdown__arrow {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.dropdown__menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: 160px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  list-style: none;
+  margin: 0;
+  display: none;
+  box-shadow: var(--shadow-card);
+  z-index: 30;
+
+  /* Новое: ограничение высоты и скролл */
+  max-height: 220px;      /* ~5 пунктов, посчитай под свой размер */
+  overflow-y: auto;
+}
+
+.dropdown.is-open .dropdown__menu {
+  display: block;
+}
+
+.dropdown__item {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+}
+
+.dropdown__item:hover {
+  background: var(--color-overlay);
+}
+
+.dropdown__item.is-active {
+  background: var(--color-overlay);
+  color: var(--color-text);
+  font-weight: var(--fw-medium);
+}
+
+/* Кастомный скроллбар для меню дропдауна */
+.dropdown__menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown__menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.dropdown__menu::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

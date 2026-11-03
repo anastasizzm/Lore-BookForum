@@ -1,0 +1,14 @@
+/* ============================================
+   INFO BOX
+   ============================================ */
+.info-box__title {
+  font-size: var(--fs-h2);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.info-box__body {
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  line-height: var(--lh-normal);
+}

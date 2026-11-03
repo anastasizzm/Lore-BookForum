@@ -31,18 +31,19 @@ $langField = $langQuery !== null && $langQuery !== ''
  *          $bookTitle   — название книги-источника (для режима «отрывок»);
  *          $coverUrl    — адрес уже загруженной обложки или '' (редактирование).
  *
- *   POST /api/articles         → api.articles.create.submit, AuthPolicy::Verified
- *        ФОЛБЭК action формы (см. $action ниже): без JS нативный POST уходит сюда,
- *        а не на несуществующий веб-роут /articles/save (его в config/routes.php
- *        нет — 404). Сохранение этим роутом не обслуживается: статья всегда уходит
- *        в API напрямую (article-form.js, JSON + CSRF-заголовок):
- *          • «Create draft»  → POST /api/articles, обязательно только название (title);
- *          • «Publish»       → POST /api/articles (черновик) → POST /api/articles/{id}/publish
- *            (окно выбора прав, article-publish.js); статья не готова к публикации →
- *            422 { errors: { field: [msg] } } и фронт возвращает пользователя на шаг
- *            с ошибками.
- *        «Create draft» после успеха ведёт на страницу статьи (/articles/{id}): там
- *        пометка «Черновик» и кнопка «Publish» внизу.
+ *   Сохранение идёт через JSON/multipart API, формы-POST нет:
+ *     создание   POST  /api/articles              (api.articles.create.submit → data-create-url)
+ *                      title, description, authorNotes, genreId, typeId, doi?, iconId?,
+ *                      content? | book[bookId|pageStart|pageEnd]  → 201 { createdId }
+ *     правка     PATCH /api/articles/{id}         + PUT /api/articles/{id}/content (If-Match)
+ *     обложка    POST  /api/files/upload          (category=cover) → iconId
+ *     публикация POST  /api/articles/{id}/publish (окно выбора прав, article-publish.js)
+ *   Поля жанр/тип/аннотация/заметка автора обязательны уже для черновика (так у бэка).
+ *   data-version — текущая версия контента для If-Match (необязательно: иначе берём из
+ *   ETag ответа GET /api/articles/{id}/content).
+ *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
+ *        «Create draft» после успеха ведёт на страницу статьи (redirect): там пометка
+ *        «Черновик» и кнопка «Publish» внизу.
  *
  *   POST /api/articles/{id}/publish  → api.articles.publish, AuthPolicy::Verified
  *        multipart: editor_ids[] (ID соавторов-редакторов, можно пусто). Повторно проверяет
@@ -124,11 +125,13 @@ if (!in_array($mode, ['standalone', 'excerpt'], true)) $mode = 'standalone';
 $genreValue = $val('genre');
 $typeValue  = $val('type');
 
-/* Форма сохраняется через API (см. article-form.js): POST /api/articles —
-   создание, PATCH /api/articles/{id} + PUT /api/articles/{id}/content — правка.
-   action — фолбэк для нативного submit без JS: раньше здесь был несуществующий
-   веб-роут /articles/save (его нет в config/routes.php) → 404. */
-$action = $withLang('/api/articles');
+/* Форма сохраняется через API (см. article-form.js): создание —
+   POST /api/articles (api.articles.create.submit), правка —
+   PATCH /api/articles/{id} + PUT /api/articles/{id}/content (If-Match).
+   action — фолбэк для нативного submit без JS: раньше здесь был
+   несуществующий веб-роут /articles/save (его в config/routes.php нет)
+   → 404. */
+$action = $withLang($view->url('api.articles.create.submit'));
 
 /* ---------- панель редактора ---------- */
 $toolbarButtons = [
@@ -217,13 +220,14 @@ if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.articleform.title_edit' : 'common.articleform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/cover-upload.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/forms/article-form.css') ?>">
   <!-- реальное имя файла article-right.css (article-rights.css не существует) -->
-  <link rel="stylesheet" href="<?= $view->asset('css/article-right.css') ?>">
-  <!-- модуль «назначение ролей» внутри окна публикации -->
-  <link rel="stylesheet" href="<?= $view->asset('css/roles-module.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
+  <!-- плашка ролей и людей публикации (publication-roles.js) -->
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/publication-roles.css') ?>">
+  <script src="<?= $view->asset('js/publication-roles.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
-  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
@@ -253,6 +257,8 @@ if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
           method="POST"
           id="articleForm"
           data-article-form
+          data-create-url="<?= $view->e($action) ?>"
+          data-version="<?= $view->e($val('version')) ?>"
           data-initial-errors="<?= $view->e(implode(',', $dirtyFields)) ?>"
           data-book-title="<?= $view->e($bookTitle) ?>"
           enctype="multipart/form-data"

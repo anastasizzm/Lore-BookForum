@@ -36,7 +36,7 @@ window.LoreArticlePublish = (function () {
     articleId: 0,
     onInvalid: null,
     onConflict: null,
-    // Колбэк публикации для страницы черновиков (drafts.js): вместо
+    // Колбэк публикации для страницы черновиков: вместо
     // перехода на /articles/{id} вызывается он (карточка уходит из списка).
     onPublished: null,
     mode: 'publish',               // publish | roles
@@ -255,7 +255,7 @@ window.LoreArticlePublish = (function () {
 
         if (res.ok && !isHtml) {
           var payload = (data && data.data) || data || {};
-          // Страница черновиков: карточка уходит из списка (drafts.js);
+          // Страница черновиков: карточка уходит из списка;
           // иначе — переход на опубликованную статью.
           if (typeof state.onPublished === 'function') {
             var cb = state.onPublished;

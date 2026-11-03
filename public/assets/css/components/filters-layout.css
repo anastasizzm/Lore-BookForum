@@ -1,0 +1,143 @@
+/* ============================================
+   FILTER PANEL — выравнивание всех контролов
+   ============================================ */
+.filter-panel__row > * {
+  box-sizing: border-box;
+}
+
+.filter-panel__row .tabs,
+.filter-panel__row .dropdown,
+.filter-panel__row .filter-input,
+.filter-panel__row .filter-reset {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filter-panel__row .tab,
+.filter-panel__row .dropdown__trigger,
+.filter-panel__row .filter-input,
+.filter-panel__row .filter-reset {
+  height: 40px;
+  box-sizing: border-box;
+  line-height: 1;
+  text-decoration: none;
+}
+
+/* ============================================
+   FILTER PANEL — адаптив
+   ============================================ */
+
+/* Планшет / средний экран — разрешаем нормальный перенос */
+@media (max-width: 1024px) {
+  .filter-panel__row {
+    align-items: flex-start;
+  }
+
+  /* Reset больше не липнет вправо в одиночку */
+  .filter-panel__row .filter-reset {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-panel {
+    padding: var(--space-2);
+  }
+
+  .filter-panel__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  /* Контейнер табов на всю ширину */
+  .filter-panel__row .tabs--segmented {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Кнопки внутри делят ширину поровну и центрируют текст */
+  .filter-panel__row .tabs--segmented .tab {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 0 var(--space-2);
+  }
+
+  /* Дропдауны, инпуты, reset — на всю ширину */
+  .filter-panel__row .dropdown,
+  .filter-panel__row .filter-input,
+  .filter-panel__row .filter-reset {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-panel__row .dropdown__trigger,
+  .filter-panel__row .filter-input,
+  .filter-panel__row .filter-reset {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-panel__row .filter-reset {
+    margin-left: 0;
+  }
+}
+
+/* Очень маленькие экраны (не даём кнопкам переполнить контейнер) */
+@media (max-width: 420px) {
+  .filter-panel__row .tabs--segmented {
+    overflow: visible; /* убираем горизонтальный скролл */
+  }
+
+  .filter-panel__row .tabs--segmented .tab {
+    flex: 1 1 auto;
+    padding: 0 4px; /* уменьшаем отступы */
+    font-size: 12px;
+    gap: 2px;
+  }
+
+  .filter-panel__row .tabs--segmented .tab__icon {
+    display: none; /* на самых узких экранах скрываем иконки, чтобы не ломать текст */
+  }
+}
+
+/* ============================================
+   FILTER PANEL — десктоп: всё в одну строку
+   (мобильная версия ≤768px не затрагивается)
+   ============================================ */
+@media (min-width: 769px) {
+  .filter-panel:not([hidden]) {
+    display: flex;
+    flex-wrap: wrap;          /* страховка: если не влезает — перенос, а не поломка */
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* Видимая строка не создаёт свой блок — её контролы встают в ряд панели.
+     :not([hidden]) важен, чтобы скрытые строки оставались скрытыми */
+  .filter-panel > .filter-panel__row:not([hidden]) {
+    display: contents;
+  }
+
+  /* Сегментированные табы: не на всю ширину, а по содержимому */
+  .filter-panel .tabs--segmented {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  /* Инпуты могут чуть сжиматься, чтобы строка вмещалась */
+  .filter-panel .filter-input {
+    flex: 0 1 200px;
+    min-width: 120px;
+  }
+
+  /* Reset — в правый край (перебивает margin-left: 0 из блока ≤1024px) */
+  .filter-panel .filter-panel__row .filter-reset {
+    margin-left: auto;
+  }
+}

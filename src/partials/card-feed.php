@@ -132,10 +132,8 @@ $liked = (bool) ($liked ?? false);
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
-            <p data-comment-error role="alert" hidden
-               style="color: red; margin-top: 8px; font-size: 14px; width: 100%;"></p>
-            <p data-comment-status role="status" hidden
-               style="color: green; margin-top: 8px; font-size: 14px; width: 100%;"></p>
+            <p class="comment-form__error" data-comment-error role="alert" hidden></p>
+            <p class="comment-form__status" data-comment-status role="status" hidden></p>
           </form>
 
           <!-- Ссылка «Show more» / «Show less» — только если у поста есть

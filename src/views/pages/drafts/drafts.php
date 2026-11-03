@@ -1,54 +1,11 @@
 <?php $view->extends('main'); ?>
-<?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
+<?php $tr = fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
 <?php
 /*
  * drafts — страница черновиков пользователя (DR-02, DR-03, DR-08).
- *
- * КОНТРАКТ С БЭКОМ (config/ и app/ для фронта заморожены):
- *
- *   GET /books/drafts    → BooksController::draftList   (meta.type = 'book')
- *   GET /articles/drafts → ArticlesController::draftList (meta.type = 'article')
- *        оба рендерят ЭТУ же вьюху, передавая:
- *          $user  — UserContext текущего пользователя (сайдбар);
- *          $items — список черновиков: каждый элемент — массив ИЛИ объект
- *                    (Publication/Book/Article) с полями:
- *                      id        — int
- *                      type      — 'book' | 'article'
- *                                  (если объект — определяется по классу)
- *                      title     — string
- *                      icon      — Uuid|string обложки (как Publication->iconId)
- *                                  или готовый URL в 'cover'/'iconUrl'
- *                      creator   — UserShortData (properties=creator): нужен,
- *                                  чтобы отличить СВОИ черновики от чужих
- *                      updatedAt — DateTimeInterface|string (приоритет)
- *                      createdAt — DateTimeInterface|string (фолбэк даты)
- *          $meta  — ['page' => int, 'pageSize' => int, 'hasNext' => bool,
- *                    'type' => 'book'|'article'] (пагинация + раздел);
- *          $filterState — ?f= (панель фильтров читает сама).
- *
- *   ФИЛЬТРЫ — тот же partial, что в библиотеке (library-filters), но в режиме
- *   $draftMode: без вкладок публикации (бэк всегда шлёт status=draft) и без
- *   статуса ЧТЕНИЯ (контекст читателя). Пилюля «Книги/Статьи» меняет href на
- *   /books/drafts ↔ /articles/drafts. Работают: ?q=, ?genre=, ?isbn= (книги),
- *   ?type= и ?doi= (статьи) — рендер серверный, фильтр — переходом по ссылке.
- *   Контракт fromDraft — app/Models/Filters/Publications/*Filters.php.
- *
- *   ДЕЙСТВИЯ С КАРТОЧКИ (drafts.js):
- *     Удалить   — ConfirmModal → DELETE /api/{books|articles}/{id} → карточка
- *                 уходит из списка (без редиректа);
- *     Публикация — через окно ролей: книги RightsModal.open({mode:'publish'}),
- *                 статьи LoreArticlePublish.open(id); 409 (нет контента) —
- *                 тост errors.books.content_pdf / errors.article.publish_no_content.
- *
- *   Ссылка «Продолжить»: книги → /books/new?id={id} (форма правки, book-form.js),
- *   статьи → /articles/new?id={id}&part=meta (article-edit-meta, пока только
- *   разметка — см. card-draft).
- *   «Открыть» → /books/{id} или /articles/{id}.
- *
- * Стили — public/assets/css/drafts.css (.card-draft*).
- * Карточка — src/partials/card-draft.php (DR-03).
- * JS — public/assets/js/drafts.js (удаление/публикация/сброс фильтров).
+ * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts")
+ * + drafts-filters.js (publish / delete).
  */
 
 $view->setBlock('selectedTab', 'drafts');
@@ -62,35 +19,8 @@ $page     = max(1, (int) ($meta['page'] ?? 1));
 $pageSize = (int) ($meta['pageSize'] ?? 0);
 $hasNext  = (bool) ($meta['hasNext'] ?? false);
 
-// Раздел: контроллер пишет meta.type; иначе — по пути (страницу можно
-// открыть и через тест-роут /pages/test).
-$currentPath  = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
-$isArticles   = ($meta['type'] ?? null) === 'article';
-if (($meta['type'] ?? null) === null) {
-    $isArticles = str_contains($currentPath, '/articles');
-}
-
-// Текущий пользователь — чтобы пометить СВОИ карточки (data-requires-owner):
-// публикация/удаление чужого черновика бэк не пропустит, кнопки на чужих
-// карточках гасит permissions.js.
-$currentUserId = (int) ($user->id ?? 0);
-
-// Активные фильтры: при них «нет ни одного черновика» (DR-08) не показываем —
-// вместо него отрисуется «на этой странице пусто» + панель фильтров.
-$hasActiveFilters = false;
-foreach (['q', 'genre', 'isbn', 'doi', 'type', 'kind'] as $fk) {
-    if (isset($_GET[$fk]) && is_scalar($_GET[$fk]) && trim((string) $_GET[$fk]) !== '') {
-        $hasActiveFilters = true;
-        break;
-    }
-}
-
 $coversBase = '/uploads/covers/';
 
-/**
- * Дата элемента: updatedAt приоритетнее createdAt; строка проходит как есть.
- * Формат d.m.Y — как на book-details / article-details.
- */
 $draftDate = static function (object|array $item): string {
     foreach (['updatedAt', 'createdAt'] as $key) {
         $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
@@ -100,7 +30,6 @@ $draftDate = static function (object|array $item): string {
     return '';
 };
 
-/** Тип: явное поле type → имя класса модели → 'book'. */
 $draftType = static function (object|array $item): string {
     $raw = is_array($item) ? ($item['type'] ?? null) : ($item->type ?? null);
     if (is_string($raw)) {
@@ -115,14 +44,12 @@ $draftType = static function (object|array $item): string {
     return 'book';
 };
 
-/** Значение поля: массив или объект — читаем одинаково. */
 $pick = static function (object|array $item, array $keys, string $default = '') use ($coversBase): string {
     foreach ($keys as $key) {
         $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
         if ($raw instanceof \Stringable) $raw = (string) $raw;
         if ($raw === null || $raw === '') continue;
         if (is_string($raw)) {
-            // UUID обложки (как Publication->iconId) -> путь загрузки
             if ($key === 'icon' || $key === 'iconId') return $coversBase . $raw;
             return $raw;
         }
@@ -133,16 +60,8 @@ $pick = static function (object|array $item, array $keys, string $default = '') 
 $cards = [];
 foreach ($drafts as $one) {
     if (!is_array($one) && !is_object($one)) continue;
-
     $id = (int) (is_array($one) ? ($one['id'] ?? 0) : ($one->id ?? 0));
     if ($id <= 0) continue;
-
-    // Создатель (properties=creator): data-requires-owner в card-draft —
-    // кнопки «Опубликовать»/«Удалить» показывает permissions.js только на
-    // СВОИХ карточках (или когда правила бэка дают право глобально).
-    $creatorRaw = is_array($one) ? ($one['creator'] ?? null) : ($one->creator ?? null);
-    $creatorId  = (int) (is_array($creatorRaw) ? ($creatorRaw['id'] ?? 0)
-                        : (is_object($creatorRaw) ? ($creatorRaw->id ?? 0) : 0));
 
     $cards[] = [
         'id'    => $id,
@@ -150,18 +69,15 @@ foreach ($drafts as $one) {
         'title' => $pick($one, ['title'], ''),
         'cover' => $pick($one, ['cover', 'iconUrl', 'icon', 'iconId']),
         'date'  => $draftDate($one),
-        'owner' => $currentUserId > 0 && $creatorId > 0 && $creatorId === $currentUserId,
     ];
 }
 
-/**
- * Локаль и адрес страницы для ссылок пагинации: путь берём из URI
- * ($currentPath посчитан выше).
- */
 $currentLang = $_GET['lang'] ?? null;
 if (!is_string($currentLang) || $currentLang === '') {
     $currentLang = method_exists($view, 'locale') ? $view->locale() : null;
 }
+
+$currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
 
 $pageLink = static function (int $to) use ($currentPath, $currentLang): string {
     parse_str((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_QUERY), $q);
@@ -173,70 +89,62 @@ $pageLink = static function (int $to) use ($currentPath, $currentLang): string {
 
 $shown = ($page - 1) * $pageSize + count($cards);
 
-/** Совсем нет черновиков (а не «страница пагинации опустела»). При активных
- *  фильтрах это «ничего не нашлось» — тогда показываем сетку + панель. */
-$isEmptyAll = empty($cards) && $page <= 1 && !$hasActiveFilters && !$hasNext;
+// Есть ли активные фильтры: тогда пустой список — результат фильтра, а не «черновиков нет совсем»
+$hasFilters = false;
+foreach (['q', 'genre', 'kind', 'ctype'] as $fk) {
+    if (isset($_GET[$fk]) && $_GET[$fk] !== '') { $hasFilters = true; break; }
+}
+$isEmptyAll = empty($cards) && $page <= 1 && !$hasNext && !$hasFilters;
+
+// По умолчанию панель фильтров открыта; закрыта только при ?f=closed (как в library-filters)
+$fRaw        = $_GET['f'] ?? null;
+$filter_open = !(is_string($fRaw) && strtolower($fRaw) === 'closed');
+$searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '';
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr('common.drafts.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/drafts.css') ?>">
-  <!-- Окно публикации, которое рендерит этот раздел (см. конец content) -->
-  <link rel="stylesheet" href="<?= $view->asset('css/roles-module.css') ?>">
-  <?php if ($isArticles): ?>
-    <link rel="stylesheet" href="<?= $view->asset('css/article-right.css') ?>">
-  <?php else: ?>
-    <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
-  <?php endif; ?>
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/drafts.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
 
 <?php
-// Поиск + кнопка фильтров в шапке (как в библиотеке): ввод ?q= применяется
-// по Enter (filters.js), кнопка раскрывает панель (?f=).
-ob_start();
-$view->include('input', [
-    'type'        => 'search',
-    'name'        => 'q',
-    'placeholder' => $view->t($isArticles ? 'common.library.search_articles' : 'common.library.search_books'),
-    'value'       => isset($_GET['q']) && is_scalar($_GET['q']) ? (string) $_GET['q'] : '',
-]);
-?>
-<button type="button"
-        class="btn-icon filter-toggle"
-        data-filter-toggle
-        aria-label="<?= $tr('common.common.filters') ?>">
-  <span>&#9776;</span>
-</button>
-<?php $pageActions = ob_get_clean(); ?>
+// Поиск и кнопка фильтров нужны, только когда есть что фильтровать
+$pageActions = '';
+if (!$isEmptyAll) {
+    ob_start();
+    $view->include('input', [
+        'type'        => 'search',
+        'name'        => 'q',
+        'placeholder' => $view->t('common.feed.search'),
+        'value'       => $searchQuery,
+    ]);
+    ?>
+    <button type="button"
+            class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
+            data-filter-toggle
+            aria-label="<?= $tr('common.common.filters') ?>">
+      <span>&#9776;</span>
+    </button>
+    <?php
+    $pageActions = ob_get_clean();
+}
 
-<?php $view->include('page-header', [
+$view->include('page-header', [
     'title'    => $view->t('common.drafts.title'),
     'subtitle' => $view->t('common.drafts.subtitle'),
     'actions'  => $pageActions,
-]); ?>
-
-<?php
-// Панель фильтров — та же, что в библиотеке, но в режиме черновиков:
-// без статусов публикации/чтения; пилюля Книги/Статьи ведёт на соседний
-// роут черновиков (/books/drafts ↔ /articles/drafts).
-$view->include('library-filters', [
-    'bookHref'    => '/books/drafts',
-    'articleHref' => '/articles/drafts',
-    'draftMode'   => true,
 ]);
-?>
 
-<?php // Скрытый токен CSRF — его читает csrf.js (запасной вариант к куке) ?>
-<div hidden data-csrf><?= $view->csrfField() ?></div>
+if (!$isEmptyAll) {
+    $view->include('library-filters', ['mode' => 'drafts']);
+}
+?>
 
 <?php if ($isEmptyAll): ?>
 
-  <!-- ============================================================
-       ПУСТОЕ СОСТОЯНИЕ (DR-08): ни одной строки от бэка
-       ============================================================ -->
   <section class="books-panel drafts-panel">
     <div class="empty-state drafts-empty">
       <div class="drafts-empty__icon" aria-hidden="true">
@@ -257,7 +165,14 @@ $view->include('library-filters', [
 
 <?php else: ?>
 
-  <section class="books-panel drafts-panel" data-drafts-page>
+  <section class="books-panel drafts-panel"
+           data-drafts
+           data-list="drafts"
+           data-list-hydrate
+           data-api-books="/api/books"
+           data-api-articles="/api/articles"
+           data-initial-page="<?= $page ?>"
+           data-initial-has-next="<?= $hasNext ? '1' : '0' ?>">
 
     <header class="books-panel__head">
       <div class="books-panel__title-wrap">
@@ -271,70 +186,37 @@ $view->include('library-filters', [
         <div>
           <h2 class="books-panel__title"><?= $tr('common.drafts.panel_title') ?></h2>
           <p class="books-panel__meta">
-            <span data-drafts-count><?= $shown ?></span><?= $hasNext ? '+' : '' ?>
+            <span data-drafts-count><?= $shown ?></span><span data-drafts-plus <?= $hasNext ? '' : 'hidden' ?>>+</span>
             <?= $tr('common.drafts.count_suffix') ?>
           </p>
         </div>
       </div>
+
+      <?php $view->include('list-sort'); ?>
     </header>
 
-    <?php if (empty($cards)): ?>
-      <!-- Страница есть, но на ней пусто (пагинация увела дальше): ниже
-           остаётся pager, чтобы вернуться назад -->
-      <p class="empty-state__text"><?= $tr('common.drafts.none_page') ?></p>
-    <?php else: ?>
-      <div class="grid-books drafts-grid">
-        <?php foreach ($cards as $card): ?>
-          <?php $view->include('card-draft', $card); ?>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+    <?php /* Пустое сообщение, сетка и «Показать ещё» рендерятся всегда: filters.js переключает их без перезагрузки */ ?>
+    <p class="empty-state__text" data-drafts-empty <?= empty($cards) ? '' : 'hidden' ?>><?= $tr('common.drafts.none_page') ?></p>
 
-    <?php if ($page > 1 || $hasNext): ?>
-      <nav class="books-panel__pager" aria-label="<?= $tr('common.drafts.pagination') ?>">
-        <?php if ($page > 1): ?>
-          <a class="btn btn--secondary" href="<?= $view->e($pageLink($page - 1)) ?>">
-            <?= $tr('common.drafts.prev') ?>
-          </a>
-        <?php endif; ?>
-        <?php if ($hasNext): ?>
-          <a class="btn btn--secondary" href="<?= $view->e($pageLink($page + 1)) ?>">
-            <?= $tr('common.drafts.next') ?>
-          </a>
-        <?php endif; ?>
-      </nav>
-    <?php endif; ?>
+    <div class="grid-books drafts-grid" data-drafts-grid <?= empty($cards) ? 'hidden' : '' ?>>
+      <?php foreach ($cards as $card): ?>
+        <?php $view->include('card-draft', $card); ?>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="feed-panel__load-more" data-drafts-more <?= $hasNext ? '' : 'hidden' ?>>
+      <button type="button" class="btn btn--secondary" data-drafts-load-more>
+        <?= $tr('common.common.load_more') ?>
+      </button>
+    </div>
 
   </section>
 
 <?php endif; ?>
 
-  <!-- Окна публикации для кнопки на карточке (drafts.js): книги —
-       rights-modal + модуль ролей (POST /api/books/{id}/publish), статьи —
-       article-rights-dialog (POST /api/articles/{id}/publish). На странице
-       только ОДНО окно: разделы живут на разных роутах (/books/drafts ↔
-       /articles/drafts), а roles-module.php содержит id — дважды на странице
-       они бы задублировались. -->
-  <?php if ($isArticles): ?>
-    <?php $view->include('article-rights-dialog'); ?>
-  <?php else: ?>
-    <?php $view->include('rights-modal'); ?>
-  <?php endif; ?>
-
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-  <?php if ($isArticles): ?>
-    <!-- publication-roles.js — окно статей подтягивает список ролей
-         (window.LorePubRoles, см. article-publish.js) -->
-    <script src="<?= $view->asset('js/publication-roles.js') ?>"></script>
-    <script src="<?= $view->asset('js/article-publish.js') ?>"></script>
-  <?php else: ?>
-    <script src="<?= $view->asset('js/rights-modal.js') ?>"></script>
-  <?php endif; ?>
-  <!-- roles-module.js — модуль «назначение ролей» внутри окна публикации
-       (window.LoreRoles; подключается после самого окна) -->
-  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
-  <!-- drafts.js — удаление и публикация черновика из списка, сброс фильтров -->
-  <script src="<?= $view->asset('js/drafts.js') ?>"></script>
+<script src="<?= $view->asset('js/filters.js') ?>"></script>
+<script src="<?= $view->asset('js/drafts-filters.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -1,0 +1,40 @@
+/* ============================================
+   AVATAR
+   ============================================ */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-overlay);
+  color: var(--color-text);
+  font-weight: var(--fw-medium);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar--sm { width: 32px; height: 32px; font-size: var(--fs-small); }
+.avatar--md { width: 44px; height: 44px; font-size: var(--fs-body); }
+.avatar--lg { width: 72px; height: 72px; font-size: var(--fs-h2); }
+
+/* Аватар-эмодзи: размер шрифта подбирается под размер кружка */
+.avatar--emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-weight: var(--fw-regular);
+  line-height: 1;
+  user-select: none;
+}
+.avatar--emoji.avatar--sm { font-size: 18px; }
+.avatar--emoji.avatar--md { font-size: 26px; }
+.avatar--emoji.avatar--lg { font-size: 42px; }
+
+/* Аватар-пресет из настроек профиля (cat/dog/…) — эмодзи вместо <img> */
+.avatar__emoji {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+/* Фон пресета: цвет приходит из avatar-presets.php / avatar.js через --avatar-bg */
+.avatar--preset {
+  background: var(--avatar-bg, var(--color-overlay));
+}

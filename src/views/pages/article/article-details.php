@@ -215,12 +215,9 @@ if (!empty($iconId)) {
 <?php $view->startBlock('title'); ?><?= $tr('common.article.page_title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="/assets/css/book.css">
-  <!-- publish-bar и бейдж черновика — стили book.css (подключён выше);
-       article-right.css — окно выбора прав при публикации статьи -->
-  <link rel="stylesheet" href="/assets/css/article-right.css">
-  <!-- модуль «назначение ролей» внутри окна публикации -->
-  <link rel="stylesheet" href="/assets/css/roles-module.css">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

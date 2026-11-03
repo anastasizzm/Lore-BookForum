@@ -1,0 +1,21 @@
+/* ============================================
+   TAGS
+   ============================================ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.tag__icon {
+  display: inline-flex;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.tag__value {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}

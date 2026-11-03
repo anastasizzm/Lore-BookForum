@@ -1,0 +1,700 @@
+/* ============================================
+   PROFILE LAYOUT — 2 columns (main + sidebar)
+   ============================================ */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 1024px) {
+  .profile-layout {
+    grid-template-columns: 2fr 1fr;
+    align-items: start;
+  }
+}
+
+.profile-layout__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.profile-layout__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ============================================
+   PROFILE HEADER
+   ============================================ */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.profile-header__avatar {
+  flex-shrink: 0;
+}
+
+.profile-header__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-header__name {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0 0 var(--space-1);
+}
+
+.profile-header__username {
+  font-size: var(--fs-body);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.profile-header__edit {
+  margin-left: auto;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   POSTS
+   ============================================ */
+.profile-posts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-posts__title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+}
+
+.profile-post {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.profile-posts__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-post__title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+  margin: 0;
+  text-decoration: none;
+}
+
+a.profile-post__title:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.profile-post__text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.profile-post__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+}
+
+.profile-posts__more {
+  align-self: flex-start;
+  margin-top: var(--space-2);
+}
+
+.profile-post__books {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.profile-post__book {
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.profile-post__book img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================
+   SIDEBAR BOXES (Biography, Publications)
+   ============================================ */
+.profile-sidebar-box {
+  padding: var(--space-4);
+}
+
+.profile-sidebar-box__title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-3);
+}
+
+.profile-sidebar-box__text {
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.profile-sidebar-box__text--muted {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* ============================================
+   PAGINATION
+   ============================================ */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+
+.pagination__btn:hover {
+  background: var(--color-overlay);
+}
+
+.pagination__btn--active {
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+  cursor: default;
+}
+
+.pagination__btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ============================================
+   CARD-BASE OVERRIDE — точечно для карточек профиля
+   ============================================ */
+.profile-header.card-base,
+.profile-sidebar-box.card-base,
+.profile-post.card-base {
+  border-width: 2px;
+  border-style: solid;
+  border-color: var(--border-card-color);
+  border-radius: var(--radius-lg);
+}
+
+/* ============================================
+   PROFILE EDIT FORM
+   ============================================ */
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.profile-edit__section-title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.profile-edit__section-subtitle {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+}
+
+/* Форма — ограничена по ширине, поля не растягиваются на весь экран */
+.profile-edit form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.profile-edit .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.profile-edit .form-field label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--color-text);
+}
+
+.profile-edit .form-field__input--textarea {
+  min-height: 120px;
+  padding: var(--space-3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--lh-normal);
+}
+
+.profile-edit__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  width: 100%;
+}
+
+/* ============================================
+   PROFILE EDIT — две формы на одном экране
+   ============================================ */
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  align-items: start;   /* ← ключевое: элементы не растягиваются по высоте ряда */
+}
+
+@media (min-width: 1024px) {
+  .profile-edit-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Каждая форма — по своей высоте, без растяжения под соседа */
+.profile-edit-grid > .profile-edit {
+  height: auto;
+  align-self: start;
+}
+
+/* ============================================
+   PROFILE EDIT — MOBILE
+   ============================================ */
+@media (max-width: 480px) {
+  .profile-edit form,
+  .profile-edit__actions {
+    max-width: 100%;
+  }
+
+  .profile-edit__actions {
+    flex-direction: column-reverse;
+  }
+
+  .profile-edit__actions .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================
+   FORM ROW — Name + Surname в одну строку
+   ============================================ */
+.form-row--two-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 380px));
+  gap: var(--space-3);
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .form-row--two-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   AVATAR PICKER
+   ============================================ */
+.avatar-picker__option[data-avatar] .avatar-picker__visual--preset {
+  background: var(--avatar-bg, var(--color-overlay));
+}
+
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+
+.avatar-picker__option {
+  display: inline-block;
+  cursor: pointer;
+  position: relative;
+  animation: avatar-pop-in .35s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.avatar-picker__option:nth-child(1) { animation-delay: 0.00s; }
+.avatar-picker__option:nth-child(2) { animation-delay: 0.05s; }
+.avatar-picker__option:nth-child(3) { animation-delay: 0.10s; }
+.avatar-picker__option:nth-child(4) { animation-delay: 0.15s; }
+.avatar-picker__option:nth-child(5) { animation-delay: 0.20s; }
+.avatar-picker__option:nth-child(6) { animation-delay: 0.25s; }
+.avatar-picker__option:nth-child(7) { animation-delay: 0.30s; }
+.avatar-picker__option:nth-child(8) { animation-delay: 0.35s; }
+
+@keyframes avatar-pop-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.avatar-picker__radio {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.avatar-picker__visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  font-size: 32px;
+  line-height: 1;
+  background: #f1f5f9;
+  transition:
+    border-color .2s ease,
+    transform .25s cubic-bezier(.34, 1.56, .64, 1),
+    box-shadow .25s ease,
+    filter .15s ease;
+  will-change: transform;
+}
+
+/* Фон под цвет каждой иконки */
+.avatar-picker__option[data-avatar="default"] .avatar-picker__visual { background: #dde5f0; }
+.avatar-picker__option[data-avatar="cat"]     .avatar-picker__visual { background: #ffe1c9; }
+.avatar-picker__option[data-avatar="dog"]     .avatar-picker__visual { background: #f3dfc4; }
+.avatar-picker__option[data-avatar="fox"]     .avatar-picker__visual { background: #ffd2b0; }
+.avatar-picker__option[data-avatar="owl"]     .avatar-picker__visual { background: #e4d3c3; }
+.avatar-picker__option[data-avatar="robot"]   .avatar-picker__visual { background: #d7e2f1; }
+.avatar-picker__option[data-avatar="star"]    .avatar-picker__visual { background: #fff2b8; }
+.avatar-picker__option[data-avatar="book"]    .avatar-picker__visual { background: #dcd4f0; }
+
+/* Hover: подъём + тень */
+.avatar-picker__option:hover .avatar-picker__visual {
+  transform: translateY(-4px) scale(1.08);
+  box-shadow: 0 8px 16px rgba(41, 70, 111, .18);
+  filter: brightness(1.02);
+}
+
+.avatar-picker__option:hover .avatar-picker__emoji,
+.avatar-picker__option:hover .avatar-picker__initials {
+  animation: avatar-wiggle .6s ease-in-out;
+}
+
+@keyframes avatar-wiggle {
+  0%   { transform: rotate(0deg); }
+  25%  { transform: rotate(-8deg); }
+  50%  { transform: rotate(8deg); }
+  75%  { transform: rotate(-4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Выбранный — рамка + пульсация */
+.avatar-picker__option.is-selected .avatar-picker__visual {
+  border-color: var(--color-text);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(41, 70, 111, .18);
+  animation: avatar-pulse .45s ease-out;
+}
+
+@keyframes avatar-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(41, 70, 111, .35); }
+  50%  { box-shadow: 0 0 0 10px rgba(41, 70, 111, 0); }
+  100% { box-shadow: 0 0 0 3px rgba(41, 70, 111, .18); }
+}
+
+.avatar-picker__emoji,
+.avatar-picker__initials {
+  display: inline-block;
+  transform-origin: center;
+}
+
+.avatar-picker__emoji {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.avatar-picker__initials {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: .02em;
+}
+
+/* ============================================
+   FORM FIELD ERRORS
+   ============================================ */
+.form-field__input--invalid {
+  border-color: #dc2626;
+}
+
+.form-field__input--invalid:focus-visible {
+  outline-color: #dc2626;
+}
+
+.form-field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #dc2626;
+  line-height: 1.3;
+}
+
+/* Сохраняем высоту, но ничего не показываем, когда ошибок нет */
+.form-field__error:empty {
+  visibility: hidden;
+}
+
+.field-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: var(--color-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  animation: error-pop .25s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+
+.field-error-text {
+  color: #dc2626;
+  font-size: 13px;
+}
+
+@keyframes error-pop {
+  0%   { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   PREFERS REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .avatar-picker__option,
+  .avatar-picker__visual,
+  .avatar-picker__emoji,
+  .avatar-picker__initials {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================================
+   PROFILE PUBLICATIONS — sidebar block
+   ============================================ */
+.profile-publications {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.profile-publications__item,
+.profile-publications__link {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: background .15s ease;
+}
+
+.profile-publications__item:hover,
+.profile-publications__link:hover {
+  background: var(--color-overlay, #f1f5f9);
+}
+
+.profile-publications__cover {
+  flex-shrink: 0;
+  width: 36px;
+  height: 50px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-publications__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-publications__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-publications__title {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+.profile-publications__meta {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.profile-publications__more {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.profile-publications__more:hover {
+  opacity: 0.75;
+  transform: translateX(2px);
+}
+
+.profile-publications__more::after {
+  content: " \2192";
+  display: inline-block;
+  transition: transform .15s ease;
+}
+
+/* ============================================
+   PUBLICATIONS PAGE — grid
+   ============================================ */
+.grid-publications {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.publication-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .15s ease;
+}
+
+.publication-card:hover {
+  transform: translateY(-2px);
+}
+
+.publication-card__cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-border-light);
+}
+
+.publication-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.publication-card__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.publication-card__meta {
+  font-size: 12px;
+  color: #64748b;
+}

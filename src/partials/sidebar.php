@@ -14,6 +14,11 @@
       return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
   };
 
+  $urlPath = static function (string $path) use ($langQuery): string {
+      if ($langQuery === null || $langQuery === '') return $path;
+      return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+  };
+
   $langUrl = static function (string $code): string {
       $uri  = $_SERVER['REQUEST_URI'] ?? '/';
       $path = parse_url($uri, PHP_URL_PATH) ?: '/';
@@ -43,13 +48,13 @@
   $meAvatar      = is_object($me ?? null) ? (string) ($me->avatar ?? '') : '';
   $mePreset      = $avatarPresets[$meAvatar] ?? null;
 
+  // Админка: роут 'admin' (AuthPolicy::Admin). Пункт в меню «Ещё» виден только админу;
+  // сам доступ всё равно проверяет роут.
   $canOpenAdmin = is_object($me ?? null) && !empty($me->isAdmin);
-  $adminUrl     = '/admin'
-      . ($langQuery !== null && $langQuery !== '' ? '?lang=' . urlencode($langQuery) : '');
+  $adminUrl     = $url('admin');
 
-  // Ссылка «Черновики» ведёт на страницу черновиков (роут books.drafts):
-  // список draft-книг текущего пользователя, а не библиотека с
-  // ?p_status=draft (там видны и чужие публикации).
+  // «Черновики» ведут на роут books.drafts — по умолчанию открываются книги.
+  // Переключение на статьи — внутри страницы (articles.drafts).
   $draftsUrl = $url('books.drafts');
 ?>
 <aside class="sidebar" data-sidebar>

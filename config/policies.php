@@ -71,7 +71,7 @@ foreach([
 }
 
 // Common Access
-define('PUB_PATTERN_COMMON', "#(books|articles)\/#");
+define('PUB_PATTERN_COMMON', "#(?:books|articles|publications)\/#");
 define('POST_PATTERN_COMMON', "#posts\/#");
 define('ACC_PATTERN_COMMON', "#users\/#");
 

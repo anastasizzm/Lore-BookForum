@@ -28,7 +28,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        после 422 от веб-роута: $form (значения полей) и
  *        $errors (['title' => ['msg'], ...]).
  *
- *   POST /api/books/ → роут api.books.create.submit (config/
+ *   POST /api/books/new → роут api.books.create.submit (config/
  *        endpoints.php), AuthPolicy::Verified + CSRF (поле _token или
  *        заголовок X-CSRF-Token). Accept: application/json.
  *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
@@ -64,7 +64,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   БИНАРНЫЕ ФАЙЛЫ — НЕ в этом POST: обложка и файлы книги грузятся
  *   отдельно через POST /api/files/upload (file + category →
  *   201 { createdId: uuid }), id подставляются в iconId / contentIds[].
- *   Поэтому payload /api/books/ собирается из полей формы, а файлы
+ *   Поэтому payload /api/books/new собирается из полей формы, а файлы
  *   book-form.js передаст отдельным запросом (см. F2-02 ниже).
  *
  *   РЕЖИМ РЕДАКТИРОВАНИЯ (?id=N): веб-роута /books/{id}/edit и
@@ -89,14 +89,12 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   со страницы книги), кнопки — «Отмена» / «Сохранить».
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
- *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
- *        и на book-details, и здесь. Из формы (11.4) публикация идёт второй
- *        фазой после создания черновика — POST /api/books/{id}/publish, затем
- *        открывается плашка с модулем ролей ( RightsModal.open(
- *        { mode:'after-publish', bookId, redirect } ) ): назначаем роли и
- *        Publish ведёт на страницу книги. Права (rights-modal) из формы
- *        не выбираются — только модуль ролей.
- *   POST /api/books/{id}/publish            — черновик → published; используется
+ *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
+ *        ТОЛЬКО на book-details; из формы (11.4) публикация идёт второй
+ *        фазой после создания черновика — POST /books/{id}/publish,
+ *        при неудаче редирект на страницу книги (права можно выставить
+ *        там). Права (rights-modal) из формы не выбираются.
+ *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
  *        также кнопкой Publish в форме создания
@@ -127,8 +125,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
  *   Опубликовать» вынесены из шагов в общую панель .book-form__actions
  *   внутри <form> (sticky, видна на всех шагах); «Назад» скрыта на
- *   шаге 1. Publish: POST /api/books/ → 201 { createdId } →
- *   POST /api/books/{id}/publish; при неудаче publish — черновик уже
+ *   шаге 1. Publish: POST /api/books/new → 201 { createdId } →
+ *   POST /books/{id}/publish; при неудаче publish — черновик уже
  *   создан, редирект на страницу книги (см. book-form.js).
  *
  *   ОКНО ПУБЛИКАЦИИ (11.3): списки авторов/редакторов переехали из
@@ -323,13 +321,9 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/book-form.css') ?>">
-  <!-- плашка публикации (после создания книги) + модуль ролей внутри неё -->
-  <link rel="stylesheet" href="<?= $view->asset('css/rights-modal.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/roles-module.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/cover-upload.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/forms/book-form.css') ?>">
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
-  <script src="<?= $view->asset('js/rights-modal.js') ?>" defer></script>
-  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -356,11 +350,11 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
        ============================================================ -->
   <section class="book-form card-base">
 
-    <!-- Форма шлёт JSON-эндпоинт бэка: POST /api/books/ (роут
+    <!-- Форма шлёт JSON-эндпоинт бэка: POST /api/books/new (роут
          api.books.create.submit в config/endpoints.php), multipart +
          CSRF (_token / X-CSRF-Token), Accept: application/json.
          ?lang= в action — чтобы бэк вернул ответ в той же локали. -->
-    <form action="<?= $view->e($withLang('/api/books/')) ?>"
+    <form action="<?= $view->e($withLang($view->url('api.books.create.submit'))) ?>"
           method="POST"
           id="bookForm"
           data-book-form
@@ -514,7 +508,7 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
         </div>
 
         <!-- ОБЛОЖКА: превью показывает book-form.js (object URL).
-             У input НЕТ name: бинарник не входит в payload /api/books/ —
+             У input НЕТ name: бинарник не входит в payload /api/books/new —
              book-form.js грузит его отдельным POST /api/files/upload
              (category=cover) и кладёт uuid в скрытое поле iconId. -->
         <div class="form-field book-form__cover">
@@ -583,7 +577,7 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
         </div>
 
         <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/. Обязательное (бэк требует
+             имя уходит в POST /api/books/new. Обязательное (бэк требует
              непустые 1..2000) — required + клиентская проверка на пустоту
              и длину (11.2, см. RULES в book-form.js). -->
         <div class="form-field">
@@ -686,11 +680,11 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
            шагах. «Назад» скрыта на шаге 1 (book-form.js, initSteps).
 
            СОЗДАНИЕ («Отмена» + Create draft / Publish):
-             Create draft → POST /api/books/ → 201 { createdId } →
+             Create draft → POST /api/books/new → 201 { createdId } →
                           редирект на страницу книги: бэк создаёт
                           только черновик.
-             Publish → тот же POST /api/books/ (черновик), затем
-                       POST /api/books/{id}/publish (P0-маршрут, см.
+             Publish → тот же POST /api/books/new (черновик), затем
+                       POST /books/{id}/publish (P0-маршрут, см.
                        rights-modal.php). Если publish не прошёл —
                        черновик уже создан, поэтому уводим на страницу
                        книги с предупреждением (публикация возможна
@@ -754,10 +748,6 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
     </form>
 
   </section>
-
-  <!-- Плашка публикации с модулем ролей: открывается book-form.js после
-       успеха POST /api/books/{id}/publish ( RightsModal.open({mode:'after-publish'}) ) -->
-  <?php $view->include('rights-modal'); ?>
 
 </div>
 

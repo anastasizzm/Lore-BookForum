@@ -7,6 +7,10 @@
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->startBlock('head_extra'); ?>
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/feed.css') ?>">
+<?php $view->endBlock('head_extra'); ?>
+
 <?php
 // DEV: тестовые данные для предпросмотра, открывать с &preview=1
 if (isset($_GET['preview'])) {

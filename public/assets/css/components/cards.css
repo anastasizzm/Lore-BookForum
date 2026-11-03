@@ -1,0 +1,266 @@
+/* ============================================
+   CARD — base
+   ============================================ */
+.card-base {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+/* ============================================
+   CARD — Book
+   ============================================ */
+.card-book {
+  display: flex;
+  text-decoration: none;             
+  color: inherit;
+  flex-direction: column;
+  padding-bottom: var(--space-2);
+  position: relative;
+  cursor: pointer;
+}
+
+.card-book:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border-color: var(--main-text-color);              /* если у .card-base есть border — он подсветится */
+}
+
+.card-book__cover {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+  background: var(--color-overlay);
+}
+
+.card-book__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Обложки нет или она не загрузилась (404): иконка книги вместо alt-текста.
+   Класс ставит app.js, а вьюхи деталей — сразу при отсутствии обложки;
+   самодостаточен: встроенная data-URI-иконка, внешних файлов нет. */
+/* Двойной класс — чтобы перебить фоны-шорткаты (.card-feed__book-thumb,
+   .profile-publications__cover и т.п.) независимо от порядка подключения css */
+.cover--empty.cover--empty {
+  background-color: var(--color-overlay);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236F84A5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 40%;
+}
+
+.cover--empty img {
+  display: none;
+}
+
+/* Мелкие обложки: иконка крупнее относительно коробки */
+.card-feed__book-thumb.cover--empty,
+.profile-publications__cover.cover--empty,
+.publication-card__cover.cover--empty {
+  background-size: 60%;
+}
+
+/* В ленте заглушка — <span>, а не <img> */
+.card-feed__book-thumb.cover--empty {
+  display: block;
+}
+
+.card-book__title {
+  color: var(--color-text);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  margin-bottom: var(--space-1);
+  text-decoration: none; 
+}
+
+.card-book__author {
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  margin-bottom: 0;
+  text-decoration: none;
+}
+
+/* === Ссылка на книгу, растянутая на всю карточку === */
+.card-book__link {
+  color: var(--main-text-color);
+  text-decoration: none;
+  font: inherit;
+}
+
+/* Невидимый слой, покрывающий всю карточку */
+.card-book__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Заголовок — обычный текст, без hover-эффектов */
+.card-book__title {
+  color: var(--main-text-color);   /* ← было var(--color-text) */
+}
+
+.card-book:hover .card-book__link,
+.card-book__link:hover {
+  color: var(--main-text-color);
+  text-decoration: none;
+}
+
+/* === Автор — ссылка поверх карточки === */
+.card-book__author-link {
+  position: relative;
+  z-index: 2;                       /* выше растянутой ссылки книги */
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+.card-book__author-link:hover {
+  color: var(--main-text-color);    /* ← цвет основной информации */
+  text-decoration: underline;
+}
+
+/* Фокус — для доступности */
+.card-book__link:focus-visible,
+.card-book__author-link:focus-visible {
+  outline: 2px solid var(--main-text-color);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   CARD — Feed
+   ============================================ */
+.card-feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-surface, var(--color-white)); /* Карточки белые */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg); /* Либо задать 16px жестко, если var(--radius-lg) меньше */
+  padding: var(--space-4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02); /* Легкая тень, как на макете */
+}
+
+.card-feed__book-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.card-feed__book-thumb {
+  width: 32px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--color-overlay);
+  flex-shrink: 0;
+}
+
+.card-feed__book-title {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-body);
+  color: var(--color-text);
+  margin: 0;
+}
+
+/* Название книги — ссылка на details (/books/{id} | /articles/{id},
+   резолвит card-feed.js): выглядит как обычный заголовок */
+.card-feed__book-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-feed__book-link:hover,
+.card-feed__book-link:focus-visible {
+  text-decoration: underline;
+}
+
+.card-feed__body-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.card-feed__body-section--with-book {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-border);
+  margin-left: var(--space-3);
+}
+
+.card-feed__tags {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* Поле комментария — вшито в строку поста, раскрывает Reply:
+   без разделителя сверху (макет) */
+.comment-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.comment-form[hidden] {
+  display: none;
+}
+
+.comment-form__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--color-text);
+  padding: var(--space-2) 0;
+}
+
+.comment-form__input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.comment-form__submit {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary, var(--color-accent));
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  transition: opacity 0.15s ease;
+}
+
+.comment-form__error,
+.comment-form__status {
+  width: 100%;
+  margin: var(--space-2) 0 0;
+  font-size: 14px;
+}
+
+.comment-form__error {
+  color: var(--color-error);
+}
+
+.comment-form__status {
+  color: var(--color-success);
+}
+
+.comment-form__submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Изменено: Убраны фон и рамки, чтобы карточки были самостоятельными элементами на сером фоне */
+.feed-panel {
+  background: transparent;
+  border: none;
+  padding: 0;
+}

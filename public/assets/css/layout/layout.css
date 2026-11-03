@@ -1,0 +1,617 @@
+/* ============================================
+   LAYOUT — base
+   ============================================ */
+body.is-menu-open,
+body.is-sidebar-expanded {
+  overflow: hidden;
+}
+
+/* ============================================
+   SIDEBAR (Desktop)
+   ============================================ */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0;
+  background: var(--color-surface, var(--color-white));
+  border-right: 1px solid var(--color-border, var(--color-border-light));
+  z-index: 40;
+  transition: transform 0.25s ease;
+  box-sizing: border-box;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.sidebar-nav-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  margin-top: 32px;
+  width: 100%;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  color: var(--color-text-muted, var(--color-accent));
+  text-decoration: none;
+  background: transparent;
+  border: none !important;
+  outline: none;              /* кольцо — только с клавиатуры, см. :focus-visible ниже */
+  box-shadow: none !important;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+/* a11y: при переходе Tab по навигации фокус должен быть виден —
+   иначе :focus-visible матчится, а кольца нет (outline был none). */
+.nav-item:focus-visible {
+  outline: 2px solid var(--color-primary, #1e293b);
+  outline-offset: 2px;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--color-overlay-hover);
+  color: var(--color-primary, #1e293b);
+}
+
+.nav-text {
+  display: none;
+}
+
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar .nav-profile .nav-icon {
+  background-color: var(--color-bg-subtle);
+  border-radius: 50%;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s;
+}
+
+.sidebar .nav-profile:hover .nav-icon {
+  background-color: transparent;
+}
+
+/* Выбранный в настройках аватар вместо иконки-фигурки (см. sidebar.php) */
+.nav-icon__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--avatar-bg, transparent);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sidebar-bottom {
+  position: relative;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ============================================
+   SIDEBAR: раскрытие по клику на пустую область (Desktop)
+   ============================================ */
+@media (min-width: 769px) {
+  .sidebar {
+    cursor: pointer;
+    transition: width 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .sidebar.is-expanded {
+    width: 260px;
+    padding: 24px 16px;
+    z-index: 60;
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .sidebar.is-expanded .sidebar-nav,
+  .sidebar.is-expanded .sidebar-nav-group,
+  .sidebar.is-expanded .sidebar-bottom {
+    align-items: stretch;
+  }
+
+  .sidebar.is-expanded .nav-item {
+    width: 100%;
+    height: 52px;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 0 20px;
+    border-radius: 20px;
+    background: #f8fafc;
+    box-sizing: border-box;
+  }
+
+  .sidebar.is-expanded .nav-item:hover,
+  .sidebar.is-expanded .nav-item.active {
+    background: var(--color-border-light);
+  }
+
+  .sidebar.is-expanded .nav-icon {
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .sidebar.is-expanded .nav-text {
+    display: block;
+    font-size: 16px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+/* ============================================
+   CONTENT
+   ============================================ */
+.content {
+  margin-left: var(--sidebar-width);
+  padding: 19px 46px 40px 46px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.content__inner {
+  max-width: 100%;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--space-4, 24px);   /* было 19px — шапке тесно до панели */
+}
+
+.page-header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.page-header__title {
+  font-size: 2.75rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.page-header__subtitle {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.page-header__actions .input--search {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: none;
+  height: 44px;
+  padding: 0 var(--space-3);
+}
+
+.page-header__actions .filter-toggle {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+
+/* ============================================
+   BURGER (скрыт по умолчанию, показывается на мобиле)
+   ============================================ */
+.burger {
+  display: none;
+}
+
+/* ============================================
+   OVERLAY (затемнение — мобильная и десктопная версии)
+   ============================================ */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 35;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s, visibility 0.25s;
+}
+
+body.is-menu-open .sidebar-overlay,
+body.is-sidebar-expanded .sidebar-overlay {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* ============================================
+   SETTINGS DROPDOWN
+   ============================================ */
+.settings-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 12px;
+  transform: none !important;
+  min-width: 200px;
+  /* Ширина ПО КОНТЕНТУ, а не растяжением между left/right: иначе на
+     мобильном (layout.css, @media ≤768) меню сжимается до 195px против
+     213px на десктопе, и кнопка «Админ-панель» меняет ширину при
+     изменении размеров окна. max-width — защита от выпадения за экран
+     на очень узких вьюпортах. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  background: var(--color-surface, var(--color-white));
+  border: 1px solid var(--color-border, var(--color-border-light));
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-2, 8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+}
+
+.settings-menu[hidden] {
+  display: none;
+}
+
+/* Пункт меню скрыт по правилу (app.js, data-system-rule).
+   Нужен ЯВНЫЙ [hidden]-селектор: .settings-menu__item задаёт display:flex
+   авторским правилом, оно перебивает UA-стиль [hidden] { display: none },
+   и без этого «скрытая» ссылка осталась бы на месте. */
+.settings-menu__item[hidden] {
+  display: none;
+}
+
+.settings-menu__form {
+  margin: 0;
+}
+
+.settings-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.settings-menu__item:hover {
+  background: var(--color-overlay);
+}
+
+/* Пункт-ссылка (Change password) — как обычный пункт меню */
+a.settings-menu__item {
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.settings-menu__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ---- Группировка пунктов меню (фидбэк с превью) --------------------
+   Порядок: Language | Help + Privacy Policy | Change password | Log out.
+   Группы разделены линией; Log out дополнительно отделён отступом и
+   покрашен в красный — его ждут в самом низу. */
+.settings-menu__divider {
+  height: 1px;
+  margin: var(--space-1, 4px) 0;
+  background: var(--color-border, var(--color-border-light));
+  flex-shrink: 0;
+}
+
+/* Log out: акцентный «опасный» цвет, чтобы пункт не терялся среди остальных */
+.settings-menu__item--danger {
+  color: var(--color-error, var(--color-error));
+  margin-top: var(--space-1, 4px);
+}
+
+.settings-menu__item--danger .settings-menu__icon {
+  color: var(--color-error, var(--color-error));
+}
+
+.settings-menu__item--danger:hover,
+.settings-menu__item--danger:focus-visible {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error, var(--color-error));
+}
+
+/* ---- Кнопка «Админ-панель» (фидбэк: «бордер, синий в цветах сайта,
+   выделение того же цвета, что и у остальных пунктов») ---
+   Спокойное состояние: БЕЗ заливки — только контур --color-accent
+   (#5876A6 = --color-primary, тот же синий, что у btn--primary),
+   полужирный текст --color-blue-dark и щит-иконка на акценте.
+   Раньше была пастельная заливка --button-color-dark (#D6E0EF);
+   по фидбэку её убрали — кнопка читается как аккуратная «рамка».
+   Ховер/фокус — лёгкая подсветка --color-overlay (#E8EEF7), как у
+   обычных пунктов меню: на прозрачном фоне подсветка видна, цвет
+   текста и иконки не меняется.
+   Селектор пишем С ТЕГОМ (a.settings-menu__item--admin): у базового
+   a.settings-menu__item специфика (0,1,1), а у одного класса лишь
+   (0,1,0) — без тега фон перекрывался бы общим. С тегом специфика
+   равна, и правило выигрывает позицией: оно объявлено в файле ниже
+   базового.
+   Рамка безопасна — глобально задан * { box-sizing: border-box }. */
+a.settings-menu__item--admin {
+  color: var(--color-blue-dark, #445B7B);
+  background: transparent;              /* только обводка, без заливки */
+  border: 1px solid var(--color-accent, var(--color-accent));
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+a.settings-menu__item--admin .settings-menu__icon {
+  color: var(--color-accent, var(--color-accent));
+}
+
+a.settings-menu__item--admin:hover,
+a.settings-menu__item--admin:focus-visible {
+  background: var(--color-overlay, var(--color-bg-secondary));
+}
+
+/* Выбор языка в меню настроек (sidebar.php): пункт раскрывает список языков.
+   Разделитель под блоком теперь рисует .settings-menu__divider (общий для
+   всех групп меню) — собственная border-bottom убрана, чтобы не было двух
+   линий подряд. */
+.settings-menu__lang {
+  margin-bottom: var(--space-1, 4px);
+}
+
+.settings-menu__lang-summary {
+  list-style: none;
+}
+.settings-menu__lang-summary::-webkit-details-marker { display: none; }
+
+.settings-menu__lang-label { flex: 1; }
+
+.settings-menu__lang-current {
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.settings-menu__lang-arrow {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+.settings-menu__lang[open] .settings-menu__lang-arrow { transform: rotate(180deg); }
+
+.settings-menu__lang-list {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;          /* когда языков станет много — список прокручивается */
+  overflow-y: auto;
+}
+
+.settings-menu__lang-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.settings-menu__lang-link:hover { background: var(--color-overlay); }
+.settings-menu__lang-link.is-active {
+  font-weight: 600;
+  color: var(--color-primary, #1e293b);
+  pointer-events: none;       /* текущий язык повторно не открываем */
+}
+
+/* Аватар в сайдбаре: кружок и эмодзи крупнее */
+.nav-profile .avatar--xs {
+  width: 36px;
+  height: 36px;
+}
+.nav-profile .avatar--emoji.avatar--xs {
+  font-size: 24px;
+}
+
+/* ============================================
+   RESPONSIVE (≤768px)
+   ============================================ */
+@media (max-width: 768px) {
+
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px;
+    align-items: center;
+    /* Верхний отступ с запасом: кнопка Profile не должна попадать
+       под фиксированный бургер (top:16, 42px высотой) — иначе по области
+       профиля клик «попадает через раз» (P1-5). */
+    padding: 76px 16px 24px 16px;
+  }
+
+  body.is-menu-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-nav {
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .sidebar-nav-group {
+    gap: 20px;
+    margin-top: 24px;
+  }
+
+  .sidebar .mobile-nav-btn {
+    width: 220px;
+    height: 52px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 20px;
+    gap: 16px;
+    border-radius: 20px;
+    background: #f8fafc;
+    border: none !important;
+  }
+
+  .sidebar .mobile-nav-btn:hover {
+    background: var(--color-border-light);
+  }
+
+  .sidebar .mobile-nav-btn .nav-text {
+    display: inline-block;
+    font-weight: 500;
+    font-size: 16px;
+    color: inherit;
+  }
+
+  .sidebar .mobile-nav-btn .nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+  }
+
+  .sidebar .sidebar-bottom {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .sidebar .sidebar-bottom .mobile-nav-btn {
+    width: 220px;
+    margin: 0 auto;
+  }
+
+  .content {
+    margin-left: 0;
+    padding: 76px 16px 24px 16px;
+    min-height: 100vh;
+  }
+
+  .burger {
+    display: flex;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    /* Выше overlay (35) и открытого sidebar (40), но ниже settings-menu (50):
+       кнопку всегда можно нажать, чтобы закрыть меню (app.js — toggle). */
+    z-index: 45;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    background: var(--color-white);
+    border: 1px solid var(--color-border-light);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+  }
+
+  .burger span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: #1e293b;
+    border-radius: 2px;
+  }
+
+  .page-header__title {
+    font-size: 2.2rem;
+    margin: 0;
+  }
+
+  .page-header__actions .input--search {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+  }
+
+  .sidebar-bottom {
+    justify-content: flex-start;
+  }
+
+  /* Мобильное меню: только сдвиг left — ширина управляется базовым
+     width: max-content (см. .settings-menu выше), поэтому правый inset
+     здесь не нужен: он сжимал меню (и кнопку «Админ-панель») до 195px
+     против 273px на десктопе. */
+  .settings-menu {
+    left: 16px;
+  }
+
+  /* Кнопка «Админ-панель» БЕЗ мобильных переопределений: раньше здесь
+     было min-height 52px / font-size 16px / radius 20 (коммит 2123211),
+     из-за чего кнопка меняла размер при пересечении брейкпоинта 768px
+     при изменении ширины окна. Теперь размер одинаков во всех окнах
+     и совпадает с соседними пунктами меню (Language, Log out):
+     padding 8px 16px, font-size 12px, radius берётся от .settings-menu__item. */
+}

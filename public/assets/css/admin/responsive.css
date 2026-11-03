@@ -1,0 +1,334 @@
+/* ============================================
+   RESPONSIVE — адаптация под мобильные экраны
+   ============================================ */
+@media (max-width: 520px) {
+  .admin-rolenew__footer { 
+    flex-direction: column-reverse; 
+  }
+  .admin-rolenew__footer .btn { 
+    width: 100%; 
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .admin-toolbar__add:not(.admin-toolbar__add--icon) {
+    width: 100%;
+  }
+
+  /* Круглая кнопка не ломается и не растягивается на мобилках */
+  .admin-toolbar__add--icon {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+  .admin-toolbar__search {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .admin-toolbar__count {
+    margin-left: 0;
+  }
+
+  .admin-toolbar__filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-toolbar__select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .admin-table {
+    min-width: 560px;
+    font-size: var(--fs-small);
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: var(--space-2);
+  }
+
+  .admin-table__clip {
+    max-width: 180px;
+  }
+
+  .admin-table[data-dict-table],
+  .admin-table[data-roles-table],
+  .admin-table[data-allroles-table] {
+    min-width: 0;
+  }
+
+  .admin-table[data-dict-table] .admin-dict__translations {
+    max-width: none;
+  }
+
+  .admin-table[data-dict-table] .admin-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-dict__lang-row {
+    grid-template-columns: minmax(36px, auto) minmax(0, 1fr) 44px;
+  }
+
+  .admin-dict__lang-remove {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-actions {
+    flex-wrap: nowrap;
+  }
+
+  .admin-report__facts {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .admin-report__fact {
+    display: block;
+  }
+
+  .admin-report__fact dt {
+    margin-bottom: var(--space-1);
+  }
+
+  .admin-report__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-report__actions .btn {
+    width: 100%;
+  }
+
+  .admin-role__list {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-role__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
+  .admin-role__actions .btn {
+    width: 100%;
+  }
+
+  .admin-seg { 
+    width: 100%; 
+  }
+  .admin-seg label { 
+    flex: 1 1 0; 
+  }
+  .admin-seg span { 
+    flex: 1; 
+    justify-content: center; 
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — roles / all-roles / users + их модалки
+   Брейкпоинты: ≥1280 (ПК), ≤1024 (планшет / маленький ноутбук),
+   ≤720 (телефон: таблицы превращаются в карточки), ≤520 (узкие телефоны).
+   Раскладку карточек задают data-col у ячеек (admin.js).
+   ============================================================ */
+
+/* ---------- Большие экраны ---------- */
+@media (min-width: 1280px) {
+  .admin-table__clip { max-width: 420px; }
+  .admin-table th,
+  .admin-table td { padding-top: var(--space-3); padding-bottom: var(--space-3); }
+}
+
+/* ---------- Ноутбуки / планшеты ---------- */
+@media (max-width: 1024px) {
+  .admin-table th,
+  .admin-table td { padding-left: var(--space-2); padding-right: var(--space-2); }
+  .admin-table__clip { max-width: 200px; }
+  .admin-table { font-size: var(--fs-small); }
+  .admin-table .btn { padding-left: var(--space-2); padding-right: var(--space-2); }
+}
+
+/* ---------- Телефоны: таблица → карточки ---------- */
+@media (max-width: 720px) {
+  .admin-table-wrap {
+    overflow: visible;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .admin-table,
+  .admin-table tbody {
+    display: block;
+    min-width: 0;
+    font-size: var(--fs-body);
+  }
+
+  /* Шапку прячем визуально, но оставляем для скринридеров */
+  .admin-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .admin-table tbody tr {
+    display: grid;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin-bottom: var(--space-2);
+    padding: var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .admin-table tbody tr + tr td { border-top: 0; }
+  .admin-table tbody tr:hover td { background: transparent; }
+  .admin-table td { min-width: 0; padding: 0; }
+  .admin-table__clip { max-width: 100%; }
+
+  .admin-table tbody tr.admin-table__empty {
+    display: block;
+    text-align: center;
+  }
+  .admin-table__empty td { display: block; padding: var(--space-4) 0; }
+
+  .admin-actions { white-space: normal; }
+
+  /* --- roles: ручка | id | название / права / удалить --- */
+  [data-roles-table] tbody tr[data-role-row-id] {
+    grid-template-columns: 36px auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "drag id title del"
+      "drag perms perms del";
+  }
+  [data-roles-table] td[data-col="drag"]   { grid-area: drag; align-self: stretch; display: flex; align-items: center; }
+  [data-roles-table] td[data-col="id"]     { grid-area: id; }
+  [data-roles-table] td[data-col="title"]  { grid-area: title; font-weight: var(--fw-medium); }
+  [data-roles-table] td[data-col="perms"]  { grid-area: perms; margin-top: var(--space-1); }
+  [data-roles-table] td[data-col="delete"] { grid-area: del; align-self: center; }
+  /* количество прав на телефоне не показываем — кнопка Permissions встаёт на его место */
+  [data-roles-table] [data-role-syscount] { display: none; }
+  [data-roles-table] td[data-col="perms"] .admin-actions { justify-content: flex-start; }
+
+  /* --- all-roles: id | название / видимость | удалить --- */
+  [data-allroles-table] tbody tr[data-allroles-row-id] {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id title delete"
+      "id vis delete";
+  }
+  [data-allroles-table] td[data-col="id"]     { grid-area: id; align-self: start; }
+  [data-allroles-table] td[data-col="title"]  { grid-area: title; font-weight: var(--fw-medium); }
+  [data-allroles-table] td[data-col="vis"]    { grid-area: vis; }
+  [data-allroles-table] td[data-col="delete"] { grid-area: delete; }
+
+  /* --- users: id | имя / почта | раскрыть; роли | статус; действия --- */
+  [data-users-table] tbody tr[data-user-id] {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id name expand"
+      "id email expand"
+      "role role status"
+      "actions actions actions";
+  }
+  [data-users-table] td[data-col="id"]      { grid-area: id; align-self: start; }
+  [data-users-table] td[data-col="name"]    { grid-area: name; font-weight: var(--fw-medium); overflow-wrap: anywhere; }
+  [data-users-table] td[data-col="email"]   { grid-area: email; color: var(--color-text-muted); }
+  [data-users-table] td[data-col="role"]    { grid-area: role; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+  [data-users-table] td[data-col="status"]  { grid-area: status; justify-self: end; }
+  [data-users-table] td[data-col="actions"] { grid-area: actions; margin-top: var(--space-1); }
+  [data-users-table] td[data-col="expand"]  { grid-area: expand; width: auto; align-self: start; }
+  [data-users-table] .admin-actions { width: 100%; }
+  [data-users-table] .admin-actions .btn { flex: 1 1 0; justify-content: center; text-align: center; }
+
+  /* вложенный список ролей — карточка под строкой пользователя */
+  .admin-table tbody tr.admin-user-roles {
+    display: block;
+    margin-top: calc(-1 * var(--space-1));
+    padding: 0;
+    background: var(--color-bg-secondary);
+  }
+  .admin-table tbody tr.admin-user-roles[hidden] { display: none; }
+  .admin-table tbody tr.admin-user-roles td { display: block; }
+
+  .admin-users__more .btn { width: 100%; }
+}
+
+/* ---------- Тулбар на телефонах и узких планшетах ---------- */
+@media (max-width: 640px) {
+  .admin-toolbar__search { flex: 1 1 100%; width: 100%; }
+  .admin-seg { flex: 1 1 0; min-width: 0; }
+  .admin-seg label { flex: 1 1 0; }
+  .admin-seg span { width: 100%; justify-content: center; text-align: center; }
+  .admin-toolbar__count { margin-left: auto; }
+  .admin-toolbar--end { justify-content: flex-end; }
+}
+
+@media (max-width: 520px) {
+  .admin-role__list { grid-template-columns: minmax(0, 1fr); }
+
+  .admin-role__actions { flex-direction: column-reverse; }
+  .admin-role__actions .btn { width: 100%; }
+
+  .admin-urole__user-name,
+  .admin-role__dd-toggle { font-size: var(--fs-body); }
+
+  /* пальцем попадать удобнее */
+  .admin-role__dd-item { min-height: 44px; }
+  .admin-user-roles__remove { width: 36px; height: 36px; }
+}
+
+/* Планшеты/ноутбуки в альбомной ориентации с малой высотой */
+@media (max-height: 560px) {
+  .admin-role__dd-list { max-height: 140px; }
+}
+
+@media (max-width: 720px) {
+  .admin-icon-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* Без горизонтальных слайдеров: на ноутбуках/планшетах таблица подстраивается под ширину,
+   а содержимое ячеек переносится на новую строку */
+@media (max-width: 1024px) {
+  .admin-table { min-width: 0; }
+  .admin-actions { white-space: normal; }
+  .admin-table__clip { max-width: clamp(90px, 18vw, 200px); }
+  .admin-table td { overflow-wrap: anywhere; }
+  .admin-table td.admin-table__id,
+  .admin-table td.admin-table__drag { overflow-wrap: normal; }
+}
+
+@media (min-width: 721px) and (max-width: 1024px) {
+  .admin-table-wrap { overflow-x: hidden; }
+}
+
+/* Мобильная раскладка: вставка роли между строками не показывается */
+@media (max-width: 720px) {
+  .admin-role-insert { display: none !important; }

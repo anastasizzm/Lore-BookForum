@@ -1,11 +1,12 @@
 <?php
 $view->extends('main');
-$tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+$tr = fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// $items больше не нужен для рендера, но оставим на случай SSR-fallback
+// Карточки и мета приходят из контроллера роута /books или /articles.
+// Никаких догрузок через API на этой странице — всё в SSR.
 $items = $items ?? [];
+$meta  = $meta  ?? [];
 
-// Определяем раздел по meta.type
 $type       = $meta['type'] ?? null;
 $isArticles = $type === 'article';
 
@@ -15,20 +16,21 @@ if ($type === null) {
 }
 
 $pageTitle  = $isArticles ? $view->t('common.library.all_articles') : $view->t('common.library.all_books');
-// Таб в сайдбаре — «Библиотека» и для книг, и для статей: отдельной
-// иконки «Статьи» в sidebar нет, поэтому active-плашка должна гореть
-// на обоих разделах.
 $tabKey     = 'library';
 $emptyText  = $isArticles ? $view->t('common.library.no_articles') : $view->t('common.library.no_books');
 $searchHint = $isArticles ? $view->t('common.library.search_articles') : $view->t('common.library.search_books');
-$apiBase    = $isArticles ? '/api/articles'  : '/api/books';
+$detailBase = $isArticles ? '/articles' : '/books';
+
+$initialCount   = count($items);
+$initialPage    = max(1, (int) ($meta['page'] ?? 1));
+$initialHasNext = (bool) ($meta['hasNext'] ?? false);
 
 $view->setBlock('selectedTab', $tabKey);
 $view->startBlock('title'); ?><?= $view->e($pageTitle) ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title');
 
 $view->startBlock('content');
 
-// ---- Поиск + кнопка фильтров в шапке страницы ----
+// ---- Поиск + кнопка фильтров ----
 ob_start();
 $view->include('input', [
     'type'        => 'search',
@@ -51,7 +53,6 @@ $view->include('page-header', [
     'actions' => $pageActions,
 ]);
 
-// ---- Панель фильтров ----
 $view->include('library-filters');
 
 // ---- Сортировка ----
@@ -65,9 +66,6 @@ $current_sort  = $currentSort ?? 'newest';
 if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
 $current_label = $sort_options[$current_sort];
 
-// href — только страховка на случай, если JS не загрузился.
-// Сохраняем текущие параметры (включая lang), чтобы переход без JS
-// не терял язык.
 $preservedKeys = ['q', 'genre', 'status', 'p_status', 'isbn', 'doi', 'kind', 'f', 'lang'];
 $preserved = array_filter(
     $_GET,
@@ -77,18 +75,23 @@ $preserved = array_filter(
 
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
-    $sortHref = '?' . http_build_query(array_merge($preserved, ['sort' => $key]));
     $dropdownOptions[] = [
         'label' => $text,
-        'href'  => $sortHref,
+        'href'  => '?' . http_build_query(array_merge($preserved, ['sort' => $key])),
         'value' => $key,
     ];
 }
+
+// Ссылки пагинации — обычные <a href>, страница перезагружается роутом.
+$linkWithPage = static function (int $to) use ($preserved): string {
+    $q = $preserved;
+    if ($to > 1) $q['page'] = $to; else unset($q['page']);
+    $qs = http_build_query($q);
+    return '?' . $qs;
+};
 ?>
 
-<section class="books-panel"
-         data-library
-         data-api="<?= $view->e($apiBase) ?>">
+<section class="books-panel" data-list="library">
 
   <div hidden data-csrf><?= $view->csrfField() ?></div>
 
@@ -118,7 +121,7 @@ foreach ($sort_options as $key => $text) {
       <div>
         <h2 class="books-panel__title"><?= $view->e($pageTitle) ?></h2>
         <p class="books-panel__meta">
-          <span data-library-count>0</span> <?= $tr('common.common.items') ?>
+          <span><?= $initialCount ?></span> <?= $tr('common.common.items') ?>
         </p>
       </div>
     </div>
@@ -132,21 +135,40 @@ foreach ($sort_options as $key => $text) {
     ?>
   </header>
 
-  <div class="empty-state" data-library-empty hidden>
+  <div class="empty-state" <?= $initialCount > 0 ? 'hidden' : '' ?>>
     <p class="empty-state__text"><?= $view->e($emptyText) ?></p>
   </div>
 
-  <?php /* Пустой контейнер — карточки отрисует JS из ответа API */ ?>
-  <div class="grid-books" data-library-grid></div>
-
-  <div class="feed-panel__load-more" data-library-more hidden>
-    <button type="button" class="btn btn--secondary" data-load-more><?= $tr('common.common.load_more') ?></button>
+  <?php /* SSR: карточки из $items, никаких API-догрузок */ ?>
+  <div class="grid-books" <?= $initialCount === 0 ? 'hidden' : '' ?>>
+    <?php foreach ($items as $item): ?>
+      <?php $view->include('card-book', [
+          'item'       => $item,
+          'detailBase' => $detailBase,
+          'isArticles' => $isArticles,
+      ]); ?>
+    <?php endforeach; ?>
   </div>
+
+  <?php if ($initialPage > 1 || $initialHasNext): ?>
+    <nav class="books-panel__pager" aria-label="<?= $tr('common.library.pagination') ?>">
+      <?php if ($initialPage > 1): ?>
+        <a class="btn btn--secondary" href="<?= $view->e($linkWithPage($initialPage - 1)) ?>">
+          <?= $tr('common.library.prev') ?>
+        </a>
+      <?php endif; ?>
+      <?php if ($initialHasNext): ?>
+        <a class="btn btn--secondary" href="<?= $view->e($linkWithPage($initialPage + 1)) ?>">
+          <?= $tr('common.library.next') ?>
+        </a>
+      <?php endif; ?>
+    </nav>
+  <?php endif; ?>
 
 </section>
 
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script src="<?= $view->asset('js/library-filters.js') ?>"></script>
+<script src="<?= $view->asset('js/filters.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

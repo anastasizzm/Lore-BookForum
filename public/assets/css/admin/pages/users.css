@@ -1,0 +1,167 @@
+/* ============================================
+   USERS — вложенный список ролей пользователя
+   ============================================ */
+.admin-table__expand {
+  width: 56px;
+  padding-left: 0;
+  text-align: right;
+}
+
+.admin-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.admin-expand:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.admin-expand:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.admin-expand svg {
+  transition: transform .15s;
+}
+
+.admin-expand.is-open svg {
+  transform: rotate(180deg);
+}
+
+.admin-user-roles[hidden] {
+  display: none;
+}
+
+.admin-table tbody tr.admin-user-roles:hover td {
+  background: var(--color-bg-secondary);
+}
+
+.admin-table tbody tr.admin-user-roles td {
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+}
+
+.admin-user-roles__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.admin-user-roles__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-user-roles__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.admin-user-roles__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-roles__remove {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 8px);
+  cursor: pointer;
+  transition: color .15s, background .15s, border-color .15s;
+}
+
+.admin-user-roles__remove:hover:not(:disabled) {
+  color: var(--color-error);
+  background: var(--admin-danger-bg);
+  border-color: var(--color-error);
+}
+
+.admin-user-roles__remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.admin-user-roles__remove:disabled {
+  opacity: .5;
+  cursor: progress;
+}
+
+.admin-user-roles__note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.admin-user-roles__foot {
+  display: flex;
+}
+
+/* «+» — прямоугольная кнопка по центру блока */
+/* «+» — цвет и hover от .btn--primary (как круглая кнопка в тулбаре),
+   форма: на всю длину списка, высота 32px */
+.admin-user-roles__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+/* Модалка «Добавить роль пользователю» */
+.admin-urole__user {
+  margin-bottom: var(--space-3);
+}
+
+.admin-urole__user-name {
+  padding: var(--space-2) var(--space-3);
+  font-weight: var(--fw-medium);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+/* Кнопка «Показать ещё» под таблицей пользователей */
+.admin-users__more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-3);
+}
+
+.admin-users__more[hidden],
+.admin-users__more [hidden] {
+  display: none;
+}

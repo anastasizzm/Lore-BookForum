@@ -1,0 +1,43 @@
+/* Кнопка удаления — иконка-мусорка (roles, all-roles) */
+.admin-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.admin-icon-btn svg {
+  display: block;
+  pointer-events: none;
+}
+
+/* Мусорка: обычное состояние — белая кнопка с красной иконкой;
+   при наведении, фокусе и нажатии цвета меняются местами (красная кнопка, белая иконка). */
+.btn.btn--danger.admin-icon-btn {
+  color: var(--color-error);
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-error);
+  transition: color .15s, background-color .15s, border-color .15s, filter .15s;
+}
+
+.btn.btn--danger.admin-icon-btn:hover:not(:disabled),
+.btn.btn--danger.admin-icon-btn:focus-visible:not(:disabled),
+.btn.btn--danger.admin-icon-btn:active:not(:disabled) {
+  color: #fff;
+  background: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.btn.btn--danger.admin-icon-btn:active:not(:disabled) {
+  filter: brightness(.92);
+}
+
+.btn.btn--danger.admin-icon-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

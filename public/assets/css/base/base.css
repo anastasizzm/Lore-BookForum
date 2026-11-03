@@ -1,0 +1,85 @@
+/* =========================================
+   ФАЙЛ: base.css
+   Назначение: Базовые стили тегов, сброс стилей браузера и основные сетки
+========================================= */
+
+/* Сброс стандартных отступов браузера */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Применяем переменные ко всему документу */
+/* Единственное правило body (раньше было три: base.css, layout.css, component.css).
+   Итоговые значения те же, что давал каскад: фон — #F8FAFC (--color-bg-app). */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-family-base);
+  background-color: var(--color-bg-app);
+  color: var(--interaction-text-color);
+  line-height: 1.5;
+}
+
+/* Используется страницей логина (page--login) для полноэкранного фона */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Атрибут hidden работает на любой ширине (раньше правило было только в @media >= 1024px) */
+[hidden] {
+  display: none !important;
+}
+
+/* Фон не прокручивается, пока открыта модалка (раньше дублировалось в modal.css,
+   article-right.css и article-form.css) */
+body.is-modal-open {
+  overflow: hidden;
+}
+
+/* Скрывает элемент визуально, оставляя доступным для скринридеров (label в формах) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* =======================================================
+   1. БАЗОВЫЕ СЕТКИ (Mobile First - для телефонов)
+======================================================= */
+
+.book-details {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* =======================================================
+   2. ПЛАНШЕТЫ (Tablet: >= 768px)
+======================================================= */
+@media (min-width: 768px) {
+  .layout-wrapper {
+    flex-direction: row;
+  }
+
+  .book-details {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* =======================================================
+   3. НОУТБУКИ И ДЕСКТОП (Desktop: >= 1024px)
+======================================================= */
+@media (min-width: 1024px) {
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 24px;
+  }
+
+}

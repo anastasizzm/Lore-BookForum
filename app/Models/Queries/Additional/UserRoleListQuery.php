@@ -3,12 +3,9 @@ declare(strict_types=1);
 
 namespace App\Models\Queries\Additional;
 
-use App\Extensions\Parsers\QueryParser;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Queries\SortQuery;
 use App\Models\Queries\StatusQuery;
-use App\Models\Queries\PropertiesQuery;
-use App\Models\Enums\RoleStatus;
 
 final readonly class UserRoleListQuery extends BasicModelListQuery
 {
@@ -16,7 +13,7 @@ final readonly class UserRoleListQuery extends BasicModelListQuery
         PaginationQuery $pagination,
         SortQuery $sort,
         ?string $search,
-        StatusQuery $status
+        public StatusQuery $status
     ) {
         parent::__construct($pagination, $sort, $search);
     }

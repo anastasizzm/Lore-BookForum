@@ -1,0 +1,69 @@
+/* ============================================
+   GRID — BOOKS (чистый, без конфликтов)
+   ============================================ */
+.grid-books {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+}
+
+@media (min-width: 480px) {
+  .grid-books { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 768px) {
+  .grid-books { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .grid-books { grid-template-columns: repeat(5, 1fr); }
+}
+
+@media (min-width: 1280px) {
+  .grid-books {
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (min-width: 1440px) {
+  .grid-books { grid-template-columns: repeat(8, 1fr); }
+}
+
+@media (min-width: 1680px) {
+  .grid-books { grid-template-columns: repeat(9, 1fr); }
+}
+
+@media (min-width: 1920px) {
+  .grid-books { grid-template-columns: repeat(10, 1fr); }
+}
+
+/* Уменьшение карточки на широких экранах */
+@media (min-width: 1280px) {
+  .card-book__cover {
+    margin-bottom: var(--space-2);
+  }
+
+  .card-book__title {
+    font-size: var(--fs-small);
+  }
+
+  .card-book__author {
+    font-size: 12px;
+  }
+
+  .tag,
+  .tag__value,
+  .tag__icon {
+    font-size: 12px;
+  }
+}
+
+/* ============================================
+   STACK (Изменено: отступ между карточками)
+   ============================================ */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Было 20px, сделано 16px как на макете */
+}

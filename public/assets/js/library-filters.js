@@ -11,7 +11,7 @@
     doi:    'doi',
     sort:   'sort',
     status: 'status',
-    // Публикация (draft/public) — параметр бэка ?p_status=. НЕ путать со
+    // Публикация (public/draft) — параметр бэка ?p_status=. НЕ путать со
     // 'status' — это статус ЧТЕНИЯ (reading|ended).
     pStatus:'p_status',
     type:   'type',
@@ -19,7 +19,6 @@
   };
 
   // Значения совпадают с App\Models\Enums\*
-  // (если бэк починит опечатки в enum — синхронизируй здесь)
   const SORT_VALUES   = { newest: 'newest', popularity: 'popularity', alpha: 'alpha' };
   // ReadingStatus: none|reading|ended. 'finished' оставлен для старых ссылок.
   const STATUS_VALUES = { reading: 'reading', finished: 'ended', ended: 'ended' };
@@ -28,8 +27,6 @@
   // фильтрует по public, поэтому в API шлём статус ВСЕГДА.
   const PSTATUS_VALUES = { all: 'any', public: 'public', draft: 'draft' };
 
-  // Типы статей больше не маппятся — приходят из /api/additional/article-types
-  // и уходят в ?type= как есть.
   const PROPS = 'creator';
   // ================================================
 
@@ -37,6 +34,7 @@
   const IS_ARTICLES = API.endsWith('/articles');
   // P1-6: страница публикации, куда ведёт клик по карточке
   const DETAIL_BASE = IS_ARTICLES ? '/articles' : '/books';
+
   const grid   = root.querySelector('[data-library-grid]');
   const empty  = root.querySelector('[data-library-empty]');
   const more   = root.querySelector('[data-library-more]');
@@ -83,10 +81,8 @@
     // Публикация: шлём всегда, иначе «Все» (all) не доедет до бэка.
     p.set(PARAM.pStatus, PSTATUS_VALUES[state.p_status ?? 'all'] ?? 'any');
     if (IS_ARTICLES) {
-      // Вариант B: без маппинга, значение из state.kind уходит как есть
       if (state.kind) p.set(PARAM.type, state.kind);
-      // Фильтр по DOI — бэкенд читает ?doi= (ArticlesFilters::fromInput)
-      if (state.doi) p.set(PARAM.doi, state.doi);
+      if (state.doi)  p.set(PARAM.doi, state.doi);
     } else if (state.isbn) {
       p.set(PARAM.isbn, state.isbn);
     }
@@ -162,8 +158,7 @@
       ? ([c.name, c.surname].filter(Boolean).join(' ').trim() || c.username || '')
       : '';
     const authorId = Number(c?.id ?? 0);
-    // «логин -> id» для @упоминаний в комментариях (users.js): карточки
-    // библиотеки/подборок — один из немногих мест, где пара уже есть.
+    // «логин -> id» для @упоминаний в комментариях (users.js)
     if (authorId > 0 && c && c.username && window.LoreUsers) {
       window.LoreUsers.remember(authorId, c.username);
     }
@@ -172,7 +167,7 @@
            href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
       : '';
     const id = Number(b.id);
-    // P1-6: карточка ведёт на страницу книги/статьи (раньше href="#" — клик молчал)
+    // P1-6: карточка ведёт на страницу книги/статьи
     const href = id > 0 ? `${DETAIL_BASE}/${id}` : '#';
 
     // На странице статей кнопка помечается как article — app.js по этому
@@ -181,13 +176,11 @@
     const saveKind = IS_ARTICLES ? 'article' : 'book';
 
     // API отдаёт состояние закладки в контексте юзера как isSaved
-    // (WithContext<Publication, PublicationContext>), поле saved оставлено
-    // как запасной вариант для старых ответов — иначе в библиотеке
-    // сохранённая книга выглядела несохранённой.
+    // (поле saved оставлено для старых ответов).
     const isSaved = !!(b.isSaved ?? b.saved);
 
-    // Статус чтения (контекст юзера, ReadingStatus: none | reading | ended).
-    // Только у книг; 'none' — без бейджа. Тексты — filter.reading / filter.finished.
+    // Статус чтения (ReadingStatus: none | reading | ended).
+    // Только у книг; 'none' — без бейджа.
     const rsRaw = String(b.readingStatus?.value ?? b.readingStatus ?? 'none');
     const rsKey = IS_ARTICLES ? 'none' : rsRaw;
     const rsLabel = rsKey === 'reading' ? tr('filter.reading', 'Reading')
@@ -197,12 +190,9 @@
       ? `<span class="card-book__status card-book__status--${rsKey}">${esc(rsLabel)}</span>`
       : '';
 
-    // Черновик статьи — бейдж «Draft». Статус публикации API не отдаёт,
-    // поэтому бейдж идёт по активному фильтру списка: на вкладке Draft
-    // (state.p_status === 'draft') показывается целиком из черновиков.
-    // Текст — drafts.badge («Draft»/«Черновик»), тот же ключ, что у
-    // .card-draft__badge на странице черновиков.
-    const draftBadge = IS_ARTICLES && state.p_status === 'draft'
+    // Бейдж «Draft» по активному фильтру p_status === 'draft'.
+    // На /drafts карточки рендерит drafts-filters.js — здесь этого не нужно.
+    const draftBadge = (IS_ARTICLES || !IS_ARTICLES) && state.p_status === 'draft'
       ? `<span class="card-book__status card-book__status--draft">${esc(tr('drafts.badge', 'Draft'))}</span>`
       : '';
 
@@ -226,20 +216,18 @@
   }
 
   // ---------- loading ----------
-  // Ошибки — общими плашками (messages.js)
   const notify = (text) => {
     if (window.Messages) window.Messages.show(text, { type: 'error' });
     else console.warn(text);
   };
 
   async function load({ append = false } = {}) {
-    console.log('load called, sort =', state.sort);
     controller?.abort();
     controller = new AbortController();
     if (!append) page = 1;
 
     root.classList.add('is-loading');
-    let received = false; // true, когда ответ получен: дальше ошибка уже не сетевая
+    let received = false;
     try {
       const res = await fetch(`${API}?${apiQuery()}`, {
         headers: { Accept: 'application/json' },
@@ -265,7 +253,7 @@
       if (append) grid.insertAdjacentHTML('beforeend', html);
       else grid.innerHTML = html;
 
-            shown = append ? shown + items.length : items.length;
+      shown = append ? shown + items.length : items.length;
       if (count) count.textContent = shown;
 
       if (empty) {
@@ -286,10 +274,14 @@
   }
 
   function setFilter(key, value) {
-    if (!value || value === 'all') delete state[key];
-    else state[key] = value;
+    const normalized = (!value || value === 'all') ? undefined : value;
+    // Ничего не поменялось — не дёргаем API повторно
+    if (state[key] === normalized) return;
 
-    // Закрываем открытые dropdown (в т.ч. динамические — на них нет обработчиков из app.js)
+    if (!normalized) delete state[key];
+    else state[key] = normalized;
+
+    // Закрываем открытые dropdown (в т.ч. динамические)
     document.querySelectorAll('[data-dropdown].is-open')
       .forEach(dd => dd.classList.remove('is-open'));
 
@@ -324,15 +316,13 @@
     return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   };
 
-  // filters.js шлёт cancelable-событие filter:input, чтобы без обработчика
-  // применить фильтр переходом по URL (Saved, публикации профиля). Здесь
-  // фильтр идёт через API (см. ввод ниже) — страницу не перезагружаем.
+  // filters.js шлёт cancelable-событие filter:input: здесь фильтр идёт
+  // через API (см. ввод ниже) — страницу не перезагружаем.
   document.addEventListener('filter:input', e => e.preventDefault());
 
   document.querySelectorAll('input[data-filter-key]').forEach(inp =>
     inp.addEventListener('input', debounce(() => {
-      // filters.js помечает неверный ISBN/DOI классом is-invalid — бэкенд
-      // всё равно ничего не найдёт, поэтому не пишем его в URL и не дёргаем API
+      // filters.js помечает неверный ISBN/DOI классом is-invalid
       if (inp.classList.contains('is-invalid')) return;
       setFilter(inp.dataset.filterKey, inp.value.trim());
     }, 350)));
@@ -342,6 +332,22 @@
   document.addEventListener('dropdown:populated', syncUi);
 
   // ---------- init ----------
-  syncUi();
-  load();
+  // SSR уже отрисовал первую страницу (data-initial-rendered="1") —
+  // повторный fetch не делаем, только подхватываем page/count/hasNext.
+  if (root.dataset.initialRendered === '1') {
+    page  = Number(root.dataset.initialPage || 1) || 1;
+    shown = Number(root.dataset.initialCount || 0) || (grid ? grid.children.length : 0);
+    const initHasNext = root.dataset.initialHasNext === '1';
+    if (more) more.hidden = !initHasNext;
+
+    if (count) count.textContent = shown;
+    if (empty) empty.hidden = shown > 0;
+    if (grid) grid.hidden = shown === 0;
+
+    syncUi();
+    // load() НЕ вызываем — SSR уже отрисовал первую страницу.
+  } else {
+    syncUi();
+    load();
+  }
 })();
