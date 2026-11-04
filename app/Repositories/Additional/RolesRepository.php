@@ -82,7 +82,7 @@ final class RolesRepository extends Repository
 
     public function create(string $color, bool $isPublic, array $translations) : int
     {
-        return $this->uow->transactional(function() use ($translations, $color) {
+        return $this->uow->transactional(function() use ($translations, $color, $isPublic) {
             $id = (int)$this->execute('INSERT INTO user_roles (color, is_public) VALUES (:color, :isPublic) RETURNING id', [
                 ':color' => ScriptParam::asStr($color),
                 ':isPublic' => ScriptParam::asBool($isPublic)

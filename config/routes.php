@@ -110,4 +110,5 @@ return function(Router $router)
     $router->get('/admin/posts', [App\Controllers\Additional\PostsController::class, 'adminList'], 'admin.posts', ControlPostOperation::class);
     $router->get('/admin/users', [App\Controllers\Additional\AdminPanelController::class, 'getUsers'], 'admin.users', ManagePeopleSystemOperation::class);
     $router->get('/admin/roles', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.roles', ManageRolesSystemOperation::class);
+    $router->get('/admin/all-roles', [App\Controllers\Additional\AdminPanelController::class, 'roles'], 'admin.all-roles', ManageRolesSystemOperation::class);
 };
