@@ -8,7 +8,7 @@ import { allRoles, refreshAllRoles } from '../all-roles/page.js';
 import { rolesApi } from './api.js';
 import { GRIP } from './constants.js';
 import { rerenderRoles } from './filters.js';
-import { footprint, lockedCount, moveBody, neighborsAt, neighborsOf, nextVersion, roleIndex, tailCount } from './order.js';
+import { footprint, isBaseRole, lockedCount, moveBody, neighborsAt, neighborsOf, nextVersion, roleIndex, tailCount } from './order.js';
 import { runRolesSearch } from './search.js';
 import { findRole, roleState } from './state.js';
 
@@ -144,7 +144,7 @@ function commitMove(id, to) {
   var from = roleIndex(id);
   if (from < 0) return false;
   var locked = lockedCount();
-  if (items[from].canManage === false) return false;
+  if (items[from].canManage === false || isBaseRole(items[from])) return false;
   to = Math.max(locked, Math.min(items.length - 1 - tailCount(), to));
   if (to === from) return false;
 

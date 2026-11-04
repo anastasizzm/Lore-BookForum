@@ -1,18 +1,20 @@
 /**
- * Создание роли: POST имён, привязка к проекту, размещение в списке.
+ * Создание роли: POST имени в справочник. Роль без прав системной не считается,
+ * поэтому здесь сохраняется только название (видно в «Все роли»);
+ * права и привязка к проекту — через «+» (permissions-modal.js → finishNewRole).
  */
 import { tx } from '../../../core/i18n.js';
 import { searchState } from '../../../core/search.js';
 import { notify } from '../../../core/ui.js';
-import { colorForApi, currentLang, normalizeColor } from '../../../core/utils.js';
-import { ensureSystemRoles, refreshAllRoles } from '../../all-roles/page.js';
+import { colorForApi, currentLang } from '../../../core/utils.js';
+import { refreshAllRoles } from '../../all-roles/page.js';
 import { rolesApi } from '../api.js';
-import { ROLE_COLORS, ROLE_GROUPS } from '../constants.js';
+import { ROLE_COLORS } from '../constants.js';
 import { closeRoleNew, resetRoleNewErrors, roleNew, roleNewChoice, setRoleNewBusy, setRoleNewError, showRoleNewErrors } from './modal.js';
-import { placeCreatedRole, resyncRoles } from '../dnd.js';
+import { placeCreatedRole } from '../dnd.js';
 import { nextVersion, tailCount } from '../order.js';
 import { closeRoleModal } from '../permissions-modal.js';
-import { findRole, roleState } from '../state.js';
+import { hasAnyPerms, roleState } from '../state.js';
 import { renderRoleRows } from '../table.js';
 
 function pickRoleTitle(rows) {
@@ -28,7 +30,8 @@ function buildRoleCreateBody(rows) {
   rows.forEach(function (row) { translations[row.langCode] = row.title; });
   return {
     translations: translations,
-    visibility: roleNewChoice('visibility') || 'public',
+    // бэк принимает булев флаг isPublic (раньше была строка visibility)
+    isPublic: (roleNewChoice('visibility') || 'public') === 'public',
     color: colorForApi(roleNewChoice('color') || ROLE_COLORS[0])
   };
 }
@@ -54,17 +57,6 @@ function createdRoleId(result) {
   return null;
 }
 
-var SAVE_ONLY_ATTACHES_EMPTY_PERMS = true;
-function emptyPermissionsBody() {
-  var names = { system: 'systemPermissions', posts: 'postPermissions', pubs: 'pubPermissions' };
-  var out = {};
-  Object.keys(ROLE_GROUPS).forEach(function (group) {
-    out[names[group]] = {};
-    ROLE_GROUPS[group].forEach(function (key) { out[names[group]][key] = false; });
-  });
-  return out;
-}
-
 function newRolePosition(insertAt) {
   if (insertAt) {
     return {
@@ -85,32 +77,7 @@ export function newRoleRequest(item, perms) {
   return Object.assign({ roleId: item.id }, newRolePosition(item.insertAt), perms);
 }
 
-function attachEmptyRole(stub) {
-  var perms = emptyPermissionsBody();
-  return rolesApi.create(newRoleRequest(stub, perms)).then(function (result) {
-    if (result.mode === 'forbidden') {
-      notify(tx('js.no_rights', 'You do not have permission to do this'), 'error');
-    } else if (result.mode === 'error') {
-      notify(result.message, 'error');
-    } else {
-      return finishNewRole(stub, perms, result);
-    }
-    notify(tx('admin.role_perms_skipped', 'The role name is saved, but its permissions are not set yet'), 'warning');
-  }).catch(function (err) {
-    console.warn('[admin] attach role failed', err);
-    notify(tx('errors.common.network_error', 'Network error. Check your connection and try again'), 'error');
-  });
-}
-
-function newRoleStub(created, body, insertAt) {
-  return {
-    id: created.id, title: created.title, color: normalizeColor(body.color), createdAt: '',
-    canManage: true, status: body.visibility, version: null,
-    isNew: true, insertAt: insertAt || null,
-    systemPermissions: {}, postPermissions: {}, pubPermissions: {}
-  };
-}
-
+/** Вызывается после POST /api/system/roles (привязка роли к проекту с правами). */
 export function finishNewRole(item, body, result) {
   item.systemPermissions = body.systemPermissions;
   item.postPermissions   = body.postPermissions;
@@ -119,6 +86,8 @@ export function finishNewRole(item, body, result) {
   var insertAt = item.insertAt;
   item.insertAt = null;
 
+  var hasPerms = hasAnyPerms(body);
+
   var done = function () {
     var searchInput = document.querySelector('[data-admin-search]');
     if (searchInput) searchInput.value = '';
@@ -126,7 +95,11 @@ export function finishNewRole(item, body, result) {
     renderRoleRows();
     refreshAllRoles();
     closeRoleModal();
-    notify(tx('admin.role_created', 'Role created'), 'success');
+    if (hasPerms) {
+      notify(tx('admin.role_created', 'Role created'), 'success');
+    } else {
+      notify(tx('admin.role_perms_skipped', 'The role name is saved, but its permissions are not set yet'), 'warning');
+    }
   };
   var addLocal = function () {
     item.version = nextVersion(result.etag, 0);
@@ -135,19 +108,21 @@ export function finishNewRole(item, body, result) {
   };
 
   if (result.mode === 'mock') {
-    addLocal();
-    if (insertAt) placeCreatedRole(item, insertAt);
+    // роль без прав системной не считается — в локальный список её не добавляем
+    if (hasPerms) {
+      addLocal();
+      if (insertAt) placeCreatedRole(item, insertAt);
+    }
     done();
     return Promise.resolve();
   }
 
   return rolesApi.list().then(function (items) {
-    var placed = null;
     if (items) {
-      roleState.items = items;
-      placed = findRole(item.id);
+      roleState.items = items; // источник правды — ответ сервера
+    } else if (hasPerms) {
+      addLocal();              // список не загрузился, но права есть
     }
-    if (!placed) placed = addLocal();
     done();
   });
 }
@@ -174,40 +149,21 @@ export function submitRoleNew() {
     if (result.mode === 'forbidden') { notify(tx('js.no_rights', 'You do not have permission to do this'), 'error'); return null; }
     if (result.mode === 'error')     { showRoleNewErrors(result, rows); return null; }
 
-    var id;
-    if (result.mode === 'mock') {
-      id = roleState.items.reduce(function (m, r) { return Math.max(m, Number(r.id) || 0); }, 0) + 1;
-    } else {
-      id = createdRoleId(result);
-      if (id === null) {
-        console.warn('[admin] POST /api/additional/roles: could not read the new role id', result);
-        setRoleNewError(tx('errors.common.server_error', 'Server error. Please try again later.'));
-        return null;
-      }
+    if (result.mode !== 'mock' && createdRoleId(result) === null) {
+      console.warn('[admin] POST /api/additional/roles: could not read the new role id', result);
+      setRoleNewError(tx('errors.common.server_error', 'Server error. Please try again later.'));
+      return null;
     }
-    return { id: id, title: pickRoleTitle(rows) };
+    return { title: pickRoleTitle(rows) };
   }).then(function (created) {
     if (!created) return;
 
-    var insertAt = roleNew.insertAt;
     roleNew.insertAt = null;
     closeRoleNew();
-    var stub = newRoleStub(created, body, insertAt);
-
-    return ensureSystemRoles().then(function (ok) {
-      if (!ok) {
-        notify(tx('admin.role_name_saved', 'Role name saved'), 'success');
-        notify(tx('admin.roles_load_error', 'Failed to load roles') + (rolesApi.lastError ? ': ' + rolesApi.lastError : ''), 'error');
-        refreshAllRoles();
-        return;
-      }
-      if (SAVE_ONLY_ATTACHES_EMPTY_PERMS) {
-        return attachEmptyRole(stub);
-      } else {
-        notify(tx('admin.role_name_saved', 'Role name saved'), 'success');
-        resyncRoles();
-      }
-    });
+    // Только название: без прав роль не системная, в список системных ролей не попадает.
+    // Она появится в «Все роли»; права выдаются через «+».
+    notify(tx('admin.role_name_saved', 'Role name saved'), 'success');
+    refreshAllRoles();
   }).catch(function (err) {
     console.warn('[admin] role create failed', err);
     setRoleNewError(tx('errors.common.network_error', 'Network error. Check your connection and try again'));

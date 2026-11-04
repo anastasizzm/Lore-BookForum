@@ -94,7 +94,7 @@ final class RolesRepository extends Repository
 
     public function update(int $id, string $color, bool $isPublic, array $translations) : bool
     {
-        return $this->uow->transactional(function() use ($id, $translations) {
+        return $this->uow->transactional(function() use ($id, $color, $isPublic, $translations) {
             $params = [
                 ':id' => ScriptParam::asInt($id), 
                 ':id_r' => ScriptParam::asInt($id),

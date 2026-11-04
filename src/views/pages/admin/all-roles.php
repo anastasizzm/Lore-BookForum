@@ -20,6 +20,8 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->include('admin-back'); ?>
+
 <?php $view->include('page-header', [
     'title'    => $view->t('common.admin.all_roles_title'),
     'subtitle' => $view->t('common.admin.all_roles_subtitle'),
@@ -86,13 +88,24 @@ $tx = static function (string $key, string $fallback) use ($view): string {
  * Нет данных / не сериализуются — блок не выводится, JS сам сходит в API.
  */
 $adminBoot = static function (string $name, mixed $data): void {
-    if ($data === null || $data === []) return;
+    // null = контроллер данные не передал (JS сходит в API); пустой массив = «ролей нет»
+    if ($data === null) return;
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
         | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
     if (!is_string($json)) return;
     echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
 };
-$adminBoot('all-roles', $allRoles ?? $names ?? null);
+// Контроллер (AdminPanelController::roles) передаёт список в $items
+$serverRoles = $allRoles ?? $names ?? $items ?? null;
+// Элементы могут быть моделями: приводим к массивам так же, как jsonList() в API
+if (is_array($serverRoles)) {
+    $serverRoles = array_map(static function ($item) {
+        if ($item instanceof \JsonSerializable) return $item->jsonSerialize();
+        if (is_object($item) && method_exists($item, 'toArray')) return $item->toArray();
+        return $item;
+    }, $serverRoles);
+}
+$adminBoot('all-roles', $serverRoles);
 ?>
 
 <?php $view->endBlock('content'); ?>

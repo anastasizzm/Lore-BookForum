@@ -4,23 +4,29 @@
 import { t, tx } from '../../core/i18n.js';
 import { notify } from '../../core/ui.js';
 import { currentLang, esc, langName } from '../../core/utils.js';
+import { defaultLang, hasDefaultLang, loadDefaultLang } from '../../core/default-lang.js';
 import { dictApi } from './api.js';
 import { loadLanguages } from './languages.js';
 import { dict } from './state.js';
 import { applyLocal, findItem, renderRows, syncFromApi } from './table.js';
 
-/** Названия на этих языках обязательны (en и ru нельзя убрать и оставить пустыми). */
-var REQUIRED_LANGS = ['en', 'ru'];
-
-function isRequiredLang(code) {
-  return REQUIRED_LANGS.indexOf(String(code || '').toLowerCase()) !== -1;
+/**
+ * Обязательно только название на языке системы по умолчанию
+ * (GET /api/additional/languages/fallback, см. core/default-lang.js).
+ */
+function requiredLangs() {
+  return [String(defaultLang()).toLowerCase()];
 }
 
-/** Гарантирует, что в черновике есть строки en и ru (обязательные идут первыми). */
+function isRequiredLang(code) {
+  return requiredLangs().indexOf(String(code || '').toLowerCase()) !== -1;
+}
+
+/** Гарантирует, что в черновике есть строка языка по умолчанию (обязательная идёт первой). */
 function ensureRequiredRows() {
   var byCode = {};
   dict.draft.forEach(function (row) { byCode[String(row.langCode || '').toLowerCase()] = row; });
-  var required = REQUIRED_LANGS.map(function (code) {
+  var required = requiredLangs().map(function (code) {
     return byCode[code] || { langCode: code, title: '' };
   });
   var rest = dict.draft.filter(function (row) { return !isRequiredLang(row.langCode); });
@@ -120,6 +126,13 @@ export function removeLanguage(btn) {
 
 export function openDictForm(id) {
   if (!dict.modal) return;
+  // Язык по умолчанию нужен до отрисовки обязательной строки
+  if (hasDefaultLang()) { openForm(id); return; }
+  loadDefaultLang().then(function () { openForm(id); });
+}
+
+function openForm(id) {
+  if (!dict.modal) return;
 
   dict.editId = id ? Number(id) : null;
   var item = dict.editId ? findItem(dict.editId) : null;
@@ -209,11 +222,15 @@ export function saveDictForm() {
     })
     .filter(function (row) { return row.langCode !== '' && row.title !== ''; });
 
-  var missing = REQUIRED_LANGS.filter(function (code) {
+  var missing = requiredLangs().filter(function (code) {
     return !filled.some(function (row) { return row.langCode.toLowerCase() === code; });
   });
   if (missing.length) {
-    setError(tx('admin.dict_validation_required', 'Fill in the title in English and Russian.'));
+    var defCode = requiredLangs()[0];
+    var defName = langName(defCode);
+    setError(tx('admin.dict_validation_default',
+      'Fill in the title in the default language: ' + defName + ' (' + defCode + ').',
+      { lang: defName, code: defCode }));
     Array.prototype.forEach.call(dict.list ? dict.list.querySelectorAll('[data-lang-index]') : [], function (row) {
       var code = String(row.getAttribute('data-lang') || '').toLowerCase();
       var input = row.querySelector('[data-lang-title]');

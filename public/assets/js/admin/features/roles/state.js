@@ -36,6 +36,13 @@ export function totalPerms(item) {
          countPerms(item.pubPermissions,    ROLE_GROUPS.pubs);
 }
 
+/** true, если в теле запроса выдано хотя бы одно право (роль без прав системной не считается). */
+export function hasAnyPerms(body) {
+  return [body.systemPermissions, body.postPermissions, body.pubPermissions].some(function (g) {
+    return g && Object.keys(g).some(function (k) { return !!g[k]; });
+  });
+}
+
 export function permsLabel(n) {
   var category = n === 1 ? 'one' : 'other';
   try {

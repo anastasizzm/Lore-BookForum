@@ -30,6 +30,8 @@ $serverItems = $types ?? $items ?? null;
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->include('admin-back'); ?>
+
 <?php $view->include('page-header', [
     'title'    => $view->t('common.admin.types_title'),
     'subtitle' => $view->t('common.admin.types_subtitle'),
