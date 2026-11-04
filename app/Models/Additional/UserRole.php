@@ -14,7 +14,8 @@ final readonly class UserRole extends BasicModel
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
         public string $color,
-        public bool $isSystem
+        public bool $isSystem,
+        public bool $isPublic
     ){
         parent::__construct($id, $title, $createdAt, $deletedAt);
     }
@@ -28,7 +29,8 @@ final readonly class UserRole extends BasicModel
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,
             color: self::str($row, $prefix . 'color'),
-            isSystem: self::bool($row, $prefix . 'is_system')
+            isSystem: self::bool($row, $prefix . 'is_system'),
+            isPublic: self::bool($row, $prefix . 'is_public')
         );
     }
 
@@ -37,7 +39,8 @@ final readonly class UserRole extends BasicModel
         $parent = parent::toArray();
         return $parent + [
             'color' => $this->color,
-            'isSystem' => $this->isSystem
+            'isSystem' => $this->isSystem,
+            'isPublic' => $this->isPublic,
         ];
     }
 }
