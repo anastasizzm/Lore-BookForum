@@ -156,6 +156,9 @@ window.LoreRoles = (function () {
       loadingUsers: false,
       userOpen: false,     // выпадающий список людей раскрыт
       roleOpen: false,
+      // true на время программного .focus() при открытии модалки: такой
+      // фокус не должен сам раскрывать выпадающий список.
+      suppressFocusOpen: false,
       q: '',               // строка поиска людей
       roleQ: '',
       selectedRoleId: '', // выбранная роль в модалке «роль + пользователь»
@@ -844,6 +847,7 @@ window.LoreRoles = (function () {
     add.saving = false;
     add.userOpen = false;
     add.roleOpen = false;
+    add.suppressFocusOpen = false;
     add.selectedRoleId = '';
     add.userPage = 1;
     add.userHasNext = false;
@@ -871,6 +875,20 @@ window.LoreRoles = (function () {
       try { st.add.lastFocus.focus(); } catch (_) {}
     }
     st.add.lastFocus = null;
+  }
+
+  /**
+   * Программный фокус (при открытии модалки) не должен раскрывать
+   * выпадающий список. Флаг снимается сразу после .focus(): событие
+   * focusin приходит синхронно, поэтому обработчик его проигнорирует.
+   * Обычный фокус пользователя (Tab/клик) раскрывает список как обычно.
+   */
+  function focusWithoutDropdownOpen(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    var prev = st.add.suppressFocusOpen;
+    st.add.suppressFocusOpen = true;
+    try { el.focus(); } catch (_) {}
+    finally { st.add.suppressFocusOpen = prev; }
   }
 
   /* ---------- МОДАЛКА: создание роли (экран 1, «+») ---------- */
@@ -915,7 +933,7 @@ window.LoreRoles = (function () {
     setPermsStatus('');
 
     renderPerms();
-    if (pickerInput && pickerInput.focus) { try { pickerInput.focus(); } catch (_) {} }
+    focusWithoutDropdownOpen(pickerInput);
     renderAddResults();
   }
 
@@ -1006,7 +1024,7 @@ window.LoreRoles = (function () {
     var focusTarget = add.userLocked
       ? q('[data-roles-create-user-role-search]')
       : q('[data-roles-create-user-user-search]');
-    if (focusTarget && focusTarget.focus) { try { focusTarget.focus(); } catch (_) {} }
+    focusWithoutDropdownOpen(focusTarget);
   }
 
   function closeCreateUserModal() { closeCreateModals(); }
@@ -1457,7 +1475,7 @@ window.LoreRoles = (function () {
         add.userOpen = false;
         renderAdd();
         var search = q('[data-roles-create-user-user-search]');
-        if (search) { try { search.focus(); } catch (_) {} }
+        focusWithoutDropdownOpen(search);
         return;
       }
 
@@ -2170,8 +2188,16 @@ window.LoreRoles = (function () {
         return;
       }
 
-      // клик по полю-поиску роли открывает список: focusin не сработает, если
-      // фокус уже стоит на поле (Safari не фокусирует кнопки-опции по клику)
+      // Клик по полю-поиску роли открывает список. focusin может не сработать,
+      // если фокус уже стоит на поле, поэтому раскрываем и по клику; клик по
+      // стрелке/обёртке .roles-select сначала переводит фокус в само поле.
+      var roleField = target.closest('.roles-select');
+      if (roleField) {
+        var roleInput = roleField.querySelector('[data-roles-create-user-role-search], [data-roles-create-role-search]');
+        if (roleInput && document.activeElement !== roleInput) {
+          try { roleInput.focus(); } catch (_) {}
+        }
+      }
       if (target.matches('[data-roles-create-user-role-search]') ||
           target.matches('[data-roles-create-role-search]')) {
         st.add.roleOpen = true;
@@ -2179,8 +2205,17 @@ window.LoreRoles = (function () {
         return;
       }
 
-      // Поле людей по клику список не открывает — только после ввода
-      // (см. обработчик input), иначе дропдаун раскрывается пустым.
+      // Поле людей раскрывает список по фокусу (focusin) и по вводу; клик
+      // нужен на случай, когда фокус уже стоит на поле (автофокус при
+      // открытии модалки), — тогда focusin повторно не срабатывает.
+      if (target.matches('[data-roles-create-user-user-search]')) {
+        if (!st.add.userLocked) {
+          st.add.userOpen = true;
+          renderAddResults();
+          loadMoreIfEmpty();
+        }
+        return;
+      }
 
       if (target.closest('[data-roles-perms-cancel]') ||
           target.closest('[data-roles-perms-dismiss]')) {
@@ -2277,6 +2312,29 @@ window.LoreRoles = (function () {
       cleanupDrag();
     });
 
+    /* --- поиск: раскрытие по фокусу ---
+       Поле получило фокус (Tab, клик, возврат фокуса) — список открывается.
+       Программный фокус при открытии модалки не раскрывает список: на это
+       время openCreateRole/openCreateUserModal ставят suppressFocusOpen. */
+    root.addEventListener('focusin', function (e) {
+      var target = e.target && e.target.closest ? e.target : null;
+      if (!target || st.add.suppressFocusOpen) return;
+
+      if (target.matches('[data-roles-create-user-user-search]')) {
+        if (st.add.userLocked) return;
+        st.add.userOpen = true;
+        renderAddResults();
+        loadMoreIfEmpty();
+        return;
+      }
+
+      if (target.matches('[data-roles-create-user-role-search]') ||
+          target.matches('[data-roles-create-role-search]')) {
+        st.add.roleOpen = true;
+        renderAddResults();
+      }
+    });
+
     /* --- поиск: ввод (дебаунс) --- */
     var searchTimer = 0;
 
@@ -2292,8 +2350,9 @@ window.LoreRoles = (function () {
 
       if (target.matches('[data-roles-create-user-user-search]')) {
         st.add.q = target.value.trim();
-        // Пустой запрос — список не показываем: только после реального ввода.
-        st.add.userOpen = st.add.q.length > 0;
+        // Пока поле в фокусе, список остаётся открытым; ввод лишь сужает
+        // выдачу (сфокусированное пустое поле показывает первые записи).
+        st.add.userOpen = true;
         clearTimeout(searchTimer);
         searchTimer = setTimeout(function () { loadMoreIfEmpty(); }, 250);
         // модалка — результаты каталога
@@ -2310,9 +2369,9 @@ window.LoreRoles = (function () {
       }
     });
 
-    /* --- поиск: раскрытие/скрытие выпадающих списков ---
-       Только клик: «по умолчанию» список не открывается (фокус сам по себе не
-       открывает — в т.ч. чтобы Safari не трогал фокус у кнопок-опций). */
+    /* --- поиск: скрытие выпадающих списков при уходе фокуса ---
+       Раскрываются списки по фокусу (focusin) и по вводу; при потере
+       фокуса пикером список закрывается. */
 
     root.addEventListener('focusout', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
