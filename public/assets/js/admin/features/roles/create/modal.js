@@ -3,6 +3,7 @@
  */
 import { tx } from '../../../core/i18n.js';
 import { esc, langName } from '../../../core/utils.js';
+import { defaultLang, hasDefaultLang, loadDefaultLang } from '../../../core/default-lang.js';
 import { loadLanguages } from '../../dictionary/languages.js';
 import { submitRoleNew } from './submit.js';
 import { fieldErrorText } from '../field-errors.js';
@@ -159,16 +160,37 @@ export function showRoleNewErrors(result, rows) {
   if (firstBad) firstBad.focus();
 }
 
+/** Основное поле названия — на языке системы по умолчанию (обязательное). */
+function paintMainLang() {
+  var input = roleNew.nameInput;
+  if (!input) return;
+  var code = defaultLang();
+  var name = langName(code);
+  if (input.dataset.baseHolder === undefined) input.dataset.baseHolder = input.getAttribute('placeholder') || '';
+  var base = input.dataset.baseHolder;
+  input.setAttribute('placeholder', base ? base + ' (' + name + ')' : name);
+  input.setAttribute('data-lang', code);
+  input.title = name + ' (' + code + ')';
+}
+
 export function openRoleNew(insertAt) {
   if (!roleNew.modal) return;
+  // Язык по умолчанию нужен до того, как форма откроется
+  if (hasDefaultLang()) { showRoleNew(insertAt); return; }
+  loadDefaultLang().then(function () { showRoleNew(insertAt); });
+}
+
+function showRoleNew(insertAt) {
+  if (!roleNew.modal) return;
   roleNew.insertAt = insertAt || null;
-  roleNew.draft = [{ langCode: 'en', title: '' }];
+  roleNew.draft = [{ langCode: defaultLang(), title: '' }];
   resetRoleNewErrors();
   roleNew.form.reset();
   setRoleNewError('');
   setRoleNewBusy(false);
   closeRoleNewMenu();
   renderRoleNewLangs();
+  paintMainLang();
 
   roleNew.lastFocus = document.activeElement;
   roleNew.modal.hidden = false;
@@ -203,6 +225,7 @@ export function initRoleNew() {
   var modal = document.querySelector('[data-rolenew-modal]');
   if (!modal) return;
   roleNew.modal = modal;
+  loadDefaultLang();
   roleNew.form = modal.querySelector('[data-rolenew-form]');
   roleNew.nameInput = modal.querySelector('[data-rolenew-name]');
   roleNew.list = modal.querySelector('[data-rolenew-langs]');
