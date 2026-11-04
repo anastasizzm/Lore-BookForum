@@ -914,6 +914,7 @@
         "searching": "Searching…",
         "nothing_found": "Nothing found.",
         "no_roles_added": "No roles added yet. Add a role in “Roles and people” first.",
+        "base_role_unavailable": "The “User” role is a base system role and can’t be added to a publication.",
         "search_unavailable": "User search is unavailable — showing assigned users only.",
         "chips_hint": "Pick users and roles, then press Save.",
         "remove": "Remove",

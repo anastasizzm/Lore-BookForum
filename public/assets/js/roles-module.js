@@ -321,6 +321,16 @@ window.LoreRoles = (function () {
     };
   }
 
+  /**
+   * Роль User (id 0) — базисная системная. Бэкенд POST /roles парсит
+   * roleId через positiveInt и отвечает «role id must be a positive
+   * integer», поэтому добавлять её в роли публикации нельзя. Прячем её
+   * из каталога добавления (фронт-обход без правки бэкенда).
+   */
+  function isAddableRole(role) {
+    return !!role && String(role.id) !== '0';
+  }
+
   function normalizeUser(raw) {
     if (!raw || typeof raw !== 'object') return null;
     var user = raw.user && typeof raw.user === 'object' ? raw.user : raw;
@@ -506,7 +516,9 @@ window.LoreRoles = (function () {
   }
 
   function roleRowHtml(role, index) {
-    var locked = !role.canManage;
+    // Роль User (id 0) бэкенд не принимает в маршрутах /roles/{roleId}
+    // (positiveInt) — считаем её нередактируемой, чтобы не ловить 404/400.
+    var locked = !role.canManage || String(role.id) === '0';
     var handle = st.dndReady && !locked
       ? '<span class="roles-row__handle" data-role-handle' +
         ' title="' + esc(t('roles.drag_hint')) + '">' + handleSvg() + '</span>'
@@ -915,6 +927,9 @@ window.LoreRoles = (function () {
     // название новой роли — выбранная в списке кандидатов роль каталога
     var picked = add.roles[0];
     if (!picked) { setAddStatus(t('roles.need_roles')); return; }
+    // User (id 0) бэкенд не принимает (positiveInt) — не отправляем запрос,
+    // объясняем ограничение в самой модалке.
+    if (String(picked.id) === '0') { setAddStatus(t('roles.base_role_unavailable')); return; }
     setAddStatus('');
     perms.saving = true;
 
@@ -1095,13 +1110,13 @@ window.LoreRoles = (function () {
     return request('GET', ROLES_CATALOG_URL).then(function (res) {
       add.loadingRoles = false;
       if (res.kind === 'ok') {
-        add.catalogRoles = mapList(res.data, normalizeRole) || [];
+        add.catalogRoles = (mapList(res.data, normalizeRole) || []).filter(isAddableRole);
         add.roleFallback = false;
       } else {
         // Каталога нет — предлагаем роли, уже привязанные к публикации
         add.catalogRoles = st.roles.map(function (role) {
           return { id: role.id, title: role.title, color: role.color, version: role.version, canManage: role.canManage, perms: null };
-        });
+        }).filter(isAddableRole);
         add.roleFallback = true;
       }
       renderAddResults();
@@ -1873,6 +1888,13 @@ window.LoreRoles = (function () {
   function insertRole(roleId, title, color) {
     var ins = st.insert;
     if (ins.saving) return;
+    // User (id 0) бэкенд не принимает (positiveInt) — не шлём запрос,
+    // показываем объяснение вместо сырой ошибки валидации.
+    if (String(roleId) === '0') {
+      setInsertStatus(t('roles.base_role_unavailable'));
+      renderInsert();
+      return;
+    }
     ins.saving = true;
     renderInsert();
 

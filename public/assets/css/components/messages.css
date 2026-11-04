@@ -32,7 +32,10 @@
   position: fixed;
   bottom: 16px;
   right: 16px;
-  z-index: 1000;
+  /* Выше любых модалок и оверлеев: .modal — 1300, .roles-overlay — 1200,
+     .article-rights — 1100. Плашка должна читаться поверх затемнённого
+     фона окна ролей. */
+  z-index: 2000;
   display: flex;
   flex-direction: column-reverse;  /* новая плашка — первая в DOM, у нижнего края */
   gap: 12px;
