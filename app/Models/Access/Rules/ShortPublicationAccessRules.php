@@ -15,6 +15,7 @@ use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Publications\ControlPublicationOperation;
+use App\Models\Access\Operations\Publications\ControlRPPublicationOperation;
 
 use App\Forms\Form;
 use App\Models\RowModel;

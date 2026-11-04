@@ -89,11 +89,11 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   со страницы книги), кнопки — «Отмена» / «Сохранить».
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
- *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) живёт
- *        ТОЛЬКО на book-details; из формы (11.4) публикация идёт второй
- *        фазой после создания черновика — POST /books/{id}/publish,
- *        при неудаче редирект на страницу книги (права можно выставить
- *        там). Права (rights-modal) из формы не выбираются.
+ *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
+ *        и на этой форме; после создания черновика Publish открывает
+ *        меню ролей (roles-module.js) — публикация идёт второй фазой
+ *        (POST /books/{id}/publish) внутри плашки. Если публикация
+ *        не прошла, меню открывается в режиме повторной публикации.
  *   POST /books/{id}/publish            — черновик → published; используется
  *        плашкой на book-details (кнопка «Опубликовать книгу»), успех →
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
@@ -323,6 +323,8 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/components/cover-upload.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/forms/book-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/rights-modal.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
   <script src="<?= $view->asset('js/book-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
@@ -747,8 +749,20 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
 
     </form>
 
+    <!-- Меню ролей публикации: открывается после создания/публикации книги.
+         Показываем его на форме, иначе window.RightsModal на странице нет
+         и Publish молча уводит на /books/{id}, не открывая роли. -->
+    <?php $view->include('rights-modal'); ?>
+
   </section>
 
 </div>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/rights-modal.js"></script>
+  <!-- roles-module.js — новый UI назначения ролей (экраны 1–4).
+       Подключается после rights-modal.js, как на book-details. -->
+  <script src="/assets/js/roles-module.js" defer></script>
+<?php $view->endBlock('scripts'); ?>

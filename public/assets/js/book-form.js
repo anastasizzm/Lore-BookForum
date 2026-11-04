@@ -1890,9 +1890,10 @@
 
       // ---- Публикация (11.4): POST /api/books/{id}/publish после создания ----
       // Роут API (config/endpoints.php → BooksController::publish) переводит
-      // черновик в published. При ошибке НЕ роняем процесс: черновик уже
-      // создан, уводим на его страницу с предупреждением (опубликовать можно
-      // и оттуда, rights-modal).
+      // черновик в published. Publish обязан открыть меню ролей:
+      //   • публикация прошла — режим after-publish (Publish/отмена ведут на книгу);
+      //   • публикация не прошла — режим publish (можно назначить роли и
+      //     повторить публикацию из меню), отмена ведёт на страницу книги.
       function publishPhase(createdId, redirect) {
         if (activeBtn) activeBtn.textContent = t('js.bookform_publishing');
 
@@ -1907,26 +1908,34 @@
           .then(function (response) {
             if (response.ok) {
               notify(t('js.book_published'), 'success');
-              // Открываем плашку с модулем ролей ( rights-modal.js ):
-              // назначаем роли, Publish ведёт на страницу книги.
-              if (window.RightsModal) {
-                window.RightsModal.open({
-                  mode: 'after-publish',
-                  bookId: createdId,
-                  redirect: redirect,
-                });
-                return;
-              }
-            } else {
-              notify(t('js.book_publish_failed'), 'warning');
+              openRolesMenu(createdId, redirect, 'after-publish');
+              return;
             }
-            leaveAndRedirect(redirect);
+            notify(t('js.book_publish_failed'), 'warning');
+            openRolesMenu(createdId, redirect, 'publish');
           })
           .catch(function (err) {
             console.error('[book-form] publish failed for', createdId, err);
             notify(t('js.book_publish_failed'), 'warning');
-            leaveAndRedirect(redirect);
+            openRolesMenu(createdId, redirect, 'publish');
           });
+      }
+
+      /**
+       * Открывает новое меню ролей (roles-module.js внутри rights-modal.js).
+       * Без него — прежний fallback: уводим на страницу книги.
+       */
+      function openRolesMenu(createdId, redirect, mode) {
+        if (!window.RightsModal) {
+          leaveAndRedirect(redirect);
+          return;
+        }
+        window.RightsModal.open({
+          mode: mode,
+          bookId: createdId,
+          redirect: redirect,
+          cancelRedirect: mode === 'publish' ? redirect : '',
+        });
       }
 
       /** Уход со страницы после успеха: снимаем защиту beforeunload. */

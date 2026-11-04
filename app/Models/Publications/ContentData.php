@@ -24,13 +24,33 @@ final readonly class ContentData extends RowModel
         if ($this->bookData !== NULL) return ArticleContentMode::Book;
         if ($this->content !== NULL) return ArticleContentMode::Text;
 
-        throw new \RuntimException("Neither bookData or content provided");
+        throw new \RuntimeException("Neither bookData or content provided");
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $mode = self::enum($row, $prefix . 'content_mode', ArticleContentMode::class);
-        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row));
-        else return new self(content: self::str($row, $prefix . 'content'));
+        if ($mode === ArticleContentMode::Book)
+            return new self(bookData: BookData::fromRow($row), content: null);
+
+        // Для текстовой статьи content обязателен по CHECK-констрейнту,
+        // но после UPDATE теоретически может быть NULL — не падаем.
+        $content = array_key_exists($prefix . 'content', $row) && $row[$prefix . 'content'] !== null
+            ? (string) $row[$prefix . 'content']
+            : null;
+
+        return new self(bookData: null, content: $content);
+    }
+
+    public function toArray() : array
+    {
+        return [
+            'content' => $this->content,
+            'book' => $this->bookData === null ? null : [
+                'bookId' => $this->bookData->bookId,
+                'pageStart' => $this->bookData->pageStart,
+                'pageEnd' => $this->bookData->pageEnd,
+            ],
+        ];
     }
 }

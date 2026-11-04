@@ -46,6 +46,9 @@
     mode: 'after-publish',
     bookId: 0,
     redirect: '',
+    // Для формы создания: после создания черновика отмена/крестик должны
+    // увести на книгу, иначе форма останется с уже созданной записью.
+    cancelRedirect: '',
     // Колбэк публикации для страницы черновиков: вместо
     // перехода на /books/{id} вызывается он (карточка уходит из списка).
     onPublished: null,
@@ -308,6 +311,7 @@
     }
     document.body.classList.remove('is-modal-open');
     saveError('');
+    state.cancelRedirect = '';
     if (state.lastFocus && state.lastFocus.focus) {
       try { state.lastFocus.focus(); } catch (_) {}
     }
@@ -320,8 +324,9 @@
 
   function cancel() {
     if (state.saving) return;
-    if (state.mode === 'after-publish') {
-      // Книга создана и опубликована — отказ от прав не отменяет это
+    if (state.mode === 'after-publish' || state.cancelRedirect) {
+      // Книга уже создана (и, возможно, опубликована) — отказ от прав
+      // не отменяет это; уводим на её страницу.
       goToBook();
       return;
     }
@@ -350,6 +355,7 @@
       : (opts.mode === 'roles' ? 'roles' : 'publish');
     state.bookId = parseInt(opts.bookId !== undefined ? opts.bookId : r.getAttribute('data-book-id'), 10) || 0;
     state.redirect = opts.redirect || r.getAttribute('data-redirect') || '';
+    state.cancelRedirect = opts.cancelRedirect || '';
     // 'screen' — стартовый экран модуля (1 — роли, 2 — пользователи);
     // 'context' — create (Create → Continue → Publish) | edit (без Continue).
     state.screen = opts.screen ? (parseInt(opts.screen, 10) || 1) : 1;
@@ -387,7 +393,8 @@
     var mod = r.querySelector('[data-roles-module]');
     if (!mod || !window.LoreRoles) return;
 
-    var rolesMode = state.mode === 'roles' ? 'roles' : 'publish';
+    var rolesMode = state.mode === 'roles' ? 'roles'
+      : (state.mode === 'after-publish' ? 'after-publish' : 'publish');
 
     window.LoreRoles.open(mod, {
       publicationId: state.bookId,

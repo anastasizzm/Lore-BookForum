@@ -701,10 +701,13 @@ window.LoreRoles = (function () {
     // Continue на экране 1 есть только при создании (редактирование идёт дальше
     // через экран 2 / управление ролями напрямую).
     if (next) next.hidden = st.context !== 'create';
-    // Экран 2: Publish требует хотя бы одного пользователя.
+    // Экран 2: Publish требует хотя бы одного пользователя только когда
+    // именно он завершает публикацию. В after-publish/roles книга уже
+    // создана: Publish — это «готово», его нельзя блокировать пустым списком.
+    var needsUsers = st.mode === 'publish' && !hasUsers;
     var pub = q('[data-roles-publish]');
-    if (pub) { pub.disabled = !hasUsers; show(pub, true); }
-    show(q('[data-roles-gate]'), !hasUsers);
+    if (pub) { pub.disabled = needsUsers; show(pub, true); }
+    show(q('[data-roles-gate]'), needsUsers);
   }
 
   function render() {
@@ -1893,7 +1896,10 @@ window.LoreRoles = (function () {
 
     st.root = root;
     st.pubId = parseInt(opts.publicationId, 10) || 0;
-    st.mode = opts.mode === 'roles' ? 'roles' : 'publish';
+    // after-publish — публикация уже завершена: Publish в модуле означает
+    // «готово» и не требует назначенных пользователей (см. updateGate).
+    st.mode = opts.mode === 'roles' ? 'roles'
+      : (opts.mode === 'after-publish' ? 'after-publish' : 'publish');
     st.forceMock = opts.mock === true;
     st.onPublish = typeof opts.onPublish === 'function' ? opts.onPublish : null;
     st.onCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;

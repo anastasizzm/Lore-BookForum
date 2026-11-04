@@ -11,14 +11,14 @@ use App\Models\Access\Rules\PublicationAccessRules;
 final readonly class EditPublicationPermissionForm implements Form
 {
     public function __construct(
-        public ?ShortPublicationAccessRules $pubPermissions
+        public ?PublicationAccessRules $pubPermissions
     ){}
 
     public static function fromInput(array $form) : self 
     {
         $hasPub = isset($form['pubPermissions']);
         return new self(
-            pubPermissions: $hasPub ? ShortPublicationAccessRules::fromInput($form['pubPermissions']) : NULL
+            pubPermissions: $hasPub ? PublicationAccessRules::fromInput($form['pubPermissions']) : NULL
         );
     }
 }

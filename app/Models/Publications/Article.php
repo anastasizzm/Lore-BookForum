@@ -23,9 +23,11 @@ readonly class Article extends PublicationExtended
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
         int $creatorId,
+        int $ownerId,
         int $genreId,
         ?BasicModel $genre,
         ?UserShortData $creator,
+        ?UserShortData $owner,
         int $commentsCount,
         int $savedCount,
         int $rating, // avg rating * 10
@@ -35,7 +37,7 @@ readonly class Article extends PublicationExtended
         public ?BasicModel $type,
         public ?string $doi,
         public ArticleContentMode $contentMode,
-        private int $bookId,
+        private ?int $bookId,
         public ?PublicationShort $book
     ){
         parent::__construct(
@@ -45,9 +47,11 @@ readonly class Article extends PublicationExtended
             $deletedAt,
             $iconId, 
             $creatorId,
+            $ownerId,
             $genreId,
             $genre,
             $creator,
+            $owner,
             $commentsCount,
             $savedCount,
             $rating, 
@@ -74,15 +78,17 @@ readonly class Article extends PublicationExtended
             savedCount: $parent->savedCount,
             rating: $parent->rating,
             creatorId: $parent->getCreatorId(),
+            ownerId: $parent->getOwnerId(),
             genreId: $parent->getGenreId(),
             genre: $parent->genre,
             creator: $parent->creator,
+            owner: $parent->owner,
             typeId: self::int($row, $prefix . 'type_id'),
             type: self::hasGroup($row, $t, 'id')
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
             doi: self::strN($row, $prefix . 'doi'),
             bookId: self::intN($row, $prefix . 'book_id'),
-            contentMode: self::str($row, $prefix . 'content_mode'),
+            contentMode: self::enum($row, $prefix . 'content_mode', ArticleContentMode::class),
             book: self::hasGroup($row, $b, 'id')
                 ? PublicationShort::fromRow($row, $prefix . $b)
                 : NULL

@@ -54,12 +54,12 @@ final class ArticlesController extends PublicationsController
 
     public function getContent(HttpContext $context, string $id)
     {
-        $articleId = RouteParamParser::positiveInt(['id' => $id], $id);
+        $articleId = RouteParamParser::positiveInt(['id' => $id], 'id');
 
         $data = $this->service->getContent($articleId);
         if ($data->getType() === ArticleContentMode::Book)
         {
-            $book = $data->getBook();
+            $book = $data->getBookData();
             $bookRedirect = $this->url->url("books.read", ['bookId' => $book->bookId]) . '?page=' . $book->pageStart;
 
             $array = $data->toArray();
