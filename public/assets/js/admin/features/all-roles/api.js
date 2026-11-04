@@ -136,7 +136,7 @@ export var allRolesApi = (function () {
       if (!query && !sort && (!statusFilter || statusFilter === 'all')) {
         var boot = takeBootstrap('all-roles');
         var seeded = boot === null ? null : fromPayload(boot);
-        if (seeded && seeded.length) { setStatus('live'); return Promise.resolve(seeded); }
+        if (seeded) { setStatus('live'); return Promise.resolve(seeded); }
       }
       var parts = [];
       if (query) parts.push('q=' + encodeURIComponent(query));

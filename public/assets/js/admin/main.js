@@ -12,14 +12,6 @@ import { initRoles } from './features/roles/table.js';
 import { initUsersList } from './features/users/list.js';
 import { initUserRoles } from './features/users/roles/index.js';
 
-// Кнопка «Назад на дашборд» — отдельным динамическим импортом: если файл не найден
-// или падает, остальная админка продолжает работать. Путь считается от main.js.
-function initBackLinkSafe() {
-  import('./back-link.js')
-    .then(function (m) { m.initBackLink(); })
-    .catch(function (err) { console.warn('[admin] back-link не загружен:', err); });
-}
-
 function initAdmin() {
   initSearch();
   initDictionary();
@@ -30,7 +22,6 @@ function initAdmin() {
   initUserRoles();
   initUsersList();
   initCommentsList();
-  initBackLinkSafe();
 }
 
 if (document.readyState === 'loading') {

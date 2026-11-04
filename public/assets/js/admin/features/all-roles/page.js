@@ -134,23 +134,9 @@ export function ensureSystemRoles() {
 }
 
 function loadAllRoles(query, status, sort) {
-  return Promise.all([allRolesApi.list(query, status, sort), rolesApi.list()]).then(function (res) {
-    var names = res[0], system = res[1];
-    if (names === null) return null;
-    if (system) roleState.items = system;
-    names.forEach(function (item) {
-      var sys = system ? system.find(function (r) { return Number(r.id) === Number(item.id); }) : null;
-      item.permsKnown = !!system;
-      if (!sys) return;
-      item.systemPermissions = sys.systemPermissions;
-      item.postPermissions   = sys.postPermissions;
-      item.pubPermissions    = sys.pubPermissions;
-      item.version           = sys.version;
-      item.canManage         = sys.canManage;
-      if (!item.visibility && sys.status) item.visibility = String(sys.status).toLowerCase();
-    });
-    return names;
-  });
+  // Здесь нужны только id, название и видимость (public/private) — они приходят из
+  // данных страницы или GET /api/additional/roles. Права системных ролей не грузим.
+  return allRolesApi.list(query, status, sort);
 }
 
 export function refreshAllRoles() {
