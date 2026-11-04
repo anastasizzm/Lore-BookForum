@@ -228,4 +228,11 @@
 
 .article-rights[data-rights-view="roles"] .roles-module {
   display: flex;
+  /* Шапка панели уже даёт разделитель снизу. Второй border-top модуля
+     рисовал «двойную полосу» над Roles and people / Users — убираем. */
+  margin-top: 0;
+  border-top: 0;
+  /* Кнопки Continue/Publish и «+» не должны прилипать к краям панели:
+     у .article-rights__panel нет собственного padding. */
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }

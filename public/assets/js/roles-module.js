@@ -970,7 +970,9 @@ window.LoreRoles = (function () {
     add.original = [];
     add.status = '';
     add.saving = false;
-    add.userOpen = !userId; // add — сразу показываем каталог людей; edit — после «retrieve»
+    // Каталог людей НЕ открываем сразу: список появляется только после
+    // ввода в поле поиска (input-обработчик ниже).
+    add.userOpen = false;
     add.roleOpen = false;   // дропдаун роли закрыт — раскрывается по клику по триггеру
     add.q = '';
     add.roleQ = '';
@@ -1418,7 +1420,7 @@ window.LoreRoles = (function () {
         add.q = '';
         add.roleQ = '';
         add.status = '';
-        add.userOpen = true;
+        add.userOpen = false;
         renderAdd();
         var search = q('[data-roles-create-user-user-search]');
         if (search) { try { search.focus(); } catch (_) {} }
@@ -2136,12 +2138,8 @@ window.LoreRoles = (function () {
         return;
       }
 
-      // …то же для поля людей
-      if (target.matches('[data-roles-create-user-user-search]')) {
-        st.add.userOpen = true;
-        renderAddResults();
-        return;
-      }
+      // Поле людей по клику список не открывает — только после ввода
+      // (см. обработчик input), иначе дропдаун раскрывается пустым.
 
       if (target.closest('[data-roles-perms-cancel]') ||
           target.closest('[data-roles-perms-dismiss]')) {
@@ -2253,7 +2251,8 @@ window.LoreRoles = (function () {
 
       if (target.matches('[data-roles-create-user-user-search]')) {
         st.add.q = target.value.trim();
-        st.add.userOpen = true;
+        // Пустой запрос — список не показываем: только после реального ввода.
+        st.add.userOpen = st.add.q.length > 0;
         clearTimeout(searchTimer);
         searchTimer = setTimeout(function () { loadMoreIfEmpty(); }, 250);
         // модалка — результаты каталога
