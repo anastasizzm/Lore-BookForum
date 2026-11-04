@@ -84,7 +84,7 @@ function renderRoleNewMenu() {
 
 function mapRoleNewField(field, rows) {
   var f = String(field || '').replace(/\[(\w+)\]/g, '.$1').replace(/^\./, '').toLowerCase();
-  if (f === 'visibility') return { type: 'visibility' };
+  if (f === 'visibility' || f === 'ispublic') return { type: 'visibility' };
   if (f === 'color') return { type: 'color' };
   if (f === 'title' || f === 'name') return { type: 'name' };
   var m = f.match(/^translations(?:\.([\w-]+))?(?:\.(?:title|name|lang_code|langcode|lang))?$/);
