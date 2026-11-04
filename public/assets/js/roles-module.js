@@ -1121,9 +1121,20 @@ window.LoreRoles = (function () {
     return add.catalogUsers.filter(function (user) { return matchQuery(user, add.q); }).slice(0, 30);
   }
 
+  /**
+   * Роли для дропдауна «choose a role» в Add role to user — только те,
+   * что уже есть в «Roles and people» (st.roles). Каталог ролей
+   * (add.catalogRoles) здесь не используется: добавить человеку можно
+   * лишь роль, заведённую у публикации.
+   */
   function filteredRoles() {
     var add = st.add;
-    return add.catalogRoles.filter(function (role) { return matchQuery(role, add.roleQ); }).slice(0, 30);
+    return st.roles
+      .map(function (role) {
+        return { id: String(role.id), title: role.title, color: role.color || '' };
+      })
+      .filter(function (role) { return matchQuery(role, add.roleQ); })
+      .slice(0, 30);
   }
 
   /* ---------- рендер оверлея ---------- */
@@ -1237,7 +1248,15 @@ window.LoreRoles = (function () {
           var dot = role.color ? '<span class="roles-chip__dot" style="background:' + esc(role.color) + '"></span>' : '';
           return '<li><button type="button" class="roles-picker__option' + (selected ? ' is-selected' : '') + '" data-add-role-opt="' + esc(String(role.id)) + '" data-roletitle="' + esc(role.title) + '" data-rolecolor="' + esc(role.color || '') + '">' + dot + '<span>' + esc(role.title) + '</span></button></li>';
         }).join('');
-        if (!roles.length) roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(add.loadingRoles ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
+        if (!roles.length) {
+          // Ролей у публикации ещё нет — подсказываем добавить их на
+          // экране «Roles and people». Если роли есть, но поиск ничего
+          // не нашёл — обычный «Nothing found».
+          var emptyText = st.roles.length
+            ? t('roles.nothing_found')
+            : t('roles.no_roles_added');
+          roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(emptyText) + '</li>';
+        }
         roleBox.innerHTML = roleHtml;
         roleBox.hidden = false;
       }

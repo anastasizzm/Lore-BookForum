@@ -913,6 +913,7 @@
         "search_roles_ph": "Search roles…",
         "searching": "Searching…",
         "nothing_found": "Nothing found.",
+        "no_roles_added": "No roles added yet. Add a role in “Roles and people” first.",
         "search_unavailable": "User search is unavailable — showing assigned users only.",
         "chips_hint": "Pick users and roles, then press Save.",
         "remove": "Remove",
