@@ -155,9 +155,13 @@ function loadAllRoles(query, status, sort) {
 
 export function refreshAllRoles() {
   if (!allRoles.table) return Promise.resolve();
-  return loadAllRoles('', 'all', allRoles.sort).then(function (items) {
-    if (!items) return;
+  // Обновляем с текущим поиском/фильтром/сортировкой, а не сбрасываем их;
+  // seq отбрасывает устаревшие ответы (поздний ответ не затирает свежий поиск).
+  var seq = ++allRoles.seq;
+  return loadAllRoles(allRoles.query, allRolesStatusValue(), allRoles.sort).then(function (items) {
+    if (!items || seq !== allRoles.seq) return;
     allRoles.items = items;
+    setAllRolesStatus('');
     renderAllRoles();
   });
 }
@@ -200,6 +204,7 @@ function runAllRolesSearch() {
       return;
     }
     allRoles.items = items;
+    setAllRolesStatus('');
     renderAllRoles();
   });
 }
@@ -239,7 +244,11 @@ export function initAllRoles() {
   }
 
   setAllRolesStatus(tx('admin.roles_loading', 'Loading roles…'));
+  // Первая загрузка может прийти позже, чем пользователь успел поискать:
+  // если за это время стартовал другой запрос (seq изменился), её ответ отбрасываем.
+  var initSeq = ++allRoles.seq;
   loadAllRoles('', 'all').then(function (items) {
+    if (initSeq !== allRoles.seq) return;
     if (items === null) {
       setAllRolesStatus(tx('admin.roles_load_error', 'Failed to load roles'));
       return;

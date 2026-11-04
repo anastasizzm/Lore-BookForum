@@ -9,6 +9,7 @@ import { rolesApi } from './api.js';
 import { GRIP, TRASH } from './constants.js';
 import { initRoleNew } from './create/modal.js';
 import { dnd, initRoleDnd, moveQueue } from './dnd.js';
+import { rerenderRoles } from './filters.js';
 import { lockedCount } from './order.js';
 import { findRole, permsLabel, roleState, totalPerms } from './state.js';
 
@@ -128,7 +129,7 @@ export function deleteRole(btn) {
       }
 
       roleState.items = roleState.items.filter(function (r) { return Number(r.id) !== Number(item.id); });
-      renderRoleRows();
+      rerenderRoles(); // с текущим поиском/фильтром, без сброса
       notify(tx('admin.role_deleted', 'Role deleted'), 'success');
     });
   }).catch(function (err) {
@@ -158,7 +159,8 @@ function loadRoles() {
     }
     roleState.items = items;
     setRolesStatus('');
-    renderRoleRows();
+    // Ответ первой загрузки может прийти уже после поиска: рисуем с учётом текущего запроса
+    rerenderRoles();
   });
 }
 
