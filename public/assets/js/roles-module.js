@@ -44,9 +44,14 @@ window.LoreRoles = (function () {
   var USERS_CATALOG_URL = '/api/users?ps=50';
   var ROLES_CATALOG_URL = '/api/additional/roles?ps=50';
 
-  /** Ключи pubPermissions (бэк: PublicationAccessRules::toArray). */
+  /**
+   * Ключи pubPermissions (бэк: PublicationAccessRules::toArray).
+   * 'create' намеренно отсутствует: право «Create publications» из
+   * «Publication rights» убрано. При сохранении прав бэкенд получает
+   * pubPermissions без create и выставляет его в false.
+   */
   var PUB_PERMS = [
-    'create', 'updateMeta', 'updateContent',
+    'updateMeta', 'updateContent',
     'read', 'managePeople', 'manageRoles'
   ];
 
@@ -857,6 +862,12 @@ window.LoreRoles = (function () {
     add.userHasNext = false;
   }
 
+  /** Пустой черновик прав публикации: все чекбоксы выключены. */
+  function resetPermsDraft() {
+    st.perms.draft = {};
+    PUB_PERMS.forEach(function (key) { st.perms.draft[key] = false; });
+  }
+
   function setAddStatus(text) {
     st.add.status = text || '';
     var status = q('[data-roles-create-status]') || q('[data-roles-create-user-status]');
@@ -870,7 +881,12 @@ window.LoreRoles = (function () {
     st.add.open = false;
     st.add.userOpen = false;
     st.add.roleOpen = false;
-    if (st.perms.source === 'create') st.perms.open = false;
+    if (st.perms.source === 'create') {
+      st.perms.open = false;
+      // черновик прав новой роли не должен переживать закрытие окна:
+      // следующее открытие всегда начинается с пустых чекбоксов
+      resetPermsDraft();
+    }
     var a = q('[data-roles-create-role]');
     if (a) a.hidden = true;
     var u = q('[data-roles-create-user]');
@@ -913,8 +929,7 @@ window.LoreRoles = (function () {
     st.perms.version = 1;
     st.perms.saving = false;
     st.perms.status = '';
-    st.perms.draft = {};
-    PUB_PERMS.forEach(function (key) { st.perms.draft[key] = false; });
+    resetPermsDraft();
     st.perms.lastFocus = document.activeElement;
 
     var pickerInput = q('[data-roles-create-role-search]');
