@@ -232,12 +232,12 @@ export function pickRoleDd(id) {
 }
 
 /** «+» на странице roles: выбрать роль проекта из справочника и задать ей права. */
-export function openRoleAttach() {
+export function openRoleAttach(insertAt) {
   if (!roleState.modal) return;
 
   var stub = {
     id: 0, title: '', color: '', canManage: true, status: '', version: null,
-    isNew: true, attach: true, insertAt: null,
+    isNew: true, attach: true, insertAt: insertAt || null,
     systemPermissions: {}, postPermissions: {}, pubPermissions: {}
   };
   roleState.current = stub;
