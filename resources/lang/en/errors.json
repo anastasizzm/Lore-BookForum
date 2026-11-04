@@ -13,6 +13,7 @@
         "internal": "Something went wrong :(",
         "rate_limited": "Too many requests. Try again later",
         "invalid_input": "Invalid input",
+        "check_fields": "Check the highlighted fields.",
         "min": "The value must be greater than :value",
         "min_len": "The length must be greater than :value",
         "max": "The value must be less than :value",

@@ -1621,13 +1621,26 @@
     }
 
     function onFailed(data, response, raw) {
+      var fieldErrorsShown = false;
       if ((response.status === 400 || response.status === 422) && data) {
         var errors = data.errors || (data.error && typeof data.error === 'object' ? data.error.details : null);
-        if (!silent) renderServerErrors(errors);
+        if (errors && typeof errors === 'object') {
+          // показываем у полей только те ключи, которые форма умеет подсветить
+          var mapped = Object.keys(errors).some(function (key) {
+            return FIELD_KEYS.indexOf(SERVER_KEY[key] || key) !== -1;
+          });
+          if (!silent && mapped) {
+            renderServerErrors(errors);
+            fieldErrorsShown = true;
+          }
+        }
       }
 
       if (silent) {
         setDraftStatus(t('errors.article.article_draft_failed'));
+      } else if (fieldErrorsShown) {
+        // ошибки уже подсвечены у полей — не дублируем сырые ключи бэкенда
+        notify(t('errors.common.check_fields'), 'error');
       } else {
         var fallback = t('errors.common.save_failed', { status: response.status });
         if (window.Messages) notify(window.Messages.describe(response.status, data, raw, fallback));

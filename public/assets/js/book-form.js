@@ -1873,6 +1873,10 @@
                   ? data.error.details
                   : (data && data.errors ? data.errors : null);
                 renderServerErrors(details);
+                // ошибки уже подсвечены у полей — не дублируем сырые ключи бэкенда
+                notify(t('errors.common.check_fields'), 'error');
+                resetButtons();
+                return;
               }
 
               if (response.status === 401) { if (publishDialog) publishDialog.close(); notify(t('errors.common.unauthorized')); return; }
