@@ -13,6 +13,7 @@ export var allRoles = {
   table: null, rows: null, empty: null, status: null, count: null, search: null,
   filterStatus: null,
   query: '',
+  sort: '',            // '' | 'asc' | 'desc' — по Visibility, выполняет бэк
   seq: 0,
   items: []
 };
@@ -34,7 +35,8 @@ function applyAllRolesFilters() {
   
   Array.prototype.forEach.call(rows, function (row) {
     var rowStatus = row.getAttribute('data-status') || '';
-    var hit = statusVal === 'all' || rowStatus === statusVal;
+    // фильтр по статусу выполняет сервер (?status=); локально прячем только строки с известным другим статусом
+    var hit = statusVal === 'all' || rowStatus === '' || rowStatus === statusVal;
     
     row.hidden = !hit;
     if (hit) shown++;
@@ -51,10 +53,46 @@ function applyAllRolesFilters() {
 }
 
 /** В списке All roles убраны права и выведена кнопка Delete */
+/** Порядок строк определяет бэк (?sort=…): на фронте строки не переставляются. */
+function sortedItems() {
+  return allRoles.items;
+}
+
+function paintSortHeader() {
+  var th = allRoles.visTh;
+  if (!th) return;
+  var dir = allRoles.sort || '';
+  th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : 'none');
+  th.textContent = (allRoles.visLabel || '') + (dir === 'asc' ? ' \u25B2' : dir === 'desc' ? ' \u25BC' : '');
+}
+
+function initVisibilitySort() {
+  var ths = allRoles.table ? allRoles.table.querySelectorAll('thead th') : [];
+  var th = ths[2];                       // колонка Visibility: ID, Role, Visibility, Delete
+  if (!th) return;
+  allRoles.visTh = th;
+  allRoles.visLabel = th.textContent.trim();
+  allRoles.sort = '';
+  th.style.cursor = 'pointer';
+  th.style.userSelect = 'none';
+  th.setAttribute('tabindex', '0');
+  th.setAttribute('role', 'columnheader');
+  var toggle = function () {
+    allRoles.sort = allRoles.sort === '' ? 'asc' : allRoles.sort === 'asc' ? 'desc' : '';
+    paintSortHeader();
+    runAllRolesSearch();                 // новый порядок запрашиваем у бэка
+  };
+  th.addEventListener('click', toggle);
+  th.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+  paintSortHeader();
+}
+
 export function renderAllRoles() {
   if (!allRoles.rows) return;
   
-  var html = allRoles.items.map(function (item) {
+  var html = sortedItems().map(function (item) {
     var id = Number(item.id) || 0;
     var titleHtml = item.color ? '<span class="admin-role__dot" style="background:' + esc(item.color) + '"></span> ' : '';
     titleHtml += esc(item.title || 'Без названия');
@@ -71,7 +109,7 @@ export function renderAllRoles() {
         '<td data-col="title"><span class="admin-role__title">' + titleHtml + '</span></td>' +
         '<td data-col="vis">' + visHtml + '</td>' +
         '<td data-col="delete"><div class="admin-actions">' + 
-          '<button type="button" class="btn btn--danger admin-icon-btn" data-allroles-delete data-allroles-row-id="' + id + '"' +
+          '<button type="button" class="btn btn--danger admin-icon-btn" data-allroles-delete data-allroles-row-id="' + id + '"' + (id === 0 ? ' disabled' : '') +
             ' title="' + esc(t('admin.action_delete') || 'Delete') + '" aria-label="' + esc(t('admin.action_delete') || 'Delete') + '">' +
             TRASH +
           '</button>' +
@@ -95,8 +133,8 @@ export function ensureSystemRoles() {
   });
 }
 
-function loadAllRoles(query, status) {
-  return Promise.all([allRolesApi.list(query, status), rolesApi.list()]).then(function (res) {
+function loadAllRoles(query, status, sort) {
+  return Promise.all([allRolesApi.list(query, status, sort), rolesApi.list()]).then(function (res) {
     var names = res[0], system = res[1];
     if (names === null) return null;
     if (system) roleState.items = system;
@@ -117,7 +155,7 @@ function loadAllRoles(query, status) {
 
 export function refreshAllRoles() {
   if (!allRoles.table) return Promise.resolve();
-  return loadAllRoles().then(function (items) {
+  return loadAllRoles('', 'all', allRoles.sort).then(function (items) {
     if (!items) return;
     allRoles.items = items;
     renderAllRoles();
@@ -135,8 +173,8 @@ export function deleteAllRole(btn) {
     if (!confirmed) return;
     btn.disabled = true;
     return allRolesApi.remove(id).then(function (result) {
-      if (result.mode === 'forbidden') { notify(tx('js.no_rights', 'You do not have permission to do this'), 'error'); btn.disabled = false; return; }
-      if (result.mode === 'error') { notify(result.message, 'error'); btn.disabled = false; return; }
+      if (result.mode === 'forbidden') { notify(result.message || tx('js.no_rights', 'You do not have permission to do this'), 'error'); btn.disabled = false; return; }
+      if (result.mode !== 'api') { notify(result.message || tx('errors.common.request_failed', 'Request failed'), 'error'); btn.disabled = false; return; }
       allRoles.items = allRoles.items.filter(function (x) { return Number(x.id) !== id; });
       renderAllRoles();
       notify(tx('admin.role_deleted', 'Role deleted'), 'success');
@@ -155,7 +193,7 @@ function allRolesStatusValue() {
 
 function runAllRolesSearch() {
   var seq = ++allRoles.seq;
-  return loadAllRoles(allRoles.query, allRolesStatusValue()).then(function (items) {
+  return loadAllRoles(allRoles.query, allRolesStatusValue(), allRoles.sort).then(function (items) {
     if (seq !== allRoles.seq) return;
     if (items === null) {
       notify(tx('admin.roles_load_error', 'Failed to load roles'), 'error');
@@ -178,6 +216,7 @@ export function initAllRoles() {
   allRoles.count = document.querySelector('[data-allroles-count]');
   allRoles.search = document.querySelector('[data-allroles-search]');
   allRoles.filterStatus = document.querySelector('[data-allroles-filter-status]');
+  initVisibilitySort();
 
   if (allRoles.search) {
     allRoles.search.addEventListener('keydown', function (e) {
