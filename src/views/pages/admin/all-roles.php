@@ -20,6 +20,8 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->include('admin-back'); ?>
+
 <?php $view->include('page-header', [
     'title'    => $view->t('common.admin.all_roles_title'),
     'subtitle' => $view->t('common.admin.all_roles_subtitle'),

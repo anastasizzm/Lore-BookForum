@@ -47,6 +47,8 @@ $statusBadge = [
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->include('admin-back'); ?>
+
 <?php $view->include('page-header', [
     'title'    => $view->t('common.admin.reports_title'),
     'subtitle' => $view->t('common.admin.reports_subtitle'),

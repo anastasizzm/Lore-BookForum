@@ -13,11 +13,10 @@
  *   admin.categories  → /admin/categories
  *   admin.types       → /admin/types
  *   admin.roles       → /admin/roles
+ *   admin.all-roles   → /admin/all-roles
  *
- * TODO(роуты): для «Жалоб» (admin/reports) и «Всех ролей» (admin/all-roles)
- * роутов в routes.php пока нет — эти две карточки остаются на dev-роуте
- * /pages/test. Когда бэк добавит 'admin.reports' и 'admin.all-roles',
- * поменять значение 'route' на имя роута, а 'href' убрать.
+ * TODO(роуты): для «Жалоб» (admin/reports) роута в routes.php пока нет.
+ * Когда бэк добавит 'admin.reports', вернуть карточку с 'route' => 'admin.reports'.
  *
  * Проверок прав здесь нет: доступ к каждой странице проверяет политика роута
  * (AuthPolicy::Admin / *Operation), дашборд только даёт ссылки.
@@ -49,8 +48,8 @@ $cards = [
      'hint'  => $tr('common.admin.roles_subtitle'),       // "Права ролей на всём форуме"
      'count' => '—'],
 
-    // Все роли → admin/all-roles.php — роута нет (TODO выше)
-    ['href'  => '/pages/test?page=admin/all-roles',
+    // Все роли → admin/all-roles.php
+    ['route' => 'admin.all-roles',
      'title' => $tr('common.admin.all_roles_card_title'), // "Все роли"
      'hint'  => $tr('common.admin.all_roles_card_text'),  // "Названия ролей и их видимость"
      'count' => '—'],
