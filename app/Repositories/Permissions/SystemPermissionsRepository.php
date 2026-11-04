@@ -32,6 +32,7 @@ final class SystemPermissionsRepository extends PermissionsRepository
                 \nur.id as role_id,
                 \nur.color as r_color,
                 \nur.is_system as r_is_system,
+                \nur.is_public as r_is_public,
                 \nur.created_at as r_created_at")
             ->addSelect("COALESCE(
                         MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),

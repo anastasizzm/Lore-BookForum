@@ -39,7 +39,7 @@ final class RolesScriptDirector extends ScriptDirector
     public function addRoleSelectTemp(string $currentLocale, string $fallbackLocale) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("user_roles.id,\nuser_roles.color,\nuser_roles.is_system,\nuser_roles.created_at,\nuser_roles.deleted_at")
+        $this->tempBuilder->addSelect("user_roles.id,\nuser_roles.color,\nuser_roles.is_system,\nuser_roles.is_public,\nuser_roles.created_at,\nuser_roles.deleted_at")
             ->addSelect("COALESCE(
                     MAX(CASE WHEN user_roles_translations.code = :currentCulture THEN user_roles_translations.title END),
                     MAX(CASE WHEN user_roles_translations.code = :fallbackCulture THEN user_roles_translations.title END)
