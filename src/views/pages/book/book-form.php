@@ -686,11 +686,12 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
                           редирект на страницу книги: бэк создаёт
                           только черновик.
              Publish → тот же POST /api/books/new (черновик), затем
-                       POST /books/{id}/publish (P0-маршрут, см.
-                       rights-modal.php). Если publish не прошёл —
-                       черновик уже создан, поэтому уводим на страницу
-                       книги с предупреждением (публикация возможна
-                       и с неё).
+                       открывается меню ролей — такое же, как при
+                       публикации статьи (rights-modal.php +
+                       roles-module.php). Публикует кнопка Publish уже
+                       внутри меню (rights-modal.js, POST
+                       /api/books/{id}/publish). Отмена после создания
+                       черновика ведёт на страницу книги.
 
            РЕДАКТИРОВАНИЕ (?id=N): «Отмена» ведёт на страницу книги,
            «Сохранить» (data-submit-save, скрыта до publication.edit от
@@ -734,12 +735,11 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
       </div>
 
       <!-- ============================================================
-           ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
-           в book-publish-dialog (partial). Publish в нижней панели —
-           кнопка-открыватель [data-publish-open]; отправка — кнопкой
-           внутри окна (data-submit-publish).
-           Окно лежит ВНУТРИ <form>: hidden inputs authors[]/editors[]
-           должны попадать в FormData.
+           LEGACY-ОКНО ПУБЛИКАЦИИ (11.3). Publish в нижней панели больше
+           не открывает book-publish-dialog: он создаёт черновик и сразу
+           показывает меню ролей (rights-modal + roles-module), как при
+           публикации статьи. Разметка оставлена для hidden-полей
+           authors[]/editors[] (окно лежит ВНУТРИ <form>).
            ============================================================ -->
       <?php $view->include('book-publish-dialog', [
           'authors'    => $authors,

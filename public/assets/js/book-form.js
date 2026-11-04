@@ -28,13 +28,12 @@
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
  *   10. публикацию (11.4): кнопка Publish → POST /api/books/
- *      (черновик) → 201 { createdId } → POST /api/books/{id}/publish;
- *      при неудаче publish черновик уже создан — редирект на его
- *      страницу с предупреждением (опубликовать можно и оттуда).
- *   11. окно публикации (11.3): списки авторов/редакторов переехали
- *      из шага 2 в модалку book-publish-dialog — её открывает только
- *      Publish (когда форма валидна), Cancel/Esc/фон закрывают;
- *      отправка — кнопкой внутри окна (data-submit-publish).
+ *      (черновик) → 201 { createdId } → меню ролей (rights-modal +
+ *      roles-module) — такое же, как при публикации статьи. Публикует
+ *      кнопка Publish уже в меню (POST /api/books/{id}/publish).
+ *   11. legacy-окно book-publish-dialog (11.3): больше не открывается
+ *      (роли и людей назначают в roles-module); разметка оставлена
+ *      ради hidden-полей authors[]/editors[] внутри формы.
  *   12. режим редактирования (GET /books/new?id=N, ссылки «Изменить»
  *      и «Продолжить»): метаданные подтягиваются из JSON-блоба
  *      [data-book-payload] на странице книги (fetch /books/{N}), файлы —
@@ -963,11 +962,10 @@
   }
 
   /* ============================================================
-     ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы переехали из шага 2
-     в модалку book-publish-dialog (partial, внутри <form> — hidden
-     inputs authors[]/editors[] попадают в FormData).
-     Открывает окно кнопка Publish [data-publish-open] в нижней
-     панели; отправка — кнопкой внутри окна (data-submit-publish).
+     LEGACY-ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы когда-то выбирались
+     в book-publish-dialog. Сейчас Publish сразу открывает меню ролей,
+     поэтому окно не показывается; функция оставлена для совместимости
+     и hidden-полей authors[]/editors[] внутри формы.
      ============================================================ */
   function initPublishDialog(form) {
     var root = form.querySelector('[data-book-publish-dialog]');
@@ -1093,7 +1091,13 @@
           focusFirstInvalid();
           return;
         }
-        if (publishDialog) publishDialog.open();
+        // Publish сразу ведёт в меню ролей — то же, что при публикации
+        // статьи. book-publish-dialog (авторы/редакторы) больше не
+        // открывается: роли и людей назначают в roles-module. Черновик
+        // создаётся первым (sendCreate → publishPhase), иначе у меню
+        // ещё нет publicationId.
+        publishRequested = true;
+        form.requestSubmit();
       });
     });
 
@@ -1895,30 +1899,13 @@
       //   • публикация не прошла — режим publish (можно назначить роли и
       //     повторить публикацию из меню), отмена ведёт на страницу книги.
       function publishPhase(createdId, redirect) {
-        if (activeBtn) activeBtn.textContent = t('js.bookform_publishing');
-
-        return csrfFetch('/api/books/' + createdId + '/publish', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-        })
-          .then(function (response) {
-            if (response.ok) {
-              notify(t('js.book_published'), 'success');
-              openRolesMenu(createdId, redirect, 'after-publish');
-              return;
-            }
-            notify(t('js.book_publish_failed'), 'warning');
-            openRolesMenu(createdId, redirect, 'publish');
-          })
-          .catch(function (err) {
-            console.error('[book-form] publish failed for', createdId, err);
-            notify(t('js.book_publish_failed'), 'warning');
-            openRolesMenu(createdId, redirect, 'publish');
-          });
+        // Черновик создан — открываем ровно то же меню ролей, что и при
+        // публикации статьи. Публикует уже кнопка Publish в модуле ролей
+        // (rights-modal.js → POST /api/books/{id}/publish). Отмена после
+        // создания черновика ведёт на страницу книги.
+        resetButtons();
+        openRolesMenu(createdId, redirect, 'publish');
+        return Promise.resolve(true);
       }
 
       /**
