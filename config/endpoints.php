@@ -109,8 +109,8 @@ return function(Router $router)
     $router->delete('/api/additional/types/{typeId}', [App\Controllers\Api\Additional\TypesController::class, 'delete'], 'api.types.delete', ManageAdditionalsSystemOperation::class);
     
     $router->get('/api/additional/languages', [App\Controllers\Api\Additional\LanguagesController::class, 'list'], 'api.languages', AuthPolicy::Auth);
-    $router->get('/api/additional/languages/{code}', [App\Controllers\Api\Additional\LanguagesController::class, 'retrieve'], 'api.languages.retrieve', AuthPolicy::Auth);
     $router->get('/api/additional/languages/fallback', [App\Controllers\Api\Additional\LanguagesController::class, 'fallback'], 'api.languages.fallback', AuthPolicy::Auth);
+    $router->get('/api/additional/languages/{code}', [App\Controllers\Api\Additional\LanguagesController::class, 'retrieve'], 'api.languages.retrieve', AuthPolicy::Auth);
     $router->post('/api/additional/languages',  [App\Controllers\Api\Additional\LanguagesController::class, 'create'], 'api.languages.create', ManageAdditionalsSystemOperation::class);
     $router->put('/api/additional/languages/{code}',  [App\Controllers\Api\Additional\LanguagesController::class, 'update'], 'api.languages.update', ManageAdditionalsSystemOperation::class);
     $router->delete('/api/additional/languages/{code}',  [App\Controllers\Api\Additional\LanguagesController::class, 'delete'], 'api.languages.delete', ManageAdditionalsSystemOperation::class);
