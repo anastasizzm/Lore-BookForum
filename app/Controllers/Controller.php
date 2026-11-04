@@ -52,10 +52,6 @@ abstract class Controller
 
     private static function serializeItem(mixed $item): mixed
     {
-        if (is_array($item)) {
-            return $item;
-        }
-
         if ($item instanceof WithContext) {
             return $item->toArray();
         }

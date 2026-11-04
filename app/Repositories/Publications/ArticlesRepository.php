@@ -115,7 +115,7 @@ final class ArticlesRepository extends PublicationsRepository
 
     public function create(ArticleModel $model, int $creatorId) : int 
     {
-        return $this->uow->transactional(function () use ($model, $creatorId) : int
+        $this->uow->transactional(function () use ($model, $creatorId)
         {
             $pubId = $this->insertPublication(
                 $model->title,
@@ -127,13 +127,14 @@ final class ArticlesRepository extends PublicationsRepository
             );
             
             $bookData = $model->content->getBookData();
+            $contentData = $model->content->content;
             $this->insertArticle(
                 $pubId,
                 $model->typeId,
                 $bookData?->bookId,
                 $bookData?->pageStart,
                 $bookData?->pageEnd,
-                $model->content->getContent(),
+                $contentData->content,
                 $model->doi
             );
 
@@ -187,14 +188,13 @@ final class ArticlesRepository extends PublicationsRepository
         $content = $contentData->getContent();
         $params = [
             ':id' => ScriptParam::asInt($articleId),
-            ':bookId' => $book === null ? ScriptParam::asNull(null) : ScriptParam::asInt($book->bookId),
-            ':pageStart' => ScriptParam::asInt($book === null ? 0 : $book->pageStart),
-            ':pageEnd' => ScriptParam::asInt($book === null ? 0 : $book->pageEnd),
-            ':content' => $content === null ? ScriptParam::asNull(null) : ScriptParam::asStr($content),
+            ':bookId' => ScriptParam::asInt($book->bookId),
+            ':pageStart' => ScriptParam::asInt($book->pageStart),
+            ':pageEnd' => ScriptParam::asInt($book->pageEnd),
+            ':content' => ScriptParam::asStr($content),
             ':expectedVersion' => ScriptParam::asInt($expectedVersion)
         ];
 
-        $stmt = $this->execute($sql, $params);
         $row = $stmt->fetchColumn();
         return $row === false ? null : (int)$row;
     }
@@ -265,7 +265,7 @@ final class ArticlesRepository extends PublicationsRepository
     {
         switch($className)
         {
-            case Article::class:
+            case App\Models\Publications\Article::class:
                 $this->director->addArticleSelectTemp();
                 break;
             default:
@@ -287,13 +287,11 @@ final class ArticlesRepository extends PublicationsRepository
         $values = [
             ':pubId' => ScriptParam::asInt($publicationId),
             ':typId' => ScriptParam::asInt($typeId),
-            ':content' => $content === null ? ScriptParam::asNull(null) : ScriptParam::asStr($content),
-            ':bookId' => $bookId === null ? ScriptParam::asNull(null) : ScriptParam::asInt($bookId),
-            // Для standalone-статьи страниц нет: схема хранит 0 (CHECK page_start >= 0),
-            // NULL запрещён (миграция 20261003115558_article_nulls).
-            ':pStart' => ScriptParam::asInt($pageStart ?? 0),
-            ':pEnd' => ScriptParam::asInt($pageEnd ?? 0),
-            ':doi' => $doi === null || $doi === '' ? ScriptParam::asNull(null) : ScriptParam::asStr($doi)
+            ':content' => ScriptParam::asStr($content),
+            ':bookId' => ScriptParam::asInt($bookId),
+            ':pStart' => ScriptParam::asInt($pageStart),
+            ':pEnd' => ScriptParam::asInt($pageEnd),
+            ':doi' => ScriptParam::asStr($doi?->toString())
         ];
 
         $sql = 'INSERT INTO articles (publication_id, type_id, content, book_id, page_start, page_end, doi)

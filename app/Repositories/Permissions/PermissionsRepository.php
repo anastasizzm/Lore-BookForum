@@ -302,7 +302,7 @@ class PermissionsRepository extends Repository
                 \nur.id,
                 \nur.color,
                 \nur.is_system,
-                \nur.is_public,
+                \nur.is_public
                 \nur.created_at")
             ->addSelect("COALESCE(
                         MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),

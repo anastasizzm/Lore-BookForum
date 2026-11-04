@@ -27,7 +27,7 @@ use App\Models\Publications\ArticleModel;
 use App\Models\Publications\ContentData;
 use App\Models\Publications\ArticlePatchModel;
 use App\Forms\Publications\ArticlePatchForm;
-use App\Forms\Publications\ArticleContentForm;
+use App\Forms\Publications\ArticleСontentForm;
 use App\Models\UserContext\WithContext;
 
 use App\Models\Enums\PublicationsSortBy;
@@ -163,7 +163,7 @@ final class ArticlesService extends PublicationsService
 
     public function updateContent(
         int $articleId,
-        ArticleContentForm $form,
+        ArticleСontentForm $form,
         int $expectedVersion,
     ) : int 
     {

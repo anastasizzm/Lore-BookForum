@@ -6,7 +6,6 @@ namespace App\Forms\Publications;
 use App\Forms\Publications\PublicationForm;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Enums\ArticleContentMode;
-use App\Models\Publications\BookData;
 use App\Models\Uuid;
 
 final readonly class ArticleForm extends PublicationForm
