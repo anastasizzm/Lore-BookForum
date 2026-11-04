@@ -1,203 +1,224 @@
 /**
- * Таблица комментариев (постов) админки: загрузка, поиск (по Enter), «Показать ещё», удаление.
- *   GET    /api/posts?include=creator&page=N&q=…
- *   DELETE /api/posts/{postId}
+ * Таблица комментариев (постов): GET /api/posts, поиск по Enter, «Показать ещё».
+ * Удаление — DELETE /api/posts/{id} (см. delete.js, оно вызывает removeCommentFromList).
  */
 import { apiError, apiFetch } from '../../core/http.js';
-import { tx } from '../../core/i18n.js';
-import { listFrom, unwrapItem } from '../../core/payload.js';
-import { confirmModal, notify } from '../../core/ui.js';
+import { t, tx } from '../../core/i18n.js';
 import { esc } from '../../core/utils.js';
+import { listFrom, unwrapItem } from '../../core/payload.js';
+import { takeBootstrap } from '../../core/bootstrap.js';
 
-var LIST_URL = '/api/posts';
-var ITEM_URL = '/api/posts/';       // + id (DELETE)
+var COLS = 6;
 
-var comments = {
-  table: null, rows: null, input: null, count: null, status: null, more: null,
-  items: [], page: 1, query: '', hasNext: false, loading: false, seq: 0
+var commentsList = {
+  tbody: null, status: null, count: null, search: null, more: null,
+  query: '', page: 1, ps: 20, total: null, hasMore: false,
+  items: [], seq: 0, loading: false
 };
 
-/* ---------- нормализация ---------- */
+var warned = false;
 
-/** Строка из значения любой формы: строка, объект ({title|name|username}), массив. */
-function textOf(v) {
-  if (v == null) return '';
-  if (Array.isArray(v)) return v.map(textOf).filter(Boolean).join(', ');
-  if (typeof v === 'object') {
-    if (v.title != null) return String(v.title);
-    if (v.name != null) return String(v.name);
-    if (v.username != null) return String(v.username);
-    if (v.login != null) return String(v.login);
-    if (v.email != null) return String(v.email);
-    return '';
+function pick(obj, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var v = obj[keys[i]];
+    if (v !== undefined && v !== null && v !== '') return v;
   }
-  return String(v);
+  return null;
 }
 
-/** Дата: строка ISO или объект { date: '2026-10-28 12:23:30…' } → 'YYYY-MM-DD'. */
+/** Строка из «строки или объекта {username|title|name}». */
+function labelOf(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string' || typeof v === 'number') return String(v);
+  if (typeof v === 'object') return String(pick(v, ['username', 'name', 'login', 'nickname', 'title']) || '');
+  return '';
+}
+
 function dateOf(v) {
   if (!v) return '';
-  var s = typeof v === 'object' ? (v.date || '') : String(v);
-  return String(s).slice(0, 10);
+  var s = String(v);
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
-function normalizeComment(raw) {
+function normalize(raw) {
   raw = unwrapItem(raw);
   if (!raw || typeof raw !== 'object') return null;
-  var p = (raw.post && typeof raw.post === 'object') ? raw.post : raw;
-  var rawId = p.id != null ? p.id : p.postId;
-  var id = Number(rawId);
-  if (rawId == null || rawId === '' || isNaN(id)) {
-    console.warn('[admin] comment without valid id, keys:', Object.keys(raw), raw);
-    return null;
+  var id = Number(raw.id !== undefined ? raw.id : raw.postId);
+  if (!id && id !== 0) return null;
+
+  var author = labelOf(pick(raw, ['author', 'user', 'account'])) || labelOf(pick(raw, ['authorName', 'username', 'userName']));
+  var text = String(pick(raw, ['text', 'content', 'body', 'message', 'comment']) || '');
+  var pub = labelOf(pick(raw, ['publication', 'pub', 'book', 'article'])) || labelOf(pick(raw, ['publicationTitle', 'pubTitle']));
+  var created = dateOf(pick(raw, ['createdAt', 'created_at', 'created', 'date']));
+
+  if (!warned && !text && !author) {
+    warned = true;
+    console.warn('[admin] comments: unknown post item shape, keys:', Object.keys(raw), raw);
   }
-  var pub = p.publication != null ? p.publication : raw.publication;
+
   return {
     id: id,
-    author: textOf(p.creator) || textOf(p.author) || textOf(p.user) || textOf(raw.creator) || textOf(raw.author),
-    text: String(p.text != null ? p.text : (p.content != null ? p.content : (p.body != null ? p.body : (p.message || '')))),
-    publication: textOf(pub) || String(p.publicationTitle || raw.publicationTitle || ''),
-    created: dateOf(p.createdAt || p.created_at || p.created || raw.createdAt),
+    author: author,
+    text: text,
+    publication: pub,
+    created: created,
     canDelete: raw.canDelete !== false && raw.canManage !== false
   };
 }
 
-/* ---------- рендер ---------- */
+function parse(payload) {
+  if (payload === null || payload === undefined) return null;
+  var list = listFrom(payload, ['posts', 'comments']);
+  if (!list) return null;
+
+  var meta = (payload && typeof payload === 'object' && payload.meta && typeof payload.meta === 'object') ? payload.meta : null;
+  var total = null;
+  [meta, payload].forEach(function (src) {
+    if (total !== null || !src || typeof src !== 'object' || Array.isArray(src)) return;
+    ['total', 'totalCount', 'count'].forEach(function (k) {
+      if (total === null && src[k] != null && isFinite(Number(src[k]))) total = Number(src[k]);
+    });
+  });
+
+  return {
+    items: list.map(normalize).filter(function (x) { return x !== null; }),
+    total: total,
+    hasNext: meta && typeof meta.hasNext === 'boolean' ? meta.hasNext : null
+  };
+}
+
+function rowHtml(c) {
+  var id = c.id;
+  return '<tr data-comment-id="' + id + '">' +
+      '<td class="admin-table__id" data-col="id">' + id + '</td>' +
+      '<td data-col="author">' + esc(c.author) + '</td>' +
+      '<td data-col="text"><span class="admin-table__clip" title="' + esc(c.text) + '">' + esc(c.text) + '</span></td>' +
+      '<td data-col="publication"><span class="admin-table__clip" title="' + esc(c.publication) + '">' + esc(c.publication) + '</span></td>' +
+      '<td data-col="created">' + esc(c.created) + '</td>' +
+      '<td data-col="actions"><div class="admin-actions">' +
+        '<button type="button" class="btn btn--danger" data-admin-delete data-comment-id="' + id + '"' + (c.canDelete ? '' : ' disabled') + '>' +
+          esc(t('admin.action_delete')) +
+        '</button>' +
+      '</div></td>' +
+    '</tr>';
+}
 
 function setStatus(text) {
-  if (!comments.status) return;
-  comments.status.textContent = text || '';
-  comments.status.hidden = !text;
+  if (!commentsList.status) return;
+  commentsList.status.textContent = text || '';
+  commentsList.status.hidden = !text;
 }
 
-function renderRows() {
-  if (!comments.rows) return;
-  if (!comments.items.length) {
-    comments.rows.innerHTML = '<tr class="admin-table__empty"><td colspan="6">' +
-      esc(tx('common.admin.empty', 'Nothing found')) + '</td></tr>';
+function render() {
+  var st = commentsList;
+  if (!st.tbody) return;
+  if (!st.items.length) {
+    st.tbody.innerHTML = '<tr class="admin-table__empty"><td colspan="' + COLS + '">' +
+      esc(st.query ? t('admin.no_results', { query: st.query }) : t('admin.empty')) + '</td></tr>';
   } else {
-    var delLabel = tx('common.admin.action_delete', 'Delete');
-    comments.rows.innerHTML = comments.items.map(function (c) {
-      return '<tr data-comment-id="' + c.id + '">' +
-        '<td class="admin-table__id">' + c.id + '</td>' +
-        '<td>' + esc(c.author) + '</td>' +
-        '<td><span class="admin-table__clip" title="' + esc(c.text) + '">' + esc(c.text) + '</span></td>' +
-        '<td><span class="admin-table__clip" title="' + esc(c.publication) + '">' + esc(c.publication) + '</span></td>' +
-        '<td>' + esc(c.created) + '</td>' +
-        '<td><div class="admin-actions">' +
-          '<button type="button" class="btn btn--danger" data-comment-delete data-comment-id="' + c.id + '"' +
-            (c.canDelete ? '' : ' disabled') + '>' + esc(delLabel) + '</button>' +
-        '</div></td></tr>';
-    }).join('');
+    st.tbody.innerHTML = st.items.map(rowHtml).join('');
   }
-  if (comments.count) comments.count.textContent = String(comments.items.length);
-  if (comments.more) comments.more.hidden = !comments.hasNext;
+  if (st.count) st.count.textContent = String(st.total !== null ? st.total : st.items.length);
+  if (st.more) st.more.hidden = !st.hasMore;
 }
 
-/* ---------- загрузка ---------- */
+function apply(parsed, reset) {
+  var st = commentsList;
+  var known = {};
+  var base = reset ? [] : st.items;
+  base.forEach(function (c) { known[c.id] = true; });
+  var fresh = parsed.items.filter(function (c) { return !known[c.id]; });
+
+  st.items = base.concat(fresh);
+  st.total = parsed.total;
+  if (parsed.hasNext !== null) st.hasMore = parsed.hasNext && fresh.length > 0;
+  else st.hasMore = fresh.length > 0 && (parsed.total !== null ? st.items.length < parsed.total : parsed.items.length >= st.ps);
+  setStatus('');
+  render();
+}
 
 function load(reset) {
-  if (comments.loading && !reset) return;
-  var seq = ++comments.seq;
-  comments.loading = true;
-  if (reset) { comments.page = 1; comments.items = []; }
+  var st = commentsList;
+  if (!st.tbody) return Promise.resolve();
+  if (reset) st.page = 1;
+  var seq = ++st.seq;
+
+  // Первая страница без поиска — из данных, которые сервер положил в страницу
+  if (reset && !st.query) {
+    var boot = takeBootstrap('comments');
+    var seeded = boot === null ? null : parse(boot);
+    if (seeded && seeded.items.length) {
+      st.loading = false;
+      apply(seeded, true);
+      return Promise.resolve();
+    }
+  }
+
+  st.loading = true;
+  if (st.more) st.more.disabled = true;
   setStatus(tx('admin.comments_loading', 'Loading comments…'));
-  if (comments.more) comments.more.disabled = true;
 
-  var url = LIST_URL + '?include=creator&page=' + comments.page +
-    (comments.query ? '&q=' + encodeURIComponent(comments.query) : '');
+  var qs = 'page=' + st.page + '&ps=' + st.ps + (st.query ? '&q=' + encodeURIComponent(st.query) : '');
+  return apiFetch('GET', '/api/posts?' + qs).then(function (r) {
+    if (seq !== st.seq) return;
+    st.loading = false;
+    if (st.more) st.more.disabled = false;
 
-  return apiFetch('GET', url).then(function (r) {
-    if (seq !== comments.seq) return;
-    comments.loading = false;
-    if (comments.more) comments.more.disabled = false;
-
-    if (!r.ok) {
-      setStatus(tx('admin.comments_load_error', 'Failed to load comments') + ': ' + apiError(r));
-      renderRows();
+    var parsed = r.ok ? parse(r.data) : null;
+    if (!parsed) {
+      setStatus(tx('admin.comments_load_error', 'Failed to load comments') + ': ' +
+        (r.ok ? tx('errors.common.server_error', 'Server error. Please try again later.') : apiError(r)));
+      if (reset) { st.items = []; st.total = null; st.hasMore = false; render(); }
       return;
     }
-    var list = listFrom(r.data, ['posts', 'comments']);
-    if (list === null) {
-      setStatus(tx('admin.comments_load_error', 'Failed to load comments'));
-      renderRows();
-      return;
-    }
-    var fresh = list.map(normalizeComment).filter(function (x) { return x !== null; });
-    comments.items = comments.items.concat(fresh);
-
-    var meta = r.data && typeof r.data === 'object' ? r.data.meta : null;
-    comments.hasNext = !!(meta && !Array.isArray(meta) && meta.hasNext);
-    setStatus('');
-    renderRows();
+    apply(parsed, reset);
   });
 }
 
-/* ---------- удаление ---------- */
-
-function deleteComment(btn) {
-  var id = Number(btn.getAttribute('data-comment-id'));
-  var comment = comments.items.filter(function (c) { return c.id === id; })[0];
-  if (!comment) return;
-
-  confirmModal({
-    title:       tx('admin.delete_title', 'Delete comment?'),
-    text:        tx('admin.delete_text', 'The comment will be permanently deleted. This action cannot be undone.'),
-    confirmText: tx('common.admin.action_delete', 'Delete'),
-    danger:      true
-  }).then(function (confirmed) {
-    if (!confirmed) return;
-    btn.disabled = true;
-    return apiFetch('DELETE', ITEM_URL + encodeURIComponent(id)).then(function (r) {
-      if (!r.ok) { notify(apiError(r), 'error'); btn.disabled = false; return; }
-      comments.items = comments.items.filter(function (c) { return c.id !== id; });
-      renderRows();
-      notify(tx('admin.delete_comment_success', 'Comment deleted'), 'success');
-    });
-  }).catch(function () {
-    notify(tx('errors.common.network_error', 'Network error. Try again.'), 'error');
-    btn.disabled = false;
-  });
+function runSearch(query) {
+  var q = String(query || '').trim();
+  if (q === commentsList.query && commentsList.items.length) return;
+  commentsList.query = q;
+  load(true);
 }
 
-/* ---------- init ---------- */
+/** Вызывается после успешного DELETE: убирает комментарий из состояния и перерисовывает. */
+export function removeCommentFromList(id) {
+  var st = commentsList;
+  var before = st.items.length;
+  st.items = st.items.filter(function (c) { return String(c.id) !== String(id); });
+  if (st.total !== null && st.items.length < before) st.total = Math.max(0, st.total - 1);
+  render();
+}
 
 export function initCommentsList() {
-  var table = document.querySelector('[data-comments-table]');
-  if (!table) return;
-  comments.table = table;
-  comments.rows = document.querySelector('[data-comments-rows]');
-  comments.input = document.querySelector('[data-comments-search]');
-  comments.count = document.querySelector('[data-comments-count]');
-  comments.status = document.querySelector('[data-comments-status]');
-  comments.more = document.querySelector('[data-comments-more]');
+  var tbody = document.querySelector('[data-comments-rows]');
+  if (!tbody) return;
+  commentsList.tbody = tbody;
+  commentsList.status = document.querySelector('[data-comments-status]');
+  commentsList.count = document.querySelector('[data-comments-count]');
+  commentsList.search = document.querySelector('[data-comments-search]');
+  commentsList.more = document.querySelector('[data-comments-more]');
 
-  if (comments.input) {
-    comments.input.addEventListener('keydown', function (e) {
+  if (commentsList.search) {
+    // Запрос в API — только по Enter, не на каждый символ
+    commentsList.search.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      comments.query = (comments.input.value || '').trim();
-      load(true);
+      runSearch(commentsList.search.value);
     });
-    // крестик в поле type=search очищает запрос
-    comments.input.addEventListener('search', function () {
-      var value = (comments.input.value || '').trim();
-      if (value === '' && comments.query !== '') { comments.query = ''; load(true); }
+    commentsList.search.addEventListener('search', function () {
+      if ((commentsList.search.value || '').trim() === '' && commentsList.query !== '') runSearch('');
     });
   }
 
-  if (comments.more) {
-    comments.more.addEventListener('click', function () {
-      if (!comments.hasNext) return;
-      comments.page++;
+  if (commentsList.more) {
+    commentsList.more.addEventListener('click', function () {
+      if (commentsList.loading) return;
+      commentsList.page += 1;
       load(false);
     });
   }
-
-  table.addEventListener('click', function (e) {
-    var del = e.target && e.target.closest && e.target.closest('[data-comment-delete]');
-    if (del && !del.disabled) deleteComment(del);
-  });
 
   load(true);
 }

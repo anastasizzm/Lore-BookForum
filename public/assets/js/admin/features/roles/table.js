@@ -52,8 +52,9 @@ export function renderRoleRows(list) {
       (dnd.active && dnd.id === id ? ' is-dragging' : '') +
       (pending(id) ? ' is-pending' : '');
 
-    var handle = isLocked
-      ? '<span class="admin-role__handle is-locked" title="' + esc(tx('admin.role_locked', 'Pinned: rank is above yours')) + '" aria-hidden="true">' + GRIP + '</span>'
+    var isBase = id === 0;
+    var handle = (isLocked || isBase)
+      ? '<span class="admin-role__handle is-locked" title="' + esc(isBase ? tx('admin.role_locked_base', 'Base role: always last') : tx('admin.role_locked', 'Pinned: rank is above yours')) + '" aria-hidden="true">' + GRIP + '</span>'
       : '<button type="button" class="admin-role__handle" data-role-handle' +
           ' title="' + esc(tx('admin.role_drag', 'Drag to reorder')) + '"' +
           ' aria-label="' + esc(tx('admin.role_drag', 'Drag to reorder')) + '">' + GRIP + '</button>';
