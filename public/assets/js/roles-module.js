@@ -159,6 +159,9 @@ window.LoreRoles = (function () {
       // true на время программного .focus() при открытии модалки: такой
       // фокус не должен сам раскрывать выпадающий список.
       suppressFocusOpen: false,
+      roleResults: null,   // результаты серверного поиска каталога ролей (модалка создания)
+      roleSeq: 0,          // номер последнего запроса каталога ролей (отбрасываем устаревшие)
+      userSeq: 0,          // номер последнего запроса людей (отбрасываем устаревшие)
       q: '',               // строка поиска людей
       roleQ: '',
       selectedRoleId: '', // выбранная роль в модалке «роль + пользователь»
@@ -848,6 +851,7 @@ window.LoreRoles = (function () {
     add.userOpen = false;
     add.roleOpen = false;
     add.suppressFocusOpen = false;
+    add.roleResults = null;
     add.selectedRoleId = '';
     add.userPage = 1;
     add.userHasNext = false;
@@ -924,6 +928,7 @@ window.LoreRoles = (function () {
 
     // Каталог ролей (GET /api/additional/roles) — иначе список кандидатов пуст
     ensureCatalogs({ roles: true });
+    searchRoleCatalog('');
 
     // Список чекбоксов прав публикации заполняет renderPerms() (ниже).
     var createSave = q('[data-roles-create-add]');
@@ -1064,9 +1069,11 @@ window.LoreRoles = (function () {
     }
   }
 
-  function loadUserCatalog(page, append) {
+  function loadUserCatalog(page, append, query) {
     var add = st.add;
     if (add.catalogFallback) return Promise.resolve();
+    var q = String(query || '').trim();
+    var seq = ++add.userSeq;
 
     // Мок-режим: каталог людей без сети
     if (st.api === 'mock') {
@@ -1083,7 +1090,9 @@ window.LoreRoles = (function () {
     add.loadingUsers = true;
     if (!append) renderAddResults();
 
-    return request('GET', USERS_CATALOG_URL + '&page=' + page).then(function (res) {
+    var url = USERS_CATALOG_URL + '&page=' + page + (q ? '&q=' + encodeURIComponent(q) : '');
+    return request('GET', url).then(function (res) {
+      if (seq !== add.userSeq) return;
       add.loadingUsers = false;
 
       if (res.kind === 'ok') {
@@ -1141,6 +1150,41 @@ window.LoreRoles = (function () {
     });
   }
 
+  /**
+   * Поиск по каталогу ролей для «Add role to project»: серверный ?q=,
+   * устаревшие ответы отбрасываются по номеру запроса. Если каталога нет,
+   * ищем среди уже загруженного каталога.
+   */
+  function searchRoleCatalog(query) {
+    var add = st.add;
+    var q = String(query || '').trim();
+    var seq = ++add.roleSeq;
+
+    if (st.api === 'mock') {
+      add.roleResults = MOCK.catalogRoles
+        .filter(function (role) { return matchQuery(role, q); })
+        .map(function (one) { return Object.assign({}, one); });
+      renderAddResults();
+      return Promise.resolve();
+    }
+
+    add.loadingRoles = true;
+    renderAddResults();
+
+    var url = ROLES_CATALOG_URL + (q ? '&q=' + encodeURIComponent(q) : '');
+    return request('GET', url).then(function (res) {
+      if (seq !== add.roleSeq) return;
+      add.loadingRoles = false;
+      if (res.kind === 'ok') {
+        add.roleResults = (mapList(res.data, normalizeRole) || []).filter(isAddableRole);
+      } else {
+        add.roleResults = (add.catalogRoles || [])
+          .filter(function (role) { return matchQuery(role, q); });
+      }
+      renderAddResults();
+    });
+  }
+
   function matchQuery(item, query) {
     if (!query) return true;
     var haystack = [
@@ -1162,12 +1206,23 @@ window.LoreRoles = (function () {
    */
   function filteredRoles() {
     var add = st.add;
+    var owned = ownedRoleIds();
     return st.roles
       .map(function (role) {
         return { id: String(role.id), title: role.title, color: role.color || '' };
       })
+      .filter(function (role) { return !owned[role.id]; })
       .filter(function (role) { return matchQuery(role, add.roleQ); })
       .slice(0, 30);
+  }
+
+  /** Роли, которые уже есть у выбранного человека: их в выборе не предлагаем. */
+  function ownedRoleIds() {
+    var owned = {};
+    var person = st.add.users[0];
+    var bound = person ? findUser(person.id) : null;
+    if (bound) bound.roles.forEach(function (role) { owned[String(role.id)] = true; });
+    return owned;
   }
 
   /* ---------- рендер оверлея ---------- */
@@ -1285,9 +1340,11 @@ window.LoreRoles = (function () {
           // Ролей у публикации ещё нет — подсказываем добавить их на
           // экране «Roles and people». Если роли есть, но поиск ничего
           // не нашёл — обычный «Nothing found».
-          var emptyText = st.roles.length
-            ? t('roles.nothing_found')
-            : t('roles.no_roles_added');
+          var owned = ownedRoleIds();
+          var allOwned = st.roles.length > 0 && st.roles.every(function (role) { return owned[String(role.id)]; });
+          var emptyText = allOwned
+            ? t('roles.user_has_all_roles')
+            : (st.roles.length ? t('roles.nothing_found') : t('roles.no_roles_added'));
           roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(emptyText) + '</li>';
         }
         roleBox.innerHTML = roleHtml;
@@ -1300,10 +1357,8 @@ window.LoreRoles = (function () {
     if (createRoleBox) {
       if (!add.roleOpen) { createRoleBox.hidden = true; createRoleBox.innerHTML = ''; }
       else {
-        var candidatesSource = (st.add.catalogRoles && st.add.catalogRoles.length)
-          ? st.add.catalogRoles
-          : (st.insert.catalog || []);
-        var candidates = candidatesSource.filter(function (role) {
+        // кандидаты — результат серверного поиска (searchRoleCatalog)
+        var candidates = (add.roleResults || []).filter(function (role) {
           return !st.roles.some(function (one) { return String(one.id) === String(role.id); });
         });
         var pickedIds = {};
@@ -1349,6 +1404,8 @@ window.LoreRoles = (function () {
     // В модалке «роль + пользователь» выбор закрывает выпадающий список; в модалке
     // создания роли список остаётся открытым — там видна отметка выбранного.
     if (!exists && createUserModalOpen()) add.roleOpen = false;
+    // в модалке создания роли после выбора показываем полный каталог заново
+    if (!createUserModalOpen()) searchRoleCatalog('');
     renderAdd();
   }
 
@@ -2209,11 +2266,7 @@ window.LoreRoles = (function () {
       // нужен на случай, когда фокус уже стоит на поле (автофокус при
       // открытии модалки), — тогда focusin повторно не срабатывает.
       if (target.matches('[data-roles-create-user-user-search]')) {
-        if (!st.add.userLocked) {
-          st.add.userOpen = true;
-          renderAddResults();
-          loadMoreIfEmpty();
-        }
+        openUserPicker();
         return;
       }
 
@@ -2321,10 +2374,7 @@ window.LoreRoles = (function () {
       if (!target || st.add.suppressFocusOpen) return;
 
       if (target.matches('[data-roles-create-user-user-search]')) {
-        if (st.add.userLocked) return;
-        st.add.userOpen = true;
-        renderAddResults();
-        loadMoreIfEmpty();
+        openUserPicker();
         return;
       }
 
@@ -2337,6 +2387,7 @@ window.LoreRoles = (function () {
 
     /* --- поиск: ввод (дебаунс) --- */
     var searchTimer = 0;
+    var roleSearchTimer = 0;
 
     root.addEventListener('input', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
@@ -2354,8 +2405,18 @@ window.LoreRoles = (function () {
         // выдачу (сфокусированное пустое поле показывает первые записи).
         st.add.userOpen = true;
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(function () { loadMoreIfEmpty(); }, 250);
-        // модалка — результаты каталога
+        searchTimer = setTimeout(function () {
+          if (!st.add.catalogFallback) loadUserCatalog(1, false, st.add.q);
+        }, 250);
+        renderAddResults();
+        return;
+      }
+
+      if (target.matches('[data-roles-create-role-search]')) {
+        st.add.roleQ = target.value.trim();
+        st.add.roleOpen = true;
+        clearTimeout(roleSearchTimer);
+        roleSearchTimer = setTimeout(function () { searchRoleCatalog(st.add.roleQ); }, 250);
         renderAddResults();
         return;
       }
@@ -2389,15 +2450,15 @@ window.LoreRoles = (function () {
     });
   }
 
-  /** Пусто по запросу и есть следующая страница — догружаем каталог людей. */
-  function loadMoreIfEmpty() {
+  /** Открывает список людей; если каталог ещё пуст — грузит первую страницу. */
+  function openUserPicker() {
     var add = st.add;
-    if (add.catalogFallback) return;
-    if (!add.userOpen) return;
-    if (filteredUsers().length) return;
-    if (!add.userHasNext || add.loadingUsers) return;
-    if (add.userPage >= 5) return;                 // разумный предел догрузки
-    loadUserCatalog(add.userPage + 1, true).then(loadMoreIfEmpty);
+    if (add.userLocked) return;
+    add.userOpen = true;
+    renderAddResults();
+    if (!add.catalogUsers.length && !add.loadingUsers && !add.catalogFallback) {
+      loadUserCatalog(1, false, add.q);
+    }
   }
 
   /* ============================================================
