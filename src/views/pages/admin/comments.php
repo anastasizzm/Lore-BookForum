@@ -3,13 +3,10 @@
  * admin/comments — таблица комментариев (постов) админки.
  *
  * Строки рисует public/assets/js/admin/features/comments/list.js:
- *   GET    /api/posts?include=creator&page=N&q=…
- *   DELETE /api/posts/{postId}
- * Поиск уходит в API только по Enter (и при очистке поля крестиком),
- * «Показать ещё» подгружает следующую страницу.
- *
- * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
- * .admin-actions).
+ *   GET    /api/posts?q=…&page=N&ps=20   (поиск — только по Enter)
+ *   DELETE /api/posts/{id}
+ * Первая страница берётся из блока data-admin-data="comments" (если контроллер
+ * передал $comments / $posts / $items), иначе JS сам сходит в API.
  */
 
 $view->extends('main');
@@ -42,9 +39,9 @@ $tx = static function (string $key, string $fallback) use ($view): string {
          type="search"
          name="q"
          data-comments-search
+         enterkeyhint="search"
          placeholder="<?= $tr('common.admin.search_comments_ph') ?>"
          aria-label="<?= $tr('common.admin.search_comments_ph') ?>"
-         enterkeyhint="search"
          autocomplete="off">
   <span class="admin-toolbar__count" data-comments-count>0</span>
 </div>
@@ -70,6 +67,17 @@ $tx = static function (string $key, string $fallback) use ($view): string {
     <?= $tx('common.admin.users_load_more', 'Show more') ?>
   </button>
 </div>
+
+<?php
+$adminBoot = static function (string $name, mixed $data): void {
+    if ($data === null || $data === []) return;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
+        | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    if (!is_string($json)) return;
+    echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
+};
+$adminBoot('comments', $comments ?? $posts ?? $items ?? null);
+?>
 
 <?php $view->endBlock('content'); ?>
 

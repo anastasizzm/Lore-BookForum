@@ -107,7 +107,7 @@ return function(Router $router)
     $router->get('/admin/categories', [App\Controllers\Additional\AdminPanelController::class, 'categories'], 'admin.categories', ManageAdditionalsSystemOperation::class);
     $router->get('/admin/genres', [App\Controllers\Additional\AdminPanelController::class, 'genres'], 'admin.genres', ManageAdditionalsSystemOperation::class);
     $router->get('/admin/types', [App\Controllers\Additional\AdminPanelController::class, 'types'], 'admin.types', ManageAdditionalsSystemOperation::class);
-    $router->get('/admin/posts', [App\Controllers\Additional\PostsController::class, 'adminList'], 'admin.posts', ControlPostOperation::class);
+    $router->get('/admin/posts', [App\Controllers\Posts\PostsController::class, 'adminList'], 'admin.posts', ControlPostOperation::class);
     $router->get('/admin/users', [App\Controllers\Additional\AdminPanelController::class, 'getUsers'], 'admin.users', ManagePeopleSystemOperation::class);
     $router->get('/admin/roles', [App\Controllers\Additional\AdminPanelController::class, 'getSystemRoles'], 'admin.roles', ManageRolesSystemOperation::class);
 };
