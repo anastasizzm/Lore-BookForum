@@ -77,8 +77,6 @@ $cardHref = static function (array $card) use ($view): string {
     'subtitle' => $view->t('common.admin.dashboard_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
-
 <div class="admin-grid">
   <?php foreach ($cards as $card): $soon = !empty($card['soon']); ?>
     <?php if ($soon): ?>
