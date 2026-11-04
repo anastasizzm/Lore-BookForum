@@ -77,7 +77,7 @@ $colors = ['#D64545', '#1C7ED6', '#2F9E44', '#F08C00', '#7048E8', '#0CA678', '#D
 
       <div class="admin-rolenew__footer">
         <button type="submit" class="btn admin-rolenew__save" data-rolenew-submit="save">
-          <?= $tx('common.admin.role_save_only', 'Save') ?>
+          <?= $tx('common.admin.role_save', 'Save') ?>
         </button>
       </div>
     </form>

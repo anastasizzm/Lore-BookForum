@@ -799,6 +799,7 @@
         "dict_saved": "Saved.",
         "dict_deleted": "The entry was deleted.",
         "dict_delete_title": "Delete entry?",
+        "back_to_dashboard": "Back to dasboard",
         "dict_delete_text": "The entry will be removed permanently."
     },
     "help": {
@@ -895,7 +896,6 @@
         "perms_saved": "Permissions saved.",
         "perms_confirm_title": "Save changes?",
         "perms_confirm_text": "The publication rights for the role \":name\" will be updated.",
-        "perms_save": "Save",
         "perms_conflict": "The role has changed on the server. Reload the list and try again.",
         "perm_create": "Create publications",
         "perm_updateMeta": "Edit meta data",

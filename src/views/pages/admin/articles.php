@@ -33,6 +33,8 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 
 <?php $view->startBlock('content'); ?>
 
+<?php $view->include('admin-back'); ?>
+
 <?php $view->include('page-header', [
     'title'    => $view->t('common.admin.articles_title'),
     'subtitle' => $view->t('common.admin.articles_subtitle'),

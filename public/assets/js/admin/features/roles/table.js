@@ -9,6 +9,7 @@ import { rolesApi } from './api.js';
 import { GRIP, TRASH } from './constants.js';
 import { initRoleNew } from './create/modal.js';
 import { dnd, initRoleDnd, moveQueue } from './dnd.js';
+import { rerenderRoles } from './filters.js';
 import { lockedCount } from './order.js';
 import { findRole, permsLabel, roleState, totalPerms } from './state.js';
 
@@ -52,8 +53,9 @@ export function renderRoleRows(list) {
       (dnd.active && dnd.id === id ? ' is-dragging' : '') +
       (pending(id) ? ' is-pending' : '');
 
-    var handle = isLocked
-      ? '<span class="admin-role__handle is-locked" title="' + esc(tx('admin.role_locked', 'Pinned: rank is above yours')) + '" aria-hidden="true">' + GRIP + '</span>'
+    var isBase = id === 0;
+    var handle = (isLocked || isBase)
+      ? '<span class="admin-role__handle is-locked" title="' + esc(isBase ? tx('admin.role_locked_base', 'Base role: always last') : tx('admin.role_locked', 'Pinned: rank is above yours')) + '" aria-hidden="true">' + GRIP + '</span>'
       : '<button type="button" class="admin-role__handle" data-role-handle' +
           ' title="' + esc(tx('admin.role_drag', 'Drag to reorder')) + '"' +
           ' aria-label="' + esc(tx('admin.role_drag', 'Drag to reorder')) + '">' + GRIP + '</button>';
@@ -127,7 +129,7 @@ export function deleteRole(btn) {
       }
 
       roleState.items = roleState.items.filter(function (r) { return Number(r.id) !== Number(item.id); });
-      renderRoleRows();
+      rerenderRoles(); // с текущим поиском/фильтром, без сброса
       notify(tx('admin.role_deleted', 'Role deleted'), 'success');
     });
   }).catch(function (err) {
@@ -157,7 +159,8 @@ function loadRoles() {
     }
     roleState.items = items;
     setRolesStatus('');
-    renderRoleRows();
+    // Ответ первой загрузки может прийти уже после поиска: рисуем с учётом текущего запроса
+    rerenderRoles();
   });
 }
 

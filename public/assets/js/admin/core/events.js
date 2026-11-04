@@ -10,7 +10,7 @@ import { dict } from '../features/dictionary/state.js';
 import { deleteDictItem } from '../features/dictionary/table.js';
 import { closeReportModal, decideReport, isReportOpen, openReportModal, reportState } from '../features/reports/modal.js';
 import { closeRoleUserModal, openRoleUserModal, roleUserAssign } from '../features/roles/assign-user-modal.js';
-import { handleRoleNewClick, openRoleNew } from '../features/roles/create/modal.js';
+import { handleRoleNewClick } from '../features/roles/create/modal.js';
 import { dnd, hideInsert, insertDisabled, moveQueue } from '../features/roles/dnd.js';
 import { closeRoleDd, closeRoleModal, ddEl, isRoleDdOpen, isRoleOpen, openRoleAttach, openRoleModal, pickRoleDd, renderRoleLists, saveRole, searchRoleDd, toggleRoleDd } from '../features/roles/permissions-modal.js';
 import { findRole, roleState } from '../features/roles/state.js';
@@ -25,7 +25,7 @@ document.addEventListener('click', function (e) {
     if (insertDisabled()) { hideInsert(); return; }
     var at = dnd.insertAt;
     hideInsert();
-    openRoleNew(at);
+    openRoleAttach(at); // привязка роли проекта с правами на выбранную позицию
     return;
   }
 

@@ -32,6 +32,22 @@ export var allRolesApi = (function () {
     return 'error';
   }
 
+  /**
+   * Контракт сортировки списка ролей (GET /api/additional/roles).
+   * TODO(бэк): сверить имя параметра и значения с RolesController / BasicModelSortBy.
+   *   asc  — сначала Public, desc — сначала Private.
+   */
+  var SORT = { param: 'sort', values: { asc: 'visibility', desc: '-visibility' } };
+
+  function serverMessage(r) {
+    var e = r && r.data && r.data.error;
+    if (e && e.details && typeof e.details === 'object') {
+      var k = Object.keys(e.details)[0];
+      if (k && e.details[k] && e.details[k][0]) return String(e.details[k][0]);
+    }
+    return (e && e.message) ? String(e.message) : '';
+  }
+
   var warnedVisibility = false;
 
   /** visibility роли: строка (public/private) или булев флаг; бывает и во вложенном role */
@@ -50,10 +66,17 @@ export var allRolesApi = (function () {
         if (v.indexOf('pub') !== -1) return 'public';
         return v;
       }
-      if (o.isPrivate === true || o.private === true) return 'private';
-      if (o.isPublic === true || o.public === true) return 'public';
-      if (o.isPrivate === false || o.private === false) return 'public';
-      if (o.isPublic === false || o.public === false) return 'private';
+      var pub = o.isPublic != null ? o.isPublic : o.is_public != null ? o.is_public : o.public;
+      var priv = o.isPrivate != null ? o.isPrivate : o.is_private != null ? o.is_private : o.private;
+      // булево может прийти строкой/числом ("t", "f", 1, 0, "true")
+      var asBool = function (x) {
+        if (x === true || x === 1 || x === '1' || x === 't' || x === 'true') return true;
+        if (x === false || x === 0 || x === '0' || x === 'f' || x === 'false') return false;
+        return null;
+      };
+      var pb = asBool(pub), rb = asBool(priv);
+      if (pb !== null) return pb ? 'public' : 'private';
+      if (rb !== null) return rb ? 'private' : 'public';
     }
     if (!warnedVisibility) {
       warnedVisibility = true;
@@ -65,23 +88,11 @@ export var allRolesApi = (function () {
   function normalize(raw) {
     raw = unwrapItem(raw);
     if (!raw || typeof raw !== 'object') return null;
-    // Элемент может быть плоским или вложенным: { role: { id, title, ... }, ... }
-    var src = (raw.role && typeof raw.role === 'object') ? raw.role : raw;
-    var rawId = src.id != null ? src.id
-              : src.roleId != null ? src.roleId
-              : raw.id != null ? raw.id
-              : raw.roleId != null ? raw.roleId
-              : null;
-    var id = Number(rawId);
-    // id = 0 допустим (роль «User»)
-    if (rawId == null || rawId === '' || isNaN(id)) {
-      console.warn('[admin] all-roles: item without valid id, keys:', Object.keys(raw), raw);
-      return null;
-    }
-
-    var title = src.title || src.name || raw.title || raw.name || '';
-    var rawTranslations = src.translations || raw.translations;
-    var translations = Array.isArray(rawTranslations) ? rawTranslations : [];
+    var id = Number(raw.id);
+    if (!id && id !== 0) return null;
+    
+    var title = raw.title || raw.name || '';
+    var translations = Array.isArray(raw.translations) ? raw.translations : [];
     
     if (!title && translations.length > 0) {
        var lang = currentLang().slice(0, 2).toLowerCase();
@@ -89,9 +100,9 @@ export var allRolesApi = (function () {
        title = found ? (found.title || found.name) : (translations[0].title || translations[0].name);
     }
     
-    if (!title && rawTranslations && typeof rawTranslations === 'object' && !Array.isArray(rawTranslations)) {
-       var transKeys = Object.keys(rawTranslations);
-       title = rawTranslations[currentLang()] || (transKeys.length ? rawTranslations[transKeys[0]] : '') || '';
+    if (!title && raw.translations && typeof raw.translations === 'object' && !Array.isArray(raw.translations)) {
+       var transKeys = Object.keys(raw.translations);
+       title = raw.translations[currentLang()] || (transKeys.length ? raw.translations[transKeys[0]] : '') || '';
     }
 
     var p = raw.permissions || {};
@@ -103,7 +114,7 @@ export var allRolesApi = (function () {
       id: id,
       title: String(title || ''),
       visibility: visibilityOf(raw),
-      color: normalizeColor(src.color != null ? src.color : raw.color),
+      color: normalizeColor(raw.color),
       canManage: raw.canManage !== false,
       version: raw.version != null ? raw.version : 1,
       systemPermissions: typeof systemPermissions === 'object' ? systemPermissions : {},
@@ -120,16 +131,18 @@ export var allRolesApi = (function () {
 
   return {
     get status() { return status; },
-    list: function (query, statusFilter) {
+    list: function (query, statusFilter, sort) {
       // Первая загрузка без фильтров — из данных, которые отдал сервер вместе со страницей
-      if (!query && (!statusFilter || statusFilter === 'all')) {
+      if (!query && !sort && (!statusFilter || statusFilter === 'all')) {
         var boot = takeBootstrap('all-roles');
         var seeded = boot === null ? null : fromPayload(boot);
-        if (seeded && seeded.length) { setStatus('live'); return Promise.resolve(seeded); }
+        if (seeded) { setStatus('live'); return Promise.resolve(seeded); }
       }
       var parts = [];
       if (query) parts.push('q=' + encodeURIComponent(query));
       if (statusFilter && statusFilter !== 'all') parts.push('status=' + encodeURIComponent(statusFilter));
+      // Сортировку выполняет бэк: ?sort=<значение>. Имя параметра и значения — в SORT (ниже).
+      if (sort && SORT.values[sort]) parts.push(SORT.param + '=' + encodeURIComponent(SORT.values[sort]));
       var qs = parts.length ? '?' + parts.join('&') : '';
       return request('GET', qs).then(function (r) {
         var kind = classify(r);
@@ -147,9 +160,9 @@ export var allRolesApi = (function () {
       return request('DELETE', '/' + id).then(function (r) {
         var kind = classify(r);
         if (kind === 'ok') { setStatus('live'); return { mode: 'api', status: r.status }; }
-        if (kind === 'mock') { setStatus('mock'); return { mode: 'mock' }; }
-        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status };
-        return { mode: 'error', status: r.status, message: 'HTTP ' + r.status };
+        if (kind === 'forbidden') return { mode: 'forbidden', status: r.status, message: serverMessage(r) };
+        // 404/405/HTML/сеть — это НЕ успех: роль на сервере не удалена, строку локально не убираем
+        return { mode: 'error', status: r.status, message: serverMessage(r) || ('HTTP ' + r.status) };
       });
     }
   };

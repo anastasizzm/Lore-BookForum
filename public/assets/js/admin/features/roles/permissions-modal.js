@@ -9,8 +9,8 @@ import { allRoles } from '../all-roles/page.js';
 import { rolesApi } from './api.js';
 import { ROLE_GROUPS } from './constants.js';
 import { finishNewRole, newRoleRequest } from './create/submit.js';
-import { findRole, roleState } from './state.js';
-import { updateRoleRow } from './table.js';
+import { findRole, hasAnyPerms, roleState } from './state.js';
+import { renderRoleRows, updateRoleRow } from './table.js';
 
 /* ---------- права текущего пользователя: что он вправе выдавать ----------
    Бэк не даёт выдать право, которого нет у самого редактора (403 «Пользователь должен
@@ -232,12 +232,12 @@ export function pickRoleDd(id) {
 }
 
 /** «+» на странице roles: выбрать роль проекта из справочника и задать ей права. */
-export function openRoleAttach() {
+export function openRoleAttach(insertAt) {
   if (!roleState.modal) return;
 
   var stub = {
     id: 0, title: '', color: '', canManage: true, status: '', version: null,
-    isNew: true, attach: true, insertAt: null,
+    isNew: true, attach: true, insertAt: insertAt || null,
     systemPermissions: {}, postPermissions: {}, pubPermissions: {}
   };
   roleState.current = stub;
@@ -347,6 +347,11 @@ export function saveRole() {
     item.version = isNaN(parsed) ? (Number(item.version) + 1) : parsed;
 
     updateRoleRow(item);
+    if (!hasAnyPerms(body)) {
+      // без прав роль системной не считается: убираем из списка системных (в «Все роли» остаётся)
+      roleState.items = roleState.items.filter(function (r) { return Number(r.id) !== Number(item.id); });
+      renderRoleRows();
+    }
     closeRoleModal();
     notify(t('admin.role_saved'), 'success');
   })

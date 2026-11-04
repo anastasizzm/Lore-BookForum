@@ -1,6 +1,7 @@
 /**
  * Инициализация страниц справочников.
  */
+import { loadDefaultLang } from '../../core/default-lang.js';
 import { saveDictForm, setError } from './form.js';
 import { loadLanguages } from './languages.js';
 import { dict } from './state.js';
@@ -77,5 +78,6 @@ export function initDictionary() {
     });
   }
 
+  loadDefaultLang();
   loadLanguages();
 }

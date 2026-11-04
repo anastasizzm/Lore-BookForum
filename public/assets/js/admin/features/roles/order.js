@@ -16,13 +16,19 @@ export function lockedCount() {
   return n;
 }
 
-function isBaseRole(item) {
+/** Базовая роль (id 0, «User»): у неё самый маленький lexorank, ниже неё ничего поставить нельзя. */
+export function isBaseRole(item) {
   return !!item && Number(item.id) === 0;
 }
 
-/** Раньше базовая роль (id 0) была прибита в конец; теперь двигается как все, хвоста нет. */
+/**
+ * Сколько ролей закреплено в конце списка: базовая роль всегда последняя.
+ * Бэк считает ранг новой роли между соседями (LexoRank::between) и падает, если роль
+ * пытаются поставить под базовую (её ранг 0000000000 — минимальный).
+ */
 export function tailCount() {
-  return 0;
+  var items = roleState.items;
+  return items.length && isBaseRole(items[items.length - 1]) ? 1 : 0;
 }
 
 export function neighborsAt(list, index) {

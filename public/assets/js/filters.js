@@ -980,7 +980,13 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   }
 
   function init() {
-    document.querySelectorAll('input[name="q"]').forEach(setupSearch);
+    // Поля поиска админки (.admin-toolbar) ищут сами через API (public/assets/js/admin/*).
+    // Не навешиваем на них поиск ленты/списков: он делает window.location.href = ?q=… и
+    // перезагружает страницу. Чтобы исключить своё поле в другом месте — data-own-search.
+    document.querySelectorAll('input[name="q"]').forEach(function (inp) {
+      if (inp.closest('.admin-toolbar, [data-own-search]')) return;
+      setupSearch(inp);
+    });
     document.querySelectorAll('[data-filter-panel] input.filter-input[data-format]').forEach(setupFormattedInput);
     document.querySelectorAll('[data-dropdown][data-dynamic]').forEach(function (dd) {
       const row = dd.closest('.filter-panel__row');
