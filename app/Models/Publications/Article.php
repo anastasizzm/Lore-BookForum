@@ -82,7 +82,7 @@ readonly class Article extends PublicationExtended
             genreId: $parent->getGenreId(),
             genre: $parent->genre,
             creator: $parent->creator,
-            creator: $parent->owner,
+            owner: $parent->owner,
             typeId: self::int($row, $prefix . 'type_id'),
             type: self::hasGroup($row, $t, 'id')
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
