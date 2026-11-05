@@ -291,7 +291,7 @@ final class ArticlesRepository extends PublicationsRepository
             ':bookId' => ScriptParam::asInt($bookId),
             ':pStart' => ScriptParam::asInt($pageStart),
             ':pEnd' => ScriptParam::asInt($pageEnd),
-            ':doi' => ScriptParam::asStr($doi?->toString())
+            ':doi' => ScriptParam::asStr($doi)
         ];
 
         $sql = 'INSERT INTO articles (publication_id, type_id, content, book_id, page_start, page_end, doi)
