@@ -24,6 +24,13 @@ use App\Services\Additional\GenresService;
 use App\Services\Additional\TypesService;
 use App\Services\Additional\RolesService;
 use App\Services\Permissions\SystemPermissionsService;
+use App\Services\Auth\AuthorizationService;
+
+use App\Models\Access\Operations\Posts\ControlPostOperation;
+use App\Models\Access\Operations\Publications\ControlPublicationOperation;
+use App\Models\Access\Operations\System\ManageAdditionalsSystemOperation;
+use App\Models\Access\Operations\System\ManagePeopleSystemOperation;
+use App\Models\Access\Operations\System\ManageRolesSystemOperation;
 
 use App\Constants;
 
