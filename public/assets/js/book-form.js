@@ -1795,6 +1795,9 @@
       function resetUploadIds() {
         var iconField = form.querySelector('input[name="iconId"]');
         if (iconField) iconField.value = '';
+        // FormData is captured before uploadPhase(); keep it in sync with the
+        // hidden fields so a retry does not send stale ids either.
+        body.delete('iconId');
         body.delete('contentIds[]');
       }
 
@@ -1807,6 +1810,7 @@
           tasks.push(uploadFile(coverFile, 'cover').then(function (uuid) {
             var iconField = form.querySelector('input[name="iconId"]');
             if (iconField) iconField.value = uuid;
+            body.set('iconId', uuid);
           }, function (err) {
             err.field = 'cover';
             throw err;
