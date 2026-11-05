@@ -20,4 +20,13 @@ final readonly class BookData extends RowModel
             pageEnd: self::int($row, $prefix . 'page_end')
         );
     }
+
+    public function toArray() : array 
+    {
+        return [
+            'bookId' => $this->bookId,
+            'pageStart' => $this->pageStart,
+            'pageEnd' => $this->pageEnd
+        ];
+    }
 }

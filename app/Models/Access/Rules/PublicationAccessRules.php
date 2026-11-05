@@ -55,6 +55,19 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
         );
     }
 
+    public static function fromParent(parent $parent) : self 
+    {
+        return new self(
+            create: false,
+            updateMeta: $parent->updateMeta,
+            updateContent: $parent->updateContent,
+            delete: false,
+            read: $parent->read,
+            managePeople: $parent->managePeople,
+            manageRoles: $parent->manageRoles,
+        );
+    }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $parent = parent::fromRow($row, $prefix);

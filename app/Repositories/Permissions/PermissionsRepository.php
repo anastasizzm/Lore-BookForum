@@ -257,7 +257,7 @@ class PermissionsRepository extends Repository
         if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
         else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
 
-        if(!empty($roleId))
+        if($roleId !== NULL)
             $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");

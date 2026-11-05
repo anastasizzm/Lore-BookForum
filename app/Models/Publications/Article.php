@@ -37,7 +37,7 @@ readonly class Article extends PublicationExtended
         public ?BasicModel $type,
         public ?string $doi,
         public ArticleContentMode $contentMode,
-        private int $bookId,
+        public ?int $bookId,
         public ?PublicationShort $book
     ){
         parent::__construct(
@@ -88,7 +88,7 @@ readonly class Article extends PublicationExtended
                 ? BasicModel::fromRow($row, $prefix . $t) : NULL,
             doi: self::strN($row, $prefix . 'doi'),
             bookId: self::intN($row, $prefix . 'book_id'),
-            contentMode: self::str($row, $prefix . 'content_mode'),
+            contentMode: self::enum($row, $prefix . 'content_mode', ArticleContentMode::class),
             book: self::hasGroup($row, $b, 'id')
                 ? PublicationShort::fromRow($row, $prefix . $b)
                 : NULL
@@ -102,6 +102,7 @@ readonly class Article extends PublicationExtended
             'type' => $this->type,
             'doi' => $this->doi,
             'contentMode' => $this->contentMode,
+            'bookId' => $this->bookId,
             'book' => $this->book
         ];
     }
