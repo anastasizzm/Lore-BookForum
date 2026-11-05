@@ -30,7 +30,15 @@ final readonly class ContentData extends RowModel
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $mode = self::enum($row, $prefix . 'content_mode', ArticleContentMode::class);
-        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row));
-        else return new self(content: self::str($row, $prefix . 'content'));
+        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row),  content: NULL);
+        else return new self(bookData: NULL, content: self::str($row, $prefix . 'content'));
+    }
+
+    public function toArray() : array 
+    {
+        return [
+            'bookData' => $this->bookData?->toArray(),
+            'content' => $this->content
+        ];
     }
 }

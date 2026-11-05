@@ -24,7 +24,7 @@ final readonly class RolesUserListQuery
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromInput($q),
-            roleId: QueryParser::optionalPositiveInt($q, 'role')
+            roleId: QueryParser::optionalNonNegInt($q, 'role')
         );
     }
 

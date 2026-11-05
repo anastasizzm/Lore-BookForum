@@ -94,7 +94,7 @@ final class SystemPermissionsController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
         $expectedVersion = $this->requireVersion($context);
         $form = PositionForm::fromInput($context->request->body());
 
@@ -116,7 +116,7 @@ final class SystemPermissionsController extends Controller
         if (empty($userId))
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
         if (!$this->permissionsService->canManageRole($userId, $roleId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
 
@@ -206,7 +206,7 @@ final class SystemPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
-        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
 
         if (!$this->permissionsService->canManageUser($currentUserId, $userId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);

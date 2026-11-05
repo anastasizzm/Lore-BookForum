@@ -34,8 +34,8 @@ INSERT INTO roles_permissions (role_id, publication_id,
   sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles, 
   lexorank
 ) VALUES 
-(0, NULL, true, false, false, false, false, false, false, true, false, false, false, false, false, false, "2"),
-(1, NULL, true, true, true, true, true, true, true, true, true, true, true, true, true, true, "y");
+(0, NULL, true, false, false, false, false, false, false, true, false, false, false, false, false, false, '2'),
+(1, NULL, true, true, true, true, true, true, true, true, true, true, true, true, true, true, 'y');
 
 INSERT INTO users (username, email, pass_hash, is_verified)
 VALUES (:'admin_username', :'admin_email', :'admin_pass_hash', true);

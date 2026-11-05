@@ -73,7 +73,7 @@ final class PublicationPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
-        $roleId = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
         $form = EditPublicationPermissionForm::fromInput($context->request->body());
         $expectedVersion = $this->requireVersion($context);
 
@@ -91,7 +91,7 @@ final class PublicationPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $publicationId   = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
-        $roleId          = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId          = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
         $expectedVersion = $this->requireVersion($context);
         $form            = PositionForm::fromInput($context->request->body());
 
@@ -115,7 +115,7 @@ final class PublicationPermissionsController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
-        $roleId        = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId        = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
 
         if (!$this->permissionsService->canManageRole($userId, $roleId, $publicationId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
@@ -213,7 +213,7 @@ final class PublicationPermissionsController extends Controller
 
         $publicationId = RouteParamParser::positiveInt(['p' => $publicationId], 'p');
         $targetUserId  = RouteParamParser::positiveInt(['u' => $userId], 'u');
-        $roleId        = RouteParamParser::positiveInt(['r' => $roleId], 'r');
+        $roleId        = RouteParamParser::nonNegInt(['r' => $roleId], 'r');
 
         if (!$this->permissionsService->canManageUser($currentUserId, $targetUserId, $publicationId))
             throw new ForbiddenException($this->translator->t("errors.roles.insufficient_role"), ErrorCodes::FORBIDDEN);
