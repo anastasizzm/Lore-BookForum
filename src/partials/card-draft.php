@@ -13,8 +13,8 @@
  * ССЫЛКИ (роуты books.edit / articles.edit в config/routes.php нет —
  * роуты заморожены, поэтому правка живёт на существующем роуте
  * создания через query-параметр):
- *   Продолжить → /books/new?id={id}                (book-form, edit-режим)
- *                /articles/new?id={id}&part=meta    (article-edit-meta)
+ *   Продолжить → /books/create?id={id}             (book-form, edit-режим)
+ *                /articles/create?id={id}&part=meta (article-edit-meta)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
  * ДЕЙСТВИЯ (API уже существует в config/endpoints.php):
@@ -42,7 +42,7 @@ $openUrl = $id > 0 ? $basePath . $id : '#';
 // (?id=N: префилл из JSON-блоба + PATCH /api/books/{id}), статья —
 // article-edit-meta.php (пока только разметка, без префилла и отправки).
 $editUrl = $id > 0
-    ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
+    ? ($isArticle ? '/articles/create?id=' . $id . '&part=meta' : '/books/create?id=' . $id)
     : '#';
 
 $hasCover = $cover !== '';

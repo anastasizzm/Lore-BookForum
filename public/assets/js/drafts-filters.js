@@ -27,11 +27,11 @@
   };
 
   function csrfToken() {
-    const el = document.querySelector('[data-csrf] input[name="csrf_token"], [data-csrf]');
-    if (!el) return '';
-    const inp = el.querySelector ? el.querySelector('input[name="csrf_token"]') : null;
-    if (inp) return inp.value;
-    return el.value || el.textContent?.trim() || '';
+    if (window.LoreCsrf && typeof window.LoreCsrf.token === 'function') {
+      return window.LoreCsrf.token();
+    }
+    const el = document.querySelector('input[type="hidden"][name="_token"]');
+    return el ? el.value : '';
   }
 
   function apiUrl(type, id, suffix = '') {
@@ -41,10 +41,13 @@
 
   // ---------- publish / delete ----------
   async function request(method, url) {
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
     const token = csrfToken();
     if (token) headers['X-CSRF-Token'] = token;
-    return fetch(url, { method, headers, credentials: 'same-origin' });
+    const doFetch = window.LoreCsrf && typeof window.LoreCsrf.fetch === 'function'
+      ? window.LoreCsrf.fetch
+      : fetch;
+    return doFetch(url, { method, headers, credentials: 'same-origin' });
   }
 
   function setBusy(card, busy) {

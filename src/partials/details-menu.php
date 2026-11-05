@@ -26,9 +26,9 @@
  *
  * СТРУКТУРА (спека): дропдаун ПЛОСКИЙ, без подменю — 4 кнопки правки
  * плюс Delete, каждый пункт со своим правом:
- *   1. Изменить мета-данные   — /{books|articles}/new?id=N&part=meta
+ *   1. Изменить мета-данные   — /{books|articles}/create?id=N&part=meta
  *                               (book-edit-meta / article-edit-meta);
- *   2. Изменить контент       — /{books|articles}/new?id=N&part=content
+ *   2. Изменить контент       — /{books|articles}/create?id=N&part=content
  *                               (book-edit-content / article-edit-content);
  *   3. Изменить роли          — publish-диалог с модулем ролей (mode:'roles'),
  *                               data-requires="publication.manageRoles";
@@ -58,8 +58,8 @@ $isBook    = $type === 'book';
 // через query-параметр part=meta|content — book-form.php / article-form.php
 // читают $_GET['id'] и $_GET['part'] и рендерят отдельный файл
 // (book-edit-meta, book-edit-content, article-edit-meta, article-edit-content).
-$metaHref    = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=meta';
-$contentHref = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=content';
+$metaHref    = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '&part=meta';
+$contentHref = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '&part=content';
 $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
@@ -83,7 +83,7 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
   <div class="details-menu__popup" data-details-menu hidden>
 
     <!-- 1. Метаданные: страница правки метаданных
-         (/books/new?id=N&part=meta / /articles/new?id=N&part=meta).
+         (/books/create?id=N&part=meta / /articles/create?id=N&part=meta).
          data-requires="publication.updateMeta" — permissions.js скрывает
          пункт, если права нет. -->
     <a class="details-menu__item"
@@ -96,7 +96,7 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
     </a>
 
     <!-- 2. Контент: страница правки контента
-         (/books/new?id=N&part=content / /articles/new?id=N&part=content). -->
+         (/books/create?id=N&part=content / /articles/create?id=N&part=content). -->
     <a class="details-menu__item"
        href="<?= $view->e($contentHref) ?>"
        data-requires="publication.updateContent"

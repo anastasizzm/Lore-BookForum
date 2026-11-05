@@ -103,7 +103,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
  *   согласован. Подключить, когда бэк определит форму данных.
  *
- *   GET  /api/users/search?q=… → роут api.users.search, AuthPolicy::Auth
+ *   GET  /api/users?q=… → роут api.users (UsersController::list), AuthPolicy::Auth
  *        ЗАГЛУШКА (роут добавит бэк; в endpoints.php его пока нет):
  *        автокомплит людей по нику для списков авторов/редакторов.
  *        Ответ: { items: [ { id: int, username: string }, ... ] }

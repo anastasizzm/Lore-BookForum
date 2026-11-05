@@ -482,6 +482,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const cover = coverOf(b, '/uploads/covers/');
     const date  = b.updatedAt || b.createdAt || '';
     const href  = id > 0 ? '/' + (type === 'article' ? 'articles' : 'books') + '/' + id : '#';
+    const editHref = id > 0
+      ? (type === 'article' ? '/articles/create?id=' + id + '&part=meta' : '/books/create?id=' + id)
+      : '#';
     return '<article class="card-base card-book card-draft" data-draft-id="' + id + '" data-draft-type="' + type + '">' +
       '<div class="card-book__cover card-draft__cover' + (cover ? '' : ' cover--empty') + '">' +
         (cover ? '<img src="' + escapeHtml(cover) + '" alt="' + escapeHtml(b.title) + '" loading="lazy">' : '') +
@@ -491,6 +494,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       '<p class="card-draft__meta"><span>' + escapeHtml(type === 'article' ? tOr('common.drafts.type_article', 'Article') : tOr('common.drafts.type_book', 'Book')) + '</span>' +
         (date ? '<span class="card-draft__sep">·</span><span class="card-draft__date">' + escapeHtml(date) + '</span>' : '') +
       '</p>' +
+      '<div class="card-draft__actions">' +
+        '<a class="btn btn--secondary card-draft__edit" href="' + escapeHtml(editHref) + '">' +
+          escapeHtml(tOr('common.drafts.continue', 'Continue')) +
+        '</a>' +
+        '<a class="card-draft__open" href="' + escapeHtml(href) + '">' +
+          escapeHtml(tOr('common.drafts.open', 'Open')) +
+        '</a>' +
+      '</div>' +
       '<div class="card-draft__manage">' +
         '<button type="button" class="btn btn--primary btn--sm card-draft__publish" data-draft-publish data-draft-type="' + type + '" data-draft-id="' + id + '">' +
           escapeHtml(tOr('common.drafts.publish', 'Publish')) + '</button>' +
@@ -682,7 +693,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       document.querySelectorAll('[data-dropdown][data-dynamic] a.dropdown__item[href]').forEach(function (a) {
         const dd = a.closest('[data-dropdown][data-dynamic]');
         const src = SOURCES[dd.dataset.dynamic];
-        if (src) links.push([a, src.param]);
+        if (src) links.push([a, dd.dataset.param || src.param]);
       });
       links.forEach(function (pair) {
         const a = pair[0], own = pair[1];
@@ -713,7 +724,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       document.querySelectorAll('[data-dropdown][data-dynamic]').forEach(function (dd) {
         const src = SOURCES[dd.dataset.dynamic];
         if (!src) return;
-        const cur = url.searchParams.get(src.param) || '';
+        const cur = url.searchParams.get(dd.dataset.param || src.param) || '';
         dd.querySelectorAll('a.dropdown__item').forEach(function (a) {
           const v = a.dataset.filterValue === 'all' ? '' : (a.dataset.filterValue || '');
           a.classList.toggle('is-active', v === cur);
@@ -757,7 +768,18 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         if (v) api.set(k, v);
       });
       api.delete('ctype');
-      (src.kind === 'article' ? ['status', 'isbn'] : ['kind', 'doi']).forEach(function (k) { api.delete(k); });
+      if (src.kind === 'article') {
+        // На странице черновиков дропдаун типа пишет ?kind= (общий для
+        // книг и статей), а ArticlesListQuery ждёт ?type=.
+        const kind = api.get('kind');
+        if (kind) api.set('type', kind);
+        api.delete('kind');
+        api.delete('status');
+        api.delete('isbn');
+      } else {
+        api.delete('kind');
+        api.delete('doi');
+      }
       if (!api.has('lang')) api.set('lang', langOf());
       if (mode === 'profile') { api.set(userParam, userId); api.set('include', 'creator'); }
       if (isDrafts) {
@@ -933,7 +955,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         const src = SOURCES[dd.dataset.dynamic];
         if (src) {
           const v = a.dataset.filterValue || '';
-          const ch = {}; ch[src.param] = v === 'all' ? '' : v; return ch;
+          const ch = {}; ch[dd.dataset.param || src.param] = v === 'all' ? '' : v; return ch;
         }
       }
       return null;
@@ -971,11 +993,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       more: more,
     };
 
-    // Профиль и черновики: SSR мог не учесть параметры из URL — один раз освежаем список запросом
+    // Профиль и черновики: SSR мог не учесть параметры из URL — один раз освежаем список запросом.
+    // Черновики освежаем ВСЕГДА: /books/drafts и /articles/drafts на сервере
+    // рендерят только один тип, а страница по умолчанию показывает вкладку
+    // «Все» — без запроса статьи (или книги) не появлялись бы в списке.
     if (root.dataset.listHydrate !== undefined) {
       const hasParams = LIST_KEYS.some(function (k) { return !!startUrl.searchParams.get(k); }) ||
                         (!isDrafts && (Number(startUrl.searchParams.get('page')) || 1) > 1);
-      if (hasParams) go(startUrl, false, true);
+      if (hasParams || isDrafts) go(startUrl, false, true);
     }
   }
 

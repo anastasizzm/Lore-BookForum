@@ -1010,8 +1010,42 @@
       if (applyBtn) applyBtn.disabled = !(s && e);
     }
 
+    /**
+     * PDF-файл книги для читалки фрагмента.
+     *
+     * Готового «файла книги» одним запросом API не отдаёт: файлы лежат в
+     * GET /api/books/{id}/contents (items: File[]), а сам файл скачивается
+     * по GET /api/files/{uuid}/download. Берём первый PDF из списка.
+     *
+     * @return {Promise<string>} URL для fetch()
+     */
+    function resolveBookFileUrl(bookId) {
+      return fetch('/api/books/' + encodeURIComponent(bookId) + '/contents', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(function (data) {
+        var items = Array.isArray(data) ? data
+          : (Array.isArray(data && data.items) ? data.items
+            : (Array.isArray(data && data.data) ? data.data : []));
+        var pdf = null;
+        for (var i = 0; i < items.length; i++) {
+          var it = items[i] || {};
+          var format = String(it.format || '').toLowerCase();
+          var mime = String(it.mimeType || it.mime || '').toLowerCase();
+          if (format === 'pdf' || mime === 'application/pdf') { pdf = it; break; }
+        }
+        if (!pdf) throw new Error('no pdf');
+        var id = pdf.id && typeof pdf.id === 'object' ? pdf.id.value : pdf.id;
+        if (!id) throw new Error('no pdf');
+        return '/api/files/' + encodeURIComponent(String(id)) + '/download';
+      });
+    }
+
     async function ensureDoc() {
-      var url = DEV_SRC || ('/api/books/' + state.book.id + '/file');
+      var url = DEV_SRC || await resolveBookFileUrl(state.book.id);
       if (pdf && pdfUrl === url) return;
 
       pdfjs = await loadPdfjs();
@@ -1377,11 +1411,11 @@
         break;
 
       case 'genre':
-        if (!isDraft && valueOf('genre') === '') { setError(name, t('errors.article.rule_article_genre')); return false; }
+        if (valueOf('genre') === '') { setError(name, t('errors.article.rule_article_genre')); return false; }
         break;
 
       case 'type':
-        if (!isDraft && valueOf('type') === '') { setError(name, t('errors.article.rule_article_type')); return false; }
+        if (valueOf('type') === '') { setError(name, t('errors.article.rule_article_type')); return false; }
         break;
 
       case 'doi':
@@ -1390,18 +1424,22 @@
         break;
 
       case 'annotation':
-        if (valueOf('annotation').length > LIMITS.annotation) { setError(name, t('errors.article.rule_article_annotation')); return false; }
+        v = valueOf('annotation');
+        if (v === '') { setError(name, t('errors.article.rule_article_annotation_required')); return false; }
+        if (v.length > LIMITS.annotation) { setError(name, t('errors.article.rule_article_annotation')); return false; }
         break;
 
       case 'author_note':
-        if (valueOf('author_note').length > LIMITS.authorNote) { setError(name, t('errors.article.rule_article_author_note')); return false; }
+        v = valueOf('author_note');
+        if (v === '') { setError(name, t('errors.article.rule_article_author_note_required')); return false; }
+        if (v.length > LIMITS.authorNote) { setError(name, t('errors.article.rule_article_author_note')); return false; }
         break;
 
       case 'content':
         if (!editor) break;
         // В режиме «отрывок из книги» редактор скрыт; текст статьи необязателен —
         // содержимое (при галочке «Вставить текст») приходит из фрагмента PDF.
-        if (!isDraft && state.mode !== 'excerpt' && editor.isEmpty()) {
+        if (state.mode !== 'excerpt' && editor.isEmpty()) {
           setError(name, t('errors.article.rule_article_content'));
           return false;
         }
@@ -1417,11 +1455,11 @@
         break;
 
       case 'book':
-        if (!isDraft && state.mode === 'excerpt' && !state.book) { setError(name, t('errors.article.rule_article_book')); return false; }
+        if (state.mode === 'excerpt' && !state.book) { setError(name, t('errors.article.rule_article_book')); return false; }
         break;
 
       case 'fragment':
-        if (state.mode !== 'excerpt' || isDraft) break;
+        if (state.mode !== 'excerpt') break;
         if (!state.start || !state.end) { setError(name, t('errors.article.rule_article_fragment')); return false; }
         if (Text && Text.compareAnchors(state.start, state.end) >= 0) { setError(name, t('errors.article.rule_article_fragment_order')); return false; }
         if (state.end.page - state.start.page + 1 > LIMITS.excerptPages) {
@@ -1551,7 +1589,11 @@
 
     if (!silent) {
       clearAllErrors();
-      if (!validateAll(!forPublish)) {
+      // Бэк (ArticleFormValidator + PublicationFormValidator) требует полный
+      // набор полей и для черновика: название, аннотацию, заметки, жанр,
+      // тип и контент/отрывок. Поэтому «Create draft» проверяем так же, как
+      // Publish, — иначе черновик уходил на сервер и падал с 422.
+      if (!validateAll(false)) {
         showFieldErrors();
         revealInvalidStep();
         focusFirstInvalid();
@@ -1559,11 +1601,16 @@
       }
     } else {
       // Автосохранение: минимальные требования, чтобы не слать заведомо
-      // неполный черновик и не получать ошибки сервера.
+      // неполный черновик и не получать ошибки сервера на каждом тике.
       if (valueOf('title') === '' || valueOf('title').length > LIMITS.title) {
         return Promise.resolve(false);
       }
-      if (state.mode === 'excerpt' && !state.book) {
+      if (valueOf('genre') === '' || valueOf('type') === '') {
+        return Promise.resolve(false);
+      }
+      if (state.mode === 'excerpt') {
+        if (!state.book || !state.start || !state.end) return Promise.resolve(false);
+      } else if (editor && editor.isEmpty()) {
         return Promise.resolve(false);
       }
     }
