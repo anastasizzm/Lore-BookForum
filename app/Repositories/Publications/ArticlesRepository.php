@@ -289,8 +289,8 @@ final class ArticlesRepository extends PublicationsRepository
             ':typId' => ScriptParam::asInt($typeId),
             ':content' => ScriptParam::asStr($content),
             ':bookId' => ScriptParam::asInt($bookId),
-            ':pStart' => ScriptParam::asInt($pageStart),
-            ':pEnd' => ScriptParam::asInt($pageEnd),
+            ':pStart' => ScriptParam::asInt($pageStart ?? 0),
+            ':pEnd' => ScriptParam::asInt($pageEnd ?? 0),
             ':doi' => ScriptParam::asStr($doi)
         ];
 
