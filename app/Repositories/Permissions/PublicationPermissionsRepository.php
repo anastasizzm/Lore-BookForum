@@ -11,6 +11,7 @@ use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
+use App\Services\Configuration\UnitOfWork;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
 use PDO;
 
@@ -18,9 +19,10 @@ final class PublicationPermissionsRepository extends PermissionsRepository
 {
     public function __construct(
         Database $db,
-        private readonly Translator $translator
+        Translator $translator,
+        UnitOfWork $uow
     ){
-        parent::__construct($db, $translator);
+        parent::__construct($db, $translator, $uow);
     }
 
     /** @return array<PublicationPermissions> */
