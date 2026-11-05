@@ -224,7 +224,7 @@ final class BooksRepository extends PublicationsRepository
             ':catId' => ScriptParam::asInt($categoryId),
             ':publ' => ScriptParam::asStr($publisher),
             ':pages' => ScriptParam::asInt($pagesCount),
-            ':isbn' => ScriptParam::asStr($isbn?->toString())
+            ':isbn' => ScriptParam::asStr($isbn)
         ];
 
         $sql = 'INSERT INTO books (publication_id, category_id, publisher, pages, isbn)

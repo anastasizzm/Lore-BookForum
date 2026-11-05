@@ -24,13 +24,21 @@ final readonly class ContentData extends RowModel
         if ($this->bookData !== NULL) return ArticleContentMode::Book;
         if ($this->content !== NULL) return ArticleContentMode::Text;
 
-        throw new \RuntimException("Neither bookData or content provided");
+        throw new \RuntimeException("Neither bookData or content provided");
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $mode = self::enum($row, $prefix . 'content_mode', ArticleContentMode::class);
-        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row));
-        else return new self(content: self::str($row, $prefix . 'content'));
+        if ($mode === ArticleContentMode::Book) return new self(bookData: BookData::fromRow($row),  content: NULL);
+        else return new self(bookData: NULL, content: self::str($row, $prefix . 'content'));
+    }
+
+    public function toArray() : array 
+    {
+        return [
+            'bookData' => $this->bookData?->toArray(),
+            'content' => $this->content
+        ];
     }
 }

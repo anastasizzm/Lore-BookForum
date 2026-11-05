@@ -5,6 +5,7 @@ namespace App\Forms\Publications;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Uuid;
 use App\Forms\Form;
+use App\Models\Publications\BookData;
 
 readonly class ArticleContentForm implements Form
 {
@@ -16,14 +17,14 @@ readonly class ArticleContentForm implements Form
     public static function fromInput(array $form) : self 
     {
         return new self(
-            book: array_key_exists('book', $input)
+            book: array_key_exists('book', $form)
                 ? new BookData(
-                    bookId: QueryParser::positiveInt($input['book'], 'bookId'),
-                    pageStart: QueryParser::positiveInt($input['book'], 'pageStart'),
-                    pageEnd: QueryParser::positiveInt($input['book'], 'pageEnd')
+                    bookId: QueryParser::positiveInt($form['book'], 'bookId'),
+                    pageStart: QueryParser::positiveInt($form['book'], 'pageStart'),
+                    pageEnd: QueryParser::positiveInt($form['book'], 'pageEnd')
                 )
                 : NULL,
-            content: QueryParser::optionalString($input, 'content'),
+            content: QueryParser::optionalString($form, 'content'),
         );
     }
 }

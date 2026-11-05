@@ -22,7 +22,7 @@ use App\Models\RowModel;
 readonly class PublicationAccessRules extends ShortPublicationAccessRules
 {
     public function __construct(
-        bool $create,
+        public bool $create,
         bool $updateMeta,
         bool $updateContent,
         bool $read,
@@ -30,17 +30,18 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
         bool $manageRoles,
         public bool $delete,
     ){
-        parent::__construct($create, $updateMeta, $updateContent, $read, $managePeople, $manageRoles);
+        parent::__construct($updateMeta, $updateContent, $read, $managePeople, $manageRoles);
     }
 
     public function hasAny() : bool 
     {
-        return parent::hasAny() || $this->delete;
+        return parent::hasAny() || $this->create || $this->delete;
     }
 
     public function allows(AccessOperation $operation) : bool
     {
         return match(true) {
+            $operation instanceof CreatePublicationOperation => $this->create,
             $operation instanceof DeletePublicationOperation => $this->delete,
             $operation instanceof ControlPublicationOperation => $this->updateMeta || $this->updateContent || $this->delete || $this->read,
             default => parent::allows($operation),
@@ -54,11 +55,24 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
         );
     }
 
+    public static function fromParent(parent $parent) : self 
+    {
+        return new self(
+            create: false,
+            updateMeta: $parent->updateMeta,
+            updateContent: $parent->updateContent,
+            delete: false,
+            read: $parent->read,
+            managePeople: $parent->managePeople,
+            manageRoles: $parent->manageRoles,
+        );
+    }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         $parent = parent::fromRow($row, $prefix);
         return new self(
-            create: $parent->create,
+            create: self::bool($row, $prefix . 'create'),
             updateMeta: $parent->updateMeta,
             updateContent: $parent->updateContent,
             delete: self::bool($row, $prefix . 'delete'),
@@ -72,7 +86,7 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
     {
         $parent = parent::fromInput($form);
         return new self(
-            create: $parent->create,
+            create: QueryParser::optionalBool($form, 'create') ?? false,
             updateMeta: $parent->updateMeta,
             updateContent: $parent->updateContent,
             read: $parent->read,
@@ -85,6 +99,7 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
     public function toArray(): array
     {
         return parent::toArray() + [
+            'create' => $this->create,
             'delete' => $this->delete,
         ];
     }
@@ -93,7 +108,7 @@ readonly class PublicationAccessRules extends ShortPublicationAccessRules
     {
         $parent = parent::fromArray($data);
         return new self (
-            create: $parent->create,
+            create: (bool)($data['create'] ?? false),
             updateMeta: $parent->updateMeta,
             updateContent: $parent->updateContent,
             read: $parent->read,

@@ -51,6 +51,6 @@ final readonly class ArticleModel extends PublicationModel
         );
     }
 
-    public function isBookBased() { return $this->contentData->getType() === ArticleContentMode::Book; }
-    public function isContentBased() { return $this->contentData->getType() === ArticleContentMode::Text; }
+    public function isBookBased() { return $this->content->getType() === ArticleContentMode::Book; }
+    public function isContentBased() { return $this->content->getType() === ArticleContentMode::Text; }
 }

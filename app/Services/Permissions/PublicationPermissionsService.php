@@ -9,6 +9,7 @@ use App\Exceptions\ConflictException;
 use App\Exceptions\ValidationException;
 use App\Models\PaginatedList;
 use App\Models\Access\Assignment\RolesUser;
+use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Queries\PaginationQuery;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Queries\Permissions\RolesUserListQuery;
@@ -75,7 +76,7 @@ final class PublicationPermissionsService
                     $permissions->roleId,
                     $publicationId,
                     $lexorank,
-                    $permissions->pubPermissions
+                    PublicationAccessRules::fromParent($permissions->pubPermissions)
                 );
             });
         } catch (\PDOException $e) {
@@ -98,7 +99,7 @@ final class PublicationPermissionsService
                     $roleId,
                     $publicationId,
                     $expectedVersion,
-                    $form->pubPermissions
+                    $form->pubPermissions === NULL ? NULL : PublicationAccessRules::fromParent($form->pubPermissions)
                 );
 
                 if ($newVersion === null) {
@@ -168,6 +169,7 @@ final class PublicationPermissionsService
         try {
             $this->repository->removeRole($roleId, $publicationId);
         } catch (\PDOException $e) {
+            if ($e->getCode() === '23001') throw new ConflictException($this->translator->t('errors.common.in_use'));
             throw $this->exceptionTranslator->translate($e);
         }
     }

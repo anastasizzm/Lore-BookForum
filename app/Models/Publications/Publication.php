@@ -17,7 +17,7 @@ readonly class Publication extends PublicationShort
         ?DateTimeImmutable $deletedAt,
         ?Uuid $iconId,
         private int $creatorId,
-        private int $ownerId,
+        public int $ownerId,
         private int $genreId,
         public ?BasicModel $genre,
         public ?UserShortData $creator,
@@ -53,7 +53,6 @@ readonly class Publication extends PublicationShort
 
     public function getCreatorId() { return $this->creatorId; }
     public function getGenreId() { return $this->genreId; }
-    public function getOwnerId() { return $this->ownerId; }
 
     public function toArray() : array 
     {
@@ -61,6 +60,7 @@ readonly class Publication extends PublicationShort
         return $parent + [
             'genre' => $this->genre,
             'creator' => $this->creator,
+            'ownerId' => $this->ownerId,
             'owner' => $this->owner
         ];
     }

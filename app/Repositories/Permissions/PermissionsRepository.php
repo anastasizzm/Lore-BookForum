@@ -19,6 +19,7 @@ use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
 use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
 use App\Models\Dto;
+use App\Services\Configuration\UnitOfWork;
 use PDO;
 
 class PermissionsRepository extends Repository
@@ -31,7 +32,7 @@ class PermissionsRepository extends Repository
         sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles,
         lexorank)';
 
-    public function __construct(Database $db, private readonly Translator $translator)
+    public function __construct(Database $db, protected readonly Translator $translator, protected readonly UnitOfWork $uow)
     {
         parent::__construct($db);
     }
@@ -193,14 +194,22 @@ class PermissionsRepository extends Repository
 
     public function removeRole(int $roleId, ?int $publicationId): void
     {
-        $this->execute(
-            "DELETE FROM roles_permissions
-             WHERE role_id = :roleId AND publication_id IS NOT DISTINCT FROM :pubId",
-            [
-                ':roleId' => ScriptParam::asInt($roleId),
-                ':pubId'  => ScriptParam::asInt($publicationId),
-            ]
-        );
+        $this->uow->transactional(function () use ($roleId, $publicationId) {
+            $this->execute(
+                "DELETE FROM roles_users
+                WHERE NOT is_valid
+                AND role_id = :roleId
+                AND publication_id IS NOT DISTINCT FROM :pubId",
+                [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
+            );
+
+            $this->execute(
+                "DELETE FROM roles_permissions
+                WHERE role_id = :roleId
+                AND publication_id IS NOT DISTINCT FROM :pubId",
+                [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
+            );
+        });
     }
 
     // --- User
@@ -257,7 +266,7 @@ class PermissionsRepository extends Repository
         if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
         else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
 
-        if(!empty($roleId))
+        if($roleId !== NULL)
             $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");

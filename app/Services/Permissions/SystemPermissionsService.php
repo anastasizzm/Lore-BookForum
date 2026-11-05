@@ -181,6 +181,7 @@ final class SystemPermissionsService
         try {
             $this->repository->removeRole($roleId, null);
         } catch (\PDOException $e) {
+            if ($e->getCode() === '23001') throw new ConflictException($this->translator->t('errors.common.in_use'));
             throw $this->exceptionTranslator->translate($e);
         }
     }
