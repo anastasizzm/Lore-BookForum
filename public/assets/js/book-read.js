@@ -57,24 +57,28 @@ async function init(root) {
   if (window.ResizeObserver) new ResizeObserver(syncDock).observe(stage);
 
   /* ---------- Прогресс чтения (RD-01 / RD-02) ----------
-   *   POST /api/books/{id}/progress          — сохранить страницу (upsert)
-   *   POST /api/books/{id}/progress/finish   — книга дочитана (последняя страница)
-   * Тело upsert собирает progressBody(): если бэк ждёт другие имена полей —
-   * поменять ТОЛЬКО эту функцию. Запросы фоновые: ошибка пишется в консоль,
+   *   POST /api/books/{id}/progress — сохранить страницу и (на последней)
+   *                                  отметить книгу прочитанной (upsert).
+   * Тело собирает progressBody(). Запросы фоновые: ошибка пишется в консоль,
    * читателя не отвлекаем; последняя страница дублируется в localStorage. */
   const PROGRESS_URL = '/api/books/' + bookId + '/progress';
   const SAVE_DELAY   = 1000;
-  // Контракт бэка (Api\BooksController::upsert/finish -> BookProgressForm, BookFormat):
-  // format обязателен (finish читает его через QueryParser::enum), позиция PDF —
-  // pageNumber (так её хранит и отдаёт read() в $initial). Имена полей —
-  // здесь и в finishBody(); сверить с BookProgressForm.
+  // Контракт бэка (Api\Publications\PublicationsController::upsert ->
+  // ReadProgressForm + ReadProgressFormValidator):
+  //   format            — BookFormat ('pdf')
+  //   position.pageNumber — целое ≥ 1 (именно вложенный объект position)
+  //   isFinished        — bool; на последней странице отмечает книгу прочитанной
+  // JSON обязателен: при form-urlencoded pageNumber приходит строкой, а
+  // валидатор требует int (is_int) и отклоняет такое тело.
   const FORMAT = root.dataset.format || 'pdf';
-  const progressBody = (page) =>
-    new URLSearchParams({ format: FORMAT, pageNumber: String(page) });
-  const finishBody = () => new URLSearchParams({ format: FORMAT });
+  const progressBody = (page, isFinished) => JSON.stringify({
+    format: FORMAT,
+    position: { pageNumber: page },
+    isFinished: !!isFinished,
+  });
 
   let sentPage = 0;       // страница, о которой бэк уже знает
-  let finished = false;   // finish уже отправлен
+  let finished = false;   // последняя страница уже сохранена как «прочитано»
   let inflight = false;
   let saveTimer = 0;
 
@@ -82,24 +86,29 @@ async function init(root) {
     if (!Number(bookId) || inflight) return;
     const total  = pdf ? pdf.numPages : 0;
     const isLast = total > 0 && num >= total;
-    if (isLast ? finished : num === sentPage) return;
+    // На последней странице нужен отдельный запрос, даже если номер не
+    // менялся (первое открытие короткой/уже дочитанной книги) — он ставит
+    // is_finished и создаёт запись прогресса, если её ещё нет.
+    if (num === sentPage && (finished || !isLast)) return;
 
     inflight = true;
-    const req = (window.LoreCsrf ? window.LoreCsrf.fetch : fetch)(
-      isLast ? PROGRESS_URL + '/finish' : PROGRESS_URL,
-      {
-        method: 'POST',
-        body: isLast ? finishBody() : progressBody(num),
-        keepalive: !!keepalive,
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      }
-    );
+    const req = (window.LoreCsrf ? window.LoreCsrf.fetch : fetch)(PROGRESS_URL, {
+      method: 'POST',
+      body: progressBody(num, isLast),
+      keepalive: !!keepalive,
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
     req.then(async (res) => {
       const raw = await res.text();
       // бэк иногда отвечает HTML-страницей ошибки с кодом 200 — это не успех
       if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
-      if (isLast) finished = true; else { sentPage = num; finished = false; }
+      sentPage = num;
+      finished = isLast;
     }).catch((e) => {
       console.warn('[reader] progress not saved', e);
     }).finally(() => {
@@ -293,7 +302,7 @@ async function init(root) {
   }
 
   function goTo(n) {
-    n = clamp(Number(n) || 1, 1, pdf.numPages);
+    n = clamp(Math.trunc(Number(n)) || 1, 1, pdf.numPages);
     if (n === pageNum) { syncUi(); return; }
     pageNum = n;
     pendingCenter = true;
