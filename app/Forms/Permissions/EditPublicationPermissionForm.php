@@ -6,7 +6,7 @@ use App\Forms\Form;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
-use App\Models\Access\Rules\PublicationAccessRules;
+use App\Models\Access\Rules\ShortPublicationAccessRules;
 
 final readonly class EditPublicationPermissionForm implements Form
 {

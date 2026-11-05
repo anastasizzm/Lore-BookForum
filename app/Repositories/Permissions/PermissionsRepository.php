@@ -193,14 +193,24 @@ class PermissionsRepository extends Repository
 
     public function removeRole(int $roleId, ?int $publicationId): void
     {
-        $this->execute(
-            "DELETE FROM roles_permissions
-             WHERE role_id = :roleId AND publication_id IS NOT DISTINCT FROM :pubId",
-            [
-                ':roleId' => ScriptParam::asInt($roleId),
-                ':pubId'  => ScriptParam::asInt($publicationId),
-            ]
-        );
+        $sql = "WITH clear_users AS (
+                    DELETE FROM roles_users 
+                    WHERE NOT is_valid 
+                    AND role_id = :roleId 
+                    AND publication_id IS NOT DISTINCT FROM :pubId
+                    RETURNING role_id, publication_id
+                ) 
+                DELETE FROM roles_permissions rp
+                USING clear_users cu
+                WHERE rp.role_id = cu.role_id 
+                AND rp.publication_id IS NOT DISTINCT FROM cu.publication_id;
+            ";
+        $params = [
+            ':roleId' => ScriptParam::asInt($roleId),
+            ':pubId'  => ScriptParam::asInt($publicationId),
+        ];
+
+        $this->execute($sql, $params);
     }
 
     // --- User

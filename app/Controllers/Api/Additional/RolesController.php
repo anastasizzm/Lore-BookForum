@@ -38,7 +38,7 @@ final class RolesController extends Controller
 
     public function retrieve(HttpContext $context, string $roleId) 
     {
-        $id = RouteParamParser::positiveInt(['id' => $roleId], 'id');
+        $id = RouteParamParser::nonNegInt(['id' => $roleId], 'id');
         $model = $this->rolesService->retrieve($id);
         return $this->jsonObject($model);
     }
@@ -53,7 +53,7 @@ final class RolesController extends Controller
 
     public function update(HttpContext $context, string $roleId)
     {
-        $id = RouteParamParser::positiveInt(['id' => $roleId], 'id');
+        $id = RouteParamParser::nonNegInt(['id' => $roleId], 'id');
         $form = UserRoleForm::fromInput($context->request->body());
 
         $this->rolesService->update($id, $form);
@@ -62,7 +62,7 @@ final class RolesController extends Controller
 
     public function delete(HttpContext $context, string $roleId)
     {
-        $id = RouteParamParser::positiveInt(['id' => $roleId], 'id');
+        $id = RouteParamParser::nonNegInt(['id' => $roleId], 'id');
 
         $this->rolesService->delete($id);
         return $this->jsonEmpty(204);

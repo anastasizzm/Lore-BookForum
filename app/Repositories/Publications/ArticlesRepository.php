@@ -195,6 +195,7 @@ final class ArticlesRepository extends PublicationsRepository
             ':expectedVersion' => ScriptParam::asInt($expectedVersion)
         ];
 
+        $stmt = $this->execute($sql, $params);
         $row = $stmt->fetchColumn();
         return $row === false ? null : (int)$row;
     }

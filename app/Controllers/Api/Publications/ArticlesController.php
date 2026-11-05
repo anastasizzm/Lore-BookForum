@@ -60,10 +60,10 @@ final class ArticlesController extends PublicationsController
         if ($data->getType() === ArticleContentMode::Book)
         {
             $book = $data->getBookData();
-            $bookRedirect = $this->url->url("books.read", ['bookId' => $book->bookId]) . '?page=' . $book->pageStart;
+            $bookRedirect = $this->url->url("books.read", ['bookId' => $book->bookId], ['page' => $book->pageStart]);
 
             $array = $data->toArray();
-            $array['book']['redirectUrl'] = $bookRedirect;
+            $array['bookData']['redirectUrl'] = $bookRedirect;
             return $this->jsonObject($array);
         }
 
