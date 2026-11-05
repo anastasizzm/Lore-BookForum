@@ -10,13 +10,13 @@ $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
 
 $withLang = static function (string $path) use ($langQuery): string {
     if ($langQuery === null || $langQuery === '') return $path;
+    if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
 
-$url = static function (string $name, array $params = []) use ($view, $langQuery): string {
-    $base = $view->url($name, $params);
-    if ($langQuery === null || $langQuery === '') return $base;
-    return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+/** Язык уже добавляет RouteUrlGenerator — не дублируем. */
+$url = static function (string $name, array $params = []) use ($view): string {
+    return rtrim($view->url($name, $params), '&');
 };
 
 // userId из URL: /users/{id}/books или /users/{id}/articles
@@ -72,7 +72,7 @@ $view->setBlock('selectedTab', 'profile');
 <?php $view->startBlock('title'); ?><?= $tr('common.profile.publications_of', ['name' => $userName]) ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="/assets/css/profile.css">
+  <link rel="stylesheet" href="<?= $view->asset('css/pages/profile.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

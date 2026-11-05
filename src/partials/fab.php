@@ -30,6 +30,7 @@ $fabLang = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !==
     : $view->locale();
 $fabUrl = static function (string $base) use ($fabLang): string {
     if ($fabLang === null || $fabLang === '') return $base;
+    if (preg_match('/(?:[?&])lang=/', $base)) return rtrim($base, '&');
     return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode((string) $fabLang);
 };
 

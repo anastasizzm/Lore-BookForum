@@ -10,16 +10,15 @@ $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
     ? $_GET['lang']
     : (method_exists($view, 'locale') ? $view->locale() : null);
 
-/** Обёртка над $view->url(): добавляет ?lang=<текущая> ко всем ссылкам. */
-$url = static function (string $name, array $params = []) use ($view, $langQuery): string {
-    $base = $view->url($name, $params);
-    if ($langQuery === null || $langQuery === '') return $base;
-    return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+/** Обёртка над $view->url(): язык уже добавляет RouteUrlGenerator. */
+$url = static function (string $name, array $params = []) use ($view): string {
+    return rtrim($view->url($name, $params), '&');
 };
 
-/** Для произвольного пути (например, /users/{id}/edit) — та же логика. */
+/** Для произвольного пути — добавляем язык, только если его ещё нет. */
 $withLang = static function (string $path) use ($langQuery): string {
     if ($langQuery === null || $langQuery === '') return $path;
+    if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
 
