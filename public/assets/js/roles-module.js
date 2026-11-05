@@ -978,11 +978,13 @@ window.LoreRoles = (function () {
 
     // создание роли каталога в публикации: POST /roles принимает
     // PublicationPermissionForm { roleId, pubPermissions, aboveId?, belowId? }
-    // и отвечает 201 пустым телом с ETag новой версии (id роли — roleId из запроса)
-    request('POST', base() + '/roles', JSON.stringify({
-      roleId: num(picked.id),
-      pubPermissions: perms.draft
-    })).then(function (res) {
+    // и отвечает 201 пустым телом с ETag новой версии (id роли — roleId из запроса).
+    // Позицию передаём явно: без соседей бэкенд отвечает 409, если роли уже есть.
+    var body = { roleId: num(picked.id), pubPermissions: perms.draft };
+    if (st.roles.length) {
+      body.aboveId = num(st.roles[st.roles.length - 1].id);
+    }
+    request('POST', base() + '/roles', JSON.stringify(body)).then(function (res) {
       if (res.kind === 'ok' || res.kind === 'missing') {
         if (res.kind === 'ok') {
           var version = parseInt(String(res.etag || '').replace(/"/g, ''), 10) || 1;
