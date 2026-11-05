@@ -623,61 +623,12 @@ html:has(.reader) body {
   color: var(--color-error, #EF4444);
 }
 
-/* ---- Карандаш «Изменить»: подменю (мета / содержание / роли) ---- */
-.details-menu__group {
-  position: relative;
-}
-
-.details-menu__item--parent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.details-menu__pencil {
-  flex: 0 0 auto;
-  color: currentColor;
-}
-
-/* Стрелка-индикатор раскрытия у пункта-родителя */
-.details-menu__item--parent::after {
-  content: '';
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  margin-left: auto;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 0.15s ease;
-  opacity: 0.6;
-}
-
-.details-menu__item--parent[aria-expanded="true"]::after {
-  transform: rotate(45deg);
-}
-
-/* Подменю раскрывается ВПРАВО от пункта-родителя (второй уровень) */
-.details-menu__submenu {
-  position: absolute;
-  left: calc(100% + 6px);
-  top: 0;
-  z-index: 40;
-  min-width: 176px;
-  padding: 6px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border, var(--color-border-light));
-  border-radius: var(--radius-md, 12px);
-  box-shadow: var(--shadow-card, 0 4px 6px rgba(0, 0, 0, 0.1));
-}
-
-/* На узких экранах подменю уходит ПОД родителя, а не вправо */
-@media (max-width: 480px) {
-  .details-menu__submenu {
-    left: 0;
-    right: auto;
-    top: calc(100% + 4px);
-  }
+/* Пункт с [hidden] обязан быть скрыт: base.css глобально прячет [hidden]
+   только на ≥1024px, а у .details-menu__item свой display:block (авторские
+   стили сильнее UA-правила [hidden]). Касается всех пунктов меню —
+   4 кнопки правки, Delete и «Пожаловаться» гасит permissions.js. */
+.details-menu__item[hidden] {
+  display: none !important;
 }
 
 /* Панель публикации внизу страницы — видна, пока статус draft */
@@ -727,5 +678,97 @@ html:has(.reader) body {
 
   .publish-bar__cta {
     width: 100%;
+  }
+}
+
+/* ============================================================
+   КОНТЕНТ КНИГИ (ФАЙЛЫ)
+   Список файлов + прикрепление/удаление (book-contents.js).
+   ============================================================ */
+.book-contents {
+  margin-top: var(--space-4, 24px);
+  padding: var(--space-4, 24px);
+}
+
+.book-contents__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 16px);
+  flex-wrap: wrap;
+}
+
+.book-contents__title {
+  margin: 0;
+  font-size: var(--fs-h, 18px);
+  font-weight: var(--fw-bold, 700);
+}
+
+.book-contents__hint {
+  margin: var(--space-2, 8px) 0 var(--space-3, 16px);
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.book-contents__empty {
+  margin: 0;
+  font-size: var(--fs-small, 14px);
+  color: var(--color-text-muted, #6F84A5);
+}
+
+.book-contents__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.book-contents__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 16px);
+  padding: var(--space-3, 12px) var(--space-3, 16px);
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-surface, #fff);
+  min-width: 0;
+}
+
+.book-contents__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fw-bold, 600);
+  color: var(--color-text, inherit);
+  text-decoration: none;
+}
+
+.book-contents__name:hover {
+  text-decoration: underline;
+}
+
+.book-contents__meta {
+  flex: 0 0 auto;
+  font-size: var(--fs-small, 12px);
+  color: var(--color-text-muted, #6F84A5);
+  white-space: nowrap;
+}
+
+.book-contents__remove {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 480px) {
+  .book-contents__item {
+    flex-wrap: wrap;
+  }
+
+  .book-contents__name {
+    flex-basis: 100%;
+    white-space: normal;
   }
 }

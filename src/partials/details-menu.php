@@ -18,20 +18,26 @@
  * комментариев в comments.js).
  *
  * ПРАВА (управляются permissions.js, window.LorePermissions):
- *   Пункты «Изменить» (карандаш) и Delete рендерятся скрытыми (hidden).
- *   permissions.js проверяет data-requires="publication.edit" / "publication.delete",
- *   учитывая data-requires-kind (book/article) и data-requires-owner.
+ *   Каждый пункт рендерится скрытым (hidden) и проверяется по своему
+ *   data-requires: publication.updateMeta / publication.updateContent /
+ *   publication.manageRoles / publication.managePeople / publication.delete,
+ *   с учётом data-requires-kind (book/article) и data-requires-owner.
  *   Если права нет — пункт остаётся скрытым. Если есть — показывается.
  *
- * КАРАДАШ «ИЗМЕНИТЬ» (спека): вместо прежней ссылки Edit — кнопка с
- * карандашом, открывающая подменю из трёх пунктов:
- *   1. Метаданные   — /{books|articles}/{id}/edit#step-1;
- *   2. Содержание   — /{books|articles}/{id}/edit#step-2;
- *   3. Роли         — открывает publish-диалог с модулем ролей (mode:'roles'),
- *                     гасится permissions.js по data-requires="publication.manageRoles";
- *   4. Пользователи — открывает модуль на экране 2 (пользователи публикации)
- *                     (data-requires="publication.managePeople").
- * Подменю раскрывает details-menu.js (data-edit-toggle / data-edit-submenu).
+ * СТРУКТУРА (спека): дропдаун ПЛОСКИЙ, без подменю — 4 кнопки правки
+ * плюс Delete, каждый пункт со своим правом:
+ *   1. Изменить мета-данные   — /{books|articles}/new?id=N&part=meta
+ *                               (book-edit-meta / article-edit-meta);
+ *   2. Изменить контент       — /{books|articles}/new?id=N&part=content
+ *                               (book-edit-content / article-edit-content);
+ *   3. Изменить роли          — publish-диалог с модулем ролей (mode:'roles'),
+ *                               data-requires="publication.manageRoles";
+ *   4. Изменить пользователей — модуль на втором экране (пользователи
+ *                               публикации), data-requires="publication.managePeople";
+ *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id});
+ *   6. Пожаловаться           — report-modal, без data-requires.
+ * Пункты 1–4 гасит permissions.js; подменю больше нет — details-menu.js
+ * его логику не содержит.
  *
  * Удаление выполняет details-menu.js (DELETE /api/books/{id},
  * /api/articles/{id}); ошибки показывает Messages.
@@ -47,15 +53,16 @@ $isOwner  = !empty($isOwner);
 $title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
-$editHref  = ($isBook ? '/books/' : '/articles/') . $id . '/edit';
+// Веб-роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
+// заморожены): страницы правки живут на существующем роуте создания
+// через query-параметр part=meta|content — book-form.php / article-form.php
+// читают $_GET['id'] и $_GET['part'] и рендерят отдельный файл
+// (book-edit-meta, book-edit-content, article-edit-meta, article-edit-content).
+$metaHref    = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=meta';
+$contentHref = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=content';
 $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
-
-/** Карандаш: инлайн-SVG для пункта «Изменить». */
-$pencilSvg = '<svg class="details-menu__pencil" width="15" height="15" viewBox="0 0 16 16" fill="none" '
-    . 'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    . '<path d="M11.5 2.5l2 2L6 12l-3 1 1-3z"/></svg>';
 ?>
 <div class="details-menu"
      data-details-menu-wrap
@@ -74,65 +81,59 @@ $pencilSvg = '<svg class="details-menu__pencil" width="15" height="15" viewBox="
   </button>
 
   <div class="details-menu__popup" data-details-menu hidden>
-    
-    <!-- Группа «Изменить»: карандаш открывает подменю (мета / содержание / роли) -->
-    <div class="details-menu__group" data-edit-group>
-      <button type="button"
-              class="details-menu__item details-menu__item--parent"
-              data-edit-toggle
-              data-requires="publication.edit"
-              data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
-              data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
-              aria-haspopup="true"
-              aria-expanded="false"
-              hidden>
-        <?= $pencilSvg ?>
-        <?= $view->e($view->t('common.roles.change')) ?>
-      </button>
 
-      <div class="details-menu__submenu" data-edit-submenu hidden>
-        <!-- 1. Метаданные: шаг 1 формы -->
-        <a class="details-menu__item"
-           href="<?= $view->e($editHref) ?>#step-1">
-          <?= $view->e($view->t('common.roles.edit_meta')) ?>
-        </a>
+    <!-- 1. Метаданные: страница правки метаданных
+         (/books/new?id=N&part=meta / /articles/new?id=N&part=meta).
+         data-requires="publication.updateMeta" — permissions.js скрывает
+         пункт, если права нет. -->
+    <a class="details-menu__item"
+       href="<?= $view->e($metaHref) ?>"
+       data-requires="publication.updateMeta"
+       data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+       data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+       hidden>
+      <?= $view->e($view->t('common.roles.edit_meta')) ?>
+    </a>
 
-        <!-- 2. Содержание: шаг 2 формы -->
-        <a class="details-menu__item"
-           href="<?= $view->e($editHref) ?>#step-2">
-          <?= $view->e($view->t('common.roles.edit_content')) ?>
-        </a>
+    <!-- 2. Контент: страница правки контента
+         (/books/new?id=N&part=content / /articles/new?id=N&part=content). -->
+    <a class="details-menu__item"
+       href="<?= $view->e($contentHref) ?>"
+       data-requires="publication.updateContent"
+       data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+       data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+       hidden>
+      <?= $view->e($view->t('common.roles.edit_content')) ?>
+    </a>
 
-        <!-- 3. Роли: открывает publish-диалог с модулем ролей (mode:'roles').
-             data-requires="publication.manageRoles" — permissions.js скрывает
-             пункт, если права нет. -->
-        <button type="button"
-                class="details-menu__item"
-                data-roles-open
-                data-requires="publication.manageRoles"
-                data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
-                data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
-                hidden
-                data-pub-type="<?= $view->e($type) ?>"
-                data-pub-id="<?= $id ?>">
-          <?= $view->e($view->t('common.roles.edit_roles')) ?>
-        </button>
+    <!-- 3. Роли: открывает publish-диалог с модулем ролей (mode:'roles').
+         data-requires="publication.manageRoles" — permissions.js скрывает
+         пункт, если права нет. -->
+    <button type="button"
+            class="details-menu__item"
+            data-roles-open
+            data-requires="publication.manageRoles"
+            data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+            data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+            hidden
+            data-pub-type="<?= $view->e($type) ?>"
+            data-pub-id="<?= $id ?>">
+      <?= $view->e($view->t('common.roles.edit_roles')) ?>
+    </button>
 
-        <!-- 4. Пользователи: открывает модуль на втором экране (пользователи
-             публикации) — экран 2 финального потока создания/редактирования. -->
-        <button type="button"
-                class="details-menu__item"
-                data-roles-open-users
-                data-requires="publication.managePeople"
-                data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
-                data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
-                hidden
-                data-pub-type="<?= $view->e($type) ?>"
-                data-pub-id="<?= $id ?>">
-          <?= $view->e($view->t('common.roles.edit_users')) ?>
-        </button>
-      </div>
-    </div>
+    <!-- 4. Пользователи: открывает модуль на втором экране (пользователи
+         публикации) — экран 2 финального потока создания/редактирования. -->
+    <button type="button"
+            class="details-menu__item"
+            data-roles-open-users
+            data-requires="publication.managePeople"
+            data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
+            data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
+            hidden
+            data-pub-type="<?= $view->e($type) ?>"
+            data-pub-id="<?= $id ?>">
+      <?= $view->e($view->t('common.roles.edit_users')) ?>
+    </button>
 
     <!-- Кнопка Delete -->
     <button type="button"

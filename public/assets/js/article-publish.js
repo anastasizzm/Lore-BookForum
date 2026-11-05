@@ -4,10 +4,14 @@
  * article-publish.js — окно выбора прав при публикации статьи
  * (src/partials/article-rights-dialog.php).
  *
- * Экспорт: window.LoreArticlePublish.open(articleId, { onInvalid })
+ * Экспорт: window.LoreArticlePublish.open(articleId, { onInvalid, onConflict })
  *   onInvalid(errors) — вызывается, когда бэк вернул 400/422 на publish
  *                        (значит, статья не прошла проверку как для публикации).
  *                        article-form.js в этом случае подсвечивает поля формы.
+ *   onConflict(msg)    — вызывается, когда бэк вернул 409: публикация
+ *                        запрещена (PublicationsService::publish → ConflictException
+ *                        «cannot_publish» — обычно у статьи нет контента).
+ *                        article-form.js возвращает на шаг с текстом статьи.
  *
  * Открытие кнопкой: на странице статьи (article-details, publish-bar у
  *   черновика) кнопка несёт data-article-publish-open + data-article-id —
@@ -20,6 +24,9 @@
  *   POST /api/articles/{id}/publish  → multipart, editor_ids[];
  *        успех   200/201 { data: { id, redirect } }
  *        ошибки  400/422 { errors: { field: [msg] } }
+ *        конфликт 409 { error: { message } } — публикация запрещена (нет
+ *                 контента): окно закрывается, текст показывает плашка,
+ *                 хост возвращает форму к шагу с текстом (onConflict).
  */
 window.LoreArticlePublish = (function () {
   'use strict';
@@ -28,6 +35,10 @@ window.LoreArticlePublish = (function () {
   var state = {
     articleId: 0,
     onInvalid: null,
+    onConflict: null,
+    // Колбэк публикации для страницы черновиков: вместо
+    // перехода на /articles/{id} вызывается он (карточка уходит из списка).
+    onPublished: null,
     mode: 'publish',               // publish | roles
     screen: 1,                     // стартовый экран модуля: 1 — роли | 2 — пользователи
     context: 'create',             // create — Create → Continue → Publish; edit — «Изменить…»
@@ -244,9 +255,32 @@ window.LoreArticlePublish = (function () {
 
         if (res.ok && !isHtml) {
           var payload = (data && data.data) || data || {};
+          // Страница черновиков: карточка уходит из списка;
+          // иначе — переход на опубликованную статью.
+          if (typeof state.onPublished === 'function') {
+            var cb = state.onPublished;
+            state.onPublished = null;
+            cb();
+            return true;
+          }
           window.location.href = payload.redirect
             || (state.articleId ? '/articles/' + state.articleId : '/articles');
           return true;
+        }
+
+        // 409 — бэк не даёт опубликовать публикацию (ConflictException
+        // «cannot_publish»): чаще всего у статьи нет контента. Окно
+        // закрываем, сообщение показываем, форму возвращаем к тексту.
+        if (res.status === 409) {
+          var conflictErrors = data && (data.errors
+            || (data.error && typeof data.error === 'object' ? data.error.details : null));
+          var conflictMsg = (window.Messages ? window.Messages.fromPayload(data) : '')
+            || t('errors.article.publish_no_content');
+          close();
+          if (conflictErrors && typeof state.onInvalid === 'function') state.onInvalid(conflictErrors);
+          notify(conflictMsg);
+          if (typeof state.onConflict === 'function') state.onConflict(conflictMsg);
+          return false;
         }
 
         if ((res.status === 400 || res.status === 422) && data) {
@@ -325,6 +359,8 @@ window.LoreArticlePublish = (function () {
 
     state.articleId = Number(articleId) || 0;
     state.onInvalid = (opts && opts.onInvalid) || null;
+    state.onConflict = (opts && opts.onConflict) || null;
+    state.onPublished = (opts && typeof opts.onPublished === 'function') ? opts.onPublished : null;
     // 'roles' — только модуль ролей (Publish просто сохраняет роли и закрывает);
     // иначе — привычный publish (Publish публикует статью).
     state.mode = (opts && opts.mode === 'roles') ? 'roles' : 'publish';

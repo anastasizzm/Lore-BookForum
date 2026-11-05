@@ -20,7 +20,7 @@ $langField = $langQuery !== null && $langQuery !== ''
 /*
  * КОНТРАКТ С БЭКОМ (фронт готов — роуты добавляет команда бэка):
  *
- *   GET  /articles/create      → articles.create,     AuthPolicy::Verified
+ *   GET  /articles/new         → articles.create,     AuthPolicy::Verified
  *   GET  /articles/{id}/edit   → articles.edit,       только автор статьи
  *        Обе страницы рендерят эту вьюху. Переменные:
  *          $user        — UserContext текущего пользователя (сайдбар);
@@ -125,7 +125,12 @@ if (!in_array($mode, ['standalone', 'excerpt'], true)) $mode = 'standalone';
 $genreValue = $val('genre');
 $typeValue  = $val('type');
 
-// Создание: POST /api/articles (api.articles.create.submit); правка — PATCH/PUT /api/articles/{id}.
+/* Форма сохраняется через API (см. article-form.js): создание —
+   POST /api/articles (api.articles.create.submit), правка —
+   PATCH /api/articles/{id} + PUT /api/articles/{id}/content (If-Match).
+   action — фолбэк для нативного submit без JS: раньше здесь был
+   несуществующий веб-роут /articles/save (его в config/routes.php нет)
+   → 404. */
 $action = $withLang($view->url('api.articles.create.submit'));
 
 /* ---------- панель редактора ---------- */
@@ -186,6 +191,32 @@ $richEditor = static function (
 };
 ?>
 
+<?php
+/*
+ * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ *
+ * GET /articles/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
+ * (article-edit-meta.php / article-edit-content.php) и тут же
+ * прекращает рендер этой формы. Пункты меню «три точки» на странице
+ * статьи (details-menu.php) ведут именно сюда.
+ *
+ * Контроллер /articles/new $articleId не передаёт, поэтому id берём
+ * из $_GET (в create-режиме его нет — диспетчеризация не срабатывает).
+ *
+ * Страницы правки — пока только разметка: полей префилла и отправки
+ * в них нет, article-form.js не подключается (см. шапку
+ * article-edit-*.php).
+ */
+$editPart        = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
+$queryArticleId  = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
+    $articleId = $queryArticleId;
+    $isEdit    = true;
+    require __DIR__ . '/article-edit-' . $editPart . '.php';
+    return;
+}
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.articleform.title_edit' : 'common.articleform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -195,8 +226,11 @@ $richEditor = static function (
   <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
   <!-- плашка ролей и людей публикации (publication-roles.js) -->
   <link rel="stylesheet" href="<?= $view->asset('css/modules/publication-roles.css') ?>">
+  <!-- новое меню ролей (roles-module) внутри article-rights-dialog -->
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
   <script src="<?= $view->asset('js/publication-roles.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-publish.js') ?>" defer></script>
+  <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>

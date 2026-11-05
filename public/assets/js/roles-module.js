@@ -44,9 +44,14 @@ window.LoreRoles = (function () {
   var USERS_CATALOG_URL = '/api/users?ps=50';
   var ROLES_CATALOG_URL = '/api/additional/roles?ps=50';
 
-  /** Ключи pubPermissions (бэк: PublicationAccessRules::toArray). */
+  /**
+   * Ключи pubPermissions (бэк: PublicationAccessRules::toArray).
+   * 'create' намеренно отсутствует: право «Create publications» из
+   * «Publication rights» убрано. При сохранении прав бэкенд получает
+   * pubPermissions без create и выставляет его в false.
+   */
   var PUB_PERMS = [
-    'create', 'updateMeta', 'updateContent',
+    'updateMeta', 'updateContent',
     'read', 'managePeople', 'manageRoles'
   ];
 
@@ -156,6 +161,12 @@ window.LoreRoles = (function () {
       loadingUsers: false,
       userOpen: false,     // выпадающий список людей раскрыт
       roleOpen: false,
+      // true на время программного .focus() при открытии модалки: такой
+      // фокус не должен сам раскрывать выпадающий список.
+      suppressFocusOpen: false,
+      roleResults: null,   // результаты серверного поиска каталога ролей (модалка создания)
+      roleSeq: 0,          // номер последнего запроса каталога ролей (отбрасываем устаревшие)
+      userSeq: 0,          // номер последнего запроса людей (отбрасываем устаревшие)
       q: '',               // строка поиска людей
       roleQ: '',
       selectedRoleId: '', // выбранная роль в модалке «роль + пользователь»
@@ -319,6 +330,14 @@ window.LoreRoles = (function () {
       title: String(raw.title || raw.name || ('#' + id)),
       color: String(raw.color || '')
     };
+  }
+
+  /**
+   * Бэкенд парсит roleId через nonNegInt, поэтому базовая роль User
+   * (id 0) тоже допустима в ролях публикации. Не скрываем её из каталога.
+   */
+  function isAddableRole(role) {
+    return !!role;
   }
 
   function normalizeUser(raw) {
@@ -506,6 +525,8 @@ window.LoreRoles = (function () {
   }
 
   function roleRowHtml(role, index) {
+    // Бэкенд принимает roleId = 0 (nonNegInt), поэтому базовая роль
+    // блокируется только по canManage, как и любая другая.
     var locked = !role.canManage;
     var handle = st.dndReady && !locked
       ? '<span class="roles-row__handle" data-role-handle' +
@@ -701,10 +722,13 @@ window.LoreRoles = (function () {
     // Continue на экране 1 есть только при создании (редактирование идёт дальше
     // через экран 2 / управление ролями напрямую).
     if (next) next.hidden = st.context !== 'create';
-    // Экран 2: Publish требует хотя бы одного пользователя.
+    // Экран 2: Publish требует хотя бы одного пользователя только когда
+    // именно он завершает публикацию. В after-publish/roles книга уже
+    // создана: Publish — это «готово», его нельзя блокировать пустым списком.
+    var needsUsers = st.mode === 'publish' && !hasUsers;
     var pub = q('[data-roles-publish]');
-    if (pub) { pub.disabled = !hasUsers; show(pub, true); }
-    show(q('[data-roles-gate]'), !hasUsers);
+    if (pub) { pub.disabled = needsUsers; show(pub, true); }
+    show(q('[data-roles-gate]'), needsUsers);
   }
 
   function render() {
@@ -829,9 +853,17 @@ window.LoreRoles = (function () {
     add.saving = false;
     add.userOpen = false;
     add.roleOpen = false;
+    add.suppressFocusOpen = false;
+    add.roleResults = null;
     add.selectedRoleId = '';
     add.userPage = 1;
     add.userHasNext = false;
+  }
+
+  /** Пустой черновик прав публикации: все чекбоксы выключены. */
+  function resetPermsDraft() {
+    st.perms.draft = {};
+    PUB_PERMS.forEach(function (key) { st.perms.draft[key] = false; });
   }
 
   function setAddStatus(text) {
@@ -847,7 +879,12 @@ window.LoreRoles = (function () {
     st.add.open = false;
     st.add.userOpen = false;
     st.add.roleOpen = false;
-    if (st.perms.source === 'create') st.perms.open = false;
+    if (st.perms.source === 'create') {
+      st.perms.open = false;
+      // черновик прав новой роли не должен переживать закрытие окна:
+      // следующее открытие всегда начинается с пустых чекбоксов
+      resetPermsDraft();
+    }
     var a = q('[data-roles-create-role]');
     if (a) a.hidden = true;
     var u = q('[data-roles-create-user]');
@@ -856,6 +893,20 @@ window.LoreRoles = (function () {
       try { st.add.lastFocus.focus(); } catch (_) {}
     }
     st.add.lastFocus = null;
+  }
+
+  /**
+   * Программный фокус (при открытии модалки) не должен раскрывать
+   * выпадающий список. Флаг снимается сразу после .focus(): событие
+   * focusin приходит синхронно, поэтому обработчик его проигнорирует.
+   * Обычный фокус пользователя (Tab/клик) раскрывает список как обычно.
+   */
+  function focusWithoutDropdownOpen(el) {
+    if (!el || typeof el.focus !== 'function') return;
+    var prev = st.add.suppressFocusOpen;
+    st.add.suppressFocusOpen = true;
+    try { el.focus(); } catch (_) {}
+    finally { st.add.suppressFocusOpen = prev; }
   }
 
   /* ---------- МОДАЛКА: создание роли (экран 1, «+») ---------- */
@@ -876,8 +927,7 @@ window.LoreRoles = (function () {
     st.perms.version = 1;
     st.perms.saving = false;
     st.perms.status = '';
-    st.perms.draft = {};
-    PUB_PERMS.forEach(function (key) { st.perms.draft[key] = false; });
+    resetPermsDraft();
     st.perms.lastFocus = document.activeElement;
 
     var pickerInput = q('[data-roles-create-role-search]');
@@ -891,6 +941,7 @@ window.LoreRoles = (function () {
 
     // Каталог ролей (GET /api/additional/roles) — иначе список кандидатов пуст
     ensureCatalogs({ roles: true });
+    searchRoleCatalog('');
 
     // Список чекбоксов прав публикации заполняет renderPerms() (ниже).
     var createSave = q('[data-roles-create-add]');
@@ -900,7 +951,7 @@ window.LoreRoles = (function () {
     setPermsStatus('');
 
     renderPerms();
-    if (pickerInput && pickerInput.focus) { try { pickerInput.focus(); } catch (_) {} }
+    focusWithoutDropdownOpen(pickerInput);
     renderAddResults();
   }
 
@@ -927,11 +978,13 @@ window.LoreRoles = (function () {
 
     // создание роли каталога в публикации: POST /roles принимает
     // PublicationPermissionForm { roleId, pubPermissions, aboveId?, belowId? }
-    // и отвечает 201 пустым телом с ETag новой версии (id роли — roleId из запроса)
-    request('POST', base() + '/roles', JSON.stringify({
-      roleId: num(picked.id),
-      pubPermissions: perms.draft
-    })).then(function (res) {
+    // и отвечает 201 пустым телом с ETag новой версии (id роли — roleId из запроса).
+    // Позицию передаём явно: без соседей бэкенд отвечает 409, если роли уже есть.
+    var body = { roleId: num(picked.id), pubPermissions: perms.draft };
+    if (st.roles.length) {
+      body.aboveId = num(st.roles[st.roles.length - 1].id);
+    }
+    request('POST', base() + '/roles', JSON.stringify(body)).then(function (res) {
       if (res.kind === 'ok' || res.kind === 'missing') {
         if (res.kind === 'ok') {
           var version = parseInt(String(res.etag || '').replace(/"/g, ''), 10) || 1;
@@ -967,7 +1020,9 @@ window.LoreRoles = (function () {
     add.original = [];
     add.status = '';
     add.saving = false;
-    add.userOpen = !userId; // add — сразу показываем каталог людей; edit — после «retrieve»
+    // Каталог людей НЕ открываем сразу: список появляется только после
+    // ввода в поле поиска (input-обработчик ниже).
+    add.userOpen = false;
     add.roleOpen = false;   // дропдаун роли закрыт — раскрывается по клику по триггеру
     add.q = '';
     add.roleQ = '';
@@ -986,7 +1041,7 @@ window.LoreRoles = (function () {
     var focusTarget = add.userLocked
       ? q('[data-roles-create-user-role-search]')
       : q('[data-roles-create-user-user-search]');
-    if (focusTarget && focusTarget.focus) { try { focusTarget.focus(); } catch (_) {} }
+    focusWithoutDropdownOpen(focusTarget);
   }
 
   function closeCreateUserModal() { closeCreateModals(); }
@@ -1026,9 +1081,11 @@ window.LoreRoles = (function () {
     }
   }
 
-  function loadUserCatalog(page, append) {
+  function loadUserCatalog(page, append, query) {
     var add = st.add;
     if (add.catalogFallback) return Promise.resolve();
+    var q = String(query || '').trim();
+    var seq = ++add.userSeq;
 
     // Мок-режим: каталог людей без сети
     if (st.api === 'mock') {
@@ -1045,7 +1102,9 @@ window.LoreRoles = (function () {
     add.loadingUsers = true;
     if (!append) renderAddResults();
 
-    return request('GET', USERS_CATALOG_URL + '&page=' + page).then(function (res) {
+    var url = USERS_CATALOG_URL + '&page=' + page + (q ? '&q=' + encodeURIComponent(q) : '');
+    return request('GET', url).then(function (res) {
+      if (seq !== add.userSeq) return;
       add.loadingUsers = false;
 
       if (res.kind === 'ok') {
@@ -1090,14 +1149,49 @@ window.LoreRoles = (function () {
     return request('GET', ROLES_CATALOG_URL).then(function (res) {
       add.loadingRoles = false;
       if (res.kind === 'ok') {
-        add.catalogRoles = mapList(res.data, normalizeRole) || [];
+        add.catalogRoles = (mapList(res.data, normalizeRole) || []).filter(isAddableRole);
         add.roleFallback = false;
       } else {
         // Каталога нет — предлагаем роли, уже привязанные к публикации
         add.catalogRoles = st.roles.map(function (role) {
           return { id: role.id, title: role.title, color: role.color, version: role.version, canManage: role.canManage, perms: null };
-        });
+        }).filter(isAddableRole);
         add.roleFallback = true;
+      }
+      renderAddResults();
+    });
+  }
+
+  /**
+   * Поиск по каталогу ролей для «Add role to project»: серверный ?q=,
+   * устаревшие ответы отбрасываются по номеру запроса. Если каталога нет,
+   * ищем среди уже загруженного каталога.
+   */
+  function searchRoleCatalog(query) {
+    var add = st.add;
+    var q = String(query || '').trim();
+    var seq = ++add.roleSeq;
+
+    if (st.api === 'mock') {
+      add.roleResults = MOCK.catalogRoles
+        .filter(function (role) { return matchQuery(role, q); })
+        .map(function (one) { return Object.assign({}, one); });
+      renderAddResults();
+      return Promise.resolve();
+    }
+
+    add.loadingRoles = true;
+    renderAddResults();
+
+    var url = ROLES_CATALOG_URL + (q ? '&q=' + encodeURIComponent(q) : '');
+    return request('GET', url).then(function (res) {
+      if (seq !== add.roleSeq) return;
+      add.loadingRoles = false;
+      if (res.kind === 'ok') {
+        add.roleResults = (mapList(res.data, normalizeRole) || []).filter(isAddableRole);
+      } else {
+        add.roleResults = (add.catalogRoles || [])
+          .filter(function (role) { return matchQuery(role, q); });
       }
       renderAddResults();
     });
@@ -1116,9 +1210,31 @@ window.LoreRoles = (function () {
     return add.catalogUsers.filter(function (user) { return matchQuery(user, add.q); }).slice(0, 30);
   }
 
+  /**
+   * Роли для дропдауна «choose a role» в Add role to user — только те,
+   * что уже есть в «Roles and people» (st.roles). Каталог ролей
+   * (add.catalogRoles) здесь не используется: добавить человеку можно
+   * лишь роль, заведённую у публикации.
+   */
   function filteredRoles() {
     var add = st.add;
-    return add.catalogRoles.filter(function (role) { return matchQuery(role, add.roleQ); }).slice(0, 30);
+    var owned = ownedRoleIds();
+    return st.roles
+      .map(function (role) {
+        return { id: String(role.id), title: role.title, color: role.color || '' };
+      })
+      .filter(function (role) { return !owned[role.id]; })
+      .filter(function (role) { return matchQuery(role, add.roleQ); })
+      .slice(0, 30);
+  }
+
+  /** Роли, которые уже есть у выбранного человека: их в выборе не предлагаем. */
+  function ownedRoleIds() {
+    var owned = {};
+    var person = st.add.users[0];
+    var bound = person ? findUser(person.id) : null;
+    if (bound) bound.roles.forEach(function (role) { owned[String(role.id)] = true; });
+    return owned;
   }
 
   /* ---------- рендер оверлея ---------- */
@@ -1232,7 +1348,17 @@ window.LoreRoles = (function () {
           var dot = role.color ? '<span class="roles-chip__dot" style="background:' + esc(role.color) + '"></span>' : '';
           return '<li><button type="button" class="roles-picker__option' + (selected ? ' is-selected' : '') + '" data-add-role-opt="' + esc(String(role.id)) + '" data-roletitle="' + esc(role.title) + '" data-rolecolor="' + esc(role.color || '') + '">' + dot + '<span>' + esc(role.title) + '</span></button></li>';
         }).join('');
-        if (!roles.length) roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(add.loadingRoles ? t('roles.searching') : t('roles.nothing_found')) + '</li>';
+        if (!roles.length) {
+          // Ролей у публикации ещё нет — подсказываем добавить их на
+          // экране «Roles and people». Если роли есть, но поиск ничего
+          // не нашёл — обычный «Nothing found».
+          var owned = ownedRoleIds();
+          var allOwned = st.roles.length > 0 && st.roles.every(function (role) { return owned[String(role.id)]; });
+          var emptyText = allOwned
+            ? t('roles.user_has_all_roles')
+            : (st.roles.length ? t('roles.nothing_found') : t('roles.no_roles_added'));
+          roleHtml = '<li class="roles-picker__option" aria-disabled="true">' + esc(emptyText) + '</li>';
+        }
         roleBox.innerHTML = roleHtml;
         roleBox.hidden = false;
       }
@@ -1243,10 +1369,8 @@ window.LoreRoles = (function () {
     if (createRoleBox) {
       if (!add.roleOpen) { createRoleBox.hidden = true; createRoleBox.innerHTML = ''; }
       else {
-        var candidatesSource = (st.add.catalogRoles && st.add.catalogRoles.length)
-          ? st.add.catalogRoles
-          : (st.insert.catalog || []);
-        var candidates = candidatesSource.filter(function (role) {
+        // кандидаты — результат серверного поиска (searchRoleCatalog)
+        var candidates = (add.roleResults || []).filter(function (role) {
           return !st.roles.some(function (one) { return String(one.id) === String(role.id); });
         });
         var pickedIds = {};
@@ -1292,6 +1416,8 @@ window.LoreRoles = (function () {
     // В модалке «роль + пользователь» выбор закрывает выпадающий список; в модалке
     // создания роли список остаётся открытым — там видна отметка выбранного.
     if (!exists && createUserModalOpen()) add.roleOpen = false;
+    // в модалке создания роли после выбора показываем полный каталог заново
+    if (!createUserModalOpen()) searchRoleCatalog('');
     renderAdd();
   }
 
@@ -1415,10 +1541,10 @@ window.LoreRoles = (function () {
         add.q = '';
         add.roleQ = '';
         add.status = '';
-        add.userOpen = true;
+        add.userOpen = false;
         renderAdd();
         var search = q('[data-roles-create-user-user-search]');
-        if (search) { try { search.focus(); } catch (_) {} }
+        focusWithoutDropdownOpen(search);
         return;
       }
 
@@ -1473,15 +1599,13 @@ window.LoreRoles = (function () {
     PUB_PERMS.forEach(function (key) {
       perms.draft[key] = !!(role.perms && role.perms[key]);
     });
-    // 'delete' в UI не показывается, но приходит в pubPermissions (бэк:
-    // PublicationAccessRules::toArray). Ключ отправляется обратно без
-    // изменений, чтобы PUT не сбрасывал его в false.
-    // NB: текущий PublicationPermissionForm парсит только PUB_PERMS —
-    // значение всё равно теряется на бэке (см. roles-module.php, «Известные
+    // Право 'delete' НЕ копируется в draft: выставить флаг удаления
+    // через этот экран нельзя (в PUB_PERMS его нет, чекбокса в UI нет).
+    // Раньше ключ переносился из role.perms, чтобы PUT не сбрасывал его
+    // в false, — теперь он вообще не уходит в pubPermissions.
+    // NB: PublicationPermissionForm парсит только PUB_PERMS, так что на
+    // бэке значение и раньше терялось (см. roles-module.php, «Известные
     // ограничения бэка»).
-    if (role.perms && 'delete' in role.perms) {
-      perms.draft['delete'] = !!role.perms['delete'];
-    }
     perms.lastFocus = document.activeElement;
 
     var overlay = q('[data-roles-perms]');
@@ -1895,7 +2019,10 @@ window.LoreRoles = (function () {
 
     st.root = root;
     st.pubId = parseInt(opts.publicationId, 10) || 0;
-    st.mode = opts.mode === 'roles' ? 'roles' : 'publish';
+    // after-publish — публикация уже завершена: Publish в модуле означает
+    // «готово» и не требует назначенных пользователей (см. updateGate).
+    st.mode = opts.mode === 'roles' ? 'roles'
+      : (opts.mode === 'after-publish' ? 'after-publish' : 'publish');
     st.forceMock = opts.mock === true;
     st.onPublish = typeof opts.onPublish === 'function' ? opts.onPublish : null;
     st.onCancel = typeof opts.onCancel === 'function' ? opts.onCancel : null;
@@ -2123,8 +2250,16 @@ window.LoreRoles = (function () {
         return;
       }
 
-      // клик по полю-поиску роли открывает список: focusin не сработает, если
-      // фокус уже стоит на поле (Safari не фокусирует кнопки-опции по клику)
+      // Клик по полю-поиску роли открывает список. focusin может не сработать,
+      // если фокус уже стоит на поле, поэтому раскрываем и по клику; клик по
+      // стрелке/обёртке .roles-select сначала переводит фокус в само поле.
+      var roleField = target.closest('.roles-select');
+      if (roleField) {
+        var roleInput = roleField.querySelector('[data-roles-create-user-role-search], [data-roles-create-role-search]');
+        if (roleInput && document.activeElement !== roleInput) {
+          try { roleInput.focus(); } catch (_) {}
+        }
+      }
       if (target.matches('[data-roles-create-user-role-search]') ||
           target.matches('[data-roles-create-role-search]')) {
         st.add.roleOpen = true;
@@ -2132,10 +2267,11 @@ window.LoreRoles = (function () {
         return;
       }
 
-      // …то же для поля людей
+      // Поле людей раскрывает список по фокусу (focusin) и по вводу; клик
+      // нужен на случай, когда фокус уже стоит на поле (автофокус при
+      // открытии модалки), — тогда focusin повторно не срабатывает.
       if (target.matches('[data-roles-create-user-user-search]')) {
-        st.add.userOpen = true;
-        renderAddResults();
+        openUserPicker();
         return;
       }
 
@@ -2234,8 +2370,29 @@ window.LoreRoles = (function () {
       cleanupDrag();
     });
 
+    /* --- поиск: раскрытие по фокусу ---
+       Поле получило фокус (Tab, клик, возврат фокуса) — список открывается.
+       Программный фокус при открытии модалки не раскрывает список: на это
+       время openCreateRole/openCreateUserModal ставят suppressFocusOpen. */
+    root.addEventListener('focusin', function (e) {
+      var target = e.target && e.target.closest ? e.target : null;
+      if (!target || st.add.suppressFocusOpen) return;
+
+      if (target.matches('[data-roles-create-user-user-search]')) {
+        openUserPicker();
+        return;
+      }
+
+      if (target.matches('[data-roles-create-user-role-search]') ||
+          target.matches('[data-roles-create-role-search]')) {
+        st.add.roleOpen = true;
+        renderAddResults();
+      }
+    });
+
     /* --- поиск: ввод (дебаунс) --- */
     var searchTimer = 0;
+    var roleSearchTimer = 0;
 
     root.addEventListener('input', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
@@ -2249,10 +2406,22 @@ window.LoreRoles = (function () {
 
       if (target.matches('[data-roles-create-user-user-search]')) {
         st.add.q = target.value.trim();
+        // Пока поле в фокусе, список остаётся открытым; ввод лишь сужает
+        // выдачу (сфокусированное пустое поле показывает первые записи).
         st.add.userOpen = true;
         clearTimeout(searchTimer);
-        searchTimer = setTimeout(function () { loadMoreIfEmpty(); }, 250);
-        // модалка — результаты каталога
+        searchTimer = setTimeout(function () {
+          if (!st.add.catalogFallback) loadUserCatalog(1, false, st.add.q);
+        }, 250);
+        renderAddResults();
+        return;
+      }
+
+      if (target.matches('[data-roles-create-role-search]')) {
+        st.add.roleQ = target.value.trim();
+        st.add.roleOpen = true;
+        clearTimeout(roleSearchTimer);
+        roleSearchTimer = setTimeout(function () { searchRoleCatalog(st.add.roleQ); }, 250);
         renderAddResults();
         return;
       }
@@ -2266,9 +2435,9 @@ window.LoreRoles = (function () {
       }
     });
 
-    /* --- поиск: раскрытие/скрытие выпадающих списков ---
-       Только клик: «по умолчанию» список не открывается (фокус сам по себе не
-       открывает — в т.ч. чтобы Safari не трогал фокус у кнопок-опций). */
+    /* --- поиск: скрытие выпадающих списков при уходе фокуса ---
+       Раскрываются списки по фокусу (focusin) и по вводу; при потере
+       фокуса пикером список закрывается. */
 
     root.addEventListener('focusout', function (e) {
       var target = e.target && e.target.closest ? e.target : null;
@@ -2286,15 +2455,15 @@ window.LoreRoles = (function () {
     });
   }
 
-  /** Пусто по запросу и есть следующая страница — догружаем каталог людей. */
-  function loadMoreIfEmpty() {
+  /** Открывает список людей; если каталог ещё пуст — грузит первую страницу. */
+  function openUserPicker() {
     var add = st.add;
-    if (add.catalogFallback) return;
-    if (!add.userOpen) return;
-    if (filteredUsers().length) return;
-    if (!add.userHasNext || add.loadingUsers) return;
-    if (add.userPage >= 5) return;                 // разумный предел догрузки
-    loadUserCatalog(add.userPage + 1, true).then(loadMoreIfEmpty);
+    if (add.userLocked) return;
+    add.userOpen = true;
+    renderAddResults();
+    if (!add.catalogUsers.length && !add.loadingUsers && !add.catalogFallback) {
+      loadUserCatalog(1, false, add.q);
+    }
   }
 
   /* ============================================================

@@ -217,3 +217,25 @@
 .rights-modal[data-rights-view="roles"] .roles-module {
   display: flex;
 }
+
+/* В режиме ролей окно книги выглядит так же, как окно статьи:
+   заголовок с разделителем, модуль без второго border-top и с
+   боковыми отступами, чтобы кнопки не прилипали к краям. */
+.rights-modal[data-rights-view="roles"] > .modal__dialog {
+  padding: 0;
+  max-width: 520px;
+  gap: 0;
+}
+
+.rights-modal[data-rights-view="roles"] > .modal__dialog > .modal__title {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-h3);
+}
+
+.rights-modal[data-rights-view="roles"] .roles-module {
+  margin-top: 0;
+  border-top: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}

@@ -130,12 +130,16 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return data;
   }
 
-  function renderItemHtml(entry, src, current) {
+  // param — переопределение query-параметра с самого dropdown (data-param):
+  // страницы с серверным рендером читают в бэке другое имя, чем ссылки
+  // библиотеки (?kind= → ?type= на черновиках статей). Без переопределения
+  // берём src.param.
+  function renderItemHtml(entry, src, current, param) {
     const id = String(entry.id ?? entry.value ?? '');
     const title = String(entry.title ?? entry.label ?? entry.id ?? '');
     const active = id === current;
     return '<li>' +
-      '<a href="' + appendParam(src.param, id) + '" ' +
+      '<a href="' + appendParam(param || src.param, id) + '" ' +
          'class="dropdown__item ' + (active ? 'is-active' : '') + '" ' +
          'data-filter-value="' + escapeHtml(id) + '">' +
         escapeHtml(title) +
@@ -154,10 +158,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     if (dropdown.dataset.loaded === '1') return;
     dropdown.dataset.loaded = '1';
 
+    // Имя query-параметра можно переопределить на самом dropdown
+    // (data-param): см. комментарий у renderItemHtml.
+    const param = dropdown.dataset.param || src.param;
+
     menu.innerHTML = '<li class="dropdown__loading">' + escapeHtml(tFilter('common.loading')) + '</li>';
 
     const params  = new URLSearchParams(window.location.search);
-    const current = params.get(src.param);
+    const current = params.get(param);
     const isAll   = !current;
 
     let nextPage = 1;
@@ -169,14 +177,14 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       
       // Всегда добавляем "Все ..." в начало
       let html = '<li>' +
-        '<a href="' + stripParam(src.param) + '" ' +
+        '<a href="' + stripParam(param) + '" ' +
            'class="dropdown__item ' + (isAll ? 'is-active' : '') + '" ' +
            'data-filter-value="all">' +
           escapeHtml(tFilter(src.allLabelKey)) +
         '</a>' +
       '</li>';
       
-      html += list.map(entry => renderItemHtml(entry, src, current)).join('');
+      html += list.map(entry => renderItemHtml(entry, src, current, param)).join('');
       menu.innerHTML = html;
 
       // 2. Создаем кнопку "Показать ещё"
@@ -201,7 +209,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
           const nextList = Array.isArray(nextData) ? nextData : (Array.isArray(nextData.items) ? nextData.items : []);
           
           // Вставляем новые элементы ПЕРЕД кнопкой "Показать ещё"
-          const itemsHtml = nextList.map(entry => renderItemHtml(entry, src, current)).join('');
+          const itemsHtml = nextList.map(entry => renderItemHtml(entry, src, current, param)).join('');
           loadMoreLi.insertAdjacentHTML('beforebegin', itemsHtml);
           
           // Если страницы закончились, скрываем кнопку

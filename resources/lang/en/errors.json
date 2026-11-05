@@ -13,6 +13,7 @@
         "internal": "Something went wrong :(",
         "rate_limited": "Too many requests. Try again later",
         "invalid_input": "Invalid input",
+        "check_fields": "Check the highlighted fields.",
         "min": "The value must be greater than :value",
         "min_len": "The length must be greater than :value",
         "max": "The value must be less than :value",
@@ -186,6 +187,7 @@
         "article_draft_failed": "Autosave failed",
         "article_image": "The image must be a JPEG, PNG or WebP.",
         "article_image_size": "The image must be up to 5 MB.",
-        "article_image_failed": "Could not upload the image."
+        "article_image_failed": "Could not upload the image.",
+        "publish_no_content": "The article has no text yet — add the text before publishing."
     }
 }

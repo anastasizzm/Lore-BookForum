@@ -10,9 +10,11 @@
  * @param string $cover   — адрес обложки или '' (тогда CSS-заглушка .cover--empty)
  * @param string $date    — уже отформатированная дата изменения (д.m.Y)
  *
- * ССЫЛКИ (роуты books.edit / articles.edit добавит бэк — config/ и app/
- * заморожены; роуты books.retrieve / articles.retrieve УЖЕ ЕСТЬ):
- *   Продолжить → /books/{id}/edit или /articles/{id}/edit
+ * ССЫЛКИ (роуты books.edit / articles.edit в config/routes.php нет —
+ * роуты заморожены, поэтому правка живёт на существующем роуте
+ * создания через query-параметр):
+ *   Продолжить → /books/new?id={id}                (book-form, edit-режим)
+ *                /articles/new?id={id}&part=meta    (article-edit-meta)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
  * ДЕЙСТВИЯ (API уже существует в config/endpoints.php):
@@ -35,11 +37,13 @@ $isArticle = $type === 'article';
 $basePath  = $isArticle ? '/articles/' : '/books/';
 
 $openUrl = $id > 0 ? $basePath . $id : '#';
-// TODO(backend): роутов books.edit / articles.edit в config/routes.php нет —
-// «Продолжить» пока даёт 404. Когда появятся — заменить на $view->url(...).
-// Роутов edit пока нет (см. шапку) — ссылка всё равно строится по шаблону,
-// чтобы вёрстка и локализация были готовы к моменту, когда бэк их добавит.
-$editUrl = $id > 0 ? $basePath . $id . '/edit' : '#';
+// Роутов edit нет (см. шапку) — раньше «Продолжить» давал 404. Правка
+// размещена на роуте создания: книга — book-form.php в edit-режиме
+// (?id=N: префилл из JSON-блоба + PATCH /api/books/{id}), статья —
+// article-edit-meta.php (пока только разметка, без префилла и отправки).
+$editUrl = $id > 0
+    ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
+    : '#';
 
 $hasCover = $cover !== '';
 

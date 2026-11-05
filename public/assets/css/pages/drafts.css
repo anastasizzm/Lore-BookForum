@@ -129,9 +129,40 @@
 
 .card-draft__edit:focus-visible,
 .card-draft__open:focus-visible,
-.card-draft__link:focus-visible {
+.card-draft__link:focus-visible,
+.card-draft__publish:focus-visible,
+.card-draft__delete:focus-visible {
   outline: 2px solid var(--main-text-color, var(--color-text));
   outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------
+   ВТОРАЯ СТРОКА ДЕЙСТВИЙ: публикация и удаление (drafts.js)
+   ------------------------------------------------------------ */
+.card-draft__actions--secondary {
+  margin-top: 0;              /* весь запас — над первой строкой действий */
+  padding-top: 0;
+}
+
+.card-draft__publish {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.card-draft__delete {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+
+  font-size: var(--fs-small);
+  color: var(--color-error);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.card-draft__delete:hover {
+  text-decoration: underline;
 }
 
 /* ------------------------------------------------------------
@@ -179,6 +210,10 @@
   }
 
   .card-draft__open {
+    text-align: center;
+  }
+
+  .card-draft__delete {
     text-align: center;
   }
 }

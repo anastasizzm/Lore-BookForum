@@ -23,6 +23,7 @@ $filter_open = $filter_open ?? false;
               'options' => $control['options'] ?? [],
               'dynamic' => $control['dynamic'] ?? null,
               'key'     => $control['key']     ?? null,
+              'param'   => $control['param']   ?? null,
           ]); ?>
 
         <?php elseif (($control['type'] ?? '') === 'input'): ?>
