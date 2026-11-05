@@ -21,12 +21,28 @@ $tx = static function (string $key, string $fallback) use ($view): string {
         <p class="admin-rolenew__error" data-role-user-error role="alert" hidden></p>
 
         <form data-role-user-form novalidate>
-            <!-- 1. Дропдаун с пользователями -->
+            <!-- 1. Пользователь: поле поиска + список под ним (как .roles-picker).
+                 Скрытый select хранит выбранное значение для логики страницы. -->
             <div class="form-field" style="margin-bottom: var(--space-3);">
-                <label class="admin-role__group-title" for="adminRoleUserSelect">
+                <label class="admin-role__group-title" for="adminRoleUserSearch">
                     <?= $tx('common.admin.role_select_user', 'User') ?>
                 </label>
-                <select class="form-field__input" id="adminRoleUserSelect" data-role-user-select required>
+                <div class="admin-picker" data-role-user-picker>
+                    <div class="admin-picker__field">
+                        <input class="form-field__input admin-picker__input" id="adminRoleUserSearch"
+                               type="search" data-role-user-search
+                               placeholder="<?= $tx('common.admin.role_user_search_ph', 'Search users') ?>"
+                               aria-label="<?= $tx('common.admin.role_user_search_ph', 'Search users') ?>"
+                               autocomplete="off" enterkeyhint="search"
+                               role="combobox" aria-autocomplete="list" aria-expanded="false"
+                               aria-controls="adminRoleUserResults">
+                        <svg class="admin-picker__caret" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                            <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <ul class="admin-picker__results" id="adminRoleUserResults" data-role-user-results role="listbox" hidden></ul>
+                    </div>
+                </div>
+                <select data-role-user-select hidden tabindex="-1" aria-hidden="true">
                     <option value="">— <?= $tx('common.admin.role_choose_user', 'Choose a user') ?> —</option>
                 </select>
             </div>

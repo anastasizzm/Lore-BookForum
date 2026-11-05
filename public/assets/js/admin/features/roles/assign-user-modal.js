@@ -16,7 +16,14 @@ export var roleUserAssign = {
   saveBtn: null,
   errorEl: null,
   users: [],
-  initialUserRoles: []
+  initialUserRoles: [],
+  picker: null,
+  userSearch: null,
+  userResults: null,
+  picked: null,        // выбранный пользователь { id, name }
+  userQuery: '',       // набранный текст (мгновенный фильтр по загруженным пользователям)
+  pickerOpen: false,
+  usersLoading: false
 };
 
 export function initRoleUserModal() {
@@ -30,6 +37,37 @@ export function initRoleUserModal() {
   roleUserAssign.loading = m.querySelector('[data-role-user-loading]');
   roleUserAssign.saveBtn = m.querySelector('[data-role-user-save]');
   roleUserAssign.errorEl = m.querySelector('[data-role-user-error]');
+  roleUserAssign.picker = m.querySelector('[data-role-user-picker]');
+  roleUserAssign.userSearch = m.querySelector('[data-role-user-search]');
+  roleUserAssign.userResults = m.querySelector('[data-role-user-results]');
+
+  // Поле выбора пользователя (как .roles-picker): список под полем, ввод фильтрует мгновенно
+  var userSearch = roleUserAssign.userSearch;
+  if (userSearch) {
+    userSearch.addEventListener('focus', openUserPicker);
+    userSearch.addEventListener('click', openUserPicker);
+    userSearch.addEventListener('input', function () {
+      onUserTyped(userSearch.value);
+      openUserPicker();
+    });
+    userSearch.addEventListener('keydown', function (e) {
+      var firstOption = roleUserAssign.userResults && roleUserAssign.userResults.querySelector('[data-role-user-pick]');
+      if (e.key === 'Enter') {
+        e.preventDefault();               // не отправлять форму; Enter выбирает первого в списке
+        if (firstOption && !roleUserAssign.picked) pickUser(firstOption.getAttribute('data-role-user-pick'));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        openUserPicker();
+        firstOption = roleUserAssign.userResults && roleUserAssign.userResults.querySelector('[data-role-user-pick]');
+        if (firstOption) firstOption.focus();
+      }
+    });
+  }
+  m.addEventListener('click', function (e) {
+    var pick = e.target.closest && e.target.closest('[data-role-user-pick]');
+    if (pick) { pickUser(pick.getAttribute('data-role-user-pick')); return; }
+    if (!e.target.closest || !e.target.closest('[data-role-user-picker]')) closeRoleUserPicker();
+  });
 
   if (roleUserAssign.select) {
     roleUserAssign.select.addEventListener('change', function () {
@@ -113,6 +151,14 @@ export function openRoleUserModal(preselectedRoleId) {
   if (roleUserAssign.errorEl) roleUserAssign.errorEl.hidden = true;
   if (roleUserAssign.saveBtn) roleUserAssign.saveBtn.disabled = true;
 
+  roleUserAssign.picked = null;
+  roleUserAssign.userQuery = '';
+  roleUserAssign.pickerOpen = false;
+  roleUserAssign.usersLoading = true;
+  if (roleUserAssign.userSearch) roleUserAssign.userSearch.value = '';
+  if (roleUserAssign.select) roleUserAssign.select.value = '';
+  renderUserResults();
+
   renderRolesMessage(tx('common.common.loading', 'Loading...'));
   ensureRoles().then(function (items) {
     if (!items.length) {
@@ -125,6 +171,8 @@ export function openRoleUserModal(preselectedRoleId) {
   });
 
   fetchUsersList().then(function (users) {
+    roleUserAssign.usersLoading = false;
+    if (roleUserAssign.pickerOpen) renderUserResults();
     if (!roleUserAssign.select) return;
     roleUserAssign.select.innerHTML = '<option value="">— ' + esc(tx('admin.role_choose_user', 'Choose a user')) + ' —</option>' +
       users.map(function (u) {
@@ -138,6 +186,7 @@ export function openRoleUserModal(preselectedRoleId) {
 
 export function closeRoleUserModal() {
   if (!roleUserAssign.modal) return;
+  closeRoleUserPicker();
   roleUserAssign.modal.hidden = true;
   document.body.classList.remove('is-modal-open');
 }
@@ -218,4 +267,81 @@ function saveUserRoles() {
   }).then(function () {
     if (roleUserAssign.saveBtn) roleUserAssign.saveBtn.disabled = false;
   });
+}
+
+/* ---------- поле выбора пользователя (поиск + список под ним) ---------- */
+
+export function isRoleUserPickerOpen() {
+  return !!roleUserAssign.pickerOpen;
+}
+
+export function closeRoleUserPicker() {
+  roleUserAssign.pickerOpen = false;
+  renderUserResults();
+}
+
+function openUserPicker() {
+  if (roleUserAssign.pickerOpen) return;
+  roleUserAssign.pickerOpen = true;
+  renderUserResults();
+}
+
+function renderUserResults() {
+  var box = roleUserAssign.userResults;
+  if (!box) return;
+  var open = roleUserAssign.pickerOpen;
+  if (roleUserAssign.picker) roleUserAssign.picker.classList.toggle('is-open', open);
+  if (roleUserAssign.userSearch) roleUserAssign.userSearch.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!open) { box.hidden = true; box.innerHTML = ''; return; }
+
+  var query = String(roleUserAssign.userQuery || '').toLowerCase();
+  var users = roleUserAssign.users.filter(function (u) {
+    return !query || String(u.name).toLowerCase().indexOf(query) !== -1 || String(u.id).indexOf(query) !== -1;
+  }).slice(0, 50);
+
+  if (!users.length) {
+    var msg = roleUserAssign.usersLoading
+      ? tx('roles.searching', 'Searching…')
+      : tx('admin.role_dd_nothing', 'Nothing found');
+    box.innerHTML = '<li class="admin-picker__note">' + esc(msg) + '</li>';
+  } else {
+    var pickedId = roleUserAssign.picked ? String(roleUserAssign.picked.id) : '';
+    box.innerHTML = users.map(function (u) {
+      var selected = pickedId === String(u.id);
+      return '<li role="presentation"><button type="button" class="admin-picker__option' + (selected ? ' is-selected' : '') + '"' +
+          ' role="option" aria-selected="' + (selected ? 'true' : 'false') + '" data-role-user-pick="' + esc(String(u.id)) + '">' +
+          '<span>' + esc(u.name) + '</span>' +
+          '<span class="admin-picker__option-meta">ID: ' + esc(String(u.id)) + '</span>' +
+        '</button></li>';
+    }).join('');
+  }
+  box.hidden = false;
+}
+
+/** Текст в поле изменили: после выбора это сбрасывает выбранного пользователя. */
+function onUserTyped(text) {
+  var value = String(text || '').trim();
+  var picked = roleUserAssign.picked;
+  if (picked && value !== picked.name) {
+    roleUserAssign.picked = null;
+    if (roleUserAssign.select) {
+      roleUserAssign.select.value = '';
+      roleUserAssign.select.dispatchEvent(new Event('change'));
+    }
+  }
+  roleUserAssign.userQuery = roleUserAssign.picked ? '' : value;
+}
+
+function pickUser(id) {
+  var user = roleUserAssign.users.filter(function (u) { return String(u.id) === String(id); })[0];
+  if (!user) return;
+  roleUserAssign.picked = user;
+  roleUserAssign.userQuery = '';
+  if (roleUserAssign.userSearch) roleUserAssign.userSearch.value = user.name;
+  closeRoleUserPicker();
+  var select = roleUserAssign.select;
+  if (select) {
+    select.value = String(user.id);
+    select.dispatchEvent(new Event('change'));   // дальше — прежняя логика: загрузка ролей пользователя
+  }
 }
