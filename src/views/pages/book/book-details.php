@@ -170,7 +170,7 @@ if (!empty($iconId)) {
         $iconIdStr = $iconId;
     }
     if ($iconIdStr !== '') {
-        $coverUrl = '/uploads/covers/' . $iconIdStr;
+        $coverUrl = '/api/files/' . rawurlencode($iconIdStr) . '/preview';
     }
 }
 

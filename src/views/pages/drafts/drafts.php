@@ -15,11 +15,18 @@ $meta   = $meta ?? [];
 
 if (!is_array($drafts)) $drafts = [];
 
+// Controllers wrap each publication in WithContext; the cards need the item.
+$drafts = array_map(
+    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
+    $drafts
+);
+
 $page     = max(1, (int) ($meta['page'] ?? 1));
 $pageSize = (int) ($meta['pageSize'] ?? 0);
 $hasNext  = (bool) ($meta['hasNext'] ?? false);
 
-$coversBase = '/uploads/covers/';
+$coversBase = '/api/files/';
+$coversSuffix = '/preview';
 
 $draftDate = static function (object|array $item): string {
     foreach (['updatedAt', 'createdAt'] as $key) {
@@ -30,7 +37,11 @@ $draftDate = static function (object|array $item): string {
     return '';
 };
 
-$draftType = static function (object|array $item): string {
+// The controller knows the list type (meta.type); models in draft lists may be
+// PublicationShort, so reflection alone cannot tell an article from a book.
+$defaultDraftType = (($meta['type'] ?? 'book') === 'article') ? 'article' : 'book';
+
+$draftType = static function (object|array $item, string $default = 'book'): string {
     $raw = is_array($item) ? ($item['type'] ?? null) : ($item->type ?? null);
     if (is_string($raw)) {
         $raw = strtolower(trim($raw));
@@ -41,16 +52,16 @@ $draftType = static function (object|array $item): string {
         if ($class === 'article') return 'article';
         if ($class === 'book') return 'book';
     }
-    return 'book';
+    return $default;
 };
 
-$pick = static function (object|array $item, array $keys, string $default = '') use ($coversBase): string {
+$pick = static function (object|array $item, array $keys, string $default = '') use ($coversBase, $coversSuffix): string {
     foreach ($keys as $key) {
         $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
         if ($raw instanceof \Stringable) $raw = (string) $raw;
         if ($raw === null || $raw === '') continue;
         if (is_string($raw)) {
-            if ($key === 'icon' || $key === 'iconId') return $coversBase . $raw;
+            if ($key === 'icon' || $key === 'iconId') return $coversBase . rawurlencode($raw) . $coversSuffix;
             return $raw;
         }
     }
@@ -65,7 +76,7 @@ foreach ($drafts as $one) {
 
     $cards[] = [
         'id'    => $id,
-        'type'  => $draftType($one),
+        'type'  => $draftType($one, $defaultDraftType),
         'title' => $pick($one, ['title'], ''),
         'cover' => $pick($one, ['cover', 'iconUrl', 'icon', 'iconId']),
         'date'  => $draftDate($one),
@@ -78,6 +89,7 @@ if (!is_string($currentLang) || $currentLang === '') {
 }
 
 $currentPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+$isArticlesDrafts = str_starts_with($currentPath, '/articles');
 
 $pageLink = static function (int $to) use ($currentPath, $currentLang): string {
     parse_str((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_QUERY), $q);
@@ -157,8 +169,9 @@ if (!$isEmptyAll) {
       <p class="empty-state__text drafts-empty__text"><?= $tr('common.drafts.empty') ?></p>
       <p class="empty-state__text drafts-empty__hint"><?= $tr('common.drafts.empty_hint') ?></p>
       <a class="btn btn--primary drafts-empty__cta"
-         href="<?= $view->e('/books/new' . (($currentLang !== null && $currentLang !== '') ? '?lang=' . urlencode((string) $currentLang) : '')) ?>">
-        <?= $tr('common.drafts.empty_link') ?>
+         href="<?= $view->e(($isArticlesDrafts ? '/articles/create' : '/books/create')
+             . (($currentLang !== null && $currentLang !== '') ? '?lang=' . urlencode((string) $currentLang) : '')) ?>">
+        <?= $tr($isArticlesDrafts ? 'common.drafts.empty_link_article' : 'common.drafts.empty_link') ?>
       </a>
     </div>
   </section>

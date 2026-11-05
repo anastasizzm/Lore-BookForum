@@ -37,7 +37,7 @@ if ($item !== null) {
     if ($cover === '') {
         $icon = $get($item, 'iconId');
         $uuid = is_object($icon) ? ($icon->uuid ?? $icon->value ?? '') : (string) $icon;
-        if ($uuid !== '') $cover = '/uploads/' . $uuid;
+        if ($uuid !== '') $cover = '/api/files/' . rawurlencode($uuid) . '/preview';
     }
 
     // Автор

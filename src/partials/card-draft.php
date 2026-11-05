@@ -13,8 +13,8 @@
  * ССЫЛКИ (роуты books.edit / articles.edit в config/routes.php нет —
  * роуты заморожены, поэтому правка живёт на существующем роуте
  * создания через query-параметр):
- *   Продолжить → /books/new?id={id}                (book-form, edit-режим)
- *                /articles/new?id={id}&part=meta    (article-edit-meta)
+ *   Продолжить → /books/create?id={id}#step-1      (book-form, edit-режим)
+ *                /articles/create?id={id}#step-1   (article-form, edit-режим)
  *   Открыть    → /books/{id}      или /articles/{id}
  *
  * ДЕЙСТВИЯ (API уже существует в config/endpoints.php):
@@ -39,10 +39,10 @@ $basePath  = $isArticle ? '/articles/' : '/books/';
 $openUrl = $id > 0 ? $basePath . $id : '#';
 // Роутов edit нет (см. шапку) — раньше «Продолжить» давал 404. Правка
 // размещена на роуте создания: книга — book-form.php в edit-режиме
-// (?id=N: префилл из JSON-блоба + PATCH /api/books/{id}), статья —
-// article-edit-meta.php (пока только разметка, без префилла и отправки).
+// (?id=N: префилл из JSON-блоба + PATCH /api/books/{id}); статья —
+// article-form.php в edit-режиме (PATCH + PUT content).
 $editUrl = $id > 0
-    ? ($isArticle ? '/articles/new?id=' . $id . '&part=meta' : '/books/new?id=' . $id)
+    ? ($isArticle ? '/articles/create?id=' . $id . '#step-1' : '/books/create?id=' . $id . '#step-1')
     : '#';
 
 $hasCover = $cover !== '';

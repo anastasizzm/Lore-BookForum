@@ -223,7 +223,7 @@
 
     var iconId = (pub.iconId == null ? '' : String(pub.iconId));
     var coverHtml = iconId
-      ? '<img src="' + escapeHtml('/uploads/covers/' + iconId) + '" alt="" class="card-feed__book-thumb">'
+      ? '<img src="' + escapeHtml('/api/files/' + encodeURIComponent(iconId) + '/preview') + '" alt="" class="card-feed__book-thumb">'
       : '<span class="card-feed__book-thumb cover--empty" aria-hidden="true"></span>';
 
     var bookHeader = '';

@@ -53,7 +53,8 @@ $sort = $currentSort ?? ($_GET['sort'] ?? '');
 if (!is_string($sort) || !isset($sortOptions[$sort])) $sort = 'newest';
 $sortLabel = $sortOptions[$sort];
 
-$coversBase = '/uploads/covers/';
+$coversBase = '/api/files/';
+$coversSuffix = '/preview';
 
 $cards = [];
 foreach ($items as $p) {
@@ -66,7 +67,7 @@ foreach ($items as $p) {
 
     $cards[] = [
         'id'       => (int) $p->id,
-        'cover'    => $icon instanceof Stringable ? $coversBase . $icon : '',
+        'cover'    => $icon instanceof Stringable ? $coversBase . rawurlencode((string) $icon) . $coversSuffix : '',
         'title'    => (string) $p->title,
         'authorId' => (int) ($creator->id ?? $p->getCreatorId()),
         'author'   => $author,
@@ -90,17 +91,17 @@ $filterFlag = isset($_GET['f']) && is_string($_GET['f']) && in_array(strtolower(
     ? strtolower($_GET['f'])
     : null;
 
-$baseUrl = $view->url('books.saved');
-$link = static function (array $params) use ($baseUrl, $sort, $statusParam, $currentLang, $filterFlag): string {
+// url() already carries ?lang=, so the locale is not added a second time.
+$baseUrl = rtrim($view->url('books.saved'), '&');
+$link = static function (array $params) use ($baseUrl, $sort, $statusParam, $filterFlag): string {
     $params += [
         'sort'   => $sort === 'newest' ? null : $sort,
         'status' => $statusParam,
-        'lang'   => $currentLang,
         'f'      => $filterFlag,
     ];
     $params = array_filter($params, static fn($v) => $v !== null && $v !== '');
     $qs = http_build_query($params);
-    return $baseUrl . ($qs !== '' ? '?' . $qs : '');
+    return $baseUrl . ($qs !== '' ? '&' . $qs : '');
 };
 
 $shown = ($page - 1) * $pageSize + count($cards);

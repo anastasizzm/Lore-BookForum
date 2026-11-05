@@ -123,7 +123,7 @@ $items = array_map(
           $iconId = $publication?->iconId ?? null;
           $iconStr = (is_string($iconId) || (is_object($iconId) && method_exists($iconId, '__toString')))
               ? (string) $iconId : '';
-          $coverUrl = $iconStr !== '' ? '/uploads/covers/' . $iconStr : '';
+          $coverUrl = $iconStr !== '' ? '/api/files/' . rawurlencode($iconStr) . '/preview' : '';
 
           // Текущий пользователь — для оптимистичной вставки своего комментария
           $cu = $user ?? null;
