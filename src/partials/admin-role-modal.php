@@ -27,27 +27,26 @@ $tx = static function (string $key, string $fallback) use ($view): string {
             <?= $tx('common.admin.role_modal_title', 'Permissions') ?>
         </h2>
 
-        <!-- Режим «+»: выбор роли проекта -->
+        <!-- Режим «+»: выбор роли проекта (поле поиска + список под ним, как .roles-picker) -->
         <div class="admin-role__dropdown" data-role-dropdown hidden>
-            <span class="admin-role__group-title" id="adminRoleDdLabel">
+            <label class="admin-role__group-title" id="adminRoleDdLabel" for="adminRoleDdSearch">
                 <?= $tx('common.admin.role_select_label', 'Role') ?>
-            </span>
-            <div class="admin-role__dd" data-role-dd>
-                <button type="button" class="admin-role__dd-toggle" data-role-dd-toggle
-                        aria-haspopup="listbox" aria-expanded="false" aria-labelledby="adminRoleDdLabel">
-                    <span class="admin-role__dd-value is-placeholder" data-role-dd-value>
-                        <?= $tx('common.admin.role_select_placeholder', 'Choose a role') ?>
-                    </span>
-                    <svg class="admin-role__dd-chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
-                        <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <div class="admin-role__dd-menu" data-role-dd-menu hidden>
-                    <input class="admin-role__dd-search" type="search" data-role-dd-search
+            </label>
+            <div class="admin-picker" data-role-dd>
+                <div class="admin-picker__field">
+                    <span class="admin-picker__dot" data-role-dd-dot hidden></span>
+                    <input class="form-field__input admin-picker__input" id="adminRoleDdSearch"
+                           type="search" data-role-dd-search
                            placeholder="<?= $tx('common.admin.role_search_ph', 'Search roles') ?>"
                            aria-label="<?= $tx('common.admin.role_search_ph', 'Search roles') ?>"
-                           autocomplete="off" enterkeyhint="search">
-                    <ul class="admin-role__dd-list" data-role-dd-list role="listbox" aria-labelledby="adminRoleDdLabel"></ul>
+                           autocomplete="off" enterkeyhint="search"
+                           role="combobox" aria-autocomplete="list" aria-expanded="false"
+                           aria-controls="adminRoleDdList">
+                    <svg class="admin-picker__caret" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                        <path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <ul class="admin-picker__results" id="adminRoleDdList" data-role-dd-list role="listbox"
+                        aria-labelledby="adminRoleDdLabel" hidden></ul>
                 </div>
             </div>
         </div>
