@@ -188,9 +188,9 @@ final class ArticlesRepository extends PublicationsRepository
         $content = $contentData->getContent();
         $params = [
             ':id' => ScriptParam::asInt($articleId),
-            ':bookId' => ScriptParam::asInt($book->bookId),
-            ':pageStart' => ScriptParam::asInt($book->pageStart),
-            ':pageEnd' => ScriptParam::asInt($book->pageEnd),
+            ':bookId' => ScriptParam::asInt($book?->bookId),
+            ':pageStart' => ScriptParam::asInt($book?->pageStart ?? 0),
+            ':pageEnd' => ScriptParam::asInt($book?->pageEnd ?? 0),
             ':content' => ScriptParam::asStr($content),
             ':expectedVersion' => ScriptParam::asInt($expectedVersion)
         ];

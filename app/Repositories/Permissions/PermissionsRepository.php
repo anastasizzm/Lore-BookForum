@@ -19,6 +19,7 @@ use App\Lib\Data\Database;
 use App\Extensions\ScriptBuilders\ScriptBuilder;
 use App\Extensions\ScriptBuilders\Additional\RolesScriptDirector;
 use App\Models\Dto;
+use App\Services\Configuration\UnitOfWork;
 use PDO;
 
 class PermissionsRepository extends Repository
@@ -31,7 +32,7 @@ class PermissionsRepository extends Repository
         sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles,
         lexorank)';
 
-    public function __construct(Database $db, private readonly Translator $translator)
+    public function __construct(Database $db, private readonly Translator $translator, private readonly UnitOfWork $uow)
     {
         parent::__construct($db);
     }
@@ -193,24 +194,22 @@ class PermissionsRepository extends Repository
 
     public function removeRole(int $roleId, ?int $publicationId): void
     {
-        $sql = "WITH clear_users AS (
-                    DELETE FROM roles_users 
-                    WHERE NOT is_valid 
-                    AND role_id = :roleId 
-                    AND publication_id IS NOT DISTINCT FROM :pubId
-                    RETURNING role_id, publication_id
-                ) 
-                DELETE FROM roles_permissions rp
-                USING clear_users cu
-                WHERE rp.role_id = cu.role_id 
-                AND rp.publication_id IS NOT DISTINCT FROM cu.publication_id;
-            ";
-        $params = [
-            ':roleId' => ScriptParam::asInt($roleId),
-            ':pubId'  => ScriptParam::asInt($publicationId),
-        ];
+        $this->uow->translational(function () {
+            $this->execute(
+                "DELETE FROM roles_users
+                WHERE NOT is_valid
+                AND role_id = :roleId
+                AND publication_id IS NOT DISTINCT FROM :pubId",
+                [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
+            );
 
-        $this->execute($sql, $params);
+            $this->execute(
+                "DELETE FROM roles_permissions
+                WHERE role_id = :roleId
+                AND publication_id IS NOT DISTINCT FROM :pubId",
+                [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
+            );
+        });
     }
 
     // --- User
