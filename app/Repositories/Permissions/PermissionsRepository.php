@@ -32,7 +32,7 @@ class PermissionsRepository extends Repository
         sys_manage_accounts, sys_manage_additionals, sys_manage_ppl, sys_manage_roles,
         lexorank)';
 
-    public function __construct(Database $db, private readonly Translator $translator, private readonly UnitOfWork $uow)
+    public function __construct(Database $db, protected readonly Translator $translator, protected readonly UnitOfWork $uow)
     {
         parent::__construct($db);
     }
@@ -194,7 +194,7 @@ class PermissionsRepository extends Repository
 
     public function removeRole(int $roleId, ?int $publicationId): void
     {
-        $this->uow->translational(function () {
+        $this->uow->transactional(function () use ($roleId, $publicationId) {
             $this->execute(
                 "DELETE FROM roles_users
                 WHERE NOT is_valid
