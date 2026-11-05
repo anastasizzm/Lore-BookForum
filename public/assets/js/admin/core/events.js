@@ -9,10 +9,10 @@ import { addLanguage, closeDictForm, isDictOpen, openDictForm, removeLanguage } 
 import { dict } from '../features/dictionary/state.js';
 import { deleteDictItem } from '../features/dictionary/table.js';
 import { closeReportModal, decideReport, isReportOpen, openReportModal, reportState } from '../features/reports/modal.js';
-import { closeRoleUserModal, openRoleUserModal, roleUserAssign } from '../features/roles/assign-user-modal.js';
-import { handleRoleNewClick } from '../features/roles/create/modal.js';
+import { closeRoleUserModal, closeRoleUserPicker, isRoleUserPickerOpen, openRoleUserModal, roleUserAssign } from '../features/roles/assign-user-modal.js';
+import { handleRoleNewClick, openRoleNew } from '../features/roles/create/modal.js';
 import { dnd, hideInsert, insertDisabled, moveQueue } from '../features/roles/dnd.js';
-import { closeRoleDd, closeRoleModal, ddEl, isRoleDdOpen, isRoleOpen, openRoleAttach, openRoleModal, pickRoleDd, renderRoleLists, saveRole, searchRoleDd, toggleRoleDd } from '../features/roles/permissions-modal.js';
+import { closeRoleDd, closeRoleModal, ddEl, isRoleDdOpen, isRoleOpen, openRoleAttach, openRoleDd, openRoleModal, pickRoleDd, renderRoleLists, saveRole, searchRoleDd, typeRoleDd } from '../features/roles/permissions-modal.js';
 import { findRole, roleState } from '../features/roles/state.js';
 import { deleteRole } from '../features/roles/table.js';
 import { blockUser } from '../features/users/block.js';
@@ -25,7 +25,7 @@ document.addEventListener('click', function (e) {
     if (insertDisabled()) { hideInsert(); return; }
     var at = dnd.insertAt;
     hideInsert();
-    openRoleAttach(at); // привязка роли проекта с правами на выбранную позицию
+    openRoleNew(at);
     return;
   }
 
@@ -72,7 +72,7 @@ document.addEventListener('click', function (e) {
   }
 
   // Дропдаун выбора роли в модалке «+»
-  if (e.target.closest('[data-role-dd-toggle]')) { toggleRoleDd(); return; }
+  if (e.target.closest('[data-role-dd-search]')) { openRoleDd(); return; }
   var ddPick = e.target.closest('[data-role-dd-pick]');
   if (ddPick) { pickRoleDd(ddPick.getAttribute('data-role-dd-pick')); return; }
   if (isRoleOpen() && isRoleDdOpen() && !e.target.closest('[data-role-dd]')) closeRoleDd();
@@ -131,6 +131,15 @@ document.addEventListener('click', function (e) {
   if (deleteBtn) deleteComment(deleteBtn);
 });
 
+// Поле выбора роли (как .roles-picker): список открывается по фокусу, ввод фильтрует мгновенно
+document.addEventListener('focusin', function (e) {
+  if (e.target && e.target.closest && e.target.closest('[data-role-dd-search]')) openRoleDd();
+});
+document.addEventListener('input', function (e) {
+  var search = e.target && e.target.closest && e.target.closest('[data-role-dd-search]');
+  if (search) typeRoleDd(search.value);
+});
+
 // Поиск в дропдауне выбора роли: запрос к API только по Enter (и при очистке поля крестиком)
 document.addEventListener('search', function (e) {
   var search = e.target && e.target.closest && e.target.closest('[data-role-dd-search]');
@@ -183,6 +192,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     e.preventDefault();
     if (roleOpen && isRoleDdOpen()) { closeRoleDd(); return; }
+    if (userRoleOpen && isRoleUserPickerOpen()) { closeRoleUserPicker(); return; }
     if (dictOpen) closeDictForm();
     else if (reportOpen) closeReportModal();
     else if (userRoleOpen) closeRoleUserModal();

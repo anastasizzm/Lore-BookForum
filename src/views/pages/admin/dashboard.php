@@ -55,6 +55,15 @@ $cards = [
      'count' => '—'],
 ];
 
+// Права: контроллер передаёт $allowed — [имя роута => bool] (AdminPanelController::dashboardAccess).
+// Карточка показывается, только если у пользователя есть доступ к разделу.
+// Нет карты $allowed (страницу отрисовали без контроллера) — показываем все карточки.
+$allowed = $allowed ?? null;
+$cards = array_values(array_filter($cards, static function (array $card) use ($allowed): bool {
+    if (!is_array($allowed) || empty($card['route'])) return true;
+    return !empty($allowed[$card['route']]);
+}));
+
 /** Адрес карточки: по имени роута, иначе запасной href. */
 $cardHref = static function (array $card) use ($view): string {
     if (!empty($card['route'])) return (string) $view->url($card['route']);
@@ -76,6 +85,14 @@ $cardHref = static function (array $card) use ($view): string {
     'title'    => $view->t('common.admin.dashboard_title'),
     'subtitle' => $view->t('common.admin.dashboard_subtitle'),
 ]); ?>
+
+<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
+
+<?php if (!$cards): ?>
+  <p class="admin-note"><?= $view->e($view->t('common.admin.dashboard_empty') === 'common.admin.dashboard_empty'
+      ? 'No sections are available for your account'
+      : $view->t('common.admin.dashboard_empty')) ?></p>
+<?php endif; ?>
 
 <div class="admin-grid">
   <?php foreach ($cards as $card): $soon = !empty($card['soon']); ?>

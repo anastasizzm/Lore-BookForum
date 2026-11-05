@@ -10,7 +10,8 @@ import { rolesApi } from './api.js';
 import { ROLE_GROUPS } from './constants.js';
 import { finishNewRole, newRoleRequest } from './create/submit.js';
 import { findRole, hasAnyPerms, roleState } from './state.js';
-import { renderRoleRows, updateRoleRow } from './table.js';
+import { rerenderRoles } from './filters.js';
+import { updateRoleRow } from './table.js';
 
 /* ---------- права текущего пользователя: что он вправе выдавать ----------
    Бэк не даёт выдать право, которого нет у самого редактора (403 «Пользователь должен
@@ -125,10 +126,10 @@ export function closeRoleDd() {
   var wrap = ddEl('[data-role-dd]');
   if (!wrap) return;
   wrap.classList.remove('is-open');
-  var menu = ddEl('[data-role-dd-menu]');
-  if (menu) menu.hidden = true;
-  var toggle = ddEl('[data-role-dd-toggle]');
-  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  var list = ddEl('[data-role-dd-list]');
+  if (list) list.hidden = true;
+  var input = ddEl('[data-role-dd-search]');
+  if (input) input.setAttribute('aria-expanded', 'false');
 }
 
 export function isRoleDdOpen() {
@@ -136,32 +137,52 @@ export function isRoleDdOpen() {
   return !!(wrap && wrap.classList.contains('is-open'));
 }
 
-export function toggleRoleDd() {
+/** Открыть список под полем поиска (как .roles-picker в модалке ролей книги). */
+export function openRoleDd() {
   var wrap = ddEl('[data-role-dd]');
-  var toggle = ddEl('[data-role-dd-toggle]');
-  var menu = ddEl('[data-role-dd-menu]');
-  if (!wrap || !toggle || !menu || toggle.disabled) return;
-  var open = !wrap.classList.contains('is-open');
-  wrap.classList.toggle('is-open', open);
-  menu.hidden = !open;
-  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) {
-    var search = ddEl('[data-role-dd-search]');
-    if (search) search.focus();
+  var list = ddEl('[data-role-dd-list]');
+  var input = ddEl('[data-role-dd-search]');
+  if (!wrap || !list || !input || input.disabled) return;
+  wrap.classList.add('is-open');
+  list.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  renderRoleDdMenu();
+}
+
+/** Ввод в поле: мгновенный фильтр по названию; серверный поиск — по Enter (events.js). */
+export function typeRoleDd(text) {
+  var value = String(text || '').trim();
+  var cur = roleState.current;
+  var picked = !!(cur && cur.attach && cur.id);
+  if (picked && value !== String(cur.title || '')) {
+    // текст изменили после выбора — выбор сбрасывается
+    cur.id = 0; cur.title = ''; cur.color = '';
+    picked = false;
+    renderRoleDdValue();
+    setRoleSaveEnabled(false);
   }
+  roleState.ddTyped = picked ? '' : value;
+  if (!value && roleState.ddQuery) { searchRoleDd(''); return; }
+  openRoleDd();
 }
 
 function renderRoleDdValue() {
-  var valueEl = ddEl('[data-role-dd-value]');
-  if (!valueEl) return;
+  var input = ddEl('[data-role-dd-search]');
+  var wrap = ddEl('[data-role-dd]');
+  var dot = ddEl('[data-role-dd-dot]');
+  if (!input) return;
+  if (input.dataset.basePlaceholder === undefined) input.dataset.basePlaceholder = input.getAttribute('placeholder') || '';
   var cur = roleState.current;
   if (cur && cur.id) {
-    valueEl.classList.remove('is-placeholder');
-    valueEl.innerHTML = (cur.color ? '<span class="admin-role__dot" style="background:' + esc(cur.color) + '"></span>' : '') +
-      '<span class="admin-role__dd-text">' + esc(cur.title) + '</span>';
+    input.value = cur.title || '';
+    input.setAttribute('placeholder', input.dataset.basePlaceholder);
+    if (dot) { dot.style.background = cur.color || ''; dot.hidden = !cur.color; }
+    if (wrap) wrap.classList.toggle('has-dot', !!cur.color);
   } else {
-    valueEl.classList.add('is-placeholder');
-    valueEl.textContent = (roleState.ddMessage || tx('admin.role_select_placeholder', 'Choose a role'));
+    // ничего не выбрано: набранный текст остаётся, подсказка — «загрузка» или обычная
+    input.setAttribute('placeholder', roleState.ddMessage || input.dataset.basePlaceholder);
+    if (dot) dot.hidden = true;
+    if (wrap) wrap.classList.remove('has-dot');
   }
 }
 
@@ -172,26 +193,34 @@ function freeRoles(names) {
   return names.filter(function (r) { return !taken[Number(r.id)]; });
 }
 
+/** Опции с учётом мгновенного фильтра по набранному тексту. */
+function visibleDdOptions() {
+  var all = roleState.ddOptions || [];
+  var typed = String(roleState.ddTyped || '').toLowerCase();
+  if (!typed) return all;
+  return all.filter(function (r) { return String(r.title || '').toLowerCase().indexOf(typed) !== -1; });
+}
+
 function renderRoleDdMenu() {
   var list = ddEl('[data-role-dd-list]');
   if (!list) return;
-  var shown = roleState.ddOptions || [];
+  var shown = visibleDdOptions();
   var curId = roleState.current ? Number(roleState.current.id) : 0;
   if (!shown.length) {
     var msg = roleState.ddSearching
       ? tx('common.common.loading', 'Loading...')
-      : (roleState.ddQuery
+      : ((roleState.ddQuery || roleState.ddTyped)
           ? tx('admin.role_dd_nothing', 'Nothing found')
           : (roleState.ddMessage || tx('admin.role_none_available', 'No roles available')));
-    list.innerHTML = '<li class="admin-role__dd-note">' + esc(msg) + '</li>';
+    list.innerHTML = '<li class="admin-picker__note">' + esc(msg) + '</li>';
     return;
   }
   list.innerHTML = shown.map(function (r) {
     var selected = Number(r.id) === curId;
-    return '<li role="presentation"><button type="button" class="admin-role__dd-item' + (selected ? ' is-selected' : '') + '"' +
+    return '<li role="presentation"><button type="button" class="admin-picker__option' + (selected ? ' is-selected' : '') + '"' +
         ' role="option" aria-selected="' + (selected ? 'true' : 'false') + '" data-role-dd-pick="' + r.id + '">' +
         (r.color ? '<span class="admin-role__dot" style="background:' + esc(r.color) + '"></span>' : '') +
-        '<span class="admin-role__dd-text">' + esc(r.title) + '</span>' +
+        '<span>' + esc(r.title) + '</span>' +
       '</button></li>';
   }).join('');
 }
@@ -200,6 +229,8 @@ var roleDdSeq = 0;
 /** Серверный поиск ролей для дропдауна: GET /api/additional/roles?q=… — только по Enter. */
 export function searchRoleDd(query) {
   var q = String(query || '').trim();
+  roleState.ddTyped = '';   // результат сервера показываем целиком
+  openRoleDd();
   if (q === (roleState.ddQuery || '') && !roleState.ddSearching) return;
   roleState.ddQuery = q;
   roleState.ddSearching = true;
@@ -225,6 +256,7 @@ export function pickRoleDd(id) {
   cur.id = Number(picked.id);
   cur.title = picked.title;
   cur.color = picked.color || '';
+  roleState.ddTyped = '';
   renderRoleDdValue();
   renderRoleDdMenu();
   closeRoleDd();
@@ -232,18 +264,19 @@ export function pickRoleDd(id) {
 }
 
 /** «+» на странице roles: выбрать роль проекта из справочника и задать ей права. */
-export function openRoleAttach(insertAt) {
+export function openRoleAttach() {
   if (!roleState.modal) return;
 
   var stub = {
     id: 0, title: '', color: '', canManage: true, status: '', version: null,
-    isNew: true, attach: true, insertAt: insertAt || null,
+    isNew: true, attach: true, insertAt: null,
     systemPermissions: {}, postPermissions: {}, pubPermissions: {}
   };
   roleState.current = stub;
   roleState.draft = { system: {}, posts: {}, pubs: {} };
   roleState.ddOptions = [];
   roleState.ddQuery = '';
+  roleState.ddTyped = '';
   roleState.ddSearching = false;
   roleDdSeq++;
   roleState.ddMessage = tx('common.common.loading', 'Loading...');
@@ -255,7 +288,7 @@ export function openRoleAttach(insertAt) {
   var dropdown = ddEl('[data-role-dropdown]');
   if (dropdown) dropdown.hidden = false;
   roleState.modal.setAttribute('data-role-new', 'true');
-  var toggle = ddEl('[data-role-dd-toggle]');
+  var toggle = ddEl('[data-role-dd-search]');   // поле поиска: заблокировано, пока грузятся роли
   if (toggle) toggle.disabled = true;
   closeRoleDd();
   renderRoleDdValue();
@@ -350,7 +383,7 @@ export function saveRole() {
     if (!hasAnyPerms(body)) {
       // без прав роль системной не считается: убираем из списка системных (в «Все роли» остаётся)
       roleState.items = roleState.items.filter(function (r) { return Number(r.id) !== Number(item.id); });
-      renderRoleRows();
+      rerenderRoles();
     }
     closeRoleModal();
     notify(t('admin.role_saved'), 'success');
