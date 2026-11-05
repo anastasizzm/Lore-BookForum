@@ -333,13 +333,11 @@ window.LoreRoles = (function () {
   }
 
   /**
-   * Роль User (id 0) — базисная системная. Бэкенд POST /roles парсит
-   * roleId через positiveInt и отвечает «role id must be a positive
-   * integer», поэтому добавлять её в роли публикации нельзя. Прячем её
-   * из каталога добавления (фронт-обход без правки бэкенда).
+   * Бэкенд парсит roleId через nonNegInt, поэтому базовая роль User
+   * (id 0) тоже допустима в ролях публикации. Не скрываем её из каталога.
    */
   function isAddableRole(role) {
-    return !!role && String(role.id) !== '0';
+    return !!role;
   }
 
   function normalizeUser(raw) {
@@ -527,9 +525,9 @@ window.LoreRoles = (function () {
   }
 
   function roleRowHtml(role, index) {
-    // Роль User (id 0) бэкенд не принимает в маршрутах /roles/{roleId}
-    // (positiveInt) — считаем её нередактируемой, чтобы не ловить 404/400.
-    var locked = !role.canManage || String(role.id) === '0';
+    // Бэкенд принимает roleId = 0 (nonNegInt), поэтому базовая роль
+    // блокируется только по canManage, как и любая другая.
+    var locked = !role.canManage;
     var handle = st.dndReady && !locked
       ? '<span class="roles-row__handle" data-role-handle' +
         ' title="' + esc(t('roles.drag_hint')) + '">' + handleSvg() + '</span>'
@@ -965,9 +963,6 @@ window.LoreRoles = (function () {
     // название новой роли — выбранная в списке кандидатов роль каталога
     var picked = add.roles[0];
     if (!picked) { setAddStatus(t('roles.need_roles')); return; }
-    // User (id 0) бэкенд не принимает (positiveInt) — не отправляем запрос,
-    // объясняем ограничение в самой модалке.
-    if (String(picked.id) === '0') { setAddStatus(t('roles.base_role_unavailable')); return; }
     setAddStatus('');
     perms.saving = true;
 
@@ -1978,13 +1973,6 @@ window.LoreRoles = (function () {
   function insertRole(roleId, title, color) {
     var ins = st.insert;
     if (ins.saving) return;
-    // User (id 0) бэкенд не принимает (positiveInt) — не шлём запрос,
-    // показываем объяснение вместо сырой ошибки валидации.
-    if (String(roleId) === '0') {
-      setInsertStatus(t('roles.base_role_unavailable'));
-      renderInsert();
-      return;
-    }
     ins.saving = true;
     renderInsert();
 
