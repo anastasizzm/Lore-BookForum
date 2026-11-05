@@ -1,7 +1,17 @@
 <?php
 /**
- * admin/all-roles — страница ВСЕХ ролей (названий).
+ * admin/comments — модерация комментариев (роут /admin/posts).
+ *
+ * Строки рисует public/assets/js/admin/features/comments/list.js:
+ *   GET    /api/posts?page=N&ps=20&q=…
+ *   DELETE /api/posts/{id}
+ * Поиск уходит в API только по Enter (и при очистке поля крестиком),
+ * «Показать ещё» подгружает следующую страницу.
+ *
+ * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
+ * .admin-badge, .admin-actions).
  */
+
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 $tx = static function (string $key, string $fallback) use ($view): string {
@@ -12,7 +22,7 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 
 <?php $view->setBlock('selectedTab', 'admin'); ?>
 
-<?php $view->startBlock('title'); ?><?= $tr('common.admin.all_roles_title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
+<?php $view->startBlock('title'); ?><?= $tr('common.admin.comments_title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/admin.css') ?>">
@@ -23,79 +33,71 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 <?php $view->include('admin-back'); ?>
 
 <?php $view->include('page-header', [
-    'title'    => $view->t('common.admin.all_roles_title'),
-    'subtitle' => $view->t('common.admin.all_roles_subtitle'),
+    'title'    => $view->t('common.admin.comments_title'),
+    'subtitle' => $view->t('common.admin.comments_subtitle'),
 ]); ?>
 
-<p class="admin-toolbar__status" data-allroles-status role="status" aria-live="polite"><?= $tr('common.admin.roles_loading') ?></p>
+<?php if (!empty($innerMessages)): ?>
+  <div class="messages">
+    <?php foreach ($innerMessages as $msg): ?>
+      <div class="message message--error">
+        <div class="message__title"><?= $view->e($msg->title ?? '') ?></div>
+        <div class="message__body"><?= $view->e($msg->body ?? '') ?></div>
+      </div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<p class="admin-toolbar__status" data-comments-status role="status" aria-live="polite"><?= $tx('common.admin.comments_loading', 'Loading comments…') ?></p>
 
 <div class="admin-toolbar">
   <input class="admin-toolbar__search"
          type="search"
          name="q"
-         data-allroles-search
-         placeholder="<?= $tr('common.admin.search_roles_ph') ?>"
-         aria-label="<?= $tr('common.admin.search_roles_ph') ?>"
+         data-comments-search
+         placeholder="<?= $tr('common.admin.search_comments_ph') ?>"
+         aria-label="<?= $tr('common.admin.search_comments_ph') ?>"
          enterkeyhint="search"
          autocomplete="off">
-         
-  <button type="button"
-          class="btn btn--primary admin-toolbar__add admin-toolbar__add--icon"
-          data-rolenew-open
-          title="<?= $tr('common.admin.role_new_title') ?>"
-          aria-label="<?= $tr('common.admin.role_new_title') ?>">
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <line x1="9" y1="3" x2="9" y2="15"></line>
-      <line x1="3" y1="9" x2="15" y2="9"></line>
-    </svg>
-  </button>
-
-  <div class="admin-seg" role="radiogroup" data-allroles-filter-status
-       aria-label="<?= $tx('common.admin.roles_filter_status', 'Status') ?>">
-    <label><input type="radio" name="allroles-status" value="all" checked><span><?= $tx('common.admin.role_status_all', 'All') ?></span></label>
-    <label><input type="radio" name="allroles-status" value="public"><span><?= $tx('common.admin.role_public', 'Public') ?></span></label>
-    <label><input type="radio" name="allroles-status" value="private"><span><?= $tx('common.admin.role_private', 'Private') ?></span></label>
-  </div>
-  <span class="admin-toolbar__count" data-allroles-count>0</span>
+  <span class="admin-toolbar__count" data-comments-count>0</span>
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-allroles-table>
+  <table class="admin-table" data-admin-table="comments" data-comments-table>
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>
-        <th scope="col"><?= $tr('common.admin.col_role') ?></th>
-        <th scope="col"><?= $tx('common.admin.col_visibility', 'Visibility') ?></th>
-        <th scope="col"><?= $tr('common.admin.col_delete') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_author') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_text') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_publication') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_created') ?></th>
+        <th scope="col"><?= $tr('common.admin.col_actions') ?></th>
       </tr>
     </thead>
-    <tbody data-allroles-rows>
-      <tr class="admin-table__empty" data-allroles-empty hidden>
-        <td colspan="4"><?= $tr('common.admin.empty') ?></td>
-      </tr>
-    </tbody>
+    <tbody data-comments-rows></tbody>
   </table>
 </div>
 
-<!-- Модалка создания новой роли -->
-<?php $view->include('admin-role-create-modal'); ?>
+<div class="admin-users__more">
+  <button type="button" class="btn btn--secondary" data-comments-more hidden>
+    <?= $tx('common.admin.users_load_more', 'Show more') ?>
+  </button>
+</div>
 
 <?php
 /*
  * Данные страницы уже есть у контроллера — отдаём их в разметку, чтобы первая
  * загрузка таблицы не делала запрос к API (JS читает блок один раз и удаляет;
- * поиск, фильтры и «Показать ещё» дальше идут через API как раньше).
- * Нет данных / не сериализуются — блок не выводится, JS сам сходит в API.
+ * поиск и «Показать ещё» дальше идут через API как раньше).
  */
 $adminBoot = static function (string $name, mixed $data): void {
-    // null = контроллер данные не передал (JS сходит в API); пустой массив = «ролей нет»
     if ($data === null) return;
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG
         | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_PARTIAL_OUTPUT_ON_ERROR);
     if (!is_string($json)) return;
     echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
 };
-$adminBoot('all-roles', $allRoles ?? $names ?? null);
+$adminBoot('comments', $items ?? null);
 ?>
 
 <?php $view->endBlock('content'); ?>

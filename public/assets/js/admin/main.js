@@ -3,6 +3,8 @@
  */
 import './core/events.js'; // глобальные click/keydown/change-обработчики (Permissions, Block, Delete, ...)
 import { initCommentsList } from './features/comments/list.js';
+import { initBooksList } from './features/books/list.js';
+import { initArticlesList } from './features/articles/list.js';
 import { initSearch } from './core/search.js';
 import { initAllRoles } from './features/all-roles/page.js';
 import { initDictionary } from './features/dictionary/index.js';
@@ -22,6 +24,8 @@ function initAdmin() {
   initUserRoles();
   initUsersList();
   initCommentsList();
+  initBooksList();
+  initArticlesList();
 }
 
 if (document.readyState === 'loading') {

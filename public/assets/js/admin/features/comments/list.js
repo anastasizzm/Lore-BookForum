@@ -36,7 +36,8 @@ function labelOf(v) {
 
 function dateOf(v) {
   if (!v) return '';
-  var s = String(v);
+  // API serializes DateTimeImmutable as { date, timezone, timezone_type }.
+  var s = typeof v === 'object' ? String(v.date || '') : String(v);
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : s;
 }
 
@@ -46,7 +47,7 @@ function normalize(raw) {
   var id = Number(raw.id !== undefined ? raw.id : raw.postId);
   if (!id && id !== 0) return null;
 
-  var author = labelOf(pick(raw, ['author', 'user', 'account'])) || labelOf(pick(raw, ['authorName', 'username', 'userName']));
+  var author = labelOf(pick(raw, ['author', 'user', 'account', 'creator'])) || labelOf(pick(raw, ['authorName', 'username', 'userName']));
   var text = String(pick(raw, ['text', 'content', 'body', 'message', 'comment']) || '');
   var pub = labelOf(pick(raw, ['publication', 'pub', 'book', 'article'])) || labelOf(pick(raw, ['publicationTitle', 'pubTitle']));
   var created = dateOf(pick(raw, ['createdAt', 'created_at', 'created', 'date']));
