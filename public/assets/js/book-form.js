@@ -510,7 +510,7 @@
 
     var objectUrl = null;
 
-    // EDIT-РЕЖИМ: обложка книги уже лежит на бэке (/uploads/covers/{iconId})
+    // EDIT-РЕЖИМ: обложка книги уже лежит на бэке (/api/files/{iconId}/preview)
     // — object URL для неё не построить, поэтому серверный src держим
     // отдельно. Пока не выбран новый файл, превью — серверное; «Убрать
     // обложку» зовёт dropServerCover(), и PATCH уходит с iconId: null
@@ -770,7 +770,8 @@
         var errorEl = form.querySelector('[data-error-for="' + kind + '"]');
         if (!errorEl) return;
         errorEl.innerHTML = '<span class="field-error-icon" title="' +
-          escapeHtml(text) + '">!</span>';
+          escapeHtml(text) + '">!</span><span class="field-error-text">' +
+          escapeHtml(text) + '</span>';
       }
 
       function clearErrorEl() {
@@ -1268,7 +1269,8 @@
       if (field) field.classList.add('form-field__input--invalid');
       if (errorEl) {
         errorEl.innerHTML = '<span class="field-error-icon" title="' +
-          escapeHtml(message) + '">!</span>';
+          escapeHtml(message) + '">!</span><span class="field-error-text">' +
+          escapeHtml(message) + '</span>';
       }
     }
 
@@ -1288,7 +1290,8 @@
       if (!errorEl) return;
       errorEl.classList.add('form-field__error--warning');
       errorEl.innerHTML = '<span class="field-error-icon field-error-icon--warning" title="' +
-        escapeHtml(message) + '">!</span>';
+        escapeHtml(message) + '">!</span><span class="field-error-text">' +
+        escapeHtml(message) + '</span>';
     }
 
     function clearAllErrors() { FIELD_KEYS.forEach(clearError); }
@@ -2275,7 +2278,7 @@
         var iconField = form.querySelector('input[name="iconId"]');
         if (iconField) iconField.value = String(data.iconId);
         if (fileValidators.cover && fileValidators.cover.setServerCover) {
-          fileValidators.cover.setServerCover('/uploads/covers/' + data.iconId);
+          fileValidators.cover.setServerCover('/api/files/' + encodeURIComponent(data.iconId) + '/preview');
         }
       }
     }
