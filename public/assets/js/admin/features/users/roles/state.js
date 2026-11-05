@@ -11,6 +11,7 @@ export var userRoles = {
   selected: null,
   options: [],
   query: '',
+  typed: '',          // набранный текст — мгновенный фильтр по загруженным ролям
   searching: false,
   seq: 0,
   submitting: false,

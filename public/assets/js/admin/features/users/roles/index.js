@@ -2,7 +2,7 @@
  * Инициализация вложенных ролей пользователей.
  */
 import { urRemove, urToggle } from './list.js';
-import { urClose, urDdClose, urDdIsOpen, urDdToggle, urOpenAdd, urPick, urSave, urSearch } from './modal.js';
+import { urClose, urDdClose, urDdIsOpen, urDdOpen, urDdType, urOpenAdd, urPick, urSave, urSearch } from './modal.js';
 import { isUserRoleOpen, um, userRoles } from './state.js';
 
 export function initUserRoles() {
@@ -25,12 +25,22 @@ export function initUserRoles() {
 
     if (!isUserRoleOpen()) return;
     if (e.target.closest('[data-urole-close]')) { urClose(); return; }
-    if (e.target.closest('[data-urole-dd-toggle]')) { urDdToggle(); return; }
+    if (e.target.closest('[data-urole-dd-search]')) { urDdOpen(); return; }
     var pick = e.target.closest('[data-urole-dd-pick]');
     if (pick) { urPick(pick.getAttribute('data-urole-dd-pick')); return; }
     var save = e.target.closest('[data-urole-save]');
     if (save && !save.disabled) { urSave(); return; }
     if (urDdIsOpen() && !e.target.closest('[data-urole-dd]')) urDdClose();
+  });
+
+  // Поле выбора роли (как .roles-picker): список открывается по фокусу, ввод фильтрует мгновенно
+  document.addEventListener('focusin', function (e) {
+    if (!isUserRoleOpen()) return;
+    if (e.target && e.target.closest && e.target.closest('[data-urole-dd-search]')) urDdOpen();
+  });
+  document.addEventListener('input', function (e) {
+    var s = e.target && e.target.closest && e.target.closest('[data-urole-dd-search]');
+    if (s && isUserRoleOpen()) urDdType(s.value);
   });
 
   document.addEventListener('search', function (e) {

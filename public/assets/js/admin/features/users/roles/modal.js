@@ -15,10 +15,10 @@ export function urDdClose() {
   var wrap = um('[data-urole-dd]');
   if (!wrap) return;
   wrap.classList.remove('is-open');
-  var menu = um('[data-urole-dd-menu]');
-  if (menu) menu.hidden = true;
-  var toggle = um('[data-urole-dd-toggle]');
-  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  var list = um('[data-urole-dd-list]');
+  if (list) list.hidden = true;
+  var input = um('[data-urole-dd-search]');
+  if (input) input.setAttribute('aria-expanded', 'false');
 }
 
 export function urDdIsOpen() {
@@ -26,50 +26,78 @@ export function urDdIsOpen() {
   return !!(wrap && wrap.classList.contains('is-open'));
 }
 
-export function urDdToggle() {
+/** Открыть список под полем поиска (как .roles-picker в модалке ролей книги). */
+export function urDdOpen() {
   var wrap = um('[data-urole-dd]');
-  var toggle = um('[data-urole-dd-toggle]');
-  var menu = um('[data-urole-dd-menu]');
-  if (!wrap || !toggle || !menu || toggle.disabled) return;
-  var open = !wrap.classList.contains('is-open');
-  wrap.classList.toggle('is-open', open);
-  menu.hidden = !open;
-  toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) { var s = um('[data-urole-dd-search]'); if (s) s.focus(); }
+  var list = um('[data-urole-dd-list]');
+  var input = um('[data-urole-dd-search]');
+  if (!wrap || !list || !input || input.disabled) return;
+  wrap.classList.add('is-open');
+  list.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  urDdRenderMenu();
+}
+
+/** Ввод в поле: мгновенный фильтр по названию; серверный поиск — по Enter. */
+export function urDdType(text) {
+  var value = String(text || '').trim();
+  var selected = userRoles.selected;
+  if (selected && value !== String(selected.title || '')) {
+    // текст изменили после выбора — выбор сбрасывается
+    userRoles.selected = null;
+    selected = null;
+    urDdRenderValue();
+    var save = um('[data-urole-save]');
+    if (save) save.disabled = true;
+  }
+  userRoles.typed = selected ? '' : value;
+  if (!value && userRoles.query) { urSearch(''); return; }
+  urDdOpen();
 }
 
 function urDdRenderValue() {
-  var el = um('[data-urole-dd-value]');
-  if (!el) return;
+  var input = um('[data-urole-dd-search]');
+  var wrap = um('[data-urole-dd]');
+  var dot = um('[data-urole-dd-dot]');
+  if (!input) return;
+  if (input.dataset.basePlaceholder === undefined) input.dataset.basePlaceholder = input.getAttribute('placeholder') || '';
   var sel = userRoles.selected;
   if (sel) {
-    el.classList.remove('is-placeholder');
-    el.innerHTML = (sel.color ? '<span class="admin-role__dot" style="background:' + esc(sel.color) + '"></span>' : '') +
-      '<span class="admin-role__dd-text">' + esc(sel.title) + '</span>';
+    input.value = sel.title || '';
+    if (dot) { dot.style.background = sel.color || ''; dot.hidden = !sel.color; }
+    if (wrap) wrap.classList.toggle('has-dot', !!sel.color);
   } else {
-    el.classList.add('is-placeholder');
-    el.textContent = tx('admin.role_select_placeholder', 'Choose a role');
+    // ничего не выбрано: набранный текст остаётся, точка скрыта
+    if (dot) dot.hidden = true;
+    if (wrap) wrap.classList.remove('has-dot');
   }
+}
+
+/** Опции с учётом мгновенного фильтра по набранному тексту. */
+function urVisibleOptions() {
+  var typed = String(userRoles.typed || '').toLowerCase();
+  if (!typed) return userRoles.options;
+  return userRoles.options.filter(function (r) { return String(r.title || '').toLowerCase().indexOf(typed) !== -1; });
 }
 
 function urDdRenderMenu() {
   var list = um('[data-urole-dd-list]');
   if (!list) return;
-  var shown = userRoles.options;
+  var shown = urVisibleOptions();
   var curId = userRoles.selected ? userRoles.selected.id : null;
   if (!shown.length) {
     var msg = userRoles.searching ? tx('common.common.loading', 'Loading...')
-      : userRoles.query ? tx('admin.role_dd_nothing', 'Nothing found')
+      : (userRoles.query || userRoles.typed) ? tx('admin.role_dd_nothing', 'Nothing found')
       : tx('admin.role_none_available', 'No roles available');
-    list.innerHTML = '<li class="admin-role__dd-note">' + esc(msg) + '</li>';
+    list.innerHTML = '<li class="admin-picker__note">' + esc(msg) + '</li>';
     return;
   }
   list.innerHTML = shown.map(function (r) {
     var on = r.id === curId;
-    return '<li role="presentation"><button type="button" class="admin-role__dd-item' + (on ? ' is-selected' : '') + '"' +
+    return '<li role="presentation"><button type="button" class="admin-picker__option' + (on ? ' is-selected' : '') + '"' +
       ' role="option" aria-selected="' + (on ? 'true' : 'false') + '" data-urole-dd-pick="' + r.id + '">' +
       (r.color ? '<span class="admin-role__dot" style="background:' + esc(r.color) + '"></span>' : '') +
-      '<span class="admin-role__dd-text">' + esc(r.title) + '</span></button></li>';
+      '<span>' + esc(r.title) + '</span></button></li>';
   }).join('');
 }
 
@@ -93,6 +121,8 @@ function urAvailable(names) {
 /** Поиск ролей через API (GET /api/additional/roles?q=…) — только по Enter. */
 export function urSearch(query) {
   var q = String(query || '').trim();
+  userRoles.typed = '';   // результат сервера показываем целиком
+  urDdOpen();
   if (q === userRoles.query && !userRoles.searching) return;
   userRoles.query = q;
   userRoles.searching = true;
@@ -111,6 +141,7 @@ export function urPick(id) {
   var picked = userRoles.options.filter(function (r) { return r.id === Number(id); })[0];
   if (!picked) return;
   userRoles.selected = picked;
+  userRoles.typed = '';
   urDdRenderValue();
   urDdRenderMenu();
   urDdClose();
@@ -126,6 +157,7 @@ export function urOpenAdd(btn) {
   userRoles.selected = null;
   userRoles.options = [];
   userRoles.query = '';
+  userRoles.typed = '';
   userRoles.searching = true;
   userRoles.submitting = false;
   var seq = ++userRoles.seq;
@@ -136,7 +168,7 @@ export function urOpenAdd(btn) {
   if (search) search.value = '';
   var save = um('[data-urole-save]');
   if (save) save.disabled = true;
-  var toggle = um('[data-urole-dd-toggle]');
+  var toggle = um('[data-urole-dd-search]');   // поле поиска: заблокировано, пока грузятся роли
   if (toggle) toggle.disabled = true;
   urDdClose();
   urDdRenderValue();
