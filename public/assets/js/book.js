@@ -677,30 +677,9 @@
     }
   }
 
-  document.addEventListener('click', function (e) {
-    var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
-    if (!replyBtn) return;
-    var content = replyBtn.closest('.comment-card__content');
-    if (!content) return;
-    var form = content.querySelector('[data-reply-form]');
-    if (!form) return;
-    var open = form.hidden;
-    form.hidden = !open;
-    replyBtn.setAttribute('aria-expanded', String(open));
-    if (open) {
-      var first = form.querySelector('input');
-      if (first) {
-        var card = replyBtn.closest('[data-comment-id]');
-        var target = (card && card.dataset.authorUsername) || '';
-        if (target && first.value.trim() === '') {
-          first.value = '@' + target + ' ';
-          first.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        first.focus();
-        try { first.selectionStart = first.selectionEnd = first.value.length; } catch (_) {}
-      }
-    }
-  });
+  // Reply toggle и подстановку @ника обрабатывает comments.js (он
+  // подключается раньше book.js). Второй обработчик здесь открывал и тут же
+  // закрывал форму, поэтому оставляем только один источник поведения.
 
   // ===== Ответы: подгрузка ТОЛЬКО по клику =====
   // Один раз на карточку. Если у вас в разметке кнопка называется иначе —
