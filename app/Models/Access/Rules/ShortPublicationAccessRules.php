@@ -15,6 +15,7 @@ use App\Models\Access\Operations\Publications\ManagePeoplePublicationOperation;
 use App\Models\Access\Operations\Publications\ManageRolesPublicationOperation;
 use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Publications\ControlPublicationOperation;
+use App\Models\Access\Operations\Publications\ControlRPPublicationOperation;
 
 use App\Forms\Form;
 use App\Models\RowModel;
@@ -22,7 +23,6 @@ use App\Models\RowModel;
 readonly class ShortPublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
-        public bool $create,
         public bool $updateMeta,
         public bool $updateContent,
         public bool $read,
@@ -32,7 +32,7 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
 
     public function hasAny() : bool 
     {
-        return $this->create || $this->updateMeta 
+        return $this->updateMeta 
             || $this->updateContent || $this->updateMeta
             || $this->read
             || $this->managePeople || $this->manageRoles;
@@ -42,7 +42,6 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     {
         return match(true) {
             !($operation instanceof PublicationAccessOperation) => false,
-            $operation instanceof CreatePublicationOperation => $this->create,
             $operation instanceof UpdateMetaPublicationOperation => $this->updateMeta,
             $operation instanceof UpdateContentPublicationOperation => $this->updateContent,
             $operation instanceof ReadPublicationOperation => $this->read,
@@ -61,14 +60,13 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public static function fromEmpty() : self 
     {
         return new self(
-            false, false, false , false, false, false
+            false, false , false, false, false
         );
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(
-            create: self::bool($row, $prefix . 'create'),
             updateMeta: self::bool($row, $prefix . 'update_meta'),
             updateContent: self::bool($row, $prefix . 'update_content'),
             read: self::bool($row, $prefix . 'read'),
@@ -80,7 +78,6 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public static function fromInput(array $form) : self 
     {
         return new self(
-            create: QueryParser::optionalBool($form, 'create') ?? false,
             updateMeta: QueryParser::optionalBool($form, 'updateMeta') ?? false,
             updateContent: QueryParser::optionalBool($form, 'updateContent') ?? false,
             read: QueryParser::optionalBool($form, 'read') ?? false,
@@ -92,7 +89,6 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public function toArray(): array
     {
         return [
-            'create' => $this->create,
             'updateMeta' => $this->updateMeta,
             'updateContent' => $this->updateContent,
             'read' => $this->read,
@@ -104,7 +100,6 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public static function fromArray(array $data): self
     {
         return new self (
-            create: (bool)($data['create'] ?? false),
             updateMeta: (bool)($data['updateMeta'] ?? false),
             updateContent: (bool)($data['updateContent'] ?? false),
             read: (bool)($data['read'] ?? false),

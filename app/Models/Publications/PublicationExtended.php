@@ -18,8 +18,10 @@ readonly class PublicationExtended extends Publication
         ?Uuid $iconId,
         int $creatorId,
         int $genreId,
+        int $ownerId,
         ?BasicModel $genre,
         ?UserShortData $creator,
+        ?UserShortData $owner,
         public int $commentsCount,
         public int $savedCount,
         public int $rating, // avg rating * 10
@@ -33,9 +35,11 @@ readonly class PublicationExtended extends Publication
             $deletedAt,
             $iconId, 
             $creatorId,
+            $ownerId,
             $genreId,
             $genre,
-            $creator);
+            $creator,
+            $owner);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -48,8 +52,10 @@ readonly class PublicationExtended extends Publication
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,
             creatorId: $parent->getCreatorId(),
+            ownerId: $parent->ownerId,
             genreId: $parent->getGenreId(),
             creator: $parent->creator,
+            owner: $parent->owner,
             genre: $parent->genre,
             commentsCount: self::int($row, $prefix . 'comments_count'),
             savedCount: self::int($row, $prefix . 'saved_count'),

@@ -24,7 +24,7 @@ final readonly class ContentData extends RowModel
         if ($this->bookData !== NULL) return ArticleContentMode::Book;
         if ($this->content !== NULL) return ArticleContentMode::Text;
 
-        throw new \RuntimException("Neither bookData or content provided");
+        throw new \RuntimeException("Neither bookData or content provided");
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
