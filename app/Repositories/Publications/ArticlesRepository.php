@@ -115,7 +115,7 @@ final class ArticlesRepository extends PublicationsRepository
 
     public function create(ArticleModel $model, int $creatorId) : int 
     {
-        $this->uow->transactional(function () use ($model, $creatorId)
+        return $this->uow->transactional(function () use ($model, $creatorId) : int
         {
             $pubId = $this->insertPublication(
                 $model->title,
@@ -127,14 +127,14 @@ final class ArticlesRepository extends PublicationsRepository
             );
             
             $bookData = $model->content->getBookData();
-            $contentData = $model->content->content;
+            $content = $model->content->getContent();
             $this->insertArticle(
                 $pubId,
                 $model->typeId,
                 $bookData?->bookId,
                 $bookData?->pageStart,
                 $bookData?->pageEnd,
-                $contentData->content,
+                $content,
                 $model->doi
             );
 
@@ -265,7 +265,7 @@ final class ArticlesRepository extends PublicationsRepository
     {
         switch($className)
         {
-            case App\Models\Publications\Article::class:
+            case Article::class:
                 $this->director->addArticleSelectTemp();
                 break;
             default:

@@ -19,7 +19,7 @@ readonly class PermissionForm extends PositionForm
     {
         $parent = parent::fromInput($form);
         return new self(
-            roleId : QueryParser::positiveInt($form, 'roleId'),
+            roleId : QueryParser::nonNegInt($form, 'roleId'),
             belowId: $parent->belowId,
             aboveId: $parent->aboveId
         );

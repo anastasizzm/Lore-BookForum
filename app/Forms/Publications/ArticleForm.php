@@ -7,6 +7,7 @@ use App\Forms\Publications\PublicationForm;
 use App\Extensions\Parsers\QueryParser;
 use App\Models\Enums\ArticleContentMode;
 use App\Models\Uuid;
+use App\Models\Publications\BookData;
 
 final readonly class ArticleForm extends PublicationForm
 {
