@@ -6,6 +6,7 @@ use DateTimeImmutable;
 use App\Models\Uuid;
 use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
+use App\Models\Enums\PublicationStatus;
 use App\Models\BasicModel;
 
 readonly class PublicationExtended extends Publication
@@ -15,8 +16,8 @@ readonly class PublicationExtended extends Publication
         string $title,
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
-        PublicationStatus $status,
         ?Uuid $iconId,
+        PublicationStatus $status,
         int $creatorId,
         int $genreId,
         int $ownerId,
@@ -34,8 +35,8 @@ readonly class PublicationExtended extends Publication
             $title, 
             $createdAt,
             $deletedAt,
-            $status,
             $iconId, 
+            $status,
             $creatorId,
             $ownerId,
             $genreId,

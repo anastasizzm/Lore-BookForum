@@ -84,14 +84,7 @@ final class AccountController extends Controller
     public function getPasswordReset(HttpContext $context, string $token) : Response 
     {
         $redirectUrl = $context->query('redirect');
-        try{
-            $this->passResetService->consumeToken($token);
-            return $this->render('auth/password-reset', ['token' => $token, 'redirectUrl' => $redirectUrl]);
-        }
-        catch(HttpException $e)
-        {
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'redirectUrl' => $redirectUrl]);
-        }
+        return $this->render('auth/password-reset', ['token' => $token, 'redirectUrl' => $redirectUrl]);
     }
 
     public function passwordReset(HttpContext $context) : Response 

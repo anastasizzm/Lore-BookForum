@@ -8,6 +8,7 @@ use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
 use App\Models\Publications\PublicationShort;
 use App\Models\Publications\BookData;
+use App\Models\Enums\PublicationStatus;
 use App\Models\Publications\ContentData;
 use App\Models\Enums\ArticleContentMode;
 use App\Models\BasicModel;
@@ -46,8 +47,8 @@ readonly class Article extends PublicationExtended
             $title, 
             $createdAt,
             $deletedAt,
-            $status,
             $iconId, 
+            $status,
             $creatorId,
             $genreId,
             $ownerId,

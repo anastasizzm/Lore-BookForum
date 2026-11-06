@@ -29,14 +29,14 @@ abstract class PublicationsScriptDirector extends ScriptDirector
     public function addPublicationShortSelectTemp() : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();
-        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.icon_id,\npublications.created_at,\npublications.deleted_at,\npublications.status");
+        $this->tempBuilder->addSelect("publications.id,\npublications.title,\npublications.icon_id,\npublications.created_at,\npublications.deleted_at");
         return $this;
     }
 
     public function addPublicationSelectTemp() : self
     {
         $this->addPublicationShortSelectTemp();
-        $this->tempBuilder->addSelect("publications.genre_id,\npublications.creator_id,\npublications.owner_id");
+        $this->tempBuilder->addSelect("publications.genre_id,\npublications.creator_id,\npublications.owner_id,\npublications.status");
         
         return $this;
     }
