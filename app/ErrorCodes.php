@@ -22,6 +22,7 @@ final class ErrorCodes
     public const ACCOUNT_BLOCKED = 'account_block';
     public const INSUFFICIENT_PERMS = 'insufficient_permissions';
 
+    public const INVALID_VERSION = 'invalid_version';
     public const INVALID_ENCTYPTION = 'invalid_encryption';
     public const INVALID_HEADER = 'invalid_header';
     

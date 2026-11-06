@@ -6,6 +6,7 @@ use DateTimeImmutable;
 use App\Models\Uuid;
 use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
+use App\Models\Enums\PublicationStatus;
 use App\Models\BasicModel;
 
 readonly class PublicationExtended extends Publication
@@ -16,6 +17,7 @@ readonly class PublicationExtended extends Publication
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
         ?Uuid $iconId,
+        PublicationStatus $status,
         int $creatorId,
         int $genreId,
         int $ownerId,
@@ -34,6 +36,7 @@ readonly class PublicationExtended extends Publication
             $createdAt,
             $deletedAt,
             $iconId, 
+            $status,
             $creatorId,
             $ownerId,
             $genreId,
@@ -48,6 +51,7 @@ readonly class PublicationExtended extends Publication
         return new self(
             id: $parent->id,
             title: $parent->title,
+            status: $parent->status,
             iconId: $parent->iconId,
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,

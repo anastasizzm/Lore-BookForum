@@ -19,12 +19,12 @@ final class UserExceptionTranslator extends ExceptionTranslator
     ];
 
     private const UNIQUE = [
-        'users_pkey'                 => ['id',       'A user with this ID already exists'],
-        'uq_users_username_lower'    => ['username', 'This username is already taken'],
-        'uq_users_email_lower'       => ['email',    'This email is already registered'],
-        'profiles_pkey'              => ['id',       'A profile with this ID already exists'],
-        'profiles_user_id_key'       => ['user_id',  'A profile for this user already exists'],
-        'users_rules_pkey'           => ['id',       'A rule set with this ID already exists'],
+        'users_pkey'                 => ['id',       'errors.account.id_exists'],
+        'uq_users_username_lower'    => ['username', 'errors.account.username_exists'],
+        'uq_users_email_lower'       => ['email',    'errors.account.email_exists'],
+        'profiles_pkey'              => ['id',       'errors.account.id_exists'],
+        'profiles_user_id_key'       => ['user_id',  'errors.account.profile_exists'],
+        'users_rules_pkey'           => ['id',       'errors.account.rule_exists'],
     ];
 
     private const CHECK = [
