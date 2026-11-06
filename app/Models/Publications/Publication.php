@@ -15,6 +15,7 @@ readonly class Publication extends PublicationShort
         string $title,
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
+        PublicationStatus $status,
         ?Uuid $iconId,
         private int $creatorId,
         public int $ownerId,
@@ -23,7 +24,7 @@ readonly class Publication extends PublicationShort
         public ?UserShortData $creator,
         public ?UserShortData $owner
     ){
-        parent::__construct($id, $title, $createdAt, $deletedAt, $iconId);
+        parent::__construct($id, $title, $createdAt, $deletedAt, $status, $iconId);
     }
 
     public static function fromRow(array $row, string $prefix = '') : self 
@@ -36,6 +37,7 @@ readonly class Publication extends PublicationShort
         return new self(
             id: $parent->id,
             title: $parent->title,
+            status: $parent->status,
             iconId: $parent->iconId,
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,

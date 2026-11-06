@@ -10,6 +10,7 @@ use App\Models\Users\UserData;
 use App\Models\Users\UserShortData;
 use App\Models\Criterias\Users\UsersCriteria;
 use App\Extensions\ScriptBuilders\Users\UsersScriptDirector;
+use App\Models\Scripts\ScriptParam;
 
 use App\Repositories\Repository;
 use App\Lib\Settings\Settings;
@@ -123,6 +124,14 @@ final class UsersRepository extends Repository
         }
         
         return (int)$id;
+    }
+
+    public function block(int $userId) : bool 
+    {
+        $sql = "UPDATE users SET is_blocked = true WHERE id = :userId RETURNING id";
+        $stmt = $this->execute($sql, [':userId' => ScriptParam::asInt($userId)]);
+
+        return $stmt->fetchColumn() !== false;
     }
 
     public function createProfile(int $userId, string $name, string $surname, string $bio) : void

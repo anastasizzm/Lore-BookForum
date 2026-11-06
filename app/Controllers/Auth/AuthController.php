@@ -7,6 +7,7 @@ use App\Http\HttpContext;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 use App\Http\HttpException;
+use App\Lib\I18n\Translator;
 
 use App\Controllers\Controller;
 
@@ -34,6 +35,7 @@ final class AuthController extends Controller
     public function __construct(
         private readonly AuthService $service,
         private readonly EmailVerificationService $mailVerify,
+        private readonly Translator $translator,
         private readonly CookieService $cookies,
         private readonly UrlGenerator $url
     ){}
@@ -52,7 +54,15 @@ final class AuthController extends Controller
 
         try{
             $token = $this->service->register(RegisterForm::fromInput($formData));
-            $response = $this->render('message', ['message' => 'Please confirm your email to have full access', 'actionUrl' => $this->url->url('home'), 'actionTitle' => 'Start Reading']);
+            $response = $this->render('message', ['message' => $this->translator->t('common.email.confirm_msg'), 'actionUrl' => $this->url->url('home'), 'actionTitle' => $this->translator->t("common.drafts.continue")]);
+
+            try{
+                $this->mailVerify->startVerification($userId, $form->email);
+            }
+            catch(MailException $e){
+                $response = $this->render('message', ['message' => $this->translator->t('errors.verify.send_fail'), 'actionUrl' => $this->url->url('home'), 'actionTitle' => $this->translator->t("common.drafts.continue")]);
+            }
+
             return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
         }
         catch(ValidationException $e){
@@ -73,7 +83,7 @@ final class AuthController extends Controller
             return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [InnerMessage::asError("Authentication failed", $e->getMessage())]]);
         }
         catch(ForbiddenException $e){
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login') . "?redirect=" . $redirectUrl, 'actionTitle' => 'Understood']);
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login') . "?redirect=" . $redirectUrl, 'actionTitle' => $this->translator->t("common.drafts.continue")]);
         }
         catch(ValidationException $e){
             return $this->render('auth/login', ['form' => $formData, 'errors' => $e->errors()]);

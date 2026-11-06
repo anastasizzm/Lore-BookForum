@@ -7,6 +7,7 @@ use App\Cache\User\UserContextCache;
 
 use App\Forms\Users\ProfileForm;
 use App\Attributes\Inject;
+use App\Lib\I18n\Translator;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Validators\Users\ProfileFormValidator;
@@ -21,7 +22,9 @@ use App\Models\Users\UserShortData;
 use App\Repositories\Users\UsersRepository;
 use App\Repositories\RuleProviders\Common\CommonRuleProvider;
 use App\Exceptions\Translators\UserExceptionTranslator;
+use App\Exceptions\NotFoundException;
 use App\Factories\CriteriasFactory;
+use App\ErrorCodes;
 use Throwable;
 use PDO;
 
@@ -30,8 +33,9 @@ final class UsersService
     public function __construct(
         private readonly UserContextCache $cache,
         private readonly UnitOfWork $uow,
+        private readonly Translator $translator,
         private readonly UsersRepository  $usersRepo,
-        private readonly UserExceptionTranslator $translator,
+        private readonly UserExceptionTranslator $exceptionTranslator,
         private readonly ProfileFormValidator $profileFormValidator,
 
         #[Inject(key: ServiceType::System)]
@@ -104,6 +108,17 @@ final class UsersService
         return $this->usersRepo->retrieve($userId);
     }
 
+    public function block(int $userId) : void 
+    {
+        try{
+            $blocked = $this->usersRepo->block($userId);
+            if (!$blocked) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
     public function editProfile(int $userId, ProfileForm $form)
     {
         $errorBag = $this->profileFormValidator->validateOne($form);
@@ -113,7 +128,7 @@ final class UsersService
             $this->usersRepo->editProfile($userId, $form->name, $form->surname, $form->bio, $form->avatar);
         }
         catch(\PDOException $e){
-            throw $this->translator->translate($e);
+            throw $this->exceptionTranslator->translate($e);
         }
     }
 }

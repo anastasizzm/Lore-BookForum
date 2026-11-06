@@ -15,6 +15,7 @@ readonly class Book extends PublicationExtended
         string $title,
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
+        PublicationStatus $status,
         ?Uuid $iconId,
         int $creatorId,
         int $ownerId,
@@ -38,6 +39,7 @@ readonly class Book extends PublicationExtended
             $title, 
             $createdAt,
             $deletedAt,
+            $status,
             $iconId, 
             $creatorId,
             $genreId,
@@ -61,6 +63,7 @@ readonly class Book extends PublicationExtended
         return new self(
             id: $parent->id,
             title: $parent->title,
+            status: $parent->status,
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,
             iconId: $parent->iconId,

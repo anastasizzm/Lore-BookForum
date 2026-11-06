@@ -10,9 +10,9 @@
 -- (admin_username, admin_email, admin_pass_hash); see migrate.sh.
 -- =====================================================================
 
-INSERT INTO languages (code, is_active) VALUES
-    ('en', true),
-    ('ru', true);
+INSERT INTO languages (code) VALUES
+    ('en'),
+    ('ru');
 
 
 INSERT INTO user_roles (id, color, is_system) VALUES

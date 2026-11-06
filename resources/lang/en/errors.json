@@ -88,6 +88,11 @@
         "content_pdf": "The book must have at least one content where one should have 'pdf' format"
     },
     "account": {
+        "id_exists": "A user with this ID already exists",
+        "username_exists": "This username is already taken",
+        "email_exists": "This email is already registered",
+        "profile_exists": "A profile for this user already exists",
+        "rule_exists": "A rule set with this ID already exists",
         "credits_invalid": "Invalid login or password",
         "account_block": "Account is blocked",
         "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores",
@@ -161,7 +166,8 @@
     },
     "verify": {
         "token_missing": "The verification link is incomplete: the token is missing.",
-        "failed": "Could not send the email (HTTP :status)."
+        "failed": "Could not send the email (HTTP :status).",
+        "send_fail": "Can't send the mail. Try again later"
     },
     "article": {
         "rule_article_title": "Enter a title (up to 200 characters).",

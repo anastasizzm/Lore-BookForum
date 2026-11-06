@@ -28,7 +28,8 @@ use App\Models\Access\Operations\System\AnySystemOperation;
 return function(Router $router)
 {
     // Auth
-    $router->post('/api/mail/resend', [App\Controllers\Api\Auth\AccountController::class, 'resendMailVerify'], 'api.sendmail', AuthPolicy::Public);
+    $router->post('/api/mail/resend', [App\Controllers\Api\Auth\AccountController::class, 'resendMailVerify'], 'api.resendmail', AuthPolicy::Public);
+    $router->post('/api/mail', [App\Controllers\Api\Auth\AccountController::class, 'sendMailVerify'], 'api.sendmail', AuthPolicy::Auth);
     
     $router->get('/api/rules', [App\Controllers\Api\Auth\AccountController::class, 'getCommonRules'], 'api.rules', AuthPolicy::Auth);
     $router->put('/api/users/{userId}/credits/edit', [App\Controllers\Api\Auth\AccountController::class, 'changeCredits'], 'api.users.credits.edit.submit', ManageAccountOperation::class);
@@ -124,7 +125,7 @@ return function(Router $router)
     // Users
     $router->get('/api/users', [App\Controllers\Api\Users\UsersController::class, 'list'], 'api.users', AuthPolicy::Auth);
     $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', ManageAccountOperation::class);
-    
+    $router->post('/api/users/{userId}/block', [App\Controllers\Api\Users\UsersController::class, 'block'], 'api.users.profile.block', ManageAccountOperation::class);
 
     // Files
     $router->post('/api/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);

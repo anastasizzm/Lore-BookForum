@@ -369,6 +369,9 @@
         "ok": "Confirm"
     },
     "email": {
+        "confirm_msg": "Please confirm your email to have full access",
+        "pass_msg": "The link to reset your password was sent to your email",
+        "reset_msg": "The new password was successfully set",
         "verify_title": "Email verification",
         "verify_heading": "Confirm your email",
         "verify_hello": "Hello!",

@@ -8,6 +8,7 @@ use App\Http\HttpContext;
 use App\Http\Response;
 use App\Http\UrlGenerator;
 use App\Http\HttpException;
+use App\Lib\I18n\Translator;
 
 use App\Controllers\Controller;
 
@@ -39,6 +40,7 @@ final class AccountController extends Controller
         private readonly PasswordResetService $passResetService,
         private readonly AccountService $accountService,
         private readonly CookieService $cookies,
+        private readonly Translator $translator,
         private readonly UrlGenerator $url
     ){}
 
@@ -59,7 +61,7 @@ final class AccountController extends Controller
         }
     }
 
-    public function getPasswordMail(HttpContext $ctx) : Response 
+    public function getPasswordMail(HttpContext $context) : Response 
     {
         $redirectUrl = $context->query('redirect');
         return $this->render('auth/password-email', ['redirectUrl' => $redirectUrl]);
@@ -68,10 +70,10 @@ final class AccountController extends Controller
     public function passwordMail(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
-        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
+        $redirectUrl = $context->query('redirect') ?? $this->url->url('home');
         try{
             $this->passResetService->startReset(MailOnlyForm::fromInput($formData), $redirectUrl);
-            return $this->render('message', ['message' => 'The link to reset your password was sent to your email']);
+            return $this->render('message', ['message' => $this->translator->t("common.email.pass_msg")]);
         }
         catch(ValidationException $e)
         {
@@ -95,11 +97,11 @@ final class AccountController extends Controller
     public function passwordReset(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
-        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
+        $redirectUrl = $context->query('redirect') ?? $this->url->url('home');
 
         try{
             $this->passResetService->completeReset(PassResetForm::fromInput($formData));
-            return $this->render('message', ['message' => 'The new password was successfully set', 'actionUrl' => $redirectUrl, 'Login']);
+            return $this->render('message', ['message' => $this->translator->t('common.email.reset_msg'), 'actionUrl' => $redirectUrl, 'actionTitle' => $this->translator->t("common.drafts.continue")]);
         }
         catch(ValidationException $e)
         {

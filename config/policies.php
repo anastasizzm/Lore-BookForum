@@ -9,9 +9,6 @@ use App\Policies\Auth\AuthenticatedRequirement;
 use App\Policies\Verified\VerifiedHandler;
 use App\Policies\Verified\VerifiedRequirement;
 
-use App\Policies\Access\AdminHandler;
-use App\Policies\Access\AdminRequirement;
-
 use App\Policies\Access\AccessHandler;
 use App\Policies\Access\System\SystemAccessRequirement;
 use App\Policies\Access\Post\PostAccessRequirement;
@@ -20,7 +17,6 @@ use App\Policies\Access\Account\AccountAccessRequirement;
 
 $registry->registerPolicy(AuthPolicy::Auth, fn($ctx) => new AuthenticatedRequirement(), AuthenticatedHandler::class);
 $registry->registerPolicy(AuthPolicy::Verified, fn($ctx) => new VerifiedRequirement(), VerifiedHandler::class);
-$registry->registerPolicy(AuthPolicy::Admin, fn($ctx) => new AdminRequirement(), AdminHandler::class);
 
 // Concrete Access
 define('PUB_PATTERN_CONCRETE', "#(?:books|articles|publications)\/(\d+)#");
