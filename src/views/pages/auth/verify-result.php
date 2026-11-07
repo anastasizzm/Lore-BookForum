@@ -48,10 +48,12 @@ $withLang = static function (string $path) use ($langQuery): string {
         ? rawurldecode($match[1])
         : '';
     ?>
+      <!-- Публичный resend: POST /api/mail/resend (api.resendmail) принимает
+           token из ссылки письма, поэтому страница работает и без логина. -->
       <form class="login-message__form"
             data-verify-resend
             method="post"
-            action="<?= $view->e($withLang($view->url('api.sendmail'))) ?>">
+            action="<?= $view->e($withLang($view->url('api.resendmail'))) ?>">
         <?= $view->csrfField() ?>
         <input type="hidden" name="token" value="<?= $view->e($verifyToken) ?>">
 
