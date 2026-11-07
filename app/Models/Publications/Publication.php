@@ -5,6 +5,7 @@ use DateTimeImmutable;
 
 use App\Models\Uuid;
 use App\Models\Users\UserShortData;
+use App\Models\Enums\PublicationStatus;
 use App\Models\Publications\PublicationShort;
 use App\Models\BasicModel;
 
@@ -16,6 +17,7 @@ readonly class Publication extends PublicationShort
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
         ?Uuid $iconId,
+        public PublicationStatus $status,
         private int $creatorId,
         public int $ownerId,
         private int $genreId,
@@ -42,6 +44,7 @@ readonly class Publication extends PublicationShort
             creatorId: self::int($row, $prefix . 'creator_id'),
             genreId: self::int($row, $prefix . 'genre_id'),
             ownerId: self::int($row, $prefix . 'owner_id'),
+            status: self::enum($row, $prefix . 'status', PublicationStatus::class),
             creator: self::hasGroup($row, $prefix . $u, 'id')
                 ? UserShortData::fromRow($row, $prefix . $u) : NULL,
             owner: self::hasGroup($row, $prefix . $o, 'id')
@@ -58,6 +61,7 @@ readonly class Publication extends PublicationShort
     {
         $parent = parent::toArray();
         return $parent + [
+            'status' => $this->status,
             'genre' => $this->genre,
             'creator' => $this->creator,
             'ownerId' => $this->ownerId,

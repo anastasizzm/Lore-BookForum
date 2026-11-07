@@ -16,6 +16,7 @@ use App\Controllers\Controller;
 
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\AccountService;
+use App\Services\Users\UsersService;
 
 use App\Models\Error;
 use App\Models\Access\Permissions\RulesCombination;
@@ -39,6 +40,7 @@ final class AccountController extends Controller
         private readonly CommonRuleProvider $pubRuleProvider,
 
         private readonly EmailVerificationService $emailService,
+        private readonly UsersService $usersService,
         private readonly AccountService $accountService,
         private readonly Translator $translator
     ){}
@@ -58,6 +60,23 @@ final class AccountController extends Controller
             'post' => $postRules, 
             'publication' => $pubRules
         ]));
+    }
+
+    public function sendMailVerify(HttpContext $context)
+    {
+        $isVerified = $context->attribute(Constants::VERIFIED_ATTR) ?? false;
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId) || $isVerified === NULL)
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        if ($isVerified) return $this->jsonError(new Error(ErrorCodes::ALREADY_DONE, $this->translator->t("errors.account.mail_already_verified")), 409);
+        
+        $userData = $this->usersService->retrieve($userId);
+        if($userData === NULL)
+            return $this->jsonError(new Error(ErrorCodes::NOT_FOUND, "Not found"), 404);
+
+        $this->emailService->startVerification($userId, $userData->email);
+        return $this->jsonEmpty();
     }
 
     public function resendMailVerify(HttpContext $context)

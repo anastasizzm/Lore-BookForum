@@ -105,7 +105,7 @@ abstract class PublicationsRepository extends Repository
         $sql = "INSERT INTO saved_publications (user_id, publication_id)
                 SELECT :userId::bigint, checker.publication_id 
                 FROM {$checkTable} checker
-                WHERE checker.publicaiton_id = :pubId
+                WHERE checker.publication_id = :pubId
                 ON CONFLICT DO NOTHING";
 
         $this->execute($sql, [

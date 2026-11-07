@@ -8,7 +8,6 @@ use App\Constants;
 use App\Repositories\Users\UsersRepository;
 
 use App\Services\Configuration\UnitOfWork;
-use App\Services\Auth\EmailVerificationService;
 
 use App\Models\Email;
 use App\Models\Auth\AuthCredits;
@@ -37,7 +36,6 @@ final class AuthService
         private readonly UnitOfWork $uow,
         private readonly Jwt $jwt,
         private readonly UserExceptionTranslator $exceptionTranslator,
-        private readonly EmailVerificationService $mailVerificationService,
         private readonly LoginFormValidator $loginFormValidator,
         private readonly RegisterFormValidator $registerFormValidator,
         private readonly Translator $translator
@@ -62,7 +60,7 @@ final class AuthService
     }
 
     /** @throws ValidationException */
-    public function register(RegisterForm $form) : string
+    public function register(RegisterForm $form) : array
     {
         $errorBag = $this->registerFormValidator->validateOne($form);
         if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
@@ -76,8 +74,7 @@ final class AuthService
                 return $userId;
             });
 
-            $this->mailVerificationService->startVerification($userId, $form->email);
-            return $this->generateToken($userId, false);
+            return [$this->generateToken($userId, false), $userId];
         }
         catch(\PDOException $e) {
             throw $this->exceptionTranslator->translate($e);
