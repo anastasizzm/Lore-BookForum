@@ -250,6 +250,7 @@ $articlePayload = [
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-reader.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
@@ -304,15 +305,21 @@ $articlePayload = [
           </svg>
         </button>
         <?php
-          // P1-6: «Open book» ведёт на страницу книги, а не на «#»
+          // Отрывок из книги читается на странице книги (редирект), а
+          // standalone-статья открывается в оверлее поверх страницы.
           $bookHref = ($isBookExcerpt && $bookId > 0)
               ? '/books/' . $bookId
               : '#annotation';
         ?>
-        <a class="btn btn--primary btn--pill" href="<?= $view->e($isBookExcerpt ? $bookHref : '#content') ?>"
-           <?= $isBookExcerpt ? '' : 'data-open-article-tab="content"' ?>>
-          <?= $isBookExcerpt ? $tr('common.article.open_book') : $tr('common.article.read') ?>
-        </a>
+        <?php if ($isBookExcerpt): ?>
+          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
+            <?= $tr('common.article.open_book') ?>
+          </a>
+        <?php else: ?>
+          <button type="button" class="btn btn--primary btn--pill" data-article-reader-open>
+            <?= $tr('common.article.read') ?>
+          </button>
+        <?php endif; ?>
       </div>
 
       <div class="book-rating">
@@ -445,6 +452,15 @@ $articlePayload = [
       </div>
     </div>
   </div>
+
+  <!-- Оверлей чтения standalone-статьи: открывается кнопкой «Читать статью».
+       Для отрывка из книги оверлея нет — кнопка ведёт на /books/{id}. -->
+  <?php if (!$isBookExcerpt): ?>
+    <?php $view->include('article-reader', [
+        'title'   => (string) ($article->title ?? ''),
+        'content' => $content,
+    ]); ?>
+  <?php endif; ?>
 
   <!-- Блок комментариев.
        data-me-* нужен book.js: автора своего комментария/ответа он берёт из
@@ -734,6 +750,8 @@ $articlePayload = [
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <!-- article-reader.js — оверлей чтения standalone-статьи -->
+  <script src="/assets/js/article-reader.js"></script>
   <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->
