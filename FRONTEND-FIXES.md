@@ -1,93 +1,83 @@
-# Frontend — актуальные проблемы
+# Frontend — что нужно изменить сейчас
 
-**Аудит:** `origin/develop` (`d09d1c1`), проверка после мержа `fix/backend-fixes-7` (07.11.2026).
-**Статус:** пункты F-10…F-12 закрыты на ветке `fix/frontend-audit` в объёме, который позволяет текущий бэкенд. Оставшиеся backend-блокеры вынесены в `BACKEND-FIXES.md`.
-
----
-
-## Сводка
-
-| ID | Приоритет | Проблема | Статус |
-|---|---|---|---|
-| F-10 | P1 | Блокировка пользователя в админке — фейковая, кнопки Unblock нет | Закрыт: Block вызывает API; Unblock скрыт до появления роута |
-| F-11 | P1 | Жалоба (Report) — mock: успех показывается без запроса | Закрыт: кнопка жалобы временно скрыта, mock недоступен |
-| F-12 | P1 | Дашборд админки — заглушка с «—» и без учёта прав | Закрыт: счётчики убраны, карточки фильтруются по `/api/system/rules` |
+**Проверено:** ветка `fix/frontend-audit` после мержа `fix/backend-fixes-7`, 07.11.2026 (код + браузер).
+**Статус:** чистых фронтовых багов из прошлого аудита не осталось. Всё ниже либо ждёт бэкенд, либо включается после его роутов.
 
 ---
 
-## Что изменено
+## Актуальные задачи
 
-### F-10. Блокировка пользователя
+| Что | Когда делать | Где |
+|---|---|---|
+| Кнопка **Unblock** | после `DELETE /api/users/{id}/block` или `POST /unblock` | `public/assets/js/admin/features/users/list.js`, `block.js`, `public/assets/js/admin.js` |
+| Вернуть **«Пожаловаться»** | после `POST /api/reports` | `src/partials/details-menu.php`, `src/partials/comment-menu.php`, `public/assets/js/profile.js`, `report-modal.js` |
+| Счётчики на дашборде | после `$allowed` / счётчиков из `AdminPanelController` | `src/views/pages/admin/dashboard.php` |
+| Текст в оверлее статьи | после B-04; если бэк отдаст только API — добавить lazy-fetch | `src/partials/article-reader.php`, `public/assets/js/article-reader.js` |
+| Страница ошибки письма при регистрации | после B-20: бэк должен рендерить `auth/verify-result` с токеном | `src/views/pages/auth/verify-result.php` уже готов |
+| Полная смена пароля | после B-11 | `src/views/pages/auth/change-password.php` уже готов |
 
-**Где:** `public/assets/js/admin/features/users/block.js`, `public/assets/js/admin/features/users/list.js`, `public/assets/js/admin.js`.
-
-**Сделано:**
-
-- кнопка Block вызывает `POST /api/users/{userId}/block` через CSRF-fetch;
-- при ошибке показывается сообщение, строка не меняется, кнопка снова активна;
-- при успехе бейдж меняется на `Blocked`, кнопка Block убирается из строки;
-- у заблокированного пользователя кнопка не рисуется (Unblock-роута пока нет);
-- при перерисовке списка состояние блокировки сохраняется локально.
-
-**Осталось на бэке (B-09):** `DELETE /api/users/{id}/block` или `/unblock`, поле `is_blocked` в `GET /api/users`, отзыв сессий.
+Подробности по backend-блокерам — в `BACKEND-FIXES.md`.
 
 ---
 
-### F-11. Жалоба «отправляется» без запроса
+## Что уже работает (не переделывать)
 
-**Где:** `src/partials/details-menu.php`, `src/partials/comment-menu.php`, `public/assets/js/comments.js`.
+### F-10. Блокировка
 
-**Сделано:**
+- `POST /api/users/{userId}/block` вызывается из UI.
+- При ошибке показывается сообщение, строка не меняется.
+- При успехе бейдж становится `Blocked`, кнопка Block убирается.
+- После F5 статус сохраняется (админ-список отдаёт состояние).
+- Unblock скрыт, пока роута нет.
 
-- пункт «Пожаловаться» убран из меню публикаций и комментариев/ответов;
-- пустое меню у не-авторов больше не открывается (после удаления жалобы в нём осталось только «Удалить»);
-- mock-отправка (`report-modal.js`) больше недоступна из UI.
+Файлы: `public/assets/js/admin/features/users/block.js`, `list.js`, `public/assets/js/admin.js`.
 
-Плашка `report-modal.php`, стили и JS оставлены для возврата после появления `POST /api/reports` (B-10).
+### F-11. Жалобы
+
+- Пункт «Пожаловаться» убран из меню публикаций, комментариев, ответов и постов в профиле.
+- Пустое меню у не-авторов не открывается.
+- Mock-отправка недоступна из UI; плашка и JS оставлены для возврата после B-10.
+
+Файлы: `src/partials/details-menu.php`, `src/partials/comment-menu.php`, `public/assets/js/profile.js`, `public/assets/js/comments.js`.
+
+### F-12. Дашборд
+
+- Заглушка «Stub data» и выдуманные счётчики удалены.
+- Карточки фильтруются по `GET /api/system/rules` через `permissions.js`:
+  - Users → `system.managePeople`
+  - Books / Articles → `publication.control`
+  - Comments → `post.control`
+  - Genres / Categories / Types → `system.manageAdditionals`
+  - Roles / All roles → `system.manageRoles`
+- Если доступных разделов нет, показывается пустое состояние.
+
+Файлы: `src/views/pages/admin/dashboard.php`, `public/assets/js/admin/dashboard.js`, `public/assets/js/permissions.js`.
+
+### Чтение статьи
+
+- Для standalone-статьи кнопка «Читать статью» открывает оверлей.
+- Для отрывка из книги кнопка ведёт на `/books/{id}`.
+- Крестик, Close, Esc и клик по фону закрывают; фокус переходит в диалог.
+- Текст пока пуст из-за B-04/B-21 — фронт к этому готов.
+
+Файлы: `src/views/pages/article/article-details.php`, `src/partials/article-reader.php`, `public/assets/js/article-reader.js`, `public/assets/css/modules/article-reader.css`.
+
+### Resend письма
+
+- `auth/verify-result` отправляет повторное письмо на публичный `POST /api/mail/resend` (`api.resendmail`).
+- При ошибке показывает текст ошибки; ложного успеха нет.
+
+Файл: `src/views/pages/auth/verify-result.php`.
 
 ---
 
-### F-12. Дашборд админки
+## Проверка в браузере 07.11.2026
 
-**Где:** `src/views/pages/admin/dashboard.php`, `public/assets/js/admin/dashboard.js`, `public/assets/js/permissions.js`.
+- Block → `POST /api/users/2/block` 200, строка `Blocked`, после F5 статус сохраняется.
+- Reports: `[data-report-open]` = 0 на статье и в ленте.
+- Dashboard: `/api/system/rules` 200; при полных правах все карточки, при одном `manageAdditionals` — только справочники.
+- Article: оверлей открывается/закрывается, фокус корректен; текст пуст (B-04/B-21).
+- Resend: `/auth/verify/invalidtoken` → `action="/api/mail/resend"`, ошибка 403 без ложного успеха.
+- Регистрация: падает с `Undefined variable $userId/$form` (B-20).
 
-**Сделано:**
-
-- удалена заглушка «Stub data — the admin API is not connected yet.»;
-- убраны выдуманные счётчики «—»;
-- добавлены ключи прав `publication.control` и `post.control`;
-- карточки рендерятся скрытыми и показываются по реальным правилам `GET /api/system/rules`:
-  - Users → `system.managePeople`;
-  - Books / Articles → `publication.control`;
-  - Comments → `post.control`;
-  - Genres / Categories / Types → `system.manageAdditionals`;
-  - Roles / All roles → `system.manageRoles`;
-- если ни один раздел недоступен, показывается пустое состояние.
-
-**Осталось на бэке (B-17):** передавать `$allowed` и реальные счётчики разделов в SSR.
-
----
-
-## Проверка в браузере (07.11.2026)
-
-Прогон на `http://localhost:8080` под администратором:
-
-- **F-10:** Block для `devtester` → `POST /api/users/2/block` 200, строка стала `Blocked`, кнопка Block исчезла; после F5 статус сохранился.
-- **F-11:** на `/articles/38` и в ленте `[data-report-open]` = 0, жалоба недоступна.
-- **F-12:** `/api/system/rules` → 200; при полных правах видны все карточки, при одном `manageAdditionals` — только Genres/Categories/Types; счётчиков и «Stub data» нет.
-- **Статья:** кнопка Read открывает оверлей, Esc/крестик/Close закрывают, фокус переходит в диалог. Текст в оверлее пуст из-за B-04/B-21.
-- **Resend:** `/auth/verify/invalidtoken` показывает форму с `action="/api/mail/resend"`; POST возвращает 403 и текст ошибки, ложного успеха нет.
-- **Регистрация:** POST `/auth/register` создаёт пользователя и падает с `Undefined variable $userId/$form` → зафиксировано в B-20.
-
-Тестовые изменения в БД (пароль admin, временная роль devtester, тестовый пользователь, блокировка) откачены.
-
----
-
-## Связанные backend-блокеры
-
-Эти пункты уже закрыты/подготовлены во фронтенде, но пользовательский сценарий всё ещё зависит от бэкенда:
-
-- **F-06 (сохранение книги):** форма редактирования открывается и префиллится, но `PATCH /api/books/{id}` с `pages` возвращает 404 — см. `B-06`.
-- **F-09 (Change password):** пункт переименован в «Reset password» и ведёт на существующий сброс пароля; полноценная смена пароля требует роутов из `B-11`.
-- **Регистрация / повторная отправка письма:** `POST /api/mail/resend` появился, страница `auth/verify-result` использует его, но `AuthController::register()` падает на `$userId`/`$form` — см. `B-20`; отдельную страницу для ошибки SMTP нужно рендерить с бэка — см. `B-12`.
-- **Чтение статьи:** для standalone-статьи кнопка «Читать статью» открывает оверлей, для отрывка из книги ведёт на `/books/{id}`. Текст статьи по-прежнему зависит от данных `contentData` — см. `B-04`; API контента сейчас падает с fatal из-за `B-21`.
+Тестовые данные в БД (пароль admin, временная роль, пользователь, блокировка) откачены.
