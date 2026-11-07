@@ -14,9 +14,12 @@
  *
  * ПУБЛИЧНЫЙ API JS: window.ReportModal.open({ kind, id, label }).
  *
- * ДАННЫЕ: причины — мок-список прямо в этой разметке (бэкенд заморожен,
- * config/ и app/ не трогаем); отправка тоже мок (см. TODO(api) в
- * report-modal.js), UI к контракту готов: POST /api/reports
+ * СТАТУС: временно отключена — кнопки [data-report-open] убраны из
+ * details-menu.php и comment-menu.php, потому что POST /api/reports ещё
+ * не существует, а mock-отправка показывала ложный успех (F-11/B-10).
+ *
+ * ДАННЫЕ: причины — список прямо в этой разметке; отправка — мок (см.
+ * TODO(api) в report-modal.js), UI к контракту готов: POST /api/reports
  * { target_type, target_id, reason, comment } + _token (CSRF).
  *
  * Стили — public/assets/css/report-modal.css (каркас .modal — modal.css),

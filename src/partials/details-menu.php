@@ -34,18 +34,17 @@
  *                               data-requires="publication.manageRoles";
  *   4. Изменить пользователей — модуль на втором экране (пользователи
  *                               публикации), data-requires="publication.managePeople";
- *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id});
- *   6. Пожаловаться           — report-modal, без data-requires.
+ *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id}).
  * Пункты 1–4 гасит permissions.js; подменю больше нет — details-menu.js
  * его логику не содержит.
  *
  * Удаление выполняет details-menu.js (DELETE /api/books/{id},
  * /api/articles/{id}); ошибки показывает Messages.
  *
- * ПУНКТ «Пожаловаться» — открывает общую плашку report-modal.php
- * (report-modal.js, window.ReportModal). Он НЕ имеет data-requires:
- * жалобу может оставить любой авторизованный пользователь, в том числе
- * автор публикации, поэтому permissions.js его не трогает.
+ * «Пожаловаться» временно убрана из меню: POST /api/reports отсутствует,
+ * а mock-отправка давала ложный успех (FRONTEND-FIXES F-11). Плашка
+ * report-modal.php и report-modal.js остаются в проекте — вернуть пункт,
+ * когда бэкенд добавит роут жалоб.
  */
 $type     = $type ?? 'book';
 $id       = (int) ($id ?? 0);
@@ -145,18 +144,6 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
             data-delete-redirect="<?= $view->e($listHref) ?>"
             data-delete-kind="<?= $view->e($type) ?>">
       <?= $view->e($view->t('common.js.delete')) ?>
-    </button>
-
-    <!-- Пункт «Пожаловаться»: без data-requires (доступен всем,
-         permissions.js его не трогает), открывает report-modal.php
-         через report-modal.js. -->
-    <button type="button"
-            class="details-menu__item"
-            data-report-open
-            data-report-kind="<?= $view->e($type) ?>"
-            data-report-id="<?= $id ?>"
-            <?= $title !== '' ? 'data-report-label="' . $view->e($title) . '"' : '' ?>>
-      <?= $view->e($view->t('common.report.menu')) ?>
     </button>
   </div>
 </div>

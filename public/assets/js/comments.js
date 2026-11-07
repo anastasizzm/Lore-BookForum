@@ -251,9 +251,10 @@
     var own = !!(Number(authorId) && Number(authorId) === myId());
     var del = one('[data-c-delete]', wrap);
     if (del) del.hidden = !own;
-    // Удалённый комментарий (markDeleted) врап прячет сам — его не трогаем
+    // В меню осталось только «Удалить» (жалобы временно убраны, F-11),
+    // поэтому не-автору показывать пустой дропдаун незачем.
     var node = wrap.closest('[data-deleted]');
-    wrap.hidden = !!node;
+    wrap.hidden = !!node || !own;
   }
 
   function syncOwnMenu(node, authorId) {
@@ -273,8 +274,9 @@
 
   /**
    * Прогон по уже отрисованному DOM: серверные комментарии/ответы и посты
-   * (partials + card-feed.php) иначе останутся со скрытым врапом — раньше
-   * меню показывалось только «своим», теперь в нём есть «Пожаловаться».
+   * (partials + card-feed.php) иначе останутся со скрытым врапом. Меню
+   * показываем только автору — после удаления «Пожаловаться» (F-11) в нём
+   * осталось лишь удаление.
    */
   function initMenus() {
     each(document.querySelectorAll('[data-c-menu-wrap]'), function (wrap) {
