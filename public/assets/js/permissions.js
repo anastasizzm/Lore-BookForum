@@ -59,11 +59,16 @@
     'publication.delete':        { kind: 'publication', flags: ['delete'],        owner: true },
     'publication.managePeople':  { kind: 'publication', flags: ['managePeople'],  owner: true },
     'publication.manageRoles':   { kind: 'publication', flags: ['manageRoles'],   owner: true },
+    // ControlPublicationOperation (админ-разделы книг/статей): бэк разрешает
+    // при любом из updateMeta/updateContent/delete/read.
+    'publication.control':       { kind: 'publication', flags: ['updateMeta', 'updateContent', 'delete', 'read'] },
 
     // --- post
     'post.create': { kind: 'post', flags: ['create'] },
     'post.update': { kind: 'post', flags: ['update'], owner: true },
     'post.delete': { kind: 'post', flags: ['delete'], owner: true },
+    // ControlPostOperation (админ-раздел комментариев): update || delete.
+    'post.control': { kind: 'post', flags: ['update', 'delete'] },
 
     // --- составные
     // Админ-панель видна, если разрешено хоть одно право из AdminAccessOperation.

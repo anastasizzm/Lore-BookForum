@@ -63,7 +63,8 @@ function usersNormalize(u) {
     id: id,
     username: String(u.username || u.name || u.login || u.nickname || ''),
     email: String(u.email || ''),
-    blocked: u.blocked === true || u.isBlocked === true || /block|ban/.test(statusText),
+    blocked: u.blocked === true || u.isBlocked === true || u.is_blocked === true ||
+      Number(u.blocked || u.isBlocked || u.is_blocked) === 1 || /block|ban/.test(statusText),
     canManage: u.canManage !== false,
     roles: roles,
     roleObjs: roleObjs
@@ -81,7 +82,15 @@ function usersRowHtml(u) {
     : '<span class="admin-badge admin-badge--success">' + esc(t('admin.status_active')) + '</span>';
   var rolesLabel = tx('admin.user_roles_toggle', 'Roles');
 
-  return '<tr data-user-id="' + id + '">' +
+  // Unblock-роута в API пока нет, поэтому заблокированному пользователю
+  // не показываем кнопку «Block» вообще (а не неактивную копию).
+  var blockBtn = u.blocked ? '' :
+    '<button type="button" class="btn btn--secondary" data-admin-block' +
+      ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (!u.canManage ? ' disabled' : '') + '>' +
+      esc(t('admin.action_block')) +
+    '</button>';
+
+  return '<tr data-user-id="' + id + '"' + (u.blocked ? ' data-user-blocked="1"' : '') + '>' +
       '<td class="admin-table__id" data-col="id">' + id + '</td>' +
       '<td data-col="name">' + esc(u.username) + '</td>' +
       '<td data-col="email"><span class="admin-table__clip" title="' + esc(u.email) + '">' + esc(u.email) + '</span></td>' +
@@ -89,10 +98,7 @@ function usersRowHtml(u) {
       '<td data-col="status" data-status-cell>' + statusCell + '</td>' +
       '<td data-col="actions"><div class="admin-actions">' +
         '<a class="btn btn--secondary" href="/users/' + id + '">' + esc(t('admin.action_view')) + '</a>' +
-        '<button type="button" class="btn btn--secondary" data-admin-block' +
-          ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (u.blocked || !u.canManage ? ' disabled' : '') + '>' +
-          esc(t('admin.action_block')) +
-        '</button>' +
+        blockBtn +
       '</div></td>' +
       '<td class="admin-table__expand" data-col="expand">' +
         '<button type="button" class="admin-expand" data-user-expand' +
@@ -193,10 +199,22 @@ function usersSearch(query) {
   usersLoad(true);
 }
 
+/** Помечает пользователя заблокированным в локальном состоянии списка. */
+export function markUserBlocked(userId) {
+  var id = Number(userId);
+  if (!id) return;
+  usersList.items.forEach(function (u) {
+    if (u.id === id) u.blocked = true;
+  });
+}
+
 export function initUsersList() {
   var tbody = document.querySelector('[data-users-rows]');
   if (!tbody) return;
   usersList.tbody = tbody;
+  tbody.addEventListener('admin:user-blocked', function (e) {
+    if (e.detail && e.detail.id) markUserBlocked(e.detail.id);
+  });
   usersList.status = document.querySelector('[data-users-status]');
   usersList.count = document.querySelector('[data-users-count]');
   usersList.search = document.querySelector('[data-users-search]');

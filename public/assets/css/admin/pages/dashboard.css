@@ -8,6 +8,12 @@
   width: 100%;
 }
 
+/* permissions.js прячет карточки атрибутом hidden; авторский display:flex
+   перебивает UA-стиль [hidden], поэтому гасим явно. */
+.admin-card[hidden] {
+  display: none;
+}
+
 .admin-card {
   display: flex;
   flex-direction: column;
