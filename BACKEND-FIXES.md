@@ -28,6 +28,7 @@
 | B-17 | P2 | Дашборд админки не получает карту прав `$allowed`, поэтому показывает все разделы |
 | B-19 | P1 | Статус черновика не попадает на страницу книги/статьи: нет бейджа и publish-bar |
 | B-20 | P0 | Регистрация падает: `AuthController::register()` использует неопределённые `$userId`/`$form`; нет страницы повторной отправки письма |
+| B-21 | P0 | `VersionedContentData extends final ContentData` → fatal на `GET/PUT /api/articles/{id}/content` |
 
 ---
 
@@ -123,6 +124,8 @@ Fatal error: Uncaught Error: Call to a member function query() on null
 
 **Что сделать:** включить контент в read-модель (или отдельно запрашивать `ArticlesService::getContent()` в `retrieve` и передавать во view), добавить SSR-тест «опубликованная статья показывает текст».
 
+**Дополнительно:** сейчас и API контента падает с fatal из-за B-21, поэтому даже клиентская догрузка текста в оверлей чтения не сработает, пока бэкенд не исправлен.
+
 ---
 
 ### B-05. `/admin` доступен обычному пользователю
@@ -206,13 +209,13 @@ Uncaught Error: Class "App\Controllers\Api\Publications\HttpException" not found
 
 **Где:** `config/endpoints.php` (только `POST /api/users/{userId}/block`), `app/Repositories/Users/UsersRepository.php:129-135`, `app/Extensions/ScriptBuilders/Users/UsersScriptDirector.php` (`addUserShortSelectTemp`).
 
-**Симптом:** в `/admin/users` кнопка **Block** теперь вызывает `POST /api/users/{userId}/block` и реально ставит `users.is_blocked = true`. Но:
+**Симптом:** в `/admin/users` кнопка **Block** вызывает `POST /api/users/{userId}/block`, ставит `users.is_blocked = true`; после перезагрузки админ-список уже показывает `Blocked` (проверено в браузере 07.11.2026). Но:
 
 - роута разблокировки (`/unblock` или toggle) нет — снять блокировку из UI невозможно;
-- `GET /api/users` не выбирает `users.is_blocked`, поэтому после перезагрузки страницы бейдж `Blocked` не отображается и кнопка Block снова активна;
-- блокировка не отзывает активные сессии пользователя.
+- блокировка не отзывает активные сессии пользователя;
+- публичный `GET /api/users` не выбирает `users.is_blocked` (админ-страница использует отдельный query, где статус есть).
 
-**Что сделать:** добавить `DELETE /api/users/{userId}/block` (или `POST /unblock`) с проверкой `ManagePeopleSystemOperation`; включить `is_blocked` в read/list-модель пользователя; инвалидировать сессии/кеш контекста при блокировке.
+**Что сделать:** добавить `DELETE /api/users/{userId}/block` (или `POST /unblock`) с проверкой `ManagePeopleSystemOperation`; включить `is_blocked` в общую read/list-модель пользователя; инвалидировать сессии/кеш контекста при блокировке.
 
 ---
 
@@ -268,6 +271,15 @@ $this->mailVerify->startVerification($userId, $form->email);
 
 `$userId` и `$form` не определены → `Undefined variable`, письмо не отправляется, регистрация завершается fatal-ошибкой (либо письмо не уходит даже при рабочем SMTP).
 
+**Проверено в браузере (07.11.2026):** POST `/auth/register` создаёт пользователя, затем отдаёт `200 text/html` с:
+
+```text
+Warning: Undefined variable $userId ... line 60
+Warning: Undefined variable $form ... line 60
+Fatal error: Uncaught TypeError: EmailVerificationService::startVerification():
+Argument #1 ($userId) must be of type int, null given
+```
+
 **Что сделать:**
 
 ```php
@@ -277,6 +289,25 @@ $this->mailVerify->startVerification($userId, $form->email);
 ```
 
 При `MailException` рендерить `auth/verify-result` (success=false, token для resend) вместо общего `message`, чтобы работал `POST /api/mail/resend`.
+
+---
+
+### B-21. Контент статьи падает на наследовании от final-класса
+
+**Где:** `app/Models/Publications/VersionedContentData.php:7`, `app/Models/Publications/ContentData.php:9`.
+
+**Симптом:** `GET /api/articles/38/content` возвращает HTTP 200 и HTML с fatal:
+
+```text
+Class App\Models\Publications\VersionedContentData cannot extend final class
+App\Models\Publications\ContentData
+```
+
+Из-за этого не работает ни чтение, ни сохранение контента статьи; оверлей «Читать статью» не может догрузить текст.
+
+**Причина:** `ContentData` объявлен `final readonly`, а `VersionedContentData` пытается его наследовать. Кроме того, дочерний конструктор не вызывает родительский, поэтому одно снятие `final` приведёт к неинициализированным private-свойствам в `toArray()`.
+
+**Что сделать:** либо убрать наследование (composition: `VersionedContentData` хранит `ContentData` + `version`), либо сделать `ContentData` не-final и вызывать `parent::__construct(...)`; добавить тест `GET /api/articles/{id}/content` и `PUT` с `If-Match`.
 
 ---
 
@@ -312,7 +343,7 @@ $this->mailVerify->startVerification($userId, $form->email);
 
 `AdminPanelController::dashboard()` (`app/Controllers/Additional/AdminPanelController.php:49-57`) не передаёт `$allowed` и не отдаёт счётчики разделов. Роут `/admin` теперь закрыт `AnySystemOperation`, но карточки внутри страницы бэкенд не фильтрует.
 
-**Текущее состояние фронта:** счётчики убраны (вместо выдуманных «—»), заглушка «Stub data» удалена, карточки скрываются на клиенте через `GET /api/system/rules` и `permissions.js` (`system.managePeople`, `system.manageAdditionals`, `system.manageRoles`, `publication.control`, `post.control`).
+**Текущее состояние фронта:** счётчики убраны (вместо выдуманных «—»), заглушка «Stub data» удалена, карточки скрываются на клиенте через `GET /api/system/rules` и `permissions.js` (`system.managePeople`, `system.manageAdditionals`, `system.manageRoles`, `publication.control`, `post.control`). Проверено в браузере 07.11.2026: при одном `manageAdditionals` видны только Genres/Categories/Types, остальные карточки скрыты; запрос `/api/system/rules` → 200.
 
 **Что сделать:** передавать с картой прав `$allowed` и реальные счётчики (`COUNT(*)` по разделам) в SSR, чтобы дашборд не зависел от клиентского запроса прав.
 
