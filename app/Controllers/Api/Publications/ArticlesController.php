@@ -19,6 +19,7 @@ use App\Attributes\Inject;
 use App\Controllers\Controller;
 
 use App\Http\HttpContext;
+use App\Http\HttpException;
 use App\Exceptions\ValidationException;
 use App\Http\UrlGenerator;
 

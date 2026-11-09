@@ -101,7 +101,7 @@ return function(Router $router)
 
 
     // Admin
-    $router->get('/admin', [App\Controllers\Additional\AdminPanelController::class, 'dashboard'], 'admin', AuthPolicy::Admin);
+    $router->get('/admin', [App\Controllers\Additional\AdminPanelController::class, 'dashboard'], 'admin', AnySystemOperation::class);
     $router->get('/admin/articles', [App\Controllers\Publications\ArticlesController::class, 'adminList'], 'admin.articles', ControlPublicationOperation::class);
     $router->get('/admin/books', [App\Controllers\Publications\BooksController::class, 'adminList'], 'admin.books', ControlPublicationOperation::class);
     $router->get('/admin/categories', [App\Controllers\Additional\AdminPanelController::class, 'categories'], 'admin.categories', ManageAdditionalsSystemOperation::class);

@@ -256,7 +256,7 @@ final class BooksRepository extends PublicationsRepository
         }
 
         if ($pagesCount !== false) {
-            $sets[] = 'pagesCount = :pagesCount';
+            $sets[] = 'pages = :pagesCount';
             $params[':pagesCount'] = ScriptParam::asInt($pagesCount);
         }
 

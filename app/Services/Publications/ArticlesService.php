@@ -25,6 +25,7 @@ use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
 use App\Models\Publications\ContentData;
+use App\Models\Publications\VersionedContentData;
 use App\Models\Publications\ArticlePatchModel;
 use App\Forms\Publications\ArticlePatchForm;
 use App\Forms\Publications\ArticleContentForm;
@@ -120,7 +121,7 @@ final class ArticlesService extends PublicationsService
         );
     }
 
-    public function getContent(int $articleId) : ContentData 
+    public function getContent(int $articleId) : VersionedContentData 
     {
         $data = $this->repository->getContent($articleId);
         if($data === NULL) throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
@@ -179,7 +180,11 @@ final class ArticlesService extends PublicationsService
 
         try{
             $newVersion = $this->repository->updateContent($articleId, $contentData, $expectedVersion);
-            if ($newVersion === NULL) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+            if ($newVersion === NULL){ 
+                if ($this->repository->exists($articleId))
+                    throw new ConflictException($this->translator->t('errors.common.version_invalid'), ErrorCodes::INVALID_VERSION);
+                else throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+            }
             return $newVersion;
         }
         catch(\PDOException $e){

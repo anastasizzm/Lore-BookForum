@@ -16,6 +16,7 @@ use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
 use App\Models\Publications\ArticlePatchModel;
 use App\Models\Publications\ContentData;
+use App\Models\Publications\VersionedContentData;
 use App\Models\Criterias\Publications\ArticlesCriteria;
 use App\Models\Filters\Publications\PublicationsFilters;
 use App\Models\Filters\Publications\ArticlesFilters;
@@ -36,6 +37,13 @@ final class ArticlesRepository extends PublicationsRepository
     }
 
     protected function getCheckTable() : string { return "articles"; }
+
+    public function exists(int $articleId) : bool 
+    {
+        $script = $this->director->getExistsScript($articleId);
+        $stmt = $this->executeScript($script);
+        return $stmt->fetchColumn() !== false;
+    }
 
     public function getList(ArticlesCriteria $criteria, array $includeObjects = []) : array
     {
@@ -93,14 +101,15 @@ final class ArticlesRepository extends PublicationsRepository
         return $row === false ? null : Article::fromRow($row);
     }
 
-    public function getContent(int $articleId) : ?ContentData 
+    public function getContent(int $articleId) : ?VersionedContentData 
     {
         $sql = "SELECT 
                     content,
                     book_id,
                     page_start,
                     page_end,
-                    content_mode
+                    content_mode,
+                    version
                 FROM articles
                 WHERE publication_id = :id
                 LIMIT 1";
@@ -108,7 +117,7 @@ final class ArticlesRepository extends PublicationsRepository
         $stmt = $this->execute($sql, [':id' => ScriptParam::asInt($articleId)]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row === false ? NULL : ContentData::fromRow($row);
+        return $row === false ? NULL : VersionedContentData::fromRow($row);
     }
 
     public function validatePublish(int $articleId) : array { return []; }

@@ -8,6 +8,7 @@ use App\Models\Users\UserShortData;
 use App\Models\Publications\Publication;
 use App\Models\Publications\PublicationShort;
 use App\Models\Publications\BookData;
+use App\Models\Enums\PublicationStatus;
 use App\Models\Publications\ContentData;
 use App\Models\Enums\ArticleContentMode;
 use App\Models\BasicModel;
@@ -22,6 +23,7 @@ readonly class Article extends PublicationExtended
         ?Uuid $iconId,
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $deletedAt,
+        PublicationStatus $status,
         int $creatorId,
         int $genreId,
         int $ownerId,
@@ -46,6 +48,7 @@ readonly class Article extends PublicationExtended
             $createdAt,
             $deletedAt,
             $iconId, 
+            $status,
             $creatorId,
             $genreId,
             $ownerId,
@@ -70,6 +73,7 @@ readonly class Article extends PublicationExtended
             id: $parent->id,
             title: $parent->title,
             iconId: $parent->iconId,
+            status: $parent->status,
             createdAt: $parent->createdAt,
             deletedAt: $parent->deletedAt,
             description: $parent->description,
