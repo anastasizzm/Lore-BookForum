@@ -7,6 +7,13 @@ $tr = fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 $items = $items ?? [];
 $meta  = $meta  ?? [];
 
+// Controllers return WithContext<Publication, PublicationContext>: the card
+// partial expects the publication itself, so unwrap it first (same as Saved).
+$items = array_map(
+    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
+    $items
+);
+
 $type       = $meta['type'] ?? null;
 $isArticles = $type === 'article';
 

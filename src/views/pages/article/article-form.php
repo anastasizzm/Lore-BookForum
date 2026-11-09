@@ -10,6 +10,8 @@ $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
 
 $withLang = static function (string $path) use ($langQuery): string {
     if ($langQuery === null || $langQuery === '') return $path;
+    // $view->url() already appends ?lang=; never add it twice.
+    if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
 
@@ -62,6 +64,9 @@ $form   = $form   ?? [];
 $errors = $errors ?? [];
 
 $articleId = (int) ($articleId ?? ($form['id'] ?? 0));
+// ?id=N — edit-режим на роуте создания (веб-роута /articles/{id}/edit нет).
+$queryArticleId = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
+if ($articleId <= 0 && $queryArticleId > 0) $articleId = $queryArticleId;
 $isEdit    = $articleId > 0;
 $bookTitle = (string) ($bookTitle ?? '');
 $coverUrl  = (string) ($coverUrl ?? '');
@@ -100,7 +105,10 @@ $errOf = static function (string $key) use ($err, $aliases): string {
 $errorBox = static function (string $key) use ($view, $errOf): string {
     $msg = $errOf($key);
     return '<p class="form-field__error" data-error-for="' . $view->e($key) . '" aria-live="polite">'
-        . ($msg !== '' ? '<span class="field-error-icon" title="' . $view->e($msg) . '">!</span>' : '')
+        . ($msg !== ''
+            ? '<span class="field-error-icon" title="' . $view->e($msg) . '">!</span>'
+              . '<span class="field-error-text">' . $view->e($msg) . '</span>'
+            : '')
         . '</p>';
 };
 
@@ -193,28 +201,15 @@ $richEditor = static function (
 
 <?php
 /*
- * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ * ПРАВКА СТАТЬИ (новых роутов НЕ добавляем).
  *
- * GET /articles/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
- * (article-edit-meta.php / article-edit-content.php) и тут же
- * прекращает рендер этой формы. Пункты меню «три точки» на странице
- * статьи (details-menu.php) ведут именно сюда.
- *
- * Контроллер /articles/new $articleId не передаёт, поэтому id берём
- * из $_GET (в create-режиме его нет — диспетчеризация не срабатывает).
- *
- * Страницы правки — пока только разметка: полей префилла и отправки
- * в них нет, article-form.js не подключается (см. шапку
- * article-edit-*.php).
+ * Раньше ?part=meta|content подключал отдельные article-edit-*.php, которые
+ * были только разметкой без префилла и сохранения. Теперь оба пункта меню
+ * «три точки» ведут на эту же полную форму (#step-1 / #step-2): edit-режим
+ * уже умеет сохранение через PATCH + PUT content, а article-form.js при
+ * открытии подтягивает данные статьи со страницы /articles/{id}.
+ * Старый query-параметр part игнорируется.
  */
-$editPart        = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
-$queryArticleId  = isset($_GET['id']) && is_scalar($_GET['id']) ? (int) $_GET['id'] : 0;
-if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
-    $articleId = $queryArticleId;
-    $isEdit    = true;
-    require __DIR__ . '/article-edit-' . $editPart . '.php';
-    return;
-}
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.articleform.title_edit' : 'common.articleform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
@@ -487,23 +482,27 @@ if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
         <h3 class="article-form__section-title"><?= $tr('common.articleform.section_text') ?></h3>
 
         <div class="form-field">
-          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?></label>
+          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAnnotation"
                     name="annotation"
                     rows="6"
                     maxlength="5000"
+                    required
+                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>
 
         <div class="form-field">
-          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?></label>
+          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAuthorNote"
                     name="author_note"
                     rows="4"
                     maxlength="2000"
+                    required
+                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.author_note_ph') ?>"><?= $view->e($val('author_note')) ?></textarea>
           <?= $errorBox('author_note') ?>
         </div>
@@ -533,7 +532,7 @@ if ($queryArticleId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
                     data-requires-kind="article"
                     <?= $isEdit ? 'data-requires-owner="1"' : '' ?>
                     hidden>
-              <?= $tr('common.articleform.create_draft') ?>
+              <?= $tr($isEdit ? 'common.articleform.save' : 'common.articleform.create_draft') ?>
             </button>
             
             <button type="submit" class="btn btn--primary" name="status" value="published"

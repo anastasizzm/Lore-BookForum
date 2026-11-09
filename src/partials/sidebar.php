@@ -8,14 +8,14 @@
       ? $_GET['lang']
       : (method_exists($view, 'locale') ? $view->locale() : null);
 
-  $url = static function (string $name, array $params = []) use ($view, $langQuery): string {
-      $base = $view->url($name, $params);
-      if ($langQuery === null || $langQuery === '') return $base;
-      return $base . (str_contains($base, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
+  /** Язык уже добавляет RouteUrlGenerator — не дублируем. */
+  $url = static function (string $name, array $params = []) use ($view): string {
+      return rtrim($view->url($name, $params), '&');
   };
 
   $urlPath = static function (string $path) use ($langQuery): string {
       if ($langQuery === null || $langQuery === '') return $path;
+      if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
       return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
   };
 
@@ -39,10 +39,7 @@
       $profileBase = $view->url('login');
   }
 
-  $profileUrl = $profileBase
-      . ($langQuery !== null && $langQuery !== ''
-          ? (str_contains($profileBase, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery)
-          : '');
+  $profileUrl = $urlPath($profileBase);
 
   $avatarPresets = require __DIR__ . '/avatar-presets.php';
   $meAvatar      = is_object($me ?? null) ? (string) ($me->avatar ?? '') : '';
@@ -202,7 +199,7 @@
 
             <div class="settings-menu__divider" role="separator"></div>
 
-            <a href="<?= $view->url('password.email') ?>" class="settings-menu__item">
+            <a href="<?= $view->e(rtrim($view->url('password.email'), '&')) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -215,7 +212,7 @@
 
             <div class="settings-menu__divider" role="separator"></div>
 
-            <form method="POST" action="<?= $view->url('logout') ?>" class="settings-menu__form">
+            <form method="POST" action="<?= $view->e(rtrim($view->url('logout'), '&')) ?>" class="settings-menu__form">
                 <?= $view->csrfField() ?>
                 <button type="submit"
                         class="settings-menu__item settings-menu__item--danger"

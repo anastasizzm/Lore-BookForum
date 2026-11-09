@@ -103,11 +103,17 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   }
 
   async function fetchPage(baseUrl, page) {
-    const cacheKey = `${baseUrl}?page=${page}`;
+    // baseUrl может уже содержать ?lang= (он строится из location) —
+    // выставляем параметры через URL, чтобы не получить ?lang=...&&lang=...
+    const lang = document.documentElement.lang || (window.LoreI18n ? window.LoreI18n.locale() : 'en');
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('lang', lang);
+    url.searchParams.set('page', String(page));
+    const requestUrl = url.pathname + url.search;
+    const cacheKey = requestUrl;
     if (cache.has(cacheKey)) return cache.get(cacheKey);
 
-    const lang = document.documentElement.lang || (window.LoreI18n ? window.LoreI18n.locale() : 'en');
-    const res = await fetch(`${baseUrl}?lang=${lang}&page=${page}`, {
+    const res = await fetch(requestUrl, {
       headers: { 'Accept': 'application/json' },
       credentials: 'same-origin',
     });
@@ -390,12 +396,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     '<path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>' +
     '</svg>';
 
-  function coverOf(item, base) {
+  function coverOf(item) {
     let cover = String(item.cover || item.coverUrl || item.iconUrl || '');
     if (!cover) {
       const icon = item.iconId;
       const uuid = icon && typeof icon === 'object' ? (icon.uuid || icon.value || '') : (icon ? String(icon) : '');
-      if (uuid) cover = base + uuid;
+      if (uuid) cover = '/api/files/' + encodeURIComponent(uuid) + '/preview';
     }
     return cover;
   }
@@ -412,7 +418,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const kind  = isArt ? 'article' : 'book';
     const id    = Number(item.id) || 0;
     const title = String(item.title ?? '');
-    const cover = coverOf(item, '/uploads/');
+    const cover = coverOf(item);
 
     const creator = item.creator || item.author;
     let authorName = '';
@@ -462,7 +468,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const id    = Number(item.id) || 0;
     const base  = ctx.isArticles ? '/articles/' : '/books/';
     const href  = base + id + (ctx.lang ? '?lang=' + encodeURIComponent(ctx.lang) : '');
-    const cover = coverOf(item, '/uploads/');
+    const cover = coverOf(item);
     return '<article class="card-base card-book">' +
       '<a class="card-book__link" href="' + escapeHtml(href) + '">' +
         '<div class="card-book__cover ' + (cover ? '' : 'cover--empty') + '">' +
@@ -479,7 +485,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   function renderDraftCard(b, ctx) {
     const id    = Number(b.id) || 0;
     const type  = b.__kind || ((b.type === 'article' || b.articleId) ? 'article' : 'book');
-    const cover = coverOf(b, '/uploads/covers/');
+    const cover = coverOf(b);
     const date  = b.updatedAt || b.createdAt || '';
     const href  = id > 0 ? '/' + (type === 'article' ? 'articles' : 'books') + '/' + id : '#';
     return '<article class="card-base card-book card-draft" data-draft-id="' + id + '" data-draft-type="' + type + '">' +

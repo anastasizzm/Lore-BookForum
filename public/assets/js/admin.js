@@ -52,6 +52,8 @@
     var id   = btn.getAttribute('data-user-id') || '';
     var name = btn.getAttribute('data-user-name') || '';
 
+    if (!id) return;
+
     confirmModal({
       title:       t('admin.block_title'),
       text:        t('admin.block_text'),
@@ -59,19 +61,54 @@
       danger:      true,
     }).then(function (confirmed) {
       if (!confirmed) return;
+      if (btn.disabled || btn.dataset.sending === '1') return;
 
-      console.warn('[admin] User block route is not yet defined in routes.php. Applied locally for user:', id, name);
-
-      var row = btn.closest('tr');
-      var statusCell = row && row.querySelector('[data-status-cell]');
-      if (statusCell) {
-        statusCell.innerHTML =
-          '<span class="admin-badge admin-badge--danger">' +
-          t('admin.status_blocked') +
-          '</span>';
-      }
+      btn.dataset.sending = '1';
       btn.disabled = true;
-      notify(t('admin.block_success'), 'success');
+
+      var run = (window.LoreCsrf && LoreCsrf.fetch) ? LoreCsrf.fetch : fetch;
+      run('/api/users/' + encodeURIComponent(id) + '/block', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).then(function (res) {
+        delete btn.dataset.sending;
+        if (!res.ok) {
+          btn.disabled = false;
+          var fallback = t('errors.common.request_failed', { status: res.status });
+          var message = (window.Messages && Messages.describe)
+            ? Messages.describe(res.status, null, '', fallback)
+            : fallback;
+          notify(message, 'error');
+          return;
+        }
+
+        var row = btn.closest('tr');
+        var statusCell = row && row.querySelector('[data-status-cell]');
+        if (statusCell) {
+          statusCell.innerHTML =
+            '<span class="admin-badge admin-badge--danger">' +
+            t('admin.status_blocked') +
+            '</span>';
+        }
+
+        // Unblock-роута пока нет: у заблокированного кнопку не оставляем.
+        if (btn.parentNode) btn.remove();
+        if (row) row.setAttribute('data-user-blocked', '1');
+        if (typeof usersList !== 'undefined') {
+          usersList.items.forEach(function (u) {
+            if (u.id === Number(id)) u.blocked = true;
+          });
+        }
+        notify(t('admin.block_success'), 'success');
+      }).catch(function () {
+        delete btn.dataset.sending;
+        btn.disabled = false;
+        notify(t('errors.common.network_error'), 'error');
+      });
     });
   }
 
@@ -3891,7 +3928,8 @@
       id: id,
       username: String(u.username || u.name || u.login || u.nickname || ''),
       email: String(u.email || ''),
-      blocked: u.blocked === true || u.isBlocked === true || /block|ban/.test(statusText),
+      blocked: u.blocked === true || u.isBlocked === true || u.is_blocked === true ||
+        Number(u.blocked || u.isBlocked || u.is_blocked) === 1 || /block|ban/.test(statusText),
       roles: roles
     };
   }
@@ -3906,8 +3944,13 @@
       ? '<span class="admin-badge admin-badge--danger">' + esc(t('admin.status_blocked')) + '</span>'
       : '<span class="admin-badge admin-badge--success">' + esc(t('admin.status_active')) + '</span>';
     var rolesLabel = tx('admin.user_roles_toggle', 'Roles');
+    var blockBtn = u.blocked ? '' :
+      '<button type="button" class="btn btn--secondary" data-admin-block' +
+        ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '">' +
+        esc(t('admin.action_block')) +
+      '</button>';
 
-    return '<tr data-user-id="' + id + '">' +
+    return '<tr data-user-id="' + id + '"' + (u.blocked ? ' data-user-blocked="1"' : '') + '>' +
         '<td class="admin-table__id" data-col="id">' + id + '</td>' +
         '<td data-col="name">' + esc(u.username) + '</td>' +
         '<td data-col="email"><span class="admin-table__clip" title="' + esc(u.email) + '">' + esc(u.email) + '</span></td>' +
@@ -3915,10 +3958,7 @@
         '<td data-col="status" data-status-cell>' + statusCell + '</td>' +
         '<td data-col="actions"><div class="admin-actions">' +
           '<a class="btn btn--secondary" href="/users/' + id + '">' + esc(t('admin.action_view')) + '</a>' +
-          '<button type="button" class="btn btn--secondary" data-admin-block' +
-            ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (u.blocked ? ' disabled' : '') + '>' +
-            esc(t('admin.action_block')) +
-          '</button>' +
+          blockBtn +
         '</div></td>' +
         '<td class="admin-table__expand" data-col="expand">' +
           '<button type="button" class="admin-expand" data-user-expand' +

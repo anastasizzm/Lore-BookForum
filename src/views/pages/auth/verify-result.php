@@ -8,6 +8,8 @@ $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
 
 $withLang = static function (string $path) use ($langQuery): string {
     if ($langQuery === null || $langQuery === '') return $path;
+    // $view->url() already appends ?lang=; never add it twice.
+    if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
 ?>
@@ -46,10 +48,12 @@ $withLang = static function (string $path) use ($langQuery): string {
         ? rawurldecode($match[1])
         : '';
     ?>
+      <!-- Публичный resend: POST /api/mail/resend (api.resendmail) принимает
+           token из ссылки письма, поэтому страница работает и без логина. -->
       <form class="login-message__form"
             data-verify-resend
             method="post"
-            action="<?= $view->e($withLang($view->url('api.sendmail'))) ?>">
+            action="<?= $view->e($withLang($view->url('api.resendmail'))) ?>">
         <?= $view->csrfField() ?>
         <input type="hidden" name="token" value="<?= $view->e($verifyToken) ?>">
 

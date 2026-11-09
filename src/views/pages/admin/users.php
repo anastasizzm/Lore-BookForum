@@ -10,8 +10,9 @@
  * Внутри строки — вложенный список ролей (раздел USER ROLES):
  * GET/POST /api/system/users/{id}/roles.
  *
- * Кнопка Block открывает ConfirmModal.confirm(); роута блокировки в
- * endpoints.php пока нет, поэтому блок применяется локально.
+ * Кнопка Block открывает ConfirmModal.confirm() и вызывает
+ * POST /api/users/{id}/block. Роута разблокировки пока нет, поэтому у
+ * заблокированного пользователя кнопка не рисуется.
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
  * .admin-badge, .admin-actions, .admin-user-roles).

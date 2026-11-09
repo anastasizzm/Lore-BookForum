@@ -363,7 +363,10 @@
     var page = 1;
 
     function next() {
-      return fetch(url + `?lang=${lang}&page=` + page, {
+      const u = new URL(url, window.location.origin);
+      u.searchParams.set('lang', lang);
+      u.searchParams.set('page', String(page));
+      return fetch(u.pathname + u.search, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       }).then(function (res) {
@@ -1351,7 +1354,10 @@
     var target = invalidTarget(name);
     var box = errorEl(name);
     if (target) target.classList.add('form-field__input--invalid');
-    if (box) box.innerHTML = '<span class="field-error-icon" title="' + escapeHtml(message) + '">!</span>';
+    if (box) {
+      box.innerHTML = '<span class="field-error-icon" title="' + escapeHtml(message) + '">!</span>' +
+        '<span class="field-error-text">' + escapeHtml(message) + '</span>';
+    }
   }
 
   function clearErrorFor(name) {
@@ -1779,6 +1785,139 @@
     markDirty();
   }
 
+  /**
+   * Правка существующей статьи: данных в контроллере нет, поэтому берём
+   * JSON-блок [data-article-payload] со страницы /articles/{id}, а текст или
+   * отрывок — из GET /api/articles/{id}/content. До этой функции форма в
+   * edit-режиме была пустой, хотя PATCH/PUT уже работали.
+   */
+  function hydrateEdit() {
+    if (!state.articleId) return Promise.resolve();
+
+    function setSelect(name, value) {
+      var el = fieldByName(name);
+      if (!el || !value) return;
+      value = String(value);
+      el.setAttribute('data-selected', value);
+      if (!$('option[value="' + value + '"]', el)) {
+        var opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        el.appendChild(opt);
+      }
+      el.value = value;
+    }
+
+    function applyPayload(data) {
+      if (!data || typeof data !== 'object') return;
+      ['title', 'doi', 'annotation', 'author_note'].forEach(function (name) {
+        var el = fieldByName(name);
+        if (el && data[name === 'annotation' ? 'description'
+                      : name === 'author_note' ? 'authorNotes'
+                      : name] != null) {
+          el.value = String(data[name === 'annotation' ? 'description'
+                      : name === 'author_note' ? 'authorNotes'
+                      : name]);
+        }
+      });
+
+      setSelect('genre', data.genreId);
+      setSelect('type', data.typeId);
+
+      var mode = data.mode === 'excerpt' ? 'excerpt' : 'standalone';
+      var radio = $('[name="mode"][value="' + mode + '"]');
+      if (radio) radio.checked = true;
+      syncMode();
+
+      if (data.bookId) {
+        state.book = { id: data.bookId, title: data.bookTitle || '' };
+        var bookField = fieldByName('book');
+        if (bookField) bookField.value = String(data.bookId);
+        var chip = $('[data-book-selected]');
+        var chipTitle = $('[data-book-selected-title]');
+        if (chip) chip.hidden = false;
+        if (chipTitle) chipTitle.textContent = data.bookTitle || String(data.bookId);
+        var search = $('[data-book-search]');
+        var openBtn = $('[data-open-picker]');
+        if (search) search.hidden = true;
+        if (openBtn) openBtn.disabled = false;
+      }
+
+      if (data.iconId) {
+        var preview = $('[data-cover-preview]');
+        var placeholder = $('[data-cover-placeholder]');
+        var removeBtn = $('[data-cover-remove]');
+        if (preview) {
+          preview.src = '/api/files/' + encodeURIComponent(data.iconId) + '/preview';
+          preview.hidden = false;
+        }
+        if (placeholder) placeholder.hidden = true;
+        if (removeBtn) removeBtn.hidden = false;
+      }
+    }
+
+    function applyContent(data) {
+      var c = data && data.data ? data.data : data;
+      if (!c || typeof c !== 'object') return;
+
+      if (typeof c.content === 'string') {
+        if (editor) editor.setHtml(c.content);
+        syncMode();
+      }
+
+      var bd = c.bookData;
+      if (bd && bd.bookId) {
+        state.book = { id: bd.bookId, title: (state.book && state.book.title) || '' };
+        var bookField = fieldByName('book');
+        if (bookField) bookField.value = String(bd.bookId);
+        state.start = {
+          page: parseInt(bd.pageStart, 10) || 0,
+          offset: parseInt(bd.startOffset, 10) || 0,
+          line: parseInt(bd.startLine, 10) || 0,
+          char: parseInt(bd.startChar, 10) || 0,
+          quote: bd.startQuote || '',
+        };
+        state.end = {
+          page: parseInt(bd.pageEnd, 10) || 0,
+          offset: parseInt(bd.endOffset, 10) || 0,
+          line: parseInt(bd.endLine, 10) || 0,
+          char: parseInt(bd.endChar, 10) || 0,
+          quote: bd.endQuote || '',
+        };
+        writeAnchor('start');
+        writeAnchor('end');
+        renderSummary();
+      }
+    }
+
+    return csrfFetch('/articles/' + state.articleId, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'text/html' },
+    }).then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var node = doc.querySelector('[data-article-payload]');
+      if (!node || !node.textContent) throw new Error('article payload not found');
+      applyPayload(JSON.parse(node.textContent));
+
+      return csrfFetch(API.content(state.articleId), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      }).then(function (response) {
+        if (!response.ok) return null;
+        return response.json();
+      }).then(applyContent);
+    }).then(function () {
+      state.dirty = false;
+    }).catch(function (err) {
+      console.error('[article-form] edit hydrate failed', err);
+      notify(t('errors.common.list_load_failed'));
+    });
+  }
+
   function initRestore() {
     var box = $('[data-restore]');
     if (!box) return;
@@ -1889,8 +2028,6 @@
     // чтобы первый PUT content ушёл с корректным If-Match (см. syncVersion).
     syncVersion();
 
-    $$('[data-dynamic-select]').forEach(populateSelect);
-
     editor = initEditor();
     coverValidator = initCover();
 
@@ -1904,6 +2041,13 @@
     initBookPicker();
     initFragmentPicker();
     renderSummary();
+
+    // Справочники наполняем после префилла: selected-значения приходят из
+    // [data-article-payload] и должны попасть в уже существующие option.
+    var ready = state.articleId ? hydrateEdit() : Promise.resolve();
+    ready.then(function () {
+      $$('[data-dynamic-select]').forEach(populateSelect);
+    });
 
     ['title', 'doi', 'annotation', 'author_note'].forEach(function (name) {
       var el = fieldByName(name);

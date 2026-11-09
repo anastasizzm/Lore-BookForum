@@ -11,6 +11,8 @@ $langQuery = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
 
 $withLang = static function (string $path) use ($langQuery): string {
     if ($langQuery === null || $langQuery === '') return $path;
+    // $view->url() already appends ?lang=; never add it twice.
+    if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
 
@@ -271,7 +273,10 @@ $errOf = static function (string $key) use ($err): string {
 $errorBox = static function (string $key) use ($view, $errOf): string {
     $msg = $errOf($key);
     return '<p class="form-field__error" data-error-for="' . $view->e($key) . '" aria-live="polite">'
-        . ($msg !== '' ? '<span class="field-error-icon" title="' . $view->e($msg) . '">!</span>' : '')
+        . ($msg !== ''
+            ? '<span class="field-error-icon" title="' . $view->e($msg) . '">!</span>'
+              . '<span class="field-error-text">' . $view->e($msg) . '</span>'
+            : '')
         . '</p>';
 };
 
@@ -301,21 +306,14 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
 <?php
 /*
- * ДИСПЕТЧЕРИЗАЦИЯ СТРАНИЦ ПРАВКИ (новых роутов НЕ добавляем).
+ * ПРАВКА КНИГИ (новых роутов НЕ добавляем).
  *
- * GET /books/new?id=N&part=meta|content рендерит ОТДЕЛЬНЫЙ файл
- * (book-edit-meta.php / book-edit-content.php) и тут же прекращает
- * рендер этой формы. Пункты меню «три точки» на странице книги
- * (details-menu.php) ведут именно сюда.
- *
- * Страницы правки — пока только разметка: полей префилла и отправки
- * в них нет, book-form.js не подключается (см. шапку book-edit-*.php).
+ * Раньше ?part=meta|content подключал отдельные book-edit-*.php, которые
+ * были только разметкой без префилла и сохранения. Теперь оба пункта меню
+ * «три точки» ведут на эту же полную форму (#step-1 / #step-2): edit-режим
+ * уже умеет префилл из JSON-блоба и сохранение через PATCH. Старый
+ * query-параметр part игнорируется — форма просто откроется целиком.
  */
-$editPart = isset($_GET['part']) && is_string($_GET['part']) ? $_GET['part'] : '';
-if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
-    require __DIR__ . '/book-edit-' . $editPart . '.php';
-    return;
-}
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr($isEdit ? 'common.bookform.title_edit' : 'common.bookform.title') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
@@ -568,12 +566,14 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
         <h3 class="book-form__section-title"><?= $tr('common.bookform.section_content') ?></h3>
 
         <div class="form-field">
-          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?></label>
+          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAnnotation"
                     name="description"
                     rows="6"
                     maxlength="4000"
+                    required
+                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('description', $fromBook('description'))) ?></textarea>
           <?= $errorBox('description') ?>
         </div>
@@ -583,13 +583,14 @@ if ($queryBookId > 0 && ($editPart === 'meta' || $editPart === 'content')) {
              непустые 1..2000) — required + клиентская проверка на пустоту
              и длину (11.2, см. RULES в book-form.js). -->
         <div class="form-field">
-          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
+          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAuthorNotes"
                     name="authorNotes"
                     rows="4"
                     maxlength="2000"
                     required
+                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('authorNotes') ?>
         </div>

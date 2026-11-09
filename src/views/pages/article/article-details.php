@@ -150,8 +150,12 @@ $doi        = $str(is_array($article) ? ($article['doi'] ?? null) : ($article->d
  */
 $contentData = $article->contentData ?? null;
 $bookData    = $contentData?->getBookData();
-$bookId      = (int) ($bookData?->bookId ?? 0);
-$isBookExcerpt = $bookData !== null;
+$contentMode = is_object($article) ? ($article->contentMode ?? null) : null;
+$isBookExcerpt = $bookData !== null
+    || ($contentMode instanceof \App\Models\Enums\ArticleContentMode
+        && $contentMode->value === 'book');
+$bookId    = (int) ($bookData?->bookId ?? (is_object($article) ? ($article->bookId ?? 0) : 0));
+$bookTitle = $str($bookData?->book ?? (is_object($article) ? ($article->book ?? null) : null));
 
 /* ---------- Аннотация / заметка / контент ---------- */
 // В модели поля называются description / authorNotes (не annotation / authorNote).
@@ -161,8 +165,6 @@ $authorNote = (string) ($article->authorNotes ?? '');
 $content    = (string) ($contentData?->getContent() ?? '');
 
 /* ---------- Книга-источник (для отрывка) ---------- */
-
-$bookTitle = $str($bookData?->book ?? null);
 
 $pageStart = $bookData?->pageStart ?? null;
 $pageEnd   = $bookData?->pageEnd   ?? ($pageStart ?? null);
@@ -199,14 +201,46 @@ $meAvatar = (string) ($me->avatar ?? '');
 // data-URI-вектор из component.css, тот же, что в library/saved).
 // iconId читаем и как объект (прод), и как query-массив (тест-роут /pages/test).
 $iconId = is_array($article) ? ($article['iconId'] ?? null) : ($article->iconId ?? null);
+$iconIdStr = '';
 $coverUrl = '';
 if (!empty($iconId)) {
     if ($iconId instanceof \Stringable) {
-        $coverUrl = '/uploads/covers/' . (string) $iconId;
+        $iconIdStr = (string) $iconId;
     } elseif (is_string($iconId)) {
-        $coverUrl = '/uploads/covers/' . $iconId;
+        $iconIdStr = $iconId;
+    }
+    if ($iconIdStr !== '') {
+        // Files are served through the API, not /uploads/ (not exposed by nginx).
+        $coverUrl = '/api/files/' . rawurlencode($iconIdStr) . '/preview';
     }
 }
+
+/* ---------- Данные статьи для формы редактирования ----------
+ * Веб-роута /articles/{id}/edit нет, поэтому полная форма (article-form)
+ * забирает этот JSON со страницы статьи и префиллит поля. Контент/отрывок
+ * форма догружает отдельно из GET /api/articles/{id}/content.
+ */
+$articleMode = ($contentMode instanceof \App\Models\Enums\ArticleContentMode)
+    ? $contentMode->value
+    : ($isBookExcerpt ? 'book' : 'text');
+$articleTypeId = (int) (is_object($article) ? ($article->type->id ?? 0) : 0);
+$articleGenreId = (int) (is_object($article) && method_exists($article, 'getGenreId')
+    ? $article->getGenreId()
+    : 0);
+
+$articlePayload = [
+    'id'          => $articleId,
+    'title'       => (string) ($article->title ?? ''),
+    'description' => $annotation,
+    'authorNotes' => $authorNote,
+    'genreId'     => $articleGenreId,
+    'typeId'      => $articleTypeId,
+    'doi'         => $doi,
+    'iconId'      => $iconIdStr,
+    'mode'        => $articleMode === 'book' ? 'excerpt' : 'standalone',
+    'bookId'      => $bookId,
+    'bookTitle'   => $bookTitle,
+];
 ?>
 <?php $view->extends('main'); ?>
 
@@ -216,6 +250,7 @@ if (!empty($iconId)) {
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-reader.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
@@ -270,14 +305,21 @@ if (!empty($iconId)) {
           </svg>
         </button>
         <?php
-          // P1-6: «Open book» ведёт на страницу книги, а не на «#»
+          // Отрывок из книги читается на странице книги (редирект), а
+          // standalone-статья открывается в оверлее поверх страницы.
           $bookHref = ($isBookExcerpt && $bookId > 0)
               ? '/books/' . $bookId
               : '#annotation';
         ?>
-        <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
-          <?= $isBookExcerpt ? $tr('common.article.open_book') : $tr('common.article.read') ?>
-        </a>
+        <?php if ($isBookExcerpt): ?>
+          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
+            <?= $tr('common.article.open_book') ?>
+          </a>
+        <?php else: ?>
+          <button type="button" class="btn btn--primary btn--pill" data-article-reader-open>
+            <?= $tr('common.article.read') ?>
+          </button>
+        <?php endif; ?>
       </div>
 
       <div class="book-rating">
@@ -410,6 +452,15 @@ if (!empty($iconId)) {
       </div>
     </div>
   </div>
+
+  <!-- Оверлей чтения standalone-статьи: открывается кнопкой «Читать статью».
+       Для отрывка из книги оверлея нет — кнопка ведёт на /books/{id}. -->
+  <?php if (!$isBookExcerpt): ?>
+    <?php $view->include('article-reader', [
+        'title'   => (string) ($article->title ?? ''),
+        'content' => $content,
+    ]); ?>
+  <?php endif; ?>
 
   <!-- Блок комментариев.
        data-me-* нужен book.js: автора своего комментария/ответа он берёт из
@@ -688,9 +739,19 @@ if (!empty($iconId)) {
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <!-- Метаданные статьи для полной формы редактирования:
+       /articles/create?id={id}#step-1|#step-2. article-form.js находит блок
+       через fetch этой страницы и префиллит поля; текст/отрывок — отдельно
+       из GET /api/articles/{id}/content. -->
+  <script type="application/json" data-article-payload><?= json_encode(
+      $articlePayload,
+      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+  ) ?></script>
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
+  <!-- article-reader.js — оверлей чтения standalone-статьи -->
+  <script src="/assets/js/article-reader.js"></script>
   <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->

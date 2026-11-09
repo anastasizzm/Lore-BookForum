@@ -92,6 +92,18 @@
   transform: scale(0.98);
 }
 
+/* Reader is PDF-only: no PDF file → button is visibly unavailable. */
+.book-actions .btn--read.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.book-actions .btn--read.is-disabled:hover,
+.book-actions .btn--read.is-disabled:focus-visible {
+  background: var(--read-btn-bg);
+  border-color: var(--read-btn-bg);
+}
+
 .btn-icon--circle {
   width: 44px;
   height: 44px;

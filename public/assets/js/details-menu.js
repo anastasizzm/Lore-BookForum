@@ -17,7 +17,7 @@
  * ошибку — эффект один: книга не удаляется.
  *
  * Меню ПЛОСКОЕ (без подменю): 4 кнопки правки + Delete + «Пожаловаться».
- * Пункты 1–2 — ссылки на страницы правки (?part=meta|content), пункт 3–4
+ * Пункты 1–2 — ссылки на полную форму правки (#step-1 / #step-2), пункт 3–4
  * (data-roles-open / data-roles-open-users) открывают модуль публикации
  * (window.RightsModal / window.LoreArticlePublish, mode:'roles',
  * screen 1|2, context 'edit').

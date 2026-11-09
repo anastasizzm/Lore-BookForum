@@ -142,7 +142,7 @@
       ? (b.iconId.uuid ?? b.iconId.value ?? '')
       : (b.iconId || '');
     // Нет обложки -> '' (cardHtml нарисует CSS-заглушку .cover--empty)
-    return uuid ? '/uploads/' + uuid : '';
+    return uuid ? '/api/files/' + encodeURIComponent(uuid) + '/preview' : '';
   }
 
   // Перевод с английским запасным текстом (LoreI18n возвращает сам ключ, если его нет)

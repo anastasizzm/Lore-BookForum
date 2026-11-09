@@ -18,8 +18,13 @@
  * TODO(роуты): для «Жалоб» (admin/reports) роута в routes.php пока нет.
  * Когда бэк добавит 'admin.reports', вернуть карточку с 'route' => 'admin.reports'.
  *
- * Проверок прав здесь нет: доступ к каждой странице проверяет политика роута
- * (AuthPolicy::Admin / *Operation), дашборд только даёт ссылки.
+ * ПРАВА: контроллер не передаёт $allowed (BACKEND-FIXES B-17), поэтому
+ * карточки скрываются на клиенте через permissions.js по реальным правилам
+ * GET /api/system/rules. 'requires' — ключ из public/assets/js/permissions.js.
+ * Если правила не загрузились, карточка остаётся скрытой (fail-closed).
+ *
+ * СЧЁТЧИКИ: API админки их не отдаёт (BACKEND-FIXES B-17), поэтому цифры
+ * не показываем вовсе — вместо выдуманных «—».
  *
  * Стили — public/assets/css/admin.css (.admin-grid, .admin-card).
  */
@@ -27,32 +32,33 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// ---- Разделы дашборда. Счётчики придут с API админки ----
-// 'route' — имя роута (url() генерирует адрес с учётом языка/префикса);
-// 'href'  — запасной адрес, пока роута нет.
+// ---- Разделы дашборда. Счётчики API не отдаёт — цифры не рисуем. ----
+// 'route'    — имя роута (url() генерирует адрес с учётом языка/префикса);
+// 'requires' — ключ permissions.js, по которому карточку показывать;
+// 'href'     — запасной адрес, пока роута нет.
 $cards = [
-    ['route' => 'admin.users',      'title' => $tr('common.admin.card_users'),      'hint' => $tr('common.admin.card_users_hint'),      'count' => '—'],
-    ['route' => 'admin.books',      'title' => $tr('common.admin.card_books'),      'hint' => $tr('common.admin.card_books_hint'),      'count' => '—'],
-    ['route' => 'admin.articles',   'title' => $tr('common.admin.card_articles'),   'hint' => $tr('common.admin.card_articles_hint'),   'count' => '—'],
+    ['route' => 'admin.users',      'requires' => 'system.managePeople',      'title' => $tr('common.admin.card_users'),      'hint' => $tr('common.admin.card_users_hint')],
+    ['route' => 'admin.books',      'requires' => 'publication.control',      'title' => $tr('common.admin.card_books'),      'hint' => $tr('common.admin.card_books_hint')],
+    ['route' => 'admin.articles',   'requires' => 'publication.control',      'title' => $tr('common.admin.card_articles'),   'hint' => $tr('common.admin.card_articles_hint')],
     // «Комментарии» в админке — это посты: роут admin.posts
-    ['route' => 'admin.posts',      'title' => $tr('common.admin.card_comments'),   'hint' => $tr('common.admin.card_comments_hint'),   'count' => '—'],
+    ['route' => 'admin.posts',      'requires' => 'post.control',             'title' => $tr('common.admin.card_comments'),   'hint' => $tr('common.admin.card_comments_hint')],
     // Справочники (Genres / Categories / Types)
-    ['route' => 'admin.genres',     'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint'),     'count' => '—'],
-    ['route' => 'admin.categories', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint'), 'count' => '—'],
-    ['route' => 'admin.types',      'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint'),      'count' => '—'],
-    // «Жалобы» скрыты, пока нет раздела: вернуть карточку admin.reports, когда появится роут
+    ['route' => 'admin.genres',     'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint')],
+    ['route' => 'admin.categories', 'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint')],
+    ['route' => 'admin.types',      'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint')],
+    // «Жалобы» скрыты, пока нет раздела и API: вернуть карточку admin.reports, когда появится роут
 
     // Системные роли → admin/roles.php
     ['route' => 'admin.roles',
+     'requires' => 'system.manageRoles',
      'title' => $tr('common.admin.roles_title'),          // "Системные роли"
-     'hint'  => $tr('common.admin.roles_subtitle'),       // "Права ролей на всём форуме"
-     'count' => '—'],
+     'hint'  => $tr('common.admin.roles_subtitle')],      // "Права ролей на всём форуме"
 
     // Все роли → admin/all-roles.php
     ['route' => 'admin.all-roles',
+     'requires' => 'system.manageRoles',
      'title' => $tr('common.admin.all_roles_card_title'), // "Все роли"
-     'hint'  => $tr('common.admin.all_roles_card_text'),  // "Названия ролей и их видимость"
-     'count' => '—'],
+     'hint'  => $tr('common.admin.all_roles_card_text')], // "Названия ролей и их видимость"
 ];
 
 // Права: контроллер передаёт $allowed — [имя роута => bool] (AdminPanelController::dashboardAccess).
@@ -86,8 +92,6 @@ $cardHref = static function (array $card) use ($view): string {
     'subtitle' => $view->t('common.admin.dashboard_subtitle'),
 ]); ?>
 
-<p class="admin-note"><?= $tr('common.admin.stub_note') ?></p>
-
 <?php if (!$cards): ?>
   <p class="admin-note"><?= $view->e($view->t('common.admin.dashboard_empty') === 'common.admin.dashboard_empty'
       ? 'No sections are available for your account'
@@ -96,15 +100,27 @@ $cardHref = static function (array $card) use ($view): string {
 
 <div class="admin-grid">
   <?php foreach ($cards as $card): $soon = !empty($card['soon']); ?>
+    <?php
+      $requires     = !empty($card['requires']) ? (string) $card['requires'] : '';
+      $requiresKind = str_starts_with($requires, 'publication.') ? 'book' : '';
+    ?>
     <?php if ($soon): ?>
-      <div class="admin-card admin-card--soon">
+      <div class="admin-card admin-card--soon"
+           data-admin-card
+           <?= $requires !== '' ? 'data-requires="' . $view->e($requires) . '"' : '' ?>
+           <?= $requiresKind !== '' ? 'data-requires-kind="' . $view->e($requiresKind) . '"' : '' ?>
+           hidden>
     <?php else: ?>
-      <a class="admin-card" href="<?= $view->e($cardHref($card)) ?>">
+      <a class="admin-card"
+         data-admin-card
+         href="<?= $view->e($cardHref($card)) ?>"
+         <?= $requires !== '' ? 'data-requires="' . $view->e($requires) . '"' : '' ?>
+         <?= $requiresKind !== '' ? 'data-requires-kind="' . $view->e($requiresKind) . '"' : '' ?>
+         hidden>
     <?php endif; ?>
 
       <div class="admin-card__head">
         <h2 class="admin-card__title"><?= $card['title'] ?></h2>
-        <span class="admin-card__count"><?= $view->e($card['count']) ?></span>
       </div>
       <p class="admin-card__hint"><?= $card['hint'] ?></p>
 
@@ -117,4 +133,14 @@ $cardHref = static function (array $card) use ($view): string {
   <?php endforeach; ?>
 </div>
 
+<p class="admin-note" data-admin-dashboard-empty hidden>
+  <?= $view->e($view->t('common.admin.dashboard_empty') === 'common.admin.dashboard_empty'
+      ? 'No sections are available for your account'
+      : $view->t('common.admin.dashboard_empty')) ?>
+</p>
+
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <script src="<?= $view->asset('js/admin/dashboard.js') ?>"></script>
+<?php $view->endBlock('scripts'); ?>

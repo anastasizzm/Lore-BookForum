@@ -31,7 +31,7 @@
         "privacy": "Privacy Policy",
         "admin": "Admin panel",
         "drafts": "Drafts",
-        "changepass": "Change password"
+        "changepass": "Reset password"
     },
     "language": {
         "label": "Language",
@@ -97,6 +97,8 @@
         "contents_load_failed": "Failed to load the book files",
         "contents_upload_failed": "Failed to attach the file",
         "contents_remove_failed": "Failed to remove the file",
+        "pdf_only": "The built-in reader supports PDF only. Download the book file instead.",
+        "download_file": "Download file",
         "options": "Book options"
     },
     "bookform": {
@@ -130,7 +132,7 @@
         "cover_hint": "JPG, PNG or WebP, up to 5 MB.",
         "cover_preview_alt": "Cover preview",
         "cover_remove": "Remove cover",
-        "file_hint": "PDF, EPUB, MOBI or FB2 — at most one file per format, up to 50 MB per file, at least one file.",
+        "file_hint": "PDF, EPUB, MOBI or FB2 — at most one file per format, up to 100 MB per file, at least one file.",
         "file_remove": "Remove file",
         "select_placeholder": "Choose…",
         "select_loading": "Loading…",
@@ -323,6 +325,7 @@
         "empty": "You have no drafts yet.",
         "empty_hint": "Unfinished books and articles will appear here.",
         "empty_link": "Create a book",
+        "empty_link_article": "Create an article",
         "none_page": "There are no drafts on this page.",
         "pagination": "Drafts pagination",
         "prev": "Previous",
@@ -802,7 +805,7 @@
         "dict_saved": "Saved.",
         "dict_deleted": "The entry was deleted.",
         "dict_delete_title": "Delete entry?",
-        "back_to_dashboard": "Back to dasboard",
+        "back_to_dashboard": "Back to dashboard",
         "dict_delete_text": "The entry will be removed permanently."
     },
     "help": {

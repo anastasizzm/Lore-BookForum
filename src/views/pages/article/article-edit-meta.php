@@ -29,7 +29,7 @@
 <?php $view->startBlock('title'); ?><?= $tr('common.roles.edit_meta') ?> - <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
-  <link rel="stylesheet" href="<?= $view->asset('css/article-form.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/forms/article-form.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>

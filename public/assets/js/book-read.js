@@ -1,11 +1,11 @@
-import * as pdfjsLib from './pdfjs/pdf.min.js';
+import * as pdfjsLib from './pdfjs/pdf.min.mjs';
 
 /* ============================================
    Читалка PDF: загрузка из API, prev / next / zoom, счётчик страниц.
    Разметка — views/pages/book/book-read.php (data-reader-*).
    ============================================ */
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdfjs/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/assets/js/pdfjs/pdf.worker.min.mjs';
 
 const root = document.querySelector('[data-reader]');
 if (root) init(root);

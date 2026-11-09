@@ -42,6 +42,16 @@
     var currentAttr = Number(rate.getAttribute('data-rate-current') || 0);
     var current = (currentAttr >= 1 && currentAttr <= 5) ? Math.floor(currentAttr) : 0;
     var rateSending = false;
+
+    // SSR показывает средний рейтинг (rating_avg / 10). Запоминаем его,
+    // чтобы вернуть сводку, если пользователь снял свою оценку: API-список
+    // отдаёт в rating только оценку текущего пользователя, не среднее.
+    var initialSummary = (function () {
+      var el = document.querySelector('[data-rating-value]');
+      if (!el) return null;
+      var value = parseFloat(String(el.textContent || '').replace(',', '.'));
+      return isNaN(value) ? null : value;
+    })();
     var rateKind = rate.getAttribute('data-rate-kind') || 'books';
 
     var rateUrl = (function () {
@@ -61,7 +71,9 @@
       var summaryValue = document.querySelector('[data-rating-value]');
       if (!summaryStars || !summaryValue) return;
 
-      var rating = Math.max(0, Math.min(50, Number(ratingRaw) || 0)) / 10;
+      // API-поле rating — это оценка пользователя (0…5), а не rating_avg
+      // (0…50), поэтому НЕ делим на 10.
+      var rating = Math.max(0, Math.min(5, Number(ratingRaw) || 0));
       var hasRating = Number(ratingRaw) > 0;
       var text = rating.toFixed(1);
 
@@ -96,7 +108,30 @@
         var items = Array.isArray(data) ? data
                   : (data && Array.isArray(data.items) ? data.items : []);
         for (var i = 0; i < items.length; i++) {
-          if (Number(items[i].id) === id) { paintSummary(items[i].rating); return; }
+          if (Number(items[i].id) !== id) continue;
+
+          // Приоритет — агрегат, если бэк когда-нибудь его отдаст. Иначе
+          // rating — личная оценка пользователя (0…5), её и показываем,
+          // чтобы после голоса сводка сразу стала 5.0, а не 0.5.
+          var value = null;
+          if (items[i].ratingAvg != null) {
+            value = Number(items[i].ratingAvg);
+            if (value > 5) value /= 10;
+          } else if (items[i].rating != null) {
+            value = Number(items[i].rating);
+            // Some endpoints historically returned rating_avg (0…50).
+            if (value > 5) value /= 10;
+          }
+
+          if (value !== null && value > 0) {
+            paintSummary(value);
+            rate.setAttribute('data-rate-current', String(value));
+            current = Math.floor(value);
+            paint(current);
+          } else if (initialSummary !== null) {
+            paintSummary(initialSummary);
+          }
+          return;
         }
       }).catch(function (err) {
         console.warn('[rate] rating summary refresh failed', err);
@@ -168,6 +203,19 @@
         var target = tab.dataset.rowTarget;
         tabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); });
         panels.forEach(function (panel) { panel.hidden = panel.dataset.row !== target; });
+      });
+    });
+
+    // CTA «Read article» должен открыть текст, а не уже активную аннотацию.
+    document.querySelectorAll('[data-open-article-tab]').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        var target = link.getAttribute('data-open-article-tab');
+        var tab = document.querySelector('.book-tabs-panel [data-row-target="' + target + '"]');
+        if (tab) tab.click();
+        var panel = document.querySelector('.book-tabs-panel__content[data-row="' + target + '"]');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
   }
@@ -629,30 +677,9 @@
     }
   }
 
-  document.addEventListener('click', function (e) {
-    var replyBtn = e.target.closest && e.target.closest('[data-reply-toggle]');
-    if (!replyBtn) return;
-    var content = replyBtn.closest('.comment-card__content');
-    if (!content) return;
-    var form = content.querySelector('[data-reply-form]');
-    if (!form) return;
-    var open = form.hidden;
-    form.hidden = !open;
-    replyBtn.setAttribute('aria-expanded', String(open));
-    if (open) {
-      var first = form.querySelector('input');
-      if (first) {
-        var card = replyBtn.closest('[data-comment-id]');
-        var target = (card && card.dataset.authorUsername) || '';
-        if (target && first.value.trim() === '') {
-          first.value = '@' + target + ' ';
-          first.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        first.focus();
-        try { first.selectionStart = first.selectionEnd = first.value.length; } catch (_) {}
-      }
-    }
-  });
+  // Reply toggle и подстановку @ника обрабатывает comments.js (он
+  // подключается раньше book.js). Второй обработчик здесь открывал и тут же
+  // закрывал форму, поэтому оставляем только один источник поведения.
 
   // ===== Ответы: подгрузка ТОЛЬКО по клику =====
   // Один раз на карточку. Если у вас в разметке кнопка называется иначе —

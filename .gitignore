@@ -31,5 +31,4 @@ $RECYCLE.BIN/
 
 /vendor/
 
-# pdf.js: скачанная библиотека (cmaps, шрифты, worker) — не храним в репозитории
-/public/assets/js/pdfjs/
+# pdf.js is vendored in public/assets/js/pdfjs (see README there).

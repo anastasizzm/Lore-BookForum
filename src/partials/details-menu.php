@@ -26,26 +26,25 @@
  *
  * СТРУКТУРА (спека): дропдаун ПЛОСКИЙ, без подменю — 4 кнопки правки
  * плюс Delete, каждый пункт со своим правом:
- *   1. Изменить мета-данные   — /{books|articles}/new?id=N&part=meta
- *                               (book-edit-meta / article-edit-meta);
- *   2. Изменить контент       — /{books|articles}/new?id=N&part=content
- *                               (book-edit-content / article-edit-content);
+ *   1. Изменить мета-данные   — /{books|articles}/create?id=N#step-1
+ *                               (полная форма в edit-режиме, шаг 1);
+ *   2. Изменить контент       — /{books|articles}/create?id=N#step-2
+ *                               (полная форма в edit-режиме, шаг 2);
  *   3. Изменить роли          — publish-диалог с модулем ролей (mode:'roles'),
  *                               data-requires="publication.manageRoles";
  *   4. Изменить пользователей — модуль на втором экране (пользователи
  *                               публикации), data-requires="publication.managePeople";
- *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id});
- *   6. Пожаловаться           — report-modal, без data-requires.
+ *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id}).
  * Пункты 1–4 гасит permissions.js; подменю больше нет — details-menu.js
  * его логику не содержит.
  *
  * Удаление выполняет details-menu.js (DELETE /api/books/{id},
  * /api/articles/{id}); ошибки показывает Messages.
  *
- * ПУНКТ «Пожаловаться» — открывает общую плашку report-modal.php
- * (report-modal.js, window.ReportModal). Он НЕ имеет data-requires:
- * жалобу может оставить любой авторизованный пользователь, в том числе
- * автор публикации, поэтому permissions.js его не трогает.
+ * «Пожаловаться» временно убрана из меню: POST /api/reports отсутствует,
+ * а mock-отправка давала ложный успех (FRONTEND-FIXES F-11). Плашка
+ * report-modal.php и report-modal.js остаются в проекте — вернуть пункт,
+ * когда бэкенд добавит роут жалоб.
  */
 $type     = $type ?? 'book';
 $id       = (int) ($id ?? 0);
@@ -54,12 +53,10 @@ $title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
 // Веб-роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
-// заморожены): страницы правки живут на существующем роуте создания
-// через query-параметр part=meta|content — book-form.php / article-form.php
-// читают $_GET['id'] и $_GET['part'] и рендерят отдельный файл
-// (book-edit-meta, book-edit-content, article-edit-meta, article-edit-content).
-$metaHref    = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=meta';
-$contentHref = ($isBook ? '/books/new?id=' : '/articles/new?id=') . $id . '&part=content';
+// заморожены): правка живёт на роуте создания (?id=N), а hash открывает
+// нужный шаг полной формы. Обе формы уже умеют префилл и сохранение.
+$metaHref    = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '#step-1';
+$contentHref = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '#step-2';
 $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
@@ -82,8 +79,8 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
 
   <div class="details-menu__popup" data-details-menu hidden>
 
-    <!-- 1. Метаданные: страница правки метаданных
-         (/books/new?id=N&part=meta / /articles/new?id=N&part=meta).
+    <!-- 1. Метаданные: полная форма правки, шаг 1
+         (/books/create?id=N#step-1 / /articles/create?id=N#step-1).
          data-requires="publication.updateMeta" — permissions.js скрывает
          пункт, если права нет. -->
     <a class="details-menu__item"
@@ -95,8 +92,8 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
       <?= $view->e($view->t('common.roles.edit_meta')) ?>
     </a>
 
-    <!-- 2. Контент: страница правки контента
-         (/books/new?id=N&part=content / /articles/new?id=N&part=content). -->
+    <!-- 2. Контент: полная форма правки, шаг 2
+         (/books/create?id=N#step-2 / /articles/create?id=N#step-2). -->
     <a class="details-menu__item"
        href="<?= $view->e($contentHref) ?>"
        data-requires="publication.updateContent"
@@ -147,18 +144,6 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
             data-delete-redirect="<?= $view->e($listHref) ?>"
             data-delete-kind="<?= $view->e($type) ?>">
       <?= $view->e($view->t('common.js.delete')) ?>
-    </button>
-
-    <!-- Пункт «Пожаловаться»: без data-requires (доступен всем,
-         permissions.js его не трогает), открывает report-modal.php
-         через report-modal.js. -->
-    <button type="button"
-            class="details-menu__item"
-            data-report-open
-            data-report-kind="<?= $view->e($type) ?>"
-            data-report-id="<?= $id ?>"
-            <?= $title !== '' ? 'data-report-label="' . $view->e($title) . '"' : '' ?>>
-      <?= $view->e($view->t('common.report.menu')) ?>
     </button>
   </div>
 </div>

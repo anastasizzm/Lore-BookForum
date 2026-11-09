@@ -115,6 +115,51 @@
     });
   }
 
+  /**
+   * Ридер умеет только PDF. Если PDF-файла нет, не отправляем пользователя
+   * на страницу с вечным «Loading…», а гасим «Start reading» и предлагаем
+   * скачать доступный файл.
+   */
+  function syncReadAvailability(items) {
+    var link = document.querySelector('[data-start-reading]');
+    if (!link) return;
+
+    var pdf = items.filter(function (item) {
+      return String(item && item.format || '').toLowerCase() === 'pdf';
+    })[0];
+
+    var oldDownload = document.querySelector('[data-read-download]');
+    if (oldDownload) oldDownload.remove();
+
+    if (pdf) {
+      link.classList.remove('is-disabled');
+      link.removeAttribute('aria-disabled');
+      link.removeAttribute('title');
+      return;
+    }
+
+    link.removeAttribute('href');
+    link.setAttribute('aria-disabled', 'true');
+    link.setAttribute('title', t('book.pdf_only'));
+    link.classList.add('is-disabled');
+    if (link.dataset.readUnavailable === '1') return;
+    link.dataset.readUnavailable = '1';
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      notify(t('book.pdf_only'));
+    });
+
+    var first = items[0];
+    var contentId = fileId(first);
+    if (!contentId) return;
+    var download = document.createElement('a');
+    download.className = 'btn btn--secondary btn--pill';
+    download.setAttribute('data-read-download', '');
+    download.href = '/api/files/' + encodeURIComponent(contentId) + '/download';
+    download.textContent = t('book.download_file');
+    link.parentNode.insertBefore(download, link.nextSibling);
+  }
+
   function load() {
     return req(URLS.list, {
       credentials: 'same-origin',
@@ -124,7 +169,9 @@
         if (!response.ok) throw new Error('HTTP ' + response.status);
         var items = data && (Array.isArray(data.items) ? data.items
           : (Array.isArray(data.data) ? data.data : []));
-        render(items || []);
+        items = items || [];
+        render(items);
+        syncReadAvailability(items);
       });
     }).catch(function (err) {
       console.error('[book-contents] load failed', err);

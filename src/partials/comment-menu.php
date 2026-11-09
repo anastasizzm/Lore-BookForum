@@ -13,14 +13,14 @@
  *               comment-reply__actions на врапе).
  *
  * ПОВЕДЕНИЕ (public/assets/js/comments.js):
- *   - врап [data-c-menu-wrap] ВИДИМ ВСЕГДА: в меню есть «Пожаловаться»,
- *     поэтому прятать его «не-своим» авторам больше нельзя;
+ *   - врап [data-c-menu-wrap] показывается только автору: после удаления
+ *     пункта «Пожаловаться» в меню осталось лишь удаление;
  *   - пункт [data-c-delete] показывает только автор (syncOwnMenu /
  *     syncPostMenu / прогон по уже отрисованному DOM на старте).
  *
- * Пункт «Пожаловаться» — [data-report-open]: report-modal.js сам находит
- * id и подпись по ближайшему [data-post-id] / [data-comment-id] /
- * [data-reply-id], так что отдельные data-report-id здесь не нужны.
+ * «Пожаловаться» временно убрана: POST /api/reports отсутствует, а
+ * mock-отправка давала ложный успех (FRONTEND-FIXES F-11). Плашка
+ * report-modal.php и report-modal.js остаются в проекте.
  *
  * Стили — public/assets/css/component.css (.comment-card__menu*).
  */
@@ -44,9 +44,5 @@ $wrapClass = 'comment-card__actions' . ($isReply ? ' comment-reply__actions' : '
          data-author-id корня не совпал с моим id -->
     <button type="button" class="comment-card__menu-item comment-card__menu-item--danger"
             data-c-delete><?= $view->e($view->t('common.js.delete')) ?></button>
-    <!-- Жалоба — всем; открывает report-modal.php (report-modal.js) -->
-    <button type="button" class="comment-card__menu-item"
-            data-report-open
-            data-report-kind="<?= $view->e($kind) ?>"><?= $view->e($view->t('common.report.menu')) ?></button>
   </div>
 </div>

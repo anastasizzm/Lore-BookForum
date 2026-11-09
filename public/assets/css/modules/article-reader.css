@@ -1,0 +1,52 @@
+/* ============================================
+   ARTICLE READER — оверлей чтения статьи
+   Открывается кнопкой «Читать статью» на /articles/{id}
+   Разметка: src/partials/article-reader.php
+   Логика:   public/assets/js/article-reader.js
+   ============================================ */
+
+.article-reader__dialog {
+  max-width: 760px;
+  max-height: calc(100vh - 2 * var(--space-4));
+  display: flex;
+  flex-direction: column;
+}
+
+.article-reader__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.article-reader__title {
+  margin: 0;
+}
+
+.article-reader__close {
+  flex: 0 0 auto;
+}
+
+.article-reader__body {
+  margin-top: var(--space-3);
+  overflow-y: auto;
+  line-height: var(--lh-normal);
+  color: var(--color-text);
+}
+
+.article-reader__body p {
+  margin: 0 0 var(--space-3, 16px);
+}
+
+.article-reader__body p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .article-reader__dialog {
+    max-height: calc(100vh - 2 * var(--space-3));
+    padding: var(--space-3);
+  }
+}
