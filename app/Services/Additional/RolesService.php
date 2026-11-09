@@ -43,7 +43,7 @@ final class RolesService
             : null) ?? BasicModelSortBy::Alphabet;
 
         $statusEnum = ($query->status->hasData()
-            ? EnumExtensions::tryResolve(RoleStatus::class, $query->sort->sortString())
+            ? EnumExtensions::tryResolve(RoleStatus::class, $query->status->status())
             : null) ?? RoleStatus::All;
 
 
