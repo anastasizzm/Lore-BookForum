@@ -81,7 +81,7 @@ class RoleRankService implements RankService
         $localRank = $this->repository->getUserHighestRank($userId, $publicationId);
         if ($localRank !== null) {
             $targetRank = $this->repository->getRank($roleId, $publicationId);
-            return $targetRank !== null && strcmp($localRank, $targetRank) >= 0;
+            return $targetRank !== null && strcmp($localRank, $targetRank) > 0;
         }
 
         $accessRules = $publicationId === null
@@ -113,7 +113,7 @@ class RoleRankService implements RankService
         $result = [];
         foreach ($roleIds as $roleId) {
             $targetRank = $targetRanks[$roleId] ?? null;
-            $result[$roleId] = $targetRank !== null && strcmp($localRank, $targetRank) >= 0;
+            $result[$roleId] = $targetRank !== null && strcmp($localRank, $targetRank) > 0;
         }
         return $result;
     }
@@ -164,7 +164,7 @@ class RoleRankService implements RankService
 
         foreach ($toCheck as $targetUserId) {
             $targetRank = $targetRanks[$targetUserId] ?? null;
-            $result[$targetUserId] = $targetRank !== null && strcmp($localRank, $targetRank) >= 0;
+            $result[$targetUserId] = $targetRank !== null && strcmp($localRank, $targetRank) > 0;
         }
         return $result;
     }
