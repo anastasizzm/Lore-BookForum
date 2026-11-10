@@ -9,12 +9,14 @@ use App\Services\Users\UsersService;
 
 use App\Http\HttpContext;
 use App\Lib\I18n\Translator;
+use App\Models\Errors\Error;
 use App\Models\Queries\Users\UsersListQuery;
 use App\Exceptions\ValidationException;
 use App\Exceptions\ForbiddenException;
 use App\Extensions\Parsers\RouteParamParser;
 
 use App\Forms\Users\ProfileForm;
+use App\ErrorCodes;
 use App\Constants;
 
 final class UsersController extends Controller
