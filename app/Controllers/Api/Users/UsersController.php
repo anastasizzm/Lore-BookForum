@@ -58,4 +58,19 @@ final class UsersController extends Controller
         $this->usersService->block($userId);
         return $this->jsonEmpty();
     }
+
+    public function unblock(HttpContext $context, string $userId)
+    {
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $userId = RouteParamParser::positiveInt(['userId' => $userId], 'userId');
+
+        if ($userId === $currentUserId)
+            throw new ForbiddenException($this->translator->t('errors.policies.access.account'));
+
+        $this->usersService->unblock($userId);
+        return $this->jsonEmpty();
+    }
 }

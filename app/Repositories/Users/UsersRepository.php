@@ -31,7 +31,7 @@ final class UsersRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addActiveTempFilter();
-        $this->addSelect($criteria->classType);
+        $this->addSelect($criteria->classType)->addBlockTempFilter(false);
 
         if (!empty($criteria->search))
             $this->director->addSearchTempFilter($criteria->search);
@@ -128,7 +128,15 @@ final class UsersRepository extends Repository
 
     public function block(int $userId) : bool 
     {
-        $sql = "UPDATE users SET is_blocked = true WHERE id = :userId RETURNING id";
+        $sql = "UPDATE users SET is_blocked = true WHERE id = :userId AND is_blocked = false RETURNING id";
+        $stmt = $this->execute($sql, [':userId' => ScriptParam::asInt($userId)]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
+    public function unblock(int $userId) : bool 
+    {
+        $sql = "UPDATE users SET is_blocked = false WHERE id = :userId AND is_blocked = true RETURNING id";
         $stmt = $this->execute($sql, [':userId' => ScriptParam::asInt($userId)]);
 
         return $stmt->fetchColumn() !== false;

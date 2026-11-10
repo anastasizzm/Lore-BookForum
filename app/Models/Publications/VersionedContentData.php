@@ -10,7 +10,9 @@ final readonly class VersionedContentData extends ContentData
         ?BookData $bookData,
         ?string $content,
         public int $version
-    ){}
+    ){
+        parent::__construct($bookData, $content);
+    }
 
     public static function fromBook(BookData $book, int $version) : self {return new self ($book, NULL, $version);}
     public static function fromContent(string $content, int $version) : self {return new self (NULL, $content, $version);}
