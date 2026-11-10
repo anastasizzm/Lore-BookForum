@@ -126,6 +126,7 @@ return function(Router $router)
     $router->get('/api/users', [App\Controllers\Api\Users\UsersController::class, 'list'], 'api.users', AuthPolicy::Auth);
     $router->put('/api/users/{userId}/profile/edit', [App\Controllers\Api\Users\UsersController::class, 'editProfile'], 'api.users.profile.edit.submit', ManageAccountOperation::class);
     $router->post('/api/users/{userId}/block', [App\Controllers\Api\Users\UsersController::class, 'block'], 'api.users.profile.block', ManageAccountOperation::class);
+    $router->delete('/api/users/{userId}/block', [App\Controllers\Api\Users\UsersController::class, 'unblock'], 'api.users.profile.unblock', ManageAccountOperation::class);
 
     // Files
     $router->post('/api/files/upload', [App\Controllers\Api\Files\FileController::class, 'upload'], 'files.upload', AuthPolicy::Verified);

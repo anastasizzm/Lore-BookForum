@@ -51,9 +51,10 @@ final class AuthController extends Controller
 
     public function register(HttpContext $ctx) : Response {
         $formData = $ctx->request->body();
+        $form = RegisterForm::fromInput($formData);
 
         try{
-            $token = $this->service->register(RegisterForm::fromInput($formData));
+            [$token, $userId] = $this->service->register($form);
             $response = $this->render('message', ['message' => $this->translator->t('common.email.confirm_msg'), 'actionUrl' => $this->url->url('home'), 'actionTitle' => $this->translator->t("common.drafts.continue")]);
 
             try{

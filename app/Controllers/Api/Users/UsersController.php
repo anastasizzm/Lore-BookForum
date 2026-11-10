@@ -9,12 +9,14 @@ use App\Services\Users\UsersService;
 
 use App\Http\HttpContext;
 use App\Lib\I18n\Translator;
+use App\Models\Errors\Error;
 use App\Models\Queries\Users\UsersListQuery;
 use App\Exceptions\ValidationException;
 use App\Exceptions\ForbiddenException;
 use App\Extensions\Parsers\RouteParamParser;
 
 use App\Forms\Users\ProfileForm;
+use App\ErrorCodes;
 use App\Constants;
 
 final class UsersController extends Controller
@@ -56,6 +58,21 @@ final class UsersController extends Controller
             throw new ForbiddenException($this->translator->t('errors.policies.access.account'));
 
         $this->usersService->block($userId);
+        return $this->jsonEmpty();
+    }
+
+    public function unblock(HttpContext $context, string $userId)
+    {
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
+
+        $userId = RouteParamParser::positiveInt(['userId' => $userId], 'userId');
+
+        if ($userId === $currentUserId)
+            throw new ForbiddenException($this->translator->t('errors.policies.access.account'));
+
+        $this->usersService->unblock($userId);
         return $this->jsonEmpty();
     }
 }

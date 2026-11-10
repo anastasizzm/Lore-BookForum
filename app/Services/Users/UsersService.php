@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Users;
 
 use App\Cache\User\UserContextCache;
+use App\Services\Auth\TokenResetService;
 
 use App\Forms\Users\ProfileForm;
 use App\Attributes\Inject;
@@ -37,6 +38,7 @@ final class UsersService
         private readonly UsersRepository  $usersRepo,
         private readonly UserExceptionTranslator $exceptionTranslator,
         private readonly ProfileFormValidator $profileFormValidator,
+        private readonly TokenResetService $tokenResetService,
 
         #[Inject(key: ServiceType::System)]
         private readonly CommonRuleProvider $systemRuleProvider,
@@ -113,6 +115,19 @@ final class UsersService
         try{
             $blocked = $this->usersRepo->block($userId);
             if (!$blocked) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
+
+            $this->tokenResetService->resetFromUser($userId);
+        }
+        catch(\PDOException $e){
+            throw $this->exceptionTranslator->translate($e);
+        }
+    }
+
+    public function unblock(int $userId) : void 
+    {
+        try{
+            $unblocked = $this->usersRepo->unblock($userId);
+            if (!$unblocked) throw new NotFoundException($this->translator->t('errors.common.not_found'), ErrorCodes::NOT_FOUND);
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);

@@ -6,7 +6,7 @@ use App\Models\Enums\ArticleContentMode;
 use App\Models\Publications\BookData;
 use App\Models\RowModel;
 
-final readonly class ContentData extends RowModel
+readonly class ContentData extends RowModel
 {
     public function __construct(
         private readonly ?BookData $bookData,
