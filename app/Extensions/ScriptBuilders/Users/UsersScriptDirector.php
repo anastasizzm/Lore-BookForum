@@ -56,6 +56,16 @@ final class UsersScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addBlockTempFilter(?bool $blocked) : self  
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        if  ($blocked === NULL) return $this;
+
+        $this->tempBuilder->addWhere("users.is_blocked = :blocked", 
+            [':blocked' => ScriptParam::asBool($blocked)]);
+        return $this;
+    }
+
     public function addConcreteTempFilter(int $id) : self
     {
         if (!$this->isTempStarted()) $this->startTempFilter();

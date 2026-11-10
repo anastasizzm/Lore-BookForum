@@ -300,11 +300,13 @@ final class BooksController extends Controller
             $format,
         );
 
+        $userContext = $this->usersService->loadContext($userId);
         return $this->render('book/book-read', [
             'book'  => $publication,
             'fileId' => $fileId->toString(),
             'previewUrl' => $this->url->url('files.preview', ['fileId' => $fileId->toString()]),
-            'initial' => $progress?->position ?? $this->defaultPosition($format)
+            'initial' => $progress?->position ?? $this->defaultPosition($format),
+            'user' => $userContext
         ]);
     }
 
