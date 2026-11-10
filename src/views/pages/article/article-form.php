@@ -228,6 +228,8 @@ $richEditor = static function (
   <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
+  <!-- удаление статьи прямо с экрана редактирования -->
+  <script src="<?= $view->asset('js/details-menu.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -495,14 +497,12 @@ $richEditor = static function (
         </div>
 
         <div class="form-field">
-          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAuthorNote"
                     name="author_note"
                     rows="4"
                     maxlength="2000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.author_note_ph') ?>"><?= $view->e($val('author_note')) ?></textarea>
           <?= $errorBox('author_note') ?>
         </div>
@@ -524,6 +524,20 @@ $richEditor = static function (
             <button type="button" class="btn btn--secondary" data-step-prev>
               ← <?= $tr('common.articleform.back') ?>
             </button>
+            <?php if ($isEdit): ?>
+              <button type="button"
+                      class="btn btn--danger"
+                      data-details-delete
+                      data-requires="publication.delete"
+                      data-requires-kind="article"
+                      data-requires-owner="1"
+                      hidden
+                      data-delete-url="/api/articles/<?= $articleId ?>"
+                      data-delete-redirect="/articles"
+                      data-delete-kind="article">
+                <?= $tr('common.drafts.delete') ?>
+              </button>
+            <?php endif; ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('articles'))) ?>"><?= $tr('common.cancel') ?></a>
             
             <button type="submit" class="btn btn--secondary" name="status" value="draft"

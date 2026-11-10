@@ -141,10 +141,13 @@
   /** Метаданные статьи для POST/PATCH (ArticleForm / ArticlePatchForm). */
   function collectMeta() {
     var doi = valueOf('doi');
+    var notes = valueOf('author_note');
     return {
       title: valueOf('title'),
       description: valueOf('annotation'),
-      authorNotes: valueOf('author_note'),
+      // Бэк (заморожен) требует непустые authorNotes — пустые заметки
+      // отправляем невидимым NBSP, при выводе/префилле считаем пустыми.
+      authorNotes: notes !== '' ? notes : '\u00A0',
       genreId: parseInt(valueOf('genre'), 10) || 0,
       typeId: parseInt(valueOf('type'), 10) || 0,
       doi: doi !== '' ? doi : null,
@@ -156,7 +159,6 @@
   function collectPatchMeta() {
     var meta = collectMeta();
     if (meta.description === '') delete meta.description;
-    if (meta.authorNotes === '') delete meta.authorNotes;
     if (meta.genreId < 1) delete meta.genreId;
     if (meta.typeId < 1) delete meta.typeId;
     return meta;
@@ -1869,6 +1871,10 @@
                       : name]);
         }
       });
+
+      // NBSP — технический placeholder пустых заметок (см. collectMeta).
+      var noteEl = fieldByName('author_note');
+      if (noteEl && noteEl.value.trim() === '') noteEl.value = '';
 
       setSelect('genre', data.genreId);
       setSelect('type', data.typeId);

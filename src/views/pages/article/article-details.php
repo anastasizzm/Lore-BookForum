@@ -171,12 +171,31 @@ $bookTitle = $str($bookData?->book ?? (is_object($article) ? ($article->book ?? 
 
 $annotation = (string) ($article->description ?? '');
 $authorNote = (string) ($article->authorNotes ?? '');
+// Пустые заметки могут храниться как невидимый NBSP (обход обязательного
+// поля на замороженном бэке) — на странице считаем их пустыми.
+if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
+    $authorNote = '';
+}
 $content    = (string) ($contentData?->getContent() ?? '');
 
 /* ---------- Книга-источник (для отрывка) ---------- */
 
 $pageStart = $bookData?->pageStart ?? null;
 $pageEnd   = $bookData?->pageEnd   ?? ($pageStart ?? null);
+
+// Отрывок открывается сразу в читалке на первой странице фрагмента,
+// а не на странице деталей книги.
+$bookReadUrl = '#';
+if ($bookId > 0) {
+    $bookReadUrl = '/books/' . $bookId . '/read'
+        . (!empty($pageStart) ? '?page=' . (int) $pageStart : '');
+    $lang = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+        ? $_GET['lang']
+        : (method_exists($view, 'locale') ? $view->locale() : '');
+    if ($lang !== '') {
+        $bookReadUrl .= (str_contains($bookReadUrl, '?') ? '&' : '?') . 'lang=' . urlencode($lang);
+    }
+}
 
 /* ---------- Комментарии ---------- */
 /**
@@ -259,7 +278,6 @@ $articlePayload = [
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
-  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-reader.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
@@ -314,20 +332,18 @@ $articlePayload = [
           </svg>
         </button>
         <?php
-          // Отрывок из книги читается на странице книги (редирект), а
-          // standalone-статья открывается в оверлее поверх страницы.
-          $bookHref = ($isBookExcerpt && $bookId > 0)
-              ? '/books/' . $bookId
-              : '#annotation';
+          // Отрывок из книги читается на странице книги (редирект сразу
+          // в читалку на pageStart), standalone-статья показывает текст
+          // прямо в плашке ниже — кнопка лишь прокручивает к нему.
         ?>
         <?php if ($isBookExcerpt): ?>
-          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
+          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookReadUrl) ?>">
             <?= $tr('common.article.open_book') ?>
           </a>
         <?php else: ?>
-          <button type="button" class="btn btn--primary btn--pill" data-article-reader-open>
+          <a class="btn btn--primary btn--pill" href="#article-content">
             <?= $tr('common.article.read') ?>
-          </button>
+          </a>
         <?php endif; ?>
       </div>
 
@@ -410,16 +426,6 @@ $articlePayload = [
       <?php endif; ?>
 
       <div class="book-tabs-panel">
-        <?php
-          $view->include('tabs', [
-              'variant' => 'outline',
-              'items'   => [
-                  ['label' => $view->t('common.book.tab_annotation'), 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => $isBookExcerpt ? $view->t('common.article.tab_excerpt') : $view->t('common.article.tab_content'), 'href' => '#content', 'active' => false, 'row' => 'content'],
-              ],
-          ]);
-        ?>
-
         <div class="card-base book-tabs-panel__content" data-row="annotation">
           <?php if ($annotation !== ''): ?>
             <p class="info-box__body" id="annotation"><?= nl2br($view->e($annotation)) ?></p>
@@ -433,28 +439,25 @@ $articlePayload = [
               <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
-        </div>
 
-        <div class="card-base book-tabs-panel__content" data-row="content" hidden>
-          <?php if ($isBookExcerpt): ?>
-            <p class="info-box__body">
-              <?= $tr('common.article.excerpt_intro') ?>
-              <strong><?= $bookTitle !== '' ? $view->e($bookTitle) : $tr('common.article.untitled') ?></strong><?php
-                if (!empty($pageStart)):
-                  ?><?= $tr('common.article.excerpt_pages', ['from' => (int) $pageStart, 'to' => (int) $pageEnd]) ?><?php
-                endif;
-              ?>.
-            </p>
-            <!-- P1-6: ссылка ведёт на страницу книги -->
-            <p><a class="link" href="<?= $view->e($bookId > 0 ? '/books/' . $bookId : '#') ?>"><?= $tr('common.article.go_to_book') ?></a></p>
-          <?php elseif ($content === ''): ?>
-            <p class="info-box__body"><?= $tr('common.article.no_text') ?></p>
-          <?php else: ?>
-            <div class="info-box__body article-content">
-              <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
-                <?php if (trim($para) === '') continue; ?>
-                <p><?= nl2br($view->e(trim($para))) ?></p>
-              <?php endforeach; ?>
+          <?php if (!$isBookExcerpt): ?>
+            <!-- Текст standalone-статьи показывается прямо в плашке, без
+                 отдельной вкладки Content и без модального окна. Если
+                 сервер прислал content — рендерим сразу; иначе его
+                 подгружает article-reader.js из GET /api/articles/{id}/content. -->
+            <div class="article-body article-content"
+                 id="article-content"
+                 data-article-content
+                 <?= $content !== '' ? 'data-article-loaded="1"' : '' ?>
+                 data-article-id="<?= (int) $articleId ?>">
+              <?php if ($content !== ''): ?>
+                <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
+                  <?php if (trim($para) === '') continue; ?>
+                  <p><?= nl2br($view->e(trim($para))) ?></p>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <p class="article-body__loading"><?= $tr('common.loading') ?></p>
+              <?php endif; ?>
             </div>
           <?php endif; ?>
         </div>
@@ -462,14 +465,9 @@ $articlePayload = [
     </div>
   </div>
 
-  <!-- Оверлей чтения standalone-статьи: открывается кнопкой «Читать статью».
-       Для отрывка из книги оверлея нет — кнопка ведёт на /books/{id}. -->
-  <?php if (!$isBookExcerpt): ?>
-    <?php $view->include('article-reader', [
-        'title'   => (string) ($article->title ?? ''),
-        'content' => $content,
-    ]); ?>
-  <?php endif; ?>
+  <!-- Текст standalone-статьи уже показан в плашке выше; отдельного
+       модального окна чтения и кнопки Close больше нет. -->
+
 
   <!-- Блок комментариев.
        data-me-* нужен book.js: автора своего комментария/ответа он берёт из
@@ -759,7 +757,8 @@ $articlePayload = [
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
-  <!-- article-reader.js — оверлей чтения standalone-статьи -->
+  <!-- article-reader.js — подгружает текст standalone-статьи в плашку
+       (GET /api/articles/{id}/content), без модального окна. -->
   <script src="/assets/js/article-reader.js"></script>
   <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи

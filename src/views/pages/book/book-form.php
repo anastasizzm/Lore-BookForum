@@ -702,15 +702,36 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </button>
         <div class="book-form__actions-right">
           <?php if ($isEdit): ?>
+            <button type="button"
+                    class="btn btn--danger"
+                    data-details-delete
+                    data-requires="publication.delete"
+                    data-requires-kind="book"
+                    data-requires-owner="1"
+                    hidden
+                    data-delete-url="/api/books/<?= $bookId ?>"
+                    data-delete-redirect="/books"
+                    data-delete-kind="book">
+              <?= $tr('common.drafts.delete') ?>
+            </button>
+
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            
+
             <button class="btn btn--primary" type="submit" data-submit-save
                     data-requires="publication.edit"
                     data-requires-kind="book"
                     data-requires-owner="1"
                     hidden>
               <?= $tr('common.bookform.save') ?>
+            </button>
+
+            <button class="btn btn--primary" type="submit" data-submit-publish
+                    data-requires="publication.publish"
+                    data-requires-kind="book"
+                    data-requires-owner="1"
+                    hidden>
+              <?= $tr('common.bookform.publish') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
@@ -759,6 +780,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/details-menu.js"></script>
   <script src="/assets/js/rights-modal.js"></script>
   <!-- roles-module.js — новый UI назначения ролей (экраны 1–4).
        Подключается после rights-modal.js, как на book-details. -->

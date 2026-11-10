@@ -1492,10 +1492,9 @@
       e.preventDefault();
       clearAllErrors();
 
-      var wantPublish = !editId
-        && !!(e.submitter
-          ? e.submitter.hasAttribute('data-submit-publish')
-          : publishRequested);
+      var wantPublish = !!(e.submitter
+        ? e.submitter.hasAttribute('data-submit-publish')
+        : publishRequested);
 
       // Сначала клиентская валидация ВСЕХ полей (порядок полей в DOM:
       // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
@@ -1607,6 +1606,10 @@
             var el = getField(name);
             payload[name] = el ? String(el.value || '').trim() : '';
           });
+
+          // Бэк (заморожен) требует непустые authorNotes. Пустые заметки
+          // отправляем невидимым NBSP, а при выводе/префилле считаем их пустыми.
+          if (!payload.authorNotes) payload.authorNotes = '\u00A0';
 
           ['genreId', 'categoryId', 'pages'].forEach(function (name) {
             var el = getField(name);
@@ -1728,7 +1731,23 @@
             return loadAttached().then(function () { return attachedOk; });
           })
           .then(function (attachedOk) {
-            if (attachedOk) { leaveAndRedirect('/books/' + editId); return; }
+            if (attachedOk) {
+              // Publish из режима редактирования: сохранили изменения —
+              // открываем то же меню ролей, что и при создании/публикации.
+              if (wantPublish && window.RightsModal) {
+                resetButtons();
+                window.RightsModal.open({
+                  mode: 'publish',
+                  bookId: editId,
+                  redirect: '/books/' + editId,
+                  screen: 2,
+                  cancelRedirect: '/books/' + editId,
+                });
+                return;
+              }
+              leaveAndRedirect('/books/' + editId);
+              return;
+            }
             // Метаданные сохранены, файлы прикрепить не вышло — остаёмся
             // на форме: повторный «Сохранить» доделает прикрепление.
             notify(t('book.contents_upload_failed'), 'warning');
@@ -1769,6 +1788,8 @@
       // отдельными запросами в /api/files/upload (см. uploadPhase ниже).
       var body = new FormData(form);
       body.delete('id');   // edit-режим отсечён выше; id бэк не принимает
+      // Бэк требует непустые authorNotes; пустые заметки шлём невидимым NBSP.
+      if (!String(body.get('authorNotes') || '').trim()) body.set('authorNotes', '\u00A0');
 
       // ---- Файлы: обложка (cover) и файлы книги (book) → /api/files/upload
       var coverField = getField('cover');
@@ -2272,7 +2293,10 @@
     function setFieldValue(name, value) {
       var el = getField(name);
       if (!el) return;
-      el.value = value === null || value === undefined ? '' : String(value);
+      var next = value === null || value === undefined ? '' : String(value);
+      // NBSP — технический placeholder пустых заметок (см. submit).
+      if (name === 'authorNotes' && next.trim() === '') next = '';
+      el.value = next;
     }
 
     function applyBookPayload(data) {

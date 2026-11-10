@@ -152,6 +152,11 @@ $isbn           = $str($book->isbn      ?? null);
 
 $annotation = (string) ($book->description ?? '');
 $authorNote = (string) ($book->authorNotes ?? '');
+// Пустые заметки могут храниться как невидимый NBSP (обход обязательного
+// поля на замороженном бэке) — на странице считаем их пустыми.
+if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
+    $authorNote = '';
+}
 
 /* ---------- Обложка ---------- */
 
@@ -263,7 +268,7 @@ $bookPayload = [
     'id'          => $bookId,
     'title'       => (string) $get($book, 'title', ''),
     'description' => (string) $get($book, 'description', ''),
-    'authorNotes' => (string) $get($book, 'authorNotes', ''),
+    'authorNotes' => $authorNote,
     'genreId'     => (int) $get($get($book, 'genre', null), 'id', 0),
     'categoryId'  => (int) $get($get($book, 'category', null), 'id', 0),
     'publisher'   => (string) $get($book, 'publisher', ''),

@@ -138,19 +138,26 @@ $filter_rows = [
     ],
 ];
 
-// Черновики: книги и статьи вместе. Фильтра по статусу чтения здесь нет —
-// у черновиков его не бывает. Переключатель Все / Книги / Статьи — параметр ?ctype=.
+// Черновики: только «Книги / Статьи» (без «Все»). Каждый тип живёт на своём
+// роуте (/books/drafts и /articles/drafts), поэтому активная вкладка
+// определяется текущим путём, а переключение сохраняет фильтры и локаль.
 if ($isDrafts) {
-    $ctype = strtolower($str('ctype'));
-    if (!in_array($ctype, ['book', 'article'], true)) $ctype = '';
+    $draftsIsArticles = str_contains($currentPath, '/articles');
+    $draftKeep = array_intersect_key(
+        $params,
+        array_flip(['f', 'q', 'genre', 'p_status', 'kind', 'doi', 'isbn', 'lang'])
+    );
+    $draftHref = static function (string $href) use ($draftKeep): string {
+        if (!$draftKeep) return $href;
+        return $href . '?' . http_build_query($draftKeep);
+    };
 
     $draftsSwitcher = [
         'type'    => 'tabs',
         'variant' => 'segmented',
         'items'   => [
-            ['label' => $view->t('common.filter.all'),      'href' => $link([], ['ctype']),                 'icon' => '',        'key' => 'ctype', 'value' => 'all',     'active' => $ctype === ''],
-            ['label' => $view->t('common.filter.books'),    'href' => $link(['ctype' => 'book']),           'icon' => $bookIcon, 'key' => 'ctype', 'value' => 'book',    'active' => $ctype === 'book'],
-            ['label' => $view->t('common.filter.articles'), 'href' => $link(['ctype' => 'article']),        'icon' => $postIcon, 'key' => 'ctype', 'value' => 'article', 'active' => $ctype === 'article'],
+            ['label' => $view->t('common.filter.books'),    'href' => $draftHref('/books/drafts'),    'icon' => $bookIcon, 'active' => !$draftsIsArticles],
+            ['label' => $view->t('common.filter.articles'), 'href' => $draftHref('/articles/drafts'), 'icon' => $postIcon, 'active' => $draftsIsArticles],
         ],
     ];
 
