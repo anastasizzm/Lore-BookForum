@@ -24,18 +24,16 @@
  *   с учётом data-requires-kind (book/article) и data-requires-owner.
  *   Если права нет — пункт остаётся скрытым. Если есть — показывается.
  *
- * СТРУКТУРА (спека): дропдаун ПЛОСКИЙ, без подменю — 4 кнопки правки
- * плюс Delete, каждый пункт со своим правом:
- *   1. Изменить мета-данные   — /{books|articles}/create?id=N#step-1
- *                               (полная форма в edit-режиме, шаг 1);
- *   2. Изменить контент       — /{books|articles}/create?id=N#step-2
- *                               (полная форма в edit-режиме, шаг 2);
- *   3. Изменить роли          — publish-диалог с модулем ролей (mode:'roles'),
+ * СТРУКТУРА (спека): дропдаун ПЛОСКИЙ, без подменю — одна кнопка
+ * редактирования (полная форма) плюс роли/пользователи и Delete:
+ *   1. Редактировать           — /{books|articles}/create?id=N
+ *                               (полная форма в edit-режиме);
+ *   2. Изменить роли          — publish-диалог с модулем ролей (mode:'roles'),
  *                               data-requires="publication.manageRoles";
- *   4. Изменить пользователей — модуль на втором экране (пользователи
+ *   3. Изменить пользователей — модуль на втором экране (пользователи
  *                               публикации), data-requires="publication.managePeople";
- *   5. Delete                 — details-menu.js (DELETE /api/books|articles/{id}).
- * Пункты 1–4 гасит permissions.js; подменю больше нет — details-menu.js
+ *   4. Delete                 — details-menu.js (DELETE /api/books|articles/{id}).
+ * Пункты 1–3 гасит permissions.js; подменю больше нет — details-menu.js
  * его логику не содержит.
  *
  * Удаление выполняет details-menu.js (DELETE /api/books/{id},
@@ -53,13 +51,13 @@ $title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
 // Веб-роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
-// заморожены): правка живёт на роуте создания (?id=N), а hash открывает
-// нужный шаг полной формы. Обе формы уже умеют префилл и сохранение.
-$metaHref    = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '#step-1';
-$contentHref = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id . '#step-2';
+// заморожены): правка живёт на роуте создания (?id=N), полная форма
+// открывается одним экраном (в edit-режиме шаги не разделяются).
+$editHref = ($isBook ? '/books/create?id=' : '/articles/create?id=') . $id;
 $deleteUrl = ($isBook ? '/api/books/' : '/api/articles/') . $id;
 $listHref  = $isBook ? '/books' : '/articles';
 $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options');
+$editLabel = $isBook ? $view->t('common.book.edit') : $view->t('common.roles.edit');
 ?>
 <div class="details-menu"
      data-details-menu-wrap
@@ -79,31 +77,20 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
 
   <div class="details-menu__popup" data-details-menu hidden>
 
-    <!-- 1. Метаданные: полная форма правки, шаг 1
-         (/books/create?id=N#step-1 / /articles/create?id=N#step-1).
-         data-requires="publication.updateMeta" — permissions.js скрывает
-         пункт, если права нет. -->
+    <!-- 1. Редактирование: полная форма (в edit-режиме все поля на одном
+         экране, без шагов «Далее»). data-requires="publication.edit" —
+         permissions.js скрывает пункт, если нет ни updateMeta, ни updateContent
+         (владелец получает право через data-requires-owner). -->
     <a class="details-menu__item"
-       href="<?= $view->e($metaHref) ?>"
-       data-requires="publication.updateMeta"
+       href="<?= $view->e($editHref) ?>"
+       data-requires="publication.edit"
        data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
        data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
        hidden>
-      <?= $view->e($view->t('common.roles.edit_meta')) ?>
+      <?= $view->e($editLabel) ?>
     </a>
 
-    <!-- 2. Контент: полная форма правки, шаг 2
-         (/books/create?id=N#step-2 / /articles/create?id=N#step-2). -->
-    <a class="details-menu__item"
-       href="<?= $view->e($contentHref) ?>"
-       data-requires="publication.updateContent"
-       data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
-       data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
-       hidden>
-      <?= $view->e($view->t('common.roles.edit_content')) ?>
-    </a>
-
-    <!-- 3. Роли: открывает publish-диалог с модулем ролей (mode:'roles').
+    <!-- 2. Роли: открывает publish-диалог с модулем ролей (mode:'roles').
          data-requires="publication.manageRoles" — permissions.js скрывает
          пункт, если права нет. -->
     <button type="button"
@@ -118,7 +105,7 @@ $ariaLabel = $view->t($isBook ? 'common.book.options' : 'common.article.options'
       <?= $view->e($view->t('common.roles.edit_roles')) ?>
     </button>
 
-    <!-- 4. Пользователи: открывает модуль на втором экране (пользователи
+    <!-- 3. Пользователи: открывает модуль на втором экране (пользователи
          публикации) — экран 2 финального потока создания/редактирования. -->
     <button type="button"
             class="details-menu__item"

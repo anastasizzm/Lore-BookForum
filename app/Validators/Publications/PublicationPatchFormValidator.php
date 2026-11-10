@@ -29,7 +29,7 @@ class PublicationPatchFormValidator extends Validator
             $ok &= $this->checkStrings($bag, $item->description, 1, PublicationFormValidator::DESCR_MAX_LEN, 'description');
         
         if($item->hasAuthorNotes)
-            $ok &= $this->checkStrings($bag, $item->authorNotes, 1, PublicationFormValidator::NOTES_MAX_LEN, 'authorNotes');
+            $ok &= $this->checkStrings($bag, $item->authorNotes ?? '', 0, PublicationFormValidator::NOTES_MAX_LEN, 'authorNotes');
 
         if ($item->hasGenreId && $item->genreId < 1){
             $bag->add('genreId', [$this->translator->t('errors.common.min', [':value' => 1])]);

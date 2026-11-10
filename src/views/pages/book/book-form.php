@@ -36,7 +36,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
  *          title       (string, required, 1..255)
  *          description (string, required, 1..4000) — аннотация
- *          authorNotes (string, required, 1..2000) — заметки автора
+ *          authorNotes (string, optional, 0..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
  *                       (UI — выпадающие списки select, выбор один: бэк
@@ -578,19 +578,16 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?= $errorBox('description') ?>
         </div>
 
-        <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/new. Обязательное (бэк требует
-             непустые 1..2000) — required + клиентская проверка на пустоту
-             и длину (11.2, см. RULES в book-form.js). -->
+        <!-- Заметки автора: поле BookForm authorNotes (0..2000), то же
+             имя уходит в POST /api/books/new. Поле необязательное —
+             пустые заметки допустимы, ограничение только по длине. -->
         <div class="form-field">
-          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAuthorNotes"
                     name="authorNotes"
                     rows="4"
                     maxlength="2000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('authorNotes') ?>
         </div>

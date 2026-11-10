@@ -43,6 +43,24 @@ async function init(root) {
   root.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
   root.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
+  /* Браузерный zoom страницы запрещаем на всей странице читалки, а не только
+     внутри .reader. Иначе Ctrl+wheel / pinch вне книги масштабировал весь
+     документ — вместе с фиксированной панелью управления (пункт аудита 8). */
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart',  (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (['+', '=', '-', '_', '0'].indexOf(e.key) === -1) return;
+    // Собственный zoom работает через stage-обработчик; браузерный — нет.
+    e.preventDefault();
+  });
+
   const syncDock = () => {
     const r = stage.getBoundingClientRect();
     const rootStyle = root.style;

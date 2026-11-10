@@ -37,7 +37,21 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $view->extends('main'); ?>
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
-<?php $view->setBlock('selectedTab', 'library'); ?>
+<?php
+// Активный пункт бокового меню: подсвечиваем раздел, из которого читатель
+// пришёл (Saved / Drafts / Feed), иначе Library. Раньше жёстко стоял
+// library, поэтому при переходе из другого раздела иконка не подсвечивалась.
+$refererPath = (string) (parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '');
+$selectedTab = 'library';
+if (preg_match('#^/(saved|books/saved)#', $refererPath)) {
+    $selectedTab = 'saved';
+} elseif (preg_match('#^/books/drafts#', $refererPath)) {
+    $selectedTab = 'drafts';
+} elseif ($refererPath === '/' || preg_match('#^/(feed|home)#', $refererPath)) {
+    $selectedTab = 'for-you';
+}
+$view->setBlock('selectedTab', $selectedTab);
+?>
 <?php $view->setBlock('hideFab', '1'); /* правый нижний угол занят — плавающую «+» скрываем */ ?>
 
 <?php $view->startBlock('title'); ?>

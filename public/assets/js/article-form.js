@@ -951,12 +951,58 @@
   var pdfjsPromise = null;
   function loadPdfjs() {
     if (!pdfjsPromise) {
-      pdfjsPromise = import(PDF_BASE + 'pdf.min.js').then(function (m) {
-        m.GlobalWorkerOptions.workerSrc = PDF_BASE + 'pdf.worker.min.js';
+      // PDF.js поставляется как ES-модуль (.mjs); .js здесь нет —
+      // прежний import(pdf.min.js) давал 404, и выбор отрывка не открывался.
+      pdfjsPromise = import(PDF_BASE + 'pdf.min.mjs').then(function (m) {
+        m.GlobalWorkerOptions.workerSrc = PDF_BASE + 'pdf.worker.min.mjs';
         return m;
       });
     }
     return pdfjsPromise;
+  }
+
+  /** Кеш «id книги → URL PDF»: /api/books/{id}/file в бэкенде нет. */
+  var bookPdfUrls = {};
+
+  /**
+   * Разрешает URL PDF книги через существующий API:
+   * GET /api/books/{id}/contents → { items: File[] } → /api/files/{id}/download.
+   */
+  function resolveBookPdfUrl(bookId) {
+    bookId = String(bookId || '');
+    if (!bookId) return Promise.reject(new Error('book id is missing'));
+    if (bookPdfUrls[bookId]) return Promise.resolve(bookPdfUrls[bookId]);
+
+    return fetch('/api/books/' + encodeURIComponent(bookId) + '/contents', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function (res) {
+      return res.text().then(function (raw) {
+        var data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var items = Array.isArray(data && data.items)
+          ? data.items
+          : (Array.isArray(data && data.data) ? data.data : []);
+        var pdf = null;
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i] || {};
+          var format = String(item.format || '').toLowerCase();
+          var mime = String(item.mimeType || item.mime_type || '').toLowerCase();
+          var name = String(item.originalName || item.original_name || item.name || '');
+          if (format === 'pdf' || mime === 'application/pdf' || /\.pdf$/i.test(name)) {
+            pdf = item;
+            break;
+          }
+        }
+        if (!pdf || pdf.id == null || pdf.id === '') {
+          throw new Error('no pdf content');
+        }
+        var url = '/api/files/' + encodeURIComponent(String(pdf.id)) + '/download';
+        bookPdfUrls[bookId] = url;
+        return url;
+      });
+    });
   }
 
   function initFragmentPicker() {
@@ -1014,7 +1060,7 @@
     }
 
     async function ensureDoc() {
-      var url = DEV_SRC || ('/api/books/' + state.book.id + '/file');
+      var url = DEV_SRC || await resolveBookPdfUrl(state.book.id);
       if (pdf && pdfUrl === url) return;
 
       pdfjs = await loadPdfjs();
@@ -1536,6 +1582,9 @@
       return;
     }
     window.LoreArticlePublish.open(state.articleId, {
+      // Сразу финальный экран с кнопкой Publish (как в книжной форме):
+      // черновик уже сохранён, искать Publish за «Continue» не нужно.
+      screen: 2,
       // бэк при самой публикации нашёл ошибки в статье — показываем их на форме
       onInvalid: function (errors) { renderServerErrors(errors); },
       // 409: публикация запрещена (обычно у статьи нет контента) —

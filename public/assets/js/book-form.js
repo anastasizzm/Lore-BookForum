@@ -1044,12 +1044,9 @@
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
       // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
       description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
-      // Заметки автора (11.2): бэк требует 1..2000 (PublicationFormValidator::
-      // NOTES_MAX_LEN) — поле ОБЯЗАТЕЛЬНОЕ. Пустое и слишком длинное —
-      // разные сообщения: requiredMsgKey (пусто, включая пробелы —
-      // trim в validateField), msgKey (длина > 2000).
-      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note',
-                     requiredMsgKey: 'js.rule_book_author_note_required' },
+      // Заметки автора (11.2): поле необязательное — пустое значение
+      // допустимо, проверяем только верхний предел 2000.
+      authorNotes: { required: false, maxLength: 2000, msgKey: 'js.rule_book_author_note' },
       genreId:     { required: true,  msgKey: 'js.rule_book_genre' },
       categoryId:  { required: true,  msgKey: 'js.rule_book_category' },
       publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
@@ -1070,7 +1067,7 @@
     // Шаг 3 «Роли» пропущен — когда он появится, добавить сюда его поля.
     var STEP_FIELDS = {
       1: ['title', 'genreId', 'categoryId', 'publisher', 'pages', 'isbn', 'cover'],
-      2: ['description', 'authorNotes', 'files', 'authors', 'editors'],
+      2: ['description', 'files', 'authors', 'editors'],
     };
 
     var fileValidators = {
@@ -1932,6 +1929,9 @@
           mode: mode,
           bookId: createdId,
           redirect: redirect,
+          // Сразу финальный экран с кнопкой Publish: черновик уже создан,
+          // пользователю не нужно искать Publish за «Continue».
+          screen: mode === 'publish' ? 2 : 1,
           cancelRedirect: mode === 'publish' ? redirect : '',
         });
       }
@@ -2049,6 +2049,26 @@
       var steps = Array.prototype.slice.call(form.querySelectorAll('.book-step'));
       if (!steps.length) {
         return { current: function () { return 1; }, goTo: function () {}, reveal: function () {} };
+      }
+
+      // EDIT-РЕЖИМ: правка не делится на шаги. Показываем все секции сразу
+      // и убираем «Далее/Назад», чтобы клик по «Далее» не открывал вторую
+      // «страницу» формы (пункт аудита: редактирование открывало две страницы).
+      if (editId) {
+        steps.forEach(function (step) { step.hidden = false; });
+        Array.prototype.forEach.call(form.querySelectorAll('.book-step__nav'), function (el) {
+          el.hidden = true;
+        });
+        Array.prototype.forEach.call(form.querySelectorAll('.book-step__num'), function (el) {
+          el.hidden = true;
+        });
+        return {
+          current: function () { return 1; },
+          goTo: function () {},
+          reveal: function (stepEl) {
+            if (stepEl) stepEl.hidden = false;
+          },
+        };
       }
 
       var total = steps.length;

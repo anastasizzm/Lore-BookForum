@@ -132,6 +132,15 @@ $isOwnerPub = $viewerId > 0 && $creatorId > 0 && $viewerId === $creatorId;
  */
 $statusRaw = $status ?? (is_array($article) ? ($article['status'] ?? null)
                                             : ($article->status ?? null));
+// Article::$status — enum PublicationStatus: приводим к строке, иначе
+// черновик не распознаётся и Publish на странице не появляется.
+if ($statusRaw instanceof \BackedEnum) {
+    $statusRaw = $statusRaw->value;
+} elseif ($statusRaw instanceof \UnitEnum) {
+    $statusRaw = $statusRaw->name;
+} elseif (is_object($statusRaw) && method_exists($statusRaw, '__toString')) {
+    $statusRaw = (string) $statusRaw;
+}
 $status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
 $isDraft   = $status === 'draft';
 
