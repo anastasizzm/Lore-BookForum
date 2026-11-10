@@ -5,6 +5,7 @@ import { apiError, apiFetch } from '../../core/http.js';
 import { t, tx } from '../../core/i18n.js';
 import { esc, normalizeColor } from '../../core/utils.js';
 import { userRoles } from './roles/state.js';
+import { urLoad } from './roles/api.js';
 import { listFrom, unwrapItem } from '../../core/payload.js';
 import { takeBootstrap } from '../../core/bootstrap.js';
 
@@ -71,12 +72,39 @@ function usersNormalize(u) {
   };
 }
 
+function roleCellHtml(roles) {
+  return roles.length
+    ? roles.slice(0, 2).map(function (r) { return '<span class="admin-badge">' + esc(r) + '</span>'; }).join(' ') +
+      (roles.length > 2 ? ' <span class="admin-badge admin-badge--muted">+' + (roles.length - 2) + '</span>' : '')
+    : '<span class="admin-badge admin-badge--muted">—</span>';
+}
+
+function updateUserRoleCell(user) {
+  var cell = document.querySelector('tr[data-user-id="' + user.id + '"] [data-col="role"]');
+  if (cell) cell.innerHTML = roleCellHtml(user.roles || []);
+}
+
+// /api/users отдаёт роли не во всех состояниях (первая страница из bootstrap
+// может прийти с ролями, а поиск/следующие страницы — без них). Догружаем
+// роли существующим эндпоинтом /api/system/users/{id}/roles.
+var roleHydrating = {};
+function hydrateMissingRoles() {
+  usersList.items.forEach(function (u) {
+    if (u.roleObjs || roleHydrating[u.id]) return;
+    roleHydrating[u.id] = true;
+    urLoad(u.id).then(function (roles) {
+      if (!roles) { delete roleHydrating[u.id]; return; }
+      u.roleObjs = roles;
+      u.roles = roles.map(function (r) { return r.title; });
+      userRoles.cache[u.id] = roles;
+      updateUserRoleCell(u);
+    }, function () { delete roleHydrating[u.id]; });
+  });
+}
+
 function usersRowHtml(u) {
   var id = u.id;
-  var roleCell = u.roles.length
-    ? u.roles.slice(0, 2).map(function (r) { return '<span class="admin-badge">' + esc(r) + '</span>'; }).join(' ') +
-      (u.roles.length > 2 ? ' <span class="admin-badge admin-badge--muted">+' + (u.roles.length - 2) + '</span>' : '')
-    : '<span class="admin-badge admin-badge--muted">—</span>';
+  var roleCell = roleCellHtml(u.roles);
   var statusCell = u.blocked
     ? '<span class="admin-badge admin-badge--danger">' + esc(t('admin.status_blocked')) + '</span>'
     : '<span class="admin-badge admin-badge--success">' + esc(t('admin.status_active')) + '</span>';
@@ -133,6 +161,7 @@ function usersRender() {
     usersList.count.textContent = String(usersList.total !== null ? usersList.total : usersList.items.length);
   }
   if (usersList.more) usersList.more.hidden = !usersList.hasMore;
+  hydrateMissingRoles();
 }
 
 /** Применяет разобранную страницу пользователей к состоянию и перерисовывает таблицу. */

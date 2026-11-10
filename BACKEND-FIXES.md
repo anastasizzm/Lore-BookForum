@@ -55,3 +55,43 @@
   - `app/Controllers/Additional/AdminPanelController.php::dashboard()`
   - Передавать `$allowed` (`route => bool`).
   - Передавать `COUNT(*)` по разделам.
+
+## Frontend audit 2 (`fix/frontend-audit-2`)
+
+Ниже — правки, которые нужны на бэке. Фронт уже подготовлен: после
+выполнения этих пунктов соответствующие сценарии заработают без
+дополнительных изменений в `app/` и `config/`.
+
+- [ ] **B-A2-01. Разрешить пустые заметки автора (book/article).**
+  - `app/Forms/Publications/PublicationForm.php`
+    - `authorNotes` разбирать как необязательное:
+      `QueryParser::optionalString($input, 'authorNotes') ?? ''`.
+  - `app/Validators/Publications/PublicationFormValidator.php`
+    - Для `authorNotes` проверять длину `0..NOTES_MAX_LEN` вместо `1..`.
+  - `app/Validators/Publications/PublicationPatchFormValidator.php`
+    - Разрешить пустую строку/`null` при `hasAuthorNotes` (проверка только
+      верхнего лимита `2000`).
+  - После этого работает создание книги без заметок и очистка заметок
+    через `PATCH /api/books/{id}`. На фронте поле уже необязательное.
+
+- [ ] **B-A2-02. Передавать текущего пользователя в читалку.**
+  - `app/Controllers/Publications/BooksController.php::read()`
+    - Загрузить `$userContext = $this->usersService->loadContext($userId)`
+      и передать его во view `book/book-read` как `user`.
+  - Причина: `src/layouts/main.php` передаёт `$user` в sidebar, а читалка
+    сейчас его не получает — вместо выбранного аватара показывается
+    заглушка. Активная вкладка сайдбара уже определяется на фронте.
+
+- [ ] **B-A2-03. (Рекомендуется) Отдавать роли в `GET /api/users`.**
+  - `app/Controllers/Api/Users/UsersController.php`
+    - Добавлять `roles` (`id`, `title`, `color`) в каждый элемент списка.
+  - Сейчас фронт админки подгружает роли отдельными запросами
+    `GET /api/system/users/{userId}/roles` (работает уже сейчас), поэтому
+    пункт не блокирующий. Бэкенд-агрегация уберёт N+1 запросов.
+
+- [ ] **B-A2-04. Проверить контракт выбора фрагмента статьи.**
+  - Новый роут не нужен: фронт использует существующие
+    `GET /api/books/{id}/contents` и `GET /api/files/{fileId}/download`.
+  - Убедиться, что `GET /api/books/{id}/contents` для книги-источника
+    возвращает `items[].id`, `format` и `mimeType` (сейчас контракт
+    соответствует; проверка — после изменений в правах/фильтрах).

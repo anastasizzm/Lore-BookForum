@@ -300,13 +300,8 @@ final class BooksController extends Controller
             $format,
         );
 
-        // $user нужен общему layout/sidebar: без него в читалке не
-        // отображался выбранный аватар пользователя (пункт аудита 9).
-        $userContext = $this->usersService->loadContext($userId);
-
         return $this->render('book/book-read', [
             'book'  => $publication,
-            'user'  => $userContext,
             'fileId' => $fileId->toString(),
             'previewUrl' => $this->url->url('files.preview', ['fileId' => $fileId->toString()]),
             'initial' => $progress?->position ?? $this->defaultPosition($format)

@@ -28,9 +28,7 @@ class PublicationFormValidator extends Validator
 
         $ok &= $this->checkStrings($bag, $item->title, 1, self::TITLE_MAX_LEN, 'title');
         $ok &= $this->checkStrings($bag, $item->description, 1, self::DESCR_MAX_LEN, 'description');
-        // Заметки автора необязательны: пустая строка допустима, верхний
-        // предел 2000 сохраняем.
-        $ok &= $this->checkStrings($bag, $item->authorNotes, 0, self::NOTES_MAX_LEN, 'authorNotes');
+        $ok &= $this->checkStrings($bag, $item->authorNotes, 1, self::NOTES_MAX_LEN, 'authorNotes');
 
         if ($item->genreId < 1){
             $bag->add('genreId', [$this->translator->t('errors.common.min', [':value' => 1])]);
