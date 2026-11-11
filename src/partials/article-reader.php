@@ -7,14 +7,20 @@
  * Для отрывка из книги кнопка вместо оверлея ведёт на /books/{id}
  * (см. article-details.php).
  *
+ * @param int    $articleId — id статьи (для ленивой загрузки текста)
  * @param string $title   — заголовок статьи
  * @param string $content — полный текст статьи (многострочный)
  */
-$title   = (string) ($title   ?? '');
-$content = (string) ($content ?? '');
-$tr      = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+$articleId = (int) ($articleId ?? 0);
+$title     = (string) ($title   ?? '');
+$content   = (string) ($content ?? '');
+$tr        = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 ?>
-<div class="modal article-reader" data-article-reader hidden>
+<div class="modal article-reader"
+     data-article-reader
+     data-article-id="<?= $articleId ?>"
+     <?= trim($content) !== '' ? 'data-article-loaded="1"' : '' ?>
+     hidden>
   <div class="modal__backdrop" data-article-reader-dismiss></div>
 
   <div class="modal__dialog article-reader__dialog"
@@ -37,7 +43,7 @@ $tr      = static fn(string $key, array $p = []): string => $view->e($view->t($k
 
     <div class="article-reader__body article-content" data-article-reader-body>
       <?php if (trim($content) === ''): ?>
-        <p><?= $tr('common.article.no_text') ?></p>
+        <p class="article-body__loading"><?= $tr('common.common.loading') ?></p>
       <?php else: ?>
         <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
           <?php if (trim($para) === '') continue; ?>

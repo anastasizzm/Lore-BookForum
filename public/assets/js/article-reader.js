@@ -1,19 +1,26 @@
 /**
- * article-reader.js — текст standalone-статьи прямо на странице деталей.
+ * article-reader.js — модальный оверлей чтения standalone-статьи.
  *
- * Разметка: src/views/pages/article/article-details.php —
- *   [data-article-content][data-article-id] (внутри плашки .info-box).
+ * Разметка: src/partials/article-reader.php
+ *   [data-article-reader][data-article-id]
+ *   [data-article-reader-body] — сюда рендерится текст.
  *
- * Контент статьи не приходит в web-модели, поэтому подгружаем его из
- * GET /api/articles/{id}/content. Ответ: { data: { content } } или
- * { data: { bookData, content } }. Для отрывка (bookData) текста нет —
- * там ссылка ведёт сразу в читалку книги; pageStart/redirectUrl из этого
- * же ответа подставляются в ссылку «Открыть книгу».
+ * Открывается кнопкой [data-article-reader-open] на /articles/{id}.
+ * Текст статьи не приходит в web-модели, поэтому при первом открытии
+ * подгружается из GET /api/articles/{id}/content. Ответ:
+ *   { data: { content } } или { data: { bookData, content } }.
  *
- * Модального окна и кнопки Close больше нет: текст рендерится в плашке.
+ * Для отрывка из книги оверлея нет — кнопка ведёт на /books/{id}/read.
  */
 (function () {
   'use strict';
+
+  var state = {
+    root: null,
+    lastFocus: null,
+    loading: false,
+    loaded: false
+  };
 
   function t(key, fallback) {
     var v = window.LoreI18n ? window.LoreI18n.t(key) : key;
@@ -99,29 +106,134 @@
       });
   }
 
-  function load(root) {
-    var id = parseInt(root.getAttribute('data-article-id'), 10) || 0;
-    if (!id || root.getAttribute('data-article-loaded') === '1') return;
-    root.setAttribute('data-article-loaded', '1');
+  function root() {
+    if (!state.root) state.root = document.querySelector('[data-article-reader]');
+    return state.root;
+  }
+
+  function bodyOf(el) {
+    return el ? el.querySelector('[data-article-reader-body]') : null;
+  }
+
+  function showLoading(el) {
+    var body = bodyOf(el);
+    if (body) {
+      body.innerHTML = '<p class="article-body__loading">' +
+        escapeHtml(t('common.common.loading', 'Loading…')) + '</p>';
+    }
+  }
+
+  function showNoText(el) {
+    var body = bodyOf(el);
+    if (body) {
+      body.innerHTML = '<p>' +
+        escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
+    }
+  }
+
+  function loadContent(el) {
+    if (!el || state.loading) return;
+    if (el.getAttribute('data-article-loaded') === '1') {
+      state.loaded = true;
+      return;
+    }
+
+    var id = parseInt(el.getAttribute('data-article-id'), 10) || 0;
+    var body = bodyOf(el);
+    if (!id || !body) {
+      showNoText(el);
+      return;
+    }
+
+    state.loading = true;
+    showLoading(el);
 
     fetchContent(id)
       .then(function (data) {
-        // Отрывок из книги: собственного текста нет — оставляем ссылку
-        // «Открыть книгу» (она уже в блоке кнопок).
-        if (data.bookData) {
-          root.innerHTML = '<p>' + escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
+        // Отрывок из книги: собственного текста нет — там кнопка Open book.
+        if (data && data.bookData) {
+          showNoText(el);
           return;
         }
 
-        renderText(root, data.content);
+        renderText(body, data && data.content);
+        el.setAttribute('data-article-loaded', '1');
+        state.loaded = true;
       })
       .catch(function (err) {
-        console.error('[article] content load failed', err);
-        // Не помечаем блок загруженным: повторный клик «Читать статью»
-        // попробует загрузить текст ещё раз.
-        root.removeAttribute('data-article-loaded');
-        root.innerHTML = '<p>' + escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
+        console.error('[article-reader] content load failed', err);
+        // Не помечаем как загруженное: при повторном открытии попробуем снова.
+        el.removeAttribute('data-article-loaded');
+        state.loaded = false;
+        showNoText(el);
+      })
+      .finally(function () {
+        state.loading = false;
       });
+  }
+
+  function focusables(el) {
+    if (!el) return [];
+    return Array.prototype.slice.call(
+      el.querySelectorAll('button, [href], input, select, textarea, [tabindex]')
+    ).filter(function (node) {
+      return !node.disabled && node.offsetParent !== null;
+    });
+  }
+
+  function onKeydown(e) {
+    var el = root();
+    if (!el || el.hidden) return;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+
+    var items = focusables(el);
+    if (!items.length) return;
+    var first = items[0];
+    var last = items[items.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  function open(opener) {
+    var el = root();
+    if (!el) return;
+
+    state.lastFocus = opener || document.activeElement;
+    el.hidden = false;
+    document.body.classList.add('is-modal-open');
+    document.addEventListener('keydown', onKeydown, true);
+
+    var closeBtn = el.querySelector('[data-article-reader-close]');
+    if (closeBtn) closeBtn.focus();
+
+    loadContent(el);
+  }
+
+  function close() {
+    var el = root();
+    if (!el) return;
+
+    el.hidden = true;
+    document.body.classList.remove('is-modal-open');
+    document.removeEventListener('keydown', onKeydown, true);
+
+    var target = state.lastFocus;
+    state.lastFocus = null;
+    if (target && target.isConnected && target.offsetParent !== null) {
+      try { target.focus(); } catch (_) {}
+    }
   }
 
   /**
@@ -152,43 +264,35 @@
         link.setAttribute('href', url);
       })
       .catch(function (err) {
-        console.warn('[article] book link load failed', err);
+        console.warn('[article-reader] book link load failed', err);
       });
   }
 
   function init() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-article-content]'), load);
-    Array.prototype.forEach.call(document.querySelectorAll('[data-article-book-read]'), loadBookLink);
-  }
-
-  /**
-   * Кнопка «Читать статью»: надёжно прокручивает к тексту и, если он ещё
-   * не загружен, повторно запускает загрузку. Раньше это был обычный
-   * якорь #article-content — при пустом/поздно загруженном блоке клик
-   * выглядел как «ничего не произошло».
-   */
-  function scrollToArticle(link) {
-    var target = document.querySelector('[data-article-content]') || document.getElementById('article-content');
-    if (!target) return;
-
-    if (target.getAttribute('data-article-loaded') !== '1') {
-      target.removeAttribute('data-article-loaded');
-      load(target);
-    }
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    try {
-      history.replaceState(null, '', '#article-content');
-    } catch (_) {
-      location.hash = 'article-content';
-    }
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-article-book-read]'),
+      loadBookLink
+    );
   }
 
   document.addEventListener('click', function (e) {
-    var link = e.target && e.target.closest ? e.target.closest('[data-article-read-scroll]') : null;
-    if (!link) return;
-    e.preventDefault();
-    scrollToArticle(link);
+    var target = e.target && e.target.closest ? e.target : null;
+    if (!target) return;
+
+    var opener = target.closest('[data-article-reader-open]');
+    if (opener) {
+      e.preventDefault();
+      open(opener);
+      return;
+    }
+
+    var el = root();
+    if (!el || el.hidden) return;
+
+    if (target.closest('[data-article-reader-close], [data-article-reader-dismiss]')) {
+      e.preventDefault();
+      close();
+    }
   });
 
   if (document.readyState === 'loading') {

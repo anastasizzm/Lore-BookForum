@@ -290,6 +290,7 @@ $articlePayload = [
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/modules/article-reader.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/article-rights.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/modules/roles-module.css') ?>">
 <?php $view->endBlock('head_extra'); ?>
@@ -349,8 +350,8 @@ $articlePayload = [
         </button>
         <?php
           // Отрывок из книги читается на странице книги (редирект сразу
-          // в читалку на pageStart), standalone-статья показывает текст
-          // прямо в плашке ниже — кнопка лишь прокручивает к нему.
+          // в читалку на pageStart). Standalone-статья открывается в
+          // модальном оверлее поверх страницы (article-reader.php).
         ?>
         <?php if ($isBookExcerpt): ?>
           <!-- pageStart живёт в contentData, который бэк отдаёт отдельным
@@ -364,11 +365,11 @@ $articlePayload = [
             <?= $tr('common.article.open_book') ?>
           </a>
         <?php else: ?>
-          <a class="btn btn--primary btn--pill"
-             href="#article-content"
-             data-article-read-scroll>
+          <button type="button"
+                  class="btn btn--primary btn--pill"
+                  data-article-reader-open>
             <?= $tr('common.article.read') ?>
-          </a>
+          </button>
         <?php endif; ?>
       </div>
 
@@ -464,34 +465,20 @@ $articlePayload = [
               <?= nl2br($view->e($authorNote)) ?>
             </div>
           <?php endif; ?>
-
-          <?php if (!$isBookExcerpt): ?>
-            <!-- Текст standalone-статьи показывается прямо в плашке, без
-                 отдельной вкладки Content и без модального окна. Если
-                 сервер прислал content — рендерим сразу; иначе его
-                 подгружает article-reader.js из GET /api/articles/{id}/content. -->
-            <div class="article-body article-content"
-                 id="article-content"
-                 data-article-content
-                 <?= $content !== '' ? 'data-article-loaded="1"' : '' ?>
-                 data-article-id="<?= (int) $articleId ?>">
-              <?php if ($content !== ''): ?>
-                <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
-                  <?php if (trim($para) === '') continue; ?>
-                  <p><?= nl2br($view->e(trim($para))) ?></p>
-                <?php endforeach; ?>
-              <?php else: ?>
-                <p class="article-body__loading"><?= $tr('common.common.loading') ?></p>
-              <?php endif; ?>
-            </div>
-          <?php endif; ?>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Текст standalone-статьи уже показан в плашке выше; отдельного
-       модального окна чтения и кнопки Close больше нет. -->
+  <?php if (!$isBookExcerpt): ?>
+    <!-- Оверлей чтения standalone-статьи: открывается кнопкой Read article.
+         Текст подгружается article-reader.js из GET /api/articles/{id}/content. -->
+    <?php $view->include('article-reader', [
+        'articleId' => (int) $articleId,
+        'title'     => (string) ($article->title ?? ''),
+        'content'   => $content,
+    ]); ?>
+  <?php endif; ?>
 
 
   <!-- Блок комментариев.
@@ -782,9 +769,15 @@ $articlePayload = [
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
-  <!-- article-reader.js — подгружает текст standalone-статьи в плашку
-       (GET /api/articles/{id}/content), без модального окна. -->
-  <script src="/assets/js/article-reader.js"></script>
+  <!-- article-reader.js — модальный оверлей чтения standalone-статьи:
+       открывает статью по кнопке и подгружает текст из GET /api/articles/{id}/content. -->
+  <?php
+  $articleReaderJsFile = dirname(__DIR__, 4) . '/public/assets/js/article-reader.js';
+  $articleReaderJsUrl  = $view->asset('js/article-reader.js');
+  $articleReaderJsUrl .= (str_contains($articleReaderJsUrl, '?') ? '&' : '?')
+      . 'v=' . (@filemtime($articleReaderJsFile) ?: '1');
+  ?>
+  <script src="<?= $view->e($articleReaderJsUrl) ?>"></script>
   <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->
