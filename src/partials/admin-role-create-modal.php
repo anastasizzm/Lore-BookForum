@@ -2,7 +2,7 @@
 /**
  * partials/admin-role-create-modal — окно «Новая роль» (admin/roles).
  *
- * Логика — public/assets/js/admin.js (раздел ROLE CREATE).
+ * Логика — public/assets/js/admin/main.js (раздел ROLE CREATE).
  * Поля: название (EN) → «+ язык» → Private/Public → цвет → Save.
  */
 

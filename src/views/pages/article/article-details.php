@@ -171,8 +171,8 @@ $bookTitle = $str($bookData?->book ?? (is_object($article) ? ($article->book ?? 
 
 $annotation = (string) ($article->description ?? '');
 $authorNote = (string) ($article->authorNotes ?? '');
-// Пустые заметки могут храниться как невидимый NBSP (обход обязательного
-// поля на замороженном бэке) — на странице считаем их пустыми.
+// В старых записях пустые заметки могли сохраниться как невидимый NBSP
+// (обход уже не нужен, бэк принимает '') — на странице считаем их пустыми.
 if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
     $authorNote = '';
 }
@@ -182,6 +182,9 @@ $content    = (string) ($contentData?->getContent() ?? '');
 
 $pageStart = $bookData?->pageStart ?? null;
 $pageEnd   = $bookData?->pageEnd   ?? ($pageStart ?? null);
+$pageLang  = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : '');
 
 // Отрывок открывается сразу в читалке на первой странице фрагмента,
 // а не на странице деталей книги.
@@ -189,11 +192,8 @@ $bookReadUrl = '#';
 if ($bookId > 0) {
     $bookReadUrl = '/books/' . $bookId . '/read'
         . (!empty($pageStart) ? '?page=' . (int) $pageStart : '');
-    $lang = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
-        ? $_GET['lang']
-        : (method_exists($view, 'locale') ? $view->locale() : '');
-    if ($lang !== '') {
-        $bookReadUrl .= (str_contains($bookReadUrl, '?') ? '&' : '?') . 'lang=' . urlencode($lang);
+    if ($pageLang !== '') {
+        $bookReadUrl .= (str_contains($bookReadUrl, '?') ? '&' : '?') . 'lang=' . urlencode($pageLang);
     }
 }
 
@@ -299,8 +299,6 @@ $articlePayload = [
         'type'    => 'article',
         'id'      => $articleId,
         'isOwner' => $isOwnerPub,
-        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
-        'title'   => (string) ($article->title ?? ''),
     ]); ?>
   </div>
 
@@ -337,7 +335,14 @@ $articlePayload = [
           // прямо в плашке ниже — кнопка лишь прокручивает к нему.
         ?>
         <?php if ($isBookExcerpt): ?>
-          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookReadUrl) ?>">
+          <!-- pageStart живёт в contentData, который бэк отдаёт отдельным
+               GET /api/articles/{id}/content; article-reader.js подставит
+               redirectUrl с ?page=, если в web-модели его ещё нет. -->
+          <a class="btn btn--primary btn--pill"
+             href="<?= $view->e($bookReadUrl) ?>"
+             data-article-book-read
+             data-article-id="<?= (int) $articleId ?>"
+             data-article-lang="<?= $view->e($pageLang) ?>">
             <?= $tr('common.article.open_book') ?>
           </a>
         <?php else: ?>

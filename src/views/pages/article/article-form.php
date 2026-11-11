@@ -40,7 +40,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *     правка     PATCH /api/articles/{id}         + PUT /api/articles/{id}/content (If-Match)
  *     обложка    POST  /api/files/upload          (category=cover) → iconId
  *     публикация POST  /api/articles/{id}/publish (окно выбора прав, article-publish.js)
- *   Поля жанр/тип/аннотация/заметка автора обязательны уже для черновика (так у бэка).
+ *   Аннотация и заметка автора необязательны (пустые строки допустимы);
+ *   жанр/тип проверяются при публикации.
  *   data-version — текущая версия контента для If-Match (необязательно: иначе берём из
  *   ETag ответа GET /api/articles/{id}/content).
  *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
@@ -484,14 +485,12 @@ $richEditor = static function (
         <h3 class="article-form__section-title"><?= $tr('common.articleform.section_text') ?></h3>
 
         <div class="form-field">
-          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAnnotation"
                     name="annotation"
                     rows="6"
                     maxlength="5000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>

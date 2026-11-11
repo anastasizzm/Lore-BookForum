@@ -52,8 +52,9 @@
     'publication.updateMeta':    { kind: 'publication', flags: ['updateMeta'],    owner: true },
     'publication.updateContent': { kind: 'publication', flags: ['updateContent'], owner: true },
     'publication.edit':          { kind: 'publication', flags: ['updateMeta', 'updateContent'], owner: true },
-    // Отдельного флага publish бэк не отдаёт: по договорённости updateMeta || updateContent
-    'publication.publish':       { kind: 'publication', flags: ['updateMeta', 'updateContent'], owner: true },
+    // Публикация — это смена статуса (метаинформация), поэтому бэк требует
+    // только updateMeta (UpdateMetaPublicationOperation).
+    'publication.publish':       { kind: 'publication', flags: ['updateMeta'], owner: true },
     // Публикация НОВОЙ публикации из формы создания - опирается на create
     'publication.publishNew':    { kind: 'publication', flags: ['create'] },
     'publication.delete':        { kind: 'publication', flags: ['delete'],        owner: true },

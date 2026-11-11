@@ -7,7 +7,8 @@
  * Контент статьи не приходит в web-модели, поэтому подгружаем его из
  * GET /api/articles/{id}/content. Ответ: { data: { content } } или
  * { data: { bookData, content } }. Для отрывка (bookData) текста нет —
- * там ссылка ведёт сразу в читалку книги.
+ * там ссылка ведёт сразу в читалку книги; pageStart/redirectUrl из этого
+ * же ответа подставляются в ссылку «Открыть книгу».
  *
  * Модального окна и кнопки Close больше нет: текст рендерится в плашке.
  */
@@ -78,15 +79,11 @@
     }).join('');
   }
 
-  function load(root) {
-    var id = parseInt(root.getAttribute('data-article-id'), 10) || 0;
-    if (!id || root.getAttribute('data-article-loaded') === '1') return;
-    root.setAttribute('data-article-loaded', '1');
-
+  function fetchContent(id) {
     var url = '/api/articles/' + encodeURIComponent(id) + '/content';
     var doFetch = (window.LoreCsrf && window.LoreCsrf.fetch) ? window.LoreCsrf.fetch : fetch;
 
-    doFetch(url, {
+    return doFetch(url, {
       method: 'GET',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
@@ -98,7 +95,17 @@
       .then(function (parsed) {
         var data = parsed && parsed.data ? parsed.data : parsed;
         if (!data || typeof data !== 'object') throw new Error('empty payload');
+        return data;
+      });
+  }
 
+  function load(root) {
+    var id = parseInt(root.getAttribute('data-article-id'), 10) || 0;
+    if (!id || root.getAttribute('data-article-loaded') === '1') return;
+    root.setAttribute('data-article-loaded', '1');
+
+    fetchContent(id)
+      .then(function (data) {
         // Отрывок из книги: собственного текста нет — оставляем ссылку
         // «Открыть книгу» (она уже в блоке кнопок).
         if (data.bookData) {
@@ -114,8 +121,41 @@
       });
   }
 
+  /**
+   * Отрывок: contentData (bookData.pageStart) отдаётся отдельным запросом.
+   * Если в ссылке ещё нет ?page=, подставляем redirectUrl из ответа.
+   */
+  function loadBookLink(link) {
+    var id = parseInt(link.getAttribute('data-article-id'), 10) || 0;
+    if (!id || link.getAttribute('data-book-loaded') === '1') return;
+    if (/[?&]page=\d+/.test(link.getAttribute('href') || '')) return;
+    link.setAttribute('data-book-loaded', '1');
+
+    fetchContent(id)
+      .then(function (data) {
+        var bookData = data && data.bookData;
+        if (!bookData) return;
+
+        var url = bookData.redirectUrl || '';
+        if (!url) {
+          var bookId = parseInt(bookData.bookId, 10) || 0;
+          if (!bookId) return;
+          var params = [];
+          if (bookData.pageStart) params.push('page=' + encodeURIComponent(bookData.pageStart));
+          var lang = link.getAttribute('data-article-lang') || '';
+          if (lang) params.push('lang=' + encodeURIComponent(lang));
+          url = '/books/' + bookId + '/read' + (params.length ? '?' + params.join('&') : '');
+        }
+        link.setAttribute('href', url);
+      })
+      .catch(function (err) {
+        console.warn('[article] book link load failed', err);
+      });
+  }
+
   function init() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-article-content]'), load);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-article-book-read]'), loadBookLink);
   }
 
   if (document.readyState === 'loading') {

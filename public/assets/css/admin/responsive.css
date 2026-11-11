@@ -95,28 +95,6 @@
     flex-wrap: nowrap;
   }
 
-  .admin-report__facts {
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-  }
-
-  .admin-report__fact {
-    display: block;
-  }
-
-  .admin-report__fact dt {
-    margin-bottom: var(--space-1);
-  }
-
-  .admin-report__actions {
-    flex-direction: column-reverse;
-    justify-content: stretch;
-  }
-
-  .admin-report__actions .btn {
-    width: 100%;
-  }
-
   .admin-role__list {
     grid-template-columns: 1fr;
   }
@@ -146,7 +124,7 @@
    RESPONSIVE — roles / all-roles / users + их модалки
    Брейкпоинты: ≥1280 (ПК), ≤1024 (планшет / маленький ноутбук),
    ≤720 (телефон: таблицы превращаются в карточки), ≤520 (узкие телефоны).
-   Раскладку карточек задают data-col у ячеек (admin.js).
+   Раскладку карточек задают data-col у ячеек (admin/main.js).
    ============================================================ */
 
 /* ---------- Большие экраны ---------- */

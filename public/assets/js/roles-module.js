@@ -23,7 +23,7 @@
  * КОНТРАКТ С БЭКОМ — в шапке src/partials/roles-module.php.
  * Недоступные роуты (404/HTML/сеть) гасятся: статус data-api у корня
  * становится 'mock' и список рисуется на встроенных данных — так же,
- * как в publication-roles.js и admin.js.
+ * как в publication-roles.js и admin/main.js.
  *
  * Каталоги модалок (GET /api/users, GET /api/additional/roles) грузятся
  * лениво при первом открытии модалки — ensureCatalogs(); open() сбрасывает

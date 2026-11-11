@@ -152,8 +152,8 @@ $isbn           = $str($book->isbn      ?? null);
 
 $annotation = (string) ($book->description ?? '');
 $authorNote = (string) ($book->authorNotes ?? '');
-// Пустые заметки могут храниться как невидимый NBSP (обход обязательного
-// поля на замороженном бэке) — на странице считаем их пустыми.
+// В старых записях пустые заметки могли сохраниться как невидимый NBSP
+// (обход уже не нужен, бэк принимает '') — на странице считаем их пустыми.
 if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
     $authorNote = '';
 }
@@ -306,8 +306,6 @@ $bookPayload = [
         'type'    => 'book',
         'id'      => $bookId,
         'isOwner' => $isOwnerPub,
-        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
-        'title'   => (string) ($book->title ?? ''),
     ]); ?>
   </div>
 

@@ -35,7 +35,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        заголовок X-CSRF-Token). Accept: application/json.
  *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
  *          title       (string, required, 1..255)
- *          description (string, required, 1..4000) — аннотация
+ *          description (string, 0..4000) — аннотация (пустая строка допустима)
  *          authorNotes (string, optional, 0..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
@@ -565,15 +565,14 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <h3 class="book-form__section-title"><?= $tr('common.bookform.section_content') ?></h3>
 
+        <!-- Аннотация: description (0..4000), пустая строка допустима. -->
         <div class="form-field">
-          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAnnotation"
                     name="description"
                     rows="6"
                     maxlength="4000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('description', $fromBook('description'))) ?></textarea>
           <?= $errorBox('description') ?>
         </div>

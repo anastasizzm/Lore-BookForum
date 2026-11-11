@@ -145,20 +145,18 @@
     return {
       title: valueOf('title'),
       description: valueOf('annotation'),
-      // Бэк (заморожен) требует непустые authorNotes — пустые заметки
-      // отправляем невидимым NBSP, при выводе/префилле считаем пустыми.
-      authorNotes: notes !== '' ? notes : '\u00A0',
+      // Заметки автора необязательны: пустые уходят пустой строкой.
+      authorNotes: notes,
       genreId: parseInt(valueOf('genre'), 10) || 0,
       typeId: parseInt(valueOf('type'), 10) || 0,
       doi: doi !== '' ? doi : null,
     };
   }
 
-  /** PATCH: бэк валидирует присланные поля (min len 1) — пустые не шлём,
-      иначе правка падала бы на пустой аннотации/заметке. */
+  /** PATCH: пустые description/authorNotes разрешены (бэк принимает '').
+      Жанр и тип без значения не шлём — для них на бэке min 1. */
   function collectPatchMeta() {
     var meta = collectMeta();
-    if (meta.description === '') delete meta.description;
     if (meta.genreId < 1) delete meta.genreId;
     if (meta.typeId < 1) delete meta.typeId;
     return meta;
@@ -1871,10 +1869,6 @@
                       : name]);
         }
       });
-
-      // NBSP — технический placeholder пустых заметок (см. collectMeta).
-      var noteEl = fieldByName('author_note');
-      if (noteEl && noteEl.value.trim() === '') noteEl.value = '';
 
       setSelect('genre', data.genreId);
       setSelect('type', data.typeId);

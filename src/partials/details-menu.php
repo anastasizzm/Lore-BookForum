@@ -10,8 +10,6 @@
  * @param string $type    - 'book' | 'article'
  * @param int    $id      - id публикации
  * @param bool   $isOwner - текущий пользователь — автор/владелец публикации
- * @param string $title   - название публикации (подпись цели жалобы в
- *                          плашке «Пожаловаться»; необязательно)
  *
  * Три точки открываются на глобальных обработчиках details-menu.js
  * (тот же приём «открыть/закрыть/Escape/клик мимо», что у меню
@@ -38,16 +36,10 @@
  *
  * Удаление выполняет details-menu.js (DELETE /api/books/{id},
  * /api/articles/{id}); ошибки показывает Messages.
- *
- * «Пожаловаться» временно убрана из меню: POST /api/reports отсутствует,
- * а mock-отправка давала ложный успех (FRONTEND-FIXES F-11). Плашка
- * report-modal.php и report-modal.js остаются в проекте — вернуть пункт,
- * когда бэкенд добавит роут жалоб.
  */
 $type     = $type ?? 'book';
 $id       = (int) ($id ?? 0);
 $isOwner  = !empty($isOwner);
-$title    = (string) ($title ?? '');
 
 $isBook    = $type === 'book';
 // Веб-роута /{books|articles}/{id}/edit в config/routes.php нет (роуты
