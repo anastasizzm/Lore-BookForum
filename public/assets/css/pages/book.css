@@ -303,6 +303,7 @@
   word-break: break-word;
   color: var(--color-text, var(--color-text-strong));
   line-height: var(--lh-normal, 1.6);
+  scroll-margin-top: var(--space-4, 24px);
 }
 
 .article-body img,
@@ -597,6 +598,19 @@ html:has(.reader) body {
   line-height: 1.4;
   white-space: nowrap;
   cursor: help;
+}
+
+/* Статус чтения статьи: Reading — зелёный, Finished — синий */
+.book-page-header__badge--reading {
+  background: rgba(47, 107, 79, 0.12);
+  border-color: rgba(47, 107, 79, 0.45);
+  color: #2f6b4f;
+}
+
+.book-page-header__badge--ended {
+  background: rgba(94, 119, 163, 0.14);
+  border-color: rgba(94, 119, 163, 0.5);
+  color: #3f5a8a;
 }
 
 /* ---------------- Меню «три точки» в шапке details (F2-09) ----------------

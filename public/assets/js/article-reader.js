@@ -117,6 +117,9 @@
       })
       .catch(function (err) {
         console.error('[article] content load failed', err);
+        // Не помечаем блок загруженным: повторный клик «Читать статью»
+        // попробует загрузить текст ещё раз.
+        root.removeAttribute('data-article-loaded');
         root.innerHTML = '<p>' + escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
       });
   }
@@ -157,6 +160,36 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-article-content]'), load);
     Array.prototype.forEach.call(document.querySelectorAll('[data-article-book-read]'), loadBookLink);
   }
+
+  /**
+   * Кнопка «Читать статью»: надёжно прокручивает к тексту и, если он ещё
+   * не загружен, повторно запускает загрузку. Раньше это был обычный
+   * якорь #article-content — при пустом/поздно загруженном блоке клик
+   * выглядел как «ничего не произошло».
+   */
+  function scrollToArticle(link) {
+    var target = document.querySelector('[data-article-content]') || document.getElementById('article-content');
+    if (!target) return;
+
+    if (target.getAttribute('data-article-loaded') !== '1') {
+      target.removeAttribute('data-article-loaded');
+      load(target);
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try {
+      history.replaceState(null, '', '#article-content');
+    } catch (_) {
+      location.hash = 'article-content';
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest ? e.target.closest('[data-article-read-scroll]') : null;
+    if (!link) return;
+    e.preventDefault();
+    scrollToArticle(link);
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

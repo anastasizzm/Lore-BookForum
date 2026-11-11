@@ -82,6 +82,18 @@ $articleId     = (int) $articleRawId;
 $isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
 $savesCount    = (int)  ($article->savedCount ?? 0);
 
+// Статус чтения из контекста пользователя: none | reading | ended.
+// Показываем его в шапке статьи (Reading / Finished) — так же, как бейдж
+// на карточках в «Сохранённых».
+$readingRaw = $readerCtx?->readingStatus ?? null;
+if ($readingRaw instanceof \BackedEnum) $readingRaw = $readingRaw->value;
+$readingStatus = is_string($readingRaw) ? $readingRaw : 'none';
+$readingLabel  = match ($readingStatus) {
+    'reading' => $view->t('common.filter.reading'),
+    'ended'   => $view->t('common.filter.finished'),
+    default   => '',
+};
+
 // rating_avg в БД хранится умноженным на 10 (46 -> 4.6);0 — оценок нет.
 // Деление всегда: модель отдаёт ровно контрактные ×10 (int 0..50),
 // эвристика «> 5» ломалась на значениях 1..5 (среднее 0.1..0.5).
@@ -291,6 +303,12 @@ $articlePayload = [
       <span class="book-page-header__badge"
             title="<?= $tr('common.article.draft_hint') ?>"><?= $tr('common.article.draft_badge') ?></span>
     <?php endif; ?>
+    <?php if ($readingLabel !== ''): ?>
+      <!-- Статус чтения статьи (Reading / Finished) -->
+      <span class="book-page-header__badge book-page-header__badge--<?= $view->e($readingStatus) ?>">
+        <?= $view->e($readingLabel) ?>
+      </span>
+    <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
          по образцу book-details. Пункты рендерятся скрытыми, показывает
          permissions.js по правилам /api/publications/rules, $isOwnerPub —
@@ -346,7 +364,9 @@ $articlePayload = [
             <?= $tr('common.article.open_book') ?>
           </a>
         <?php else: ?>
-          <a class="btn btn--primary btn--pill" href="#article-content">
+          <a class="btn btn--primary btn--pill"
+             href="#article-content"
+             data-article-read-scroll>
             <?= $tr('common.article.read') ?>
           </a>
         <?php endif; ?>
@@ -461,7 +481,7 @@ $articlePayload = [
                   <p><?= nl2br($view->e(trim($para))) ?></p>
                 <?php endforeach; ?>
               <?php else: ?>
-                <p class="article-body__loading"><?= $tr('common.loading') ?></p>
+                <p class="article-body__loading"><?= $tr('common.common.loading') ?></p>
               <?php endif; ?>
             </div>
           <?php endif; ?>

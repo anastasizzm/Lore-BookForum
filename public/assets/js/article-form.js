@@ -25,8 +25,11 @@
   };
   var COVER_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
   var IMAGE_MIMES = COVER_MIMES;
-  var IMAGE_UPLOAD_URL = '/api/articles/images';
-  var IMG_SRC_RE = /^\/uploads\/articles\/[A-Za-z0-9][A-Za-z0-9._\/-]*$/;
+  var IMAGE_UPLOAD_URL = '/api/files/upload';
+  // Статьи хранят картинки как /api/files/{uuid}/preview (файл грузится
+  // через общий files.upload с категорией cover). Старый формат
+  // /uploads/articles/... оставлен для уже сохранённого контента.
+  var IMG_SRC_RE = /^(?:\/uploads\/articles\/[A-Za-z0-9][A-Za-z0-9._\/-]*|\/api\/files\/[A-Za-z0-9-]+\/preview)$/;
   var DOI_RE = /^10\.\d{4,9}\/\S+$/;
   var AUTOSAVE_MS = 30000;
   var LOCAL_PREFIX = 'articleform:v1:';
@@ -673,7 +676,10 @@
 
     function uploadImage(file) {
       var fd = new FormData();
-      fd.append('image', file);
+      // Роут files.upload ждёт поле `file` и категорию. Отдельного
+      // /api/articles/images в бэкенде нет — используем общий загрузчик.
+      fd.append('file', file);
+      fd.append('category', 'cover');
       return csrfFetch(IMAGE_UPLOAD_URL, {
         method: 'POST',
         body: fd,
@@ -688,8 +694,13 @@
             throw new Error('Forbidden');
           }
           if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          // files.upload отвечает { createdId: uuid }; некоторые версии —
+          // { data: { id } } или { data: { url } }.
           var payload = (data && data.data) || data || {};
+          var id = (data && data.createdId) || payload.id || '';
           var src = payload.url || payload.src || '';
+          if (!src && id) src = '/api/files/' + encodeURIComponent(String(id)) + '/preview';
           src = safeImgSrc(src);
           if (!src) throw new Error('bad url');
           return src;
@@ -772,6 +783,27 @@
     area.addEventListener('paste', function (e) {
       var cd = e.clipboardData;
       if (!cd) return;
+
+      // Вставка картинки из буфера (скриншот, копия изображения) — грузим
+      // файл тем же путём, что и кнопка «картинка» на панели.
+      var imageFiles = [];
+      Array.prototype.forEach.call(cd.items || [], function (item) {
+        if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
+          var f = item.getAsFile();
+          if (f) imageFiles.push(f);
+        }
+      });
+      if (!imageFiles.length) {
+        Array.prototype.forEach.call(cd.files || [], function (file) {
+          if (file.type.indexOf('image/') === 0) imageFiles.push(file);
+        });
+      }
+      if (imageFiles.length) {
+        e.preventDefault();
+        handleImageFiles(imageFiles);
+        return;
+      }
+
       e.preventDefault();
       var html = cd.getData('text/html');
       var out = html ? sanitizeHtml(html) : plainTextToHtml(cd.getData('text/plain'));
@@ -780,7 +812,11 @@
       markDirty();
     });
 
-    area.addEventListener('drop', function (e) { e.preventDefault(); });
+    area.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) handleImageFiles(files);
+    });
 
     area.addEventListener('click', function (e) {
       var img = e.target && e.target.tagName === 'IMG' ? e.target : null;

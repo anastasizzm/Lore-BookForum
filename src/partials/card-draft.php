@@ -71,7 +71,7 @@ $typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts
     <span class="card-draft__type"><?= $view->e($typeLabel) ?></span>
     <?php if ($date !== ''): ?>
       <span class="card-draft__sep" aria-hidden="true">·</span>
-      <time class="card-draft__date"><?= $view->e($view->t('common.drafts.updated', ['value' => $date])) ?></time>
+      <time class="card-draft__date"><?= $view->e($date) ?></time>
     <?php endif; ?>
   </p>
 

@@ -380,11 +380,11 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // Данные уже показанной выборки (в т.ч. SSR) кладутся в кэш —
   // возврат на неё идёт без запроса.
   // ============================================
-  const LIST_KEYS    = ['q', 'genre', 'status', 'p_status', 'isbn', 'doi', 'kind', 'sort', 'ctype'];
+  const LIST_KEYS    = ['q', 'genre', 'p_status', 'isbn', 'doi', 'kind', 'sort', 'ctype'];
   const FORWARD_KEYS = LIST_KEYS.concat(['lang']);
   const PAGER_KEYS   = LIST_KEYS.concat(['f', 'lang']);
-  const RESET_KEYS   = ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
-  const GROUP_KEYS   = ['status', 'ctype'];
+  const RESET_KEYS   = ['genre', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
+  const GROUP_KEYS   = ['ctype'];
 
   function tOr(key, fallback) {
     const v = tFilter(key);
@@ -433,8 +433,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     let rs = item.readingStatus;
     if (rs && typeof rs === 'object') rs = rs.value;
-    const readingStatus = isArt ? 'none' : String(rs || 'none');
-    const statusLabel = ctx.labels[readingStatus] || '';
+    const readingStatus = String(rs || 'none');
+    const statusLabel = readingStatus === 'reading'
+      ? tOr('common.filter.reading', 'Reading')
+      : readingStatus === 'ended'
+        ? tOr('common.filter.finished', 'Finished')
+        : '';
 
     const itemUrl   = id > 0 ? (isArt ? '/articles/' : '/books/') + id : '#';
     const authorUrl = authorId > 0 ? '/users/' + authorId : '#';
@@ -488,8 +492,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const type  = b.__kind || ((b.type === 'article' || b.articleId) ? 'article' : 'book');
     const cover = coverOf(b);
     const date  = b.updatedAt || b.createdAt || '';
+    // Подпись «Updated» убрана: в карточке черновика показываем только дату.
     const dateText = date
-      ? tFilter('common.drafts.updated', { value: (window.LoreI18n ? LoreI18n.formatDate(date) : '') || date })
+      ? ((window.LoreI18n ? LoreI18n.formatDate(date) : '') || date)
       : '';
     const lang  = ctx.lang ? '&lang=' + encodeURIComponent(ctx.lang) : '';
     const href  = id > 0

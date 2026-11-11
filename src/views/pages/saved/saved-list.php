@@ -16,10 +16,16 @@
 $items    = $items ?? [];
 $meta     = $meta  ?? [];
 
-$items = array_map(
-    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
-    $items
-);
+// Контекст пользователя (isSaved / readingStatus) приходит внутри
+// WithContext. Раньше он терялся при разворачивании, поэтому в «Сохранённых»
+// не рисовались бейджи Reading / Finished и не работал фильтр по статусу.
+$contextOf = static function ($it) {
+    return $it instanceof \App\Models\UserContext\WithContext ? $it->context : null;
+};
+$itemOf = static function ($it) {
+    return $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it;
+};
+
 $page     = max(1, (int) ($meta['page'] ?? 1));
 $pageSize = (int) ($meta['pageSize'] ?? 0);
 $hasNext  = (bool) ($meta['hasNext'] ?? false);
@@ -58,6 +64,8 @@ $coversSuffix = '/preview';
 
 $cards = [];
 foreach ($items as $p) {
+    $context = $contextOf($p);
+    $p       = $itemOf($p);
     $creator = $p->creator ?? null;
 
     $author = $creator ? trim(($creator->name ?? '') . ' ' . ($creator->surname ?? '')) : '';
@@ -65,15 +73,20 @@ foreach ($items as $p) {
 
     $icon = $p->iconId ?? null;
 
+    // ReadingStatus приходит из PublicationContext: none | reading | ended.
+    $readingRaw = $context?->readingStatus ?? null;
+    if ($readingRaw instanceof \BackedEnum) $readingRaw = $readingRaw->value;
+    $readingStatus = is_string($readingRaw) ? $readingRaw : 'none';
+
     $cards[] = [
         'id'       => (int) $p->id,
         'cover'    => $icon instanceof Stringable ? $coversBase . rawurlencode((string) $icon) . $coversSuffix : '',
         'title'    => (string) $p->title,
         'authorId' => (int) ($creator->id ?? $p->getCreatorId()),
         'author'   => $author,
+        'readingStatus' => $readingStatus,
         // Бейдж «Draft» — по активному фильтру страницы (не по полю модели:
-        // API статус не отдаёт). 'draft'/'': card-book рисует бейдж только
-        // для статей (гейт по $isArticle внутри partial).
+        // API статус не отдаёт).
         'pubStatus' => $draftFilter ? 'draft' : '',
     ];
 }
@@ -92,7 +105,7 @@ $filterFlag = isset($_GET['f']) && is_string($_GET['f']) && in_array(strtolower(
     : null;
 
 // url() already carries ?lang=, so the locale is not added a second time.
-$baseUrl = rtrim($view->url('books.saved'), '&');
+$baseUrl = rtrim($view->url($isArticles ? 'articles.saved' : 'books.saved'), '&');
 $link = static function (array $params) use ($baseUrl, $sort, $statusParam, $filterFlag): string {
     $params += [
         'sort'   => $sort === 'newest' ? null : $sort,
@@ -132,6 +145,8 @@ $view->include('page-header', [
 ]);
 
 $view->include('library-filters', [
+    'mode'             => 'saved',
+    'showReadingStatus' => true,
     'bookHref'    => '/books/saved',
     'articleHref' => '/articles/saved',
 ]);
@@ -196,8 +211,10 @@ $view->include('library-filters', [
       <div class="grid-books" data-saved-grid>
         <?php foreach ($cards as $card): ?>
           <?php $view->include('card-book', $card + [
-              'saved' => true,
-              'saveType' => $isArticles ? 'article' : 'book',
+              'saved'      => true,
+              'isArticles' => $isArticles,
+              'detailBase' => $isArticles ? '/articles' : '/books',
+              'saveType'   => $isArticles ? 'article' : 'book',
           ]); ?>
         <?php endforeach; ?>
       </div>

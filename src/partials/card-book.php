@@ -24,6 +24,9 @@ $get = static function ($src, string $key, $default = null) {
 $item       = $item       ?? null;
 $isArticles = (bool) ($isArticles ?? false);
 $detailBase = (string) ($detailBase ?? ($isArticles ? '/articles' : '/books'));
+// Плоские значения, которые может передать вызывающая вьюха (saved-list).
+$passedReadingStatus = $readingStatus ?? null;
+$passedPubStatus     = $pubStatus ?? null;
 
 if ($item !== null) {
     $id     = (int) $get($item, 'id', 0);
@@ -52,13 +55,15 @@ if ($item !== null) {
 
     $saved = (bool) ($get($item, 'isSaved') ?? $get($item, 'saved') ?? false);
 
-    // Статус чтения
-    $rsRaw = $get($item, 'readingStatus');
+    // Статус чтения. Контекст пользователя есть у книг и статей
+    // (PublicationContext.readingStatus: none | reading | ended).
+    $rsRaw = $passedReadingStatus ?? $get($item, 'readingStatus');
     if (is_object($rsRaw)) $rsRaw = $rsRaw->value ?? null;
-    $readingStatus = $isArticles ? 'none' : (string) ($rsRaw ?: 'none');
+    $readingStatus = (string) ($rsRaw ?: 'none');
 
-    // Бейдж «Draft» — только если активен фильтр ?p_status=draft
-    $pubStatus = (($_GET['p_status'] ?? '') === 'draft') ? 'draft' : '';
+    // Бейдж «Draft»: приоритет — явно переданный $pubStatus (saved-list),
+    // иначе активный фильтр ?p_status=draft.
+    $pubStatus = $passedPubStatus ?? (($_GET['p_status'] ?? '') === 'draft' ? 'draft' : '');
 
 } else {
     // Старый плоский интерфейс

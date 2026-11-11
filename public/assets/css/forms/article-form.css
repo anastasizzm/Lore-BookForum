@@ -438,6 +438,16 @@
   pointer-events: none;
 }
 
+/* Браузер после удаления текста часто оставляет <p><br></p> — :empty уже
+   не срабатывает. Показываем тот же плейсхолдер для пустого абзаца. */
+.rich-editor__area[data-placeholder]:has(> p:only-child:empty)::before,
+.rich-editor__area[data-placeholder]:has(> p:only-child > br:only-child)::before,
+.rich-editor__area[data-placeholder]:has(> br:only-child)::before {
+  content: attr(data-placeholder);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
 .rich-editor__area > :first-child {
   margin-top: 0;
 }

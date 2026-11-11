@@ -101,9 +101,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
  *        также кнопкой Publish в форме создания
  *
- *   ГЛАВЫ КНИГИ: UI-список есть (шаг 2), но input'ы БЕЗ name — в POST не
- *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
- *   согласован. Подключить, когда бэк определит форму данных.
+ *   ГЛАВЫ КНИГИ: UI-список глав убран из формы создания — бэкенд их не
+ *   принимает (контракт не согласован), а поле только путало.
  *
  *   GET  /api/users/search?q=… → роут api.users.search, AuthPolicy::Auth
  *        ЗАГЛУШКА (роут добавит бэк; в endpoints.php его пока нет):
@@ -121,7 +120,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *
  *   Шаг 1 «Данные книги» — формальности: название, жанр, категория,
  *                          издательство, страниц, ISBN, обложка.
- *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
+ *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора,
  *                          файлы книги.
  *
  *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
@@ -591,38 +590,8 @@ $categoryValue = $val('categoryId', $bookCategoryId);
           <?= $errorBox('authorNotes') ?>
         </div>
 
-        <!-- ГЛАВЫ: только UI — input'ы БЕЗ name, в POST не участвуют
-             (контракт с бэкендом уточняется, см. шапку файла).
-             Значения попадают в локальную копию несохранённых изменений,
-             поэтому восстанавливаются плашкой на шаге 1. -->
-        <div class="form-field" data-chapters-field>
-          <span class="form-field__label" id="bookChaptersLabel"><?= $tr('common.bookform.chapters_label') ?></span>
-
-          <ul class="chapters" data-chapters aria-labelledby="bookChaptersLabel">
-            <?php foreach ((array) ($form['chapters'] ?? []) as $chapterTitle): ?>
-              <li class="chapters__item" data-chapter>
-                <span class="chapters__num" data-chapter-num aria-hidden="true"></span>
-                <input class="form-field__input chapters__input"
-                       type="text"
-                       data-chapter-title
-                       maxlength="200"
-                       autocomplete="off"
-                       placeholder="<?= $tr('common.bookform.chapter_ph') ?>"
-                       value="<?= $view->e((string) $chapterTitle) ?>">
-                <button class="chapters__remove" type="button" data-chapter-remove
-                        aria-label="<?= $tr('common.bookform.chapter_remove') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
-          <div class="chapters__actions">
-            <button type="button" class="btn btn--secondary" data-chapter-add>
-              + <?= $tr('common.bookform.chapter_add') ?>
-            </button>
-          </div>
-
-          <p class="book-form__hint"><?= $tr('common.bookform.chapters_hint') ?></p>
-        </div>
+        <!-- Главы книги в форме создания больше не показываем: бэкенд их
+             не принимает, а UI-список только путал (поле не уходило в POST). -->
 
         <h3 class="book-form__section-title"><?= $tr('common.bookform.section_files') ?></h3>
 

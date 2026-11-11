@@ -319,7 +319,6 @@
         "badge": "Draft",
         "type_book": "Book",
         "type_article": "Article",
-        "updated": "Updated :value",
         "continue": "Continue",
         "open": "Open",
         "empty": "You have no drafts yet.",
