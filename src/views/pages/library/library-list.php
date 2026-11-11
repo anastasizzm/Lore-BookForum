@@ -81,9 +81,10 @@ $preserved = array_filter(
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
     $dropdownOptions[] = [
-        'label' => $text,
-        'href'  => '?' . http_build_query(array_merge($preserved, ['sort' => $key])),
-        'value' => $key,
+        'label'  => $text,
+        'href'   => '?' . http_build_query(array_merge($preserved, ['sort' => $key])),
+        'value'  => $key,
+        'active' => $key === $current_sort,
     ];
 }
 
@@ -155,6 +156,9 @@ $linkWithPage = static function (int $to) use ($preserved): string {
         $view->include('card-book', [
             'item'          => $item,
             'readingStatus' => is_string($rsRaw) ? $rsRaw : 'none',
+            // isSaved живёт в PublicationContext, а не в модели публикации.
+            // Без передачи состояния кнопка после перезагрузки выглядела снятой.
+            'saved'         => (bool) ($context?->isSaved ?? false),
             'detailBase'    => $detailBase,
             'isArticles'    => $isArticles,
         ]);

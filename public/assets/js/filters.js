@@ -491,11 +491,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const id    = Number(b.id) || 0;
     const type  = b.__kind || ((b.type === 'article' || b.articleId) ? 'article' : 'book');
     const cover = coverOf(b);
-    const date  = b.updatedAt || b.createdAt || '';
-    // Подпись «Updated» убрана: в карточке черновика показываем только дату.
-    const dateText = date
-      ? ((window.LoreI18n ? LoreI18n.formatDate(date) : '') || date)
-      : '';
     const lang  = ctx.lang ? '&lang=' + encodeURIComponent(ctx.lang) : '';
     const href  = id > 0
       ? '/' + (type === 'article' ? 'articles' : 'books') + '/create?id=' + id + lang + '#step-1'
@@ -508,9 +503,6 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       '<h3 class="card-draft__title"><a class="card-draft__link" href="' + escapeHtml(href) + '"' +
         ' aria-label="' + escapeHtml(tOr('common.drafts.continue', 'Continue') + ': ' + (b.title || '')) + '">' +
         escapeHtml(b.title) + '</a></h3>' +
-      '<p class="card-draft__meta"><span>' + escapeHtml(type === 'article' ? tOr('common.drafts.type_article', 'Article') : tOr('common.drafts.type_book', 'Book')) + '</span>' +
-        (dateText ? '<span class="card-draft__sep">·</span><span class="card-draft__date">' + escapeHtml(dateText) + '</span>' : '') +
-      '</p>' +
     '</article>';
   }
 

@@ -8,7 +8,6 @@
  * @param string $type    — 'book' | 'article' (определяет ссылки ниже)
  * @param string $title   — название
  * @param string $cover   — адрес обложки или '' (тогда CSS-заглушка .cover--empty)
- * @param string $date    — уже отформатированная дата изменения (д.m.Y)
  *
  * Карточка целиком ведёт в редактирование. Роутов edit нет (они
  * заморожены), поэтому правка живёт на роуте создания через ?id=N:
@@ -18,12 +17,14 @@
  * Publish / Delete намеренно не рендерятся здесь: они находятся на экране
  * редактирования (book-form / article-form), куда ведёт клик по карточке.
  * Ссылка заголовка растянута на всю карточку (::after в drafts.css).
+ *
+ * Тип публикации и дата на карточке не показываются — только обложка,
+ * бейдж «Черновик» и название.
  */
 $id    = (int) ($id ?? 0);
 $type  = ($type ?? 'book') === 'article' ? 'article' : 'book';
 $title = (string) ($title ?? '');
 $cover = (string) ($cover ?? '');
-$date  = (string) ($date ?? '');
 
 $isArticle = $type === 'article';
 
@@ -42,8 +43,6 @@ if ($id > 0) {
 }
 
 $hasCover = $cover !== '';
-
-$typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts.type_book');
 ?>
 <article class="card-base card-draft<?= $hasCover ? '' : ' card-draft--no-cover' ?>"
          data-draft-type="<?= $view->e($type) ?>"
@@ -66,13 +65,5 @@ $typeLabel = $view->t($isArticle ? 'common.drafts.type_article' : 'common.drafts
       <?= $view->e($title) ?>
     </a>
   </h3>
-
-  <p class="card-draft__meta">
-    <span class="card-draft__type"><?= $view->e($typeLabel) ?></span>
-    <?php if ($date !== ''): ?>
-      <span class="card-draft__sep" aria-hidden="true">·</span>
-      <time class="card-draft__date"><?= $view->e($date) ?></time>
-    <?php endif; ?>
-  </p>
 
 </article>

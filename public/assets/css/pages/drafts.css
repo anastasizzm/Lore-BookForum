@@ -11,7 +11,7 @@
 .drafts-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: calc(var(--space-4) / 2);
 }
 
 /* ------------------------------------------------------------
@@ -82,22 +82,6 @@
 
 .card-draft__link:hover {
   text-decoration: underline;
-}
-
-/* Мета: тип публикации · дата изменения */
-.card-draft__meta {
-  margin: 0;
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
-  line-height: 1.3;
-}
-
-.card-draft__sep {
-  margin: 0 4px;
-}
-
-.card-draft__date {
-  white-space: nowrap;
 }
 
 /* Действия: основное — кнопка «Продолжить», рядом текстовая «Открыть» */
@@ -261,7 +245,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
-  gap: var(--space-4);
+  gap: calc(var(--space-4) / 2);
   overflow: visible;
 }
 
@@ -294,13 +278,6 @@
   overflow-wrap: anywhere;
 }
 
-.drafts-grid .card-draft__meta {
-  min-height: 1.3em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Вся карточка кликабельна и ведёт на экран редактирования. */
 .drafts-grid .card-draft__link::after {
   content: "";
@@ -317,7 +294,7 @@
 
 @media (max-width: 480px) {
   .drafts-grid {
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .drafts-grid .card-draft {

@@ -187,9 +187,10 @@ $view->include('library-filters', [
       $sortDropdown = [];
       foreach ($sortOptions as $key => $text) {
           $sortDropdown[] = [
-              'label' => $text,
-              'href'  => $link(['q' => $q, 'sort' => $key]),
-              'value' => $key,
+              'label'  => $text,
+              'href'   => $link(['q' => $q, 'sort' => $key]),
+              'value'  => $key,
+              'active' => $key === $sort,
           ];
       }
       $view->include('dropdown', [

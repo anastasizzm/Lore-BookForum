@@ -25,9 +25,10 @@ $preserved = array_filter(
 $dropdownOptions = [];
 foreach ($sort_options as $key => $text) {
     $dropdownOptions[] = [
-        'label' => $text,
-        'href'  => '?' . http_build_query(array_merge($preserved, ['sort' => $key])),
-        'value' => $key,
+        'label'  => $text,
+        'href'   => '?' . http_build_query(array_merge($preserved, ['sort' => $key])),
+        'value'  => $key,
+        'active' => $key === $current_sort,
     ];
 }
 

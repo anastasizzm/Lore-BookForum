@@ -24,9 +24,11 @@ $get = static function ($src, string $key, $default = null) {
 $item       = $item       ?? null;
 $isArticles = (bool) ($isArticles ?? false);
 $detailBase = (string) ($detailBase ?? ($isArticles ? '/articles' : '/books'));
-// Плоские значения, которые может передать вызывающая вьюха (saved-list).
+// Плоские значения, которые может передать вызывающая вьюха (saved-list,
+// library-list): контекст пользователя лежит отдельно от модели публикации.
 $passedReadingStatus = $readingStatus ?? null;
 $passedPubStatus     = $pubStatus ?? null;
+$passedSaved         = $saved ?? null;
 
 if ($item !== null) {
     $id     = (int) $get($item, 'id', 0);
@@ -53,7 +55,7 @@ if ($item !== null) {
         $authorId   = (int) $get($creator, 'id', 0);
     }
 
-    $saved = (bool) ($get($item, 'isSaved') ?? $get($item, 'saved') ?? false);
+    $saved = (bool) ($passedSaved ?? $get($item, 'isSaved') ?? $get($item, 'saved') ?? false);
 
     // Статус чтения. Контекст пользователя есть у книг и статей
     // (PublicationContext.readingStatus: none | reading | ended).
