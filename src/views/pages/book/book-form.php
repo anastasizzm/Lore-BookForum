@@ -35,8 +35,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        заголовок X-CSRF-Token). Accept: application/json.
  *        Тело — multipart/form-data (Request::body() отдаёт $_POST):
  *          title       (string, required, 1..255)
- *          description (string, required, 1..4000) — аннотация
- *          authorNotes (string, required, 1..2000) — заметки автора
+ *          description (string, 0..4000) — аннотация (пустая строка допустима)
+ *          authorNotes (string, optional, 0..2000) — заметки автора
  *          genreId     (int > 0, required) — GET /api/additional/genres
  *          categoryId  (int > 0, required) — GET /api/additional/categories
  *                       (UI — выпадающие списки select, выбор один: бэк
@@ -101,9 +101,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        перезагрузка страницы (бейдж и кнопка исчезают); с 11.4 —
  *        также кнопкой Publish в форме создания
  *
- *   ГЛАВЫ КНИГИ: UI-список есть (шаг 2), но input'ы БЕЗ name — в POST не
- *   уходят: контракт (одна глава = номер + название? + текст?) ещё не
- *   согласован. Подключить, когда бэк определит форму данных.
+ *   ГЛАВЫ КНИГИ: UI-список глав убран из формы создания — бэкенд их не
+ *   принимает (контракт не согласован), а поле только путало.
  *
  *   GET  /api/users/search?q=… → роут api.users.search, AuthPolicy::Auth
  *        ЗАГЛУШКА (роут добавит бэк; в endpoints.php его пока нет):
@@ -121,7 +120,7 @@ $langField = $langQuery !== null && $langQuery !== ''
  *
  *   Шаг 1 «Данные книги» — формальности: название, жанр, категория,
  *                          издательство, страниц, ISBN, обложка.
- *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора, главы,
+ *   Шаг 2 «Содержание и файлы» — аннотация, заметки автора,
  *                          файлы книги.
  *
  *   НИЖНЯЯ ПАНЕЛЬ (11.4): кнопки «Назад / Отмена / Создать черновик /
@@ -565,68 +564,34 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 
         <h3 class="book-form__section-title"><?= $tr('common.bookform.section_content') ?></h3>
 
+        <!-- Аннотация: description (0..4000), пустая строка допустима. -->
         <div class="form-field">
-          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="bookAnnotation"><?= $tr('common.bookform.field_annotation') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAnnotation"
                     name="description"
                     rows="6"
                     maxlength="4000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.field_annotation_ph') ?>"><?= $view->e($val('description', $fromBook('description'))) ?></textarea>
           <?= $errorBox('description') ?>
         </div>
 
-        <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/new. Обязательное (бэк требует
-             непустые 1..2000) — required + клиентская проверка на пустоту
-             и длину (11.2, см. RULES в book-form.js). -->
+        <!-- Заметки автора: поле BookForm authorNotes (0..2000), то же
+             имя уходит в POST /api/books/new. Поле необязательное —
+             пустые заметки допустимы, ограничение только по длине. -->
         <div class="form-field">
-          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="bookAuthorNotes"
                     name="authorNotes"
                     rows="4"
                     maxlength="2000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('authorNotes') ?>
         </div>
 
-        <!-- ГЛАВЫ: только UI — input'ы БЕЗ name, в POST не участвуют
-             (контракт с бэкендом уточняется, см. шапку файла).
-             Значения попадают в локальную копию несохранённых изменений,
-             поэтому восстанавливаются плашкой на шаге 1. -->
-        <div class="form-field" data-chapters-field>
-          <span class="form-field__label" id="bookChaptersLabel"><?= $tr('common.bookform.chapters_label') ?></span>
-
-          <ul class="chapters" data-chapters aria-labelledby="bookChaptersLabel">
-            <?php foreach ((array) ($form['chapters'] ?? []) as $chapterTitle): ?>
-              <li class="chapters__item" data-chapter>
-                <span class="chapters__num" data-chapter-num aria-hidden="true"></span>
-                <input class="form-field__input chapters__input"
-                       type="text"
-                       data-chapter-title
-                       maxlength="200"
-                       autocomplete="off"
-                       placeholder="<?= $tr('common.bookform.chapter_ph') ?>"
-                       value="<?= $view->e((string) $chapterTitle) ?>">
-                <button class="chapters__remove" type="button" data-chapter-remove
-                        aria-label="<?= $tr('common.bookform.chapter_remove') ?>">−</button>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-
-          <div class="chapters__actions">
-            <button type="button" class="btn btn--secondary" data-chapter-add>
-              + <?= $tr('common.bookform.chapter_add') ?>
-            </button>
-          </div>
-
-          <p class="book-form__hint"><?= $tr('common.bookform.chapters_hint') ?></p>
-        </div>
+        <!-- Главы книги в форме создания больше не показываем: бэкенд их
+             не принимает, а UI-список только путал (поле не уходило в POST). -->
 
         <h3 class="book-form__section-title"><?= $tr('common.bookform.section_files') ?></h3>
 
@@ -705,15 +670,36 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </button>
         <div class="book-form__actions-right">
           <?php if ($isEdit): ?>
+            <button type="button"
+                    class="btn btn--danger"
+                    data-details-delete
+                    data-requires="publication.delete"
+                    data-requires-kind="book"
+                    data-requires-owner="1"
+                    hidden
+                    data-delete-url="/api/books/<?= $bookId ?>"
+                    data-delete-redirect="/books"
+                    data-delete-kind="book">
+              <?= $tr('common.drafts.delete') ?>
+            </button>
+
             <a class="btn btn--secondary"
                href="<?= $view->e($withLang('/books/' . $bookId)) ?>"><?= $tr('common.bookform.cancel') ?></a>
-            
+
             <button class="btn btn--primary" type="submit" data-submit-save
                     data-requires="publication.edit"
                     data-requires-kind="book"
                     data-requires-owner="1"
                     hidden>
               <?= $tr('common.bookform.save') ?>
+            </button>
+
+            <button class="btn btn--primary" type="submit" data-submit-publish
+                    data-requires="publication.publish"
+                    data-requires-kind="book"
+                    data-requires-owner="1"
+                    hidden>
+              <?= $tr('common.bookform.publish') ?>
             </button>
           <?php else: ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('books'))) ?>"><?= $tr('common.bookform.cancel') ?></a>
@@ -762,6 +748,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/details-menu.js"></script>
   <script src="/assets/js/rights-modal.js"></script>
   <!-- roles-module.js — новый UI назначения ролей (экраны 1–4).
        Подключается после rights-modal.js, как на book-details. -->

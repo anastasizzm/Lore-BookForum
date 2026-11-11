@@ -3,7 +3,7 @@
  * admin-user-role-modal — «Добавить роль пользователю» (admin/users).
  *
  * Открывается кнопкой «+» во вложенном списке ролей строки пользователя
- * ([data-user-role-add]); имя пользователя подставляет admin.js (раздел USER ROLES).
+ * ([data-user-role-add]); имя пользователя подставляет admin/main.js (раздел USER ROLES).
  * Дропдаун: поиск уходит в API (GET /api/additional/roles?q=…) только по Enter.
  * Save → POST /api/system/users/{id}/roles { roleId }.
  */

@@ -8,14 +8,13 @@ import { deleteComment } from '../features/comments/delete.js';
 import { addLanguage, closeDictForm, isDictOpen, openDictForm, removeLanguage } from '../features/dictionary/form.js';
 import { dict } from '../features/dictionary/state.js';
 import { deleteDictItem } from '../features/dictionary/table.js';
-import { closeReportModal, decideReport, isReportOpen, openReportModal, reportState } from '../features/reports/modal.js';
 import { closeRoleUserModal, closeRoleUserPicker, isRoleUserPickerOpen, openRoleUserModal, roleUserAssign } from '../features/roles/assign-user-modal.js';
 import { handleRoleNewClick, openRoleNew } from '../features/roles/create/modal.js';
 import { dnd, hideInsert, insertDisabled, moveQueue } from '../features/roles/dnd.js';
 import { closeRoleDd, closeRoleModal, ddEl, isRoleDdOpen, isRoleOpen, openRoleAttach, openRoleDd, openRoleModal, pickRoleDd, renderRoleLists, saveRole, searchRoleDd, typeRoleDd } from '../features/roles/permissions-modal.js';
 import { findRole, roleState } from '../features/roles/state.js';
 import { deleteRole } from '../features/roles/table.js';
-import { blockUser } from '../features/users/block.js';
+import { blockUser, unblockUser } from '../features/users/block.js';
 
 document.addEventListener('click', function (e) {
   if (!e.target || !e.target.closest) return;
@@ -54,15 +53,6 @@ document.addEventListener('click', function (e) {
   if (langRemove) { removeLanguage(langRemove); return; }
 
   if (e.target.closest('[data-dict-dismiss], [data-dict-cancel]')) { closeDictForm(); return; }
-
-  // --- Жалобы (REPORTS) ---
-  var reportReview = e.target.closest('[data-admin-report-review]');
-  if (reportReview) { openReportModal(reportReview); return; }
-
-  if (e.target.closest('[data-admin-report-dismiss], [data-admin-report-cancel]')) { closeReportModal(); return; }
-
-  if (e.target.closest('[data-admin-report-reject]')) { decideReport('reject'); return; }
-  if (e.target.closest('[data-admin-report-delete]')) { decideReport('delete'); return; }
 
   // --- Системные роли (ROLES) ---
   // Кнопка «+» на странице roles: добавить роль в проект с правами
@@ -127,6 +117,9 @@ document.addEventListener('click', function (e) {
   var blockBtn = e.target.closest('[data-admin-block]');
   if (blockBtn && !blockBtn.disabled) { blockUser(blockBtn); return; }
 
+  var unblockBtn = e.target.closest('[data-admin-unblock]');
+  if (unblockBtn && !unblockBtn.disabled) { unblockUser(unblockBtn); return; }
+
   var deleteBtn = e.target.closest('[data-admin-delete]');
   if (deleteBtn) deleteComment(deleteBtn);
 });
@@ -184,17 +177,15 @@ document.addEventListener('change', function (e) {
 
 document.addEventListener('keydown', function (e) {
   var dictOpen = isDictOpen();
-  var reportOpen = isReportOpen();
   var roleOpen = isRoleOpen();
   var userRoleOpen = !!(roleUserAssign.modal && !roleUserAssign.modal.hidden);
-  if (!dictOpen && !reportOpen && !roleOpen && !userRoleOpen) return;
+  if (!dictOpen && !roleOpen && !userRoleOpen) return;
 
   if (e.key === 'Escape') {
     e.preventDefault();
     if (roleOpen && isRoleDdOpen()) { closeRoleDd(); return; }
     if (userRoleOpen && isRoleUserPickerOpen()) { closeRoleUserPicker(); return; }
     if (dictOpen) closeDictForm();
-    else if (reportOpen) closeReportModal();
     else if (userRoleOpen) closeRoleUserModal();
     else closeRoleModal();
     return;
@@ -203,7 +194,6 @@ document.addEventListener('keydown', function (e) {
 
   var dialog;
   if (dictOpen) dialog = dict.modal.querySelector('.modal__dialog');
-  else if (reportOpen) dialog = reportState.modal.querySelector('.modal__dialog');
   else if (userRoleOpen) dialog = roleUserAssign.modal.querySelector('.modal__dialog');
   else dialog = roleState.modal.querySelector('.modal__dialog');
   if (!dialog) return;

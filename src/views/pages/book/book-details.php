@@ -147,12 +147,16 @@ $seriesTitle    = $str($book->series    ?? null);
 $publisherTitle = $str($book->publisher ?? null);
 $isbn           = $str($book->isbn      ?? null);
 
-/* ---------- Аннотация / заметка автора / TOC ---------- */
+/* ---------- Аннотация / заметка автора ---------- */
 // В модели поля называются description / authorNotes (не annotation / authorNote).
 
-$annotation      = (string) ($book->description   ?? '');
-$authorNote      = (string) ($book->authorNotes   ?? '');
-$tableOfContents = (array)  ($book->tableOfContents ?? []);
+$annotation = (string) ($book->description ?? '');
+$authorNote = (string) ($book->authorNotes ?? '');
+// В старых записях пустые заметки могли сохраниться как невидимый NBSP
+// (обход уже не нужен, бэк принимает '') — на странице считаем их пустыми.
+if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
+    $authorNote = '';
+}
 
 /* ---------- Обложка ---------- */
 
@@ -232,7 +236,17 @@ $get = static function ($src, string $key, $default = null) {
 };
 
 // Статус публикации: приоритет — явный $status от контроллера.
+// Publication::$status — это enum PublicationStatus, а не строка: приводим
+// BackedEnum/Stringable к значению, иначе черновик никогда не распознавался
+// и кнопка Publish на странице не появлялась.
 $statusRaw = $status ?? $get($book, 'status', '');
+if ($statusRaw instanceof \BackedEnum) {
+    $statusRaw = $statusRaw->value;
+} elseif ($statusRaw instanceof \UnitEnum) {
+    $statusRaw = $statusRaw->name;
+} elseif (is_object($statusRaw) && method_exists($statusRaw, '__toString')) {
+    $statusRaw = (string) $statusRaw;
+}
 $status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
 $isDraft   = $status === 'draft';
 
@@ -254,7 +268,7 @@ $bookPayload = [
     'id'          => $bookId,
     'title'       => (string) $get($book, 'title', ''),
     'description' => (string) $get($book, 'description', ''),
-    'authorNotes' => (string) $get($book, 'authorNotes', ''),
+    'authorNotes' => $authorNote,
     'genreId'     => (int) $get($get($book, 'genre', null), 'id', 0),
     'categoryId'  => (int) $get($get($book, 'category', null), 'id', 0),
     'publisher'   => (string) $get($book, 'publisher', ''),
@@ -292,8 +306,6 @@ $bookPayload = [
         'type'    => 'book',
         'id'      => $bookId,
         'isOwner' => $isOwnerPub,
-        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
-        'title'   => (string) ($book->title ?? ''),
     ]); ?>
   </div>
 
@@ -410,7 +422,6 @@ $bookPayload = [
               'variant' => 'outline',
               'items'   => [
                   ['label' => $view->t('common.book.tab_annotation'), 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => $view->t('common.book.tab_toc'), 'href' => '#toc', 'active' => false, 'row' => 'toc'],
               ],
           ]);
         ?>
@@ -427,18 +438,6 @@ $bookPayload = [
               <strong><?= $tr('common.book.author_note') ?></strong><br>
               <?= nl2br($view->e($authorNote)) ?>
             </div>
-          <?php endif; ?>
-        </div>
-
-        <div class="card-base book-tabs-panel__content" data-row="toc" hidden>
-          <?php if (empty($tableOfContents)): ?>
-            <p class="info-box__body"><?= $tr('common.book.no_toc') ?></p>
-          <?php else: ?>
-            <ol class="info-box__body">
-              <?php foreach ($tableOfContents as $chapter): ?>
-                <li><?= $view->e($chapter) ?></li>
-              <?php endforeach; ?>
-            </ol>
           <?php endif; ?>
         </div>
       </div>

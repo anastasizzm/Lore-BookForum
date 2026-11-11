@@ -4,8 +4,8 @@
 <?php
 /*
  * drafts — страница черновиков пользователя (DR-02, DR-03, DR-08).
- * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts")
- * + drafts-filters.js (publish / delete).
+ * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts").
+ * Publish / Delete живут на экране редактирования: карточка ведёт туда кликом.
  */
 
 $view->setBlock('selectedTab', 'drafts');
@@ -231,5 +231,4 @@ if (!$isEmptyAll) {
 
 <?php $view->startBlock('scripts'); ?>
 <script src="<?= $view->asset('js/filters.js') ?>"></script>
-<script src="<?= $view->asset('js/drafts-filters.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

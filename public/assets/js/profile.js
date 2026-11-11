@@ -269,8 +269,7 @@
                       DOTS_SVG +
                     '</button>' +
                     '<div class="comment-card__menu" data-c-menu hidden>' +
-                      // Удаление — только автору (syncPostMenu). «Пожаловаться»
-                      // временно убрана: POST /api/reports ещё нет (F-11).
+                      // Удаление — только автору (syncPostMenu).
                       '<button type="button" class="comment-card__menu-item comment-card__menu-item--danger"' +
                               ' data-c-delete hidden>' + t('js.delete') + '</button>' +
                     '</div>' +

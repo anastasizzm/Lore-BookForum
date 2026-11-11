@@ -447,7 +447,7 @@ window.LoreArticlePublish = (function () {
     if (!opener) return;
     e.preventDefault();
     var id = parseInt(opener.getAttribute('data-article-id'), 10) || 0;
-    if (id) open(id);
+    if (id) open(id, { screen: 2 });
   });
 
   return { open: open, close: close };

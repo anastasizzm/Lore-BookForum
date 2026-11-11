@@ -19,6 +19,11 @@
 
 $bookId = (int) ($bookId ?? 0);
 $book   = $book ?? null;
+// Контроллер read() передаёт объект книги, но не отдельный $bookId.
+// Без id читалка не знала, к какой книге сохранять прогресс (data-book-id="0").
+if ($bookId <= 0) {
+    $bookId = (int) (is_object($book) ? ($book->id ?? 0) : ($book['id'] ?? 0));
+}
 $title  = is_object($book)
     ? (string) ($book->title ?? '')
     : (string) ($book['title'] ?? '');
@@ -37,7 +42,21 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $view->extends('main'); ?>
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
-<?php $view->setBlock('selectedTab', 'library'); ?>
+<?php
+// Активный пункт бокового меню: подсвечиваем раздел, из которого читатель
+// пришёл (Saved / Drafts / Feed), иначе Library. Раньше жёстко стоял
+// library, поэтому при переходе из другого раздела иконка не подсвечивалась.
+$refererPath = (string) (parse_url($_SERVER['HTTP_REFERER'] ?? '', PHP_URL_PATH) ?? '');
+$selectedTab = 'library';
+if (preg_match('#^/(saved|books/saved)#', $refererPath)) {
+    $selectedTab = 'saved';
+} elseif (preg_match('#^/books/drafts#', $refererPath)) {
+    $selectedTab = 'drafts';
+} elseif ($refererPath === '/' || preg_match('#^/(feed|home)#', $refererPath)) {
+    $selectedTab = 'for-you';
+}
+$view->setBlock('selectedTab', $selectedTab);
+?>
 <?php $view->setBlock('hideFab', '1'); /* правый нижний угол занят — плавающую «+» скрываем */ ?>
 
 <?php $view->startBlock('title'); ?>
@@ -110,5 +129,14 @@ $backUrl = $bookId ? '/books/' . $bookId : '/books';
 <?php $view->endBlock('content'); ?>
 
 <?php $view->startBlock('scripts'); ?>
-<script type="module" src="<?= $view->asset('js/book-read.js') ?>"></script>
+<?php
+// Явный cache-bust для ES-модуля читалки: $view->asset() в текущей сборке
+// не всегда добавляет ?v=, а старый закэшированный модуль ломал сохранение
+// прогресса (старый контракт полей).
+$bookReadJsFile = dirname(__DIR__, 4) . '/public/assets/js/book-read.js';
+$bookReadJsUrl  = $view->asset('js/book-read.js');
+$bookReadJsUrl .= (str_contains($bookReadJsUrl, '?') ? '&' : '?')
+    . 'v=' . (@filemtime($bookReadJsFile) ?: '1');
+?>
+<script type="module" src="<?= $view->e($bookReadJsUrl) ?>"></script>
 <?php $view->endBlock('scripts'); ?>

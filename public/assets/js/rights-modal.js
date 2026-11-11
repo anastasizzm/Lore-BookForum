@@ -431,13 +431,17 @@
       var target = e.target && e.target.closest ? e.target : null;
       if (!target) return;
 
-      // Кнопка «Опубликовать книгу» на book-details
+      // Кнопка «Опубликовать книгу» на book-details: сразу открываем
+      // финальный экран модуля ролей, где находится Publish. Иначе
+      // пользователь видел только экран ролей с «Continue» и не понимал,
+      // как опубликовать черновик.
       var opener = target.closest('[data-rights-open]');
       if (opener) {
         e.preventDefault();
         open({
           mode: 'publish',
           bookId: opener.getAttribute('data-book-id') || (root() && root().getAttribute('data-book-id')),
+          screen: 2,
         });
         return;
       }

@@ -40,7 +40,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *     правка     PATCH /api/articles/{id}         + PUT /api/articles/{id}/content (If-Match)
  *     обложка    POST  /api/files/upload          (category=cover) → iconId
  *     публикация POST  /api/articles/{id}/publish (окно выбора прав, article-publish.js)
- *   Поля жанр/тип/аннотация/заметка автора обязательны уже для черновика (так у бэка).
+ *   Аннотация и заметка автора необязательны (пустые строки допустимы);
+ *   жанр/тип проверяются при публикации.
  *   data-version — текущая версия контента для If-Match (необязательно: иначе берём из
  *   ETag ответа GET /api/articles/{id}/content).
  *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
@@ -228,6 +229,8 @@ $richEditor = static function (
   <script src="<?= $view->asset('js/roles-module.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-text.js') ?>" defer></script>
   <script src="<?= $view->asset('js/article-form.js') ?>" defer></script>
+  <!-- удаление статьи прямо с экрана редактирования -->
+  <script src="<?= $view->asset('js/details-menu.js') ?>" defer></script>
 <?php $view->endBlock('head_extra'); ?>
 
 <?php $view->startBlock('content'); ?>
@@ -482,27 +485,23 @@ $richEditor = static function (
         <h3 class="article-form__section-title"><?= $tr('common.articleform.section_text') ?></h3>
 
         <div class="form-field">
-          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="articleAnnotation"><?= $tr('common.articleform.field_annotation') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAnnotation"
                     name="annotation"
                     rows="6"
                     maxlength="5000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>
 
         <div class="form-field">
-          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?><span class="form-field__required" aria-hidden="true">*</span></label>
+          <label for="articleAuthorNote"><?= $tr('common.articleform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
                     id="articleAuthorNote"
                     name="author_note"
                     rows="4"
                     maxlength="2000"
-                    required
-                    aria-required="true"
                     placeholder="<?= $tr('common.articleform.author_note_ph') ?>"><?= $view->e($val('author_note')) ?></textarea>
           <?= $errorBox('author_note') ?>
         </div>
@@ -524,6 +523,20 @@ $richEditor = static function (
             <button type="button" class="btn btn--secondary" data-step-prev>
               ← <?= $tr('common.articleform.back') ?>
             </button>
+            <?php if ($isEdit): ?>
+              <button type="button"
+                      class="btn btn--danger"
+                      data-details-delete
+                      data-requires="publication.delete"
+                      data-requires-kind="article"
+                      data-requires-owner="1"
+                      hidden
+                      data-delete-url="/api/articles/<?= $articleId ?>"
+                      data-delete-redirect="/articles"
+                      data-delete-kind="article">
+                <?= $tr('common.drafts.delete') ?>
+              </button>
+            <?php endif; ?>
             <a class="btn btn--secondary" href="<?= $view->e($withLang($view->url('articles'))) ?>"><?= $tr('common.cancel') ?></a>
             
             <button type="submit" class="btn btn--secondary" name="status" value="draft"

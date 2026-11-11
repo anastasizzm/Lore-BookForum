@@ -7,12 +7,10 @@ $tr = fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 $items = $items ?? [];
 $meta  = $meta  ?? [];
 
-// Controllers return WithContext<Publication, PublicationContext>: the card
-// partial expects the publication itself, so unwrap it first (same as Saved).
-$items = array_map(
-    static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it,
-    $items
-);
+// Controllers return WithContext<Publication, PublicationContext>: карточка
+// принимает саму публикацию, а статус чтения берём из контекста пользователя.
+$contextOf = static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->context : null;
+$itemOf    = static fn ($it) => $it instanceof \App\Models\UserContext\WithContext ? $it->item : $it;
 
 $type       = $meta['type'] ?? null;
 $isArticles = $type === 'article';
@@ -73,7 +71,7 @@ $current_sort  = $currentSort ?? 'newest';
 if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
 $current_label = $sort_options[$current_sort];
 
-$preservedKeys = ['q', 'genre', 'status', 'p_status', 'isbn', 'doi', 'kind', 'f', 'lang'];
+$preservedKeys = ['q', 'genre', 'p_status', 'isbn', 'doi', 'kind', 'f', 'lang'];
 $preserved = array_filter(
     $_GET,
     static fn($k) => in_array($k, $preservedKeys, true),
@@ -148,12 +146,19 @@ $linkWithPage = static function (int $to) use ($preserved): string {
 
   <?php /* SSR: карточки из $items, никаких API-догрузок */ ?>
   <div class="grid-books" <?= $initialCount === 0 ? 'hidden' : '' ?>>
-    <?php foreach ($items as $item): ?>
-      <?php $view->include('card-book', [
-          'item'       => $item,
-          'detailBase' => $detailBase,
-          'isArticles' => $isArticles,
-      ]); ?>
+    <?php foreach ($items as $entry): ?>
+      <?php
+        $item    = $itemOf($entry);
+        $context = $contextOf($entry);
+        $rsRaw   = $context?->readingStatus ?? null;
+        if ($rsRaw instanceof \BackedEnum) $rsRaw = $rsRaw->value;
+        $view->include('card-book', [
+            'item'          => $item,
+            'readingStatus' => is_string($rsRaw) ? $rsRaw : 'none',
+            'detailBase'    => $detailBase,
+            'isArticles'    => $isArticles,
+        ]);
+      ?>
     <?php endforeach; ?>
   </div>
 

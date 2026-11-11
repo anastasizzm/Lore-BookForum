@@ -147,7 +147,6 @@ Lore-BookForum/
 │       │   └── 20260926171859_add_mail_verify.sql
 │       ├── schema.sql                # Схема БД
 │       ├── init.sql                  # Первичные данные (admin)
-│       ├── test_data.sql             # Seed (3 книги, 3 статьи)
 │       └── migrate.sh                # Скрипт миграций
 │
 ├── docker/                           # Docker-конфиги
@@ -208,9 +207,6 @@ POSTGRES_APP_PASSWORD="app_secret"
 # === App ===
 APP_DATABASE_URL="postgres://app:app_secret@db:5433/lore"
 
-# === Dev only ===
-SEED_TEST_DATA="true"
-
 # === JWT ===
 JWT_SECRET="change-me-in-production-please"
 
@@ -229,7 +225,7 @@ MAIL_FROM="noreply@lore.local"
 MAIL_FROM_NAME="LoreBook"
 ```
 
-> ⚠️ **Важно:** значения `POSTGRES_*` и `SEED_TEST_DATA` применяются **только при первом запуске** — на чистой БД. После создания volume менять их бессмысленно, нужно снести volume (`docker compose down -v`).
+> ⚠️ **Важно:** значения `POSTGRES_*` применяются **только при первом запуске** — на чистой БД. После создания volume менять их бессмысленно, нужно снести volume (`docker compose down -v`).
 
 #### 3. Запустить Docker
 
@@ -525,7 +521,7 @@ POSTGRES_PORT=5434
 ### ✅ Сделано
 
 - Инфраструктура: Docker, PostgreSQL, Nginx, PHP-FPM.
-- Миграции + seed.
+- Миграции.
 - Аутентификация: register, login, verify email, logout.
 - JWT в HttpOnly-куке.
 - CSRF-middleware.

@@ -380,11 +380,11 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // Данные уже показанной выборки (в т.ч. SSR) кладутся в кэш —
   // возврат на неё идёт без запроса.
   // ============================================
-  const LIST_KEYS    = ['q', 'genre', 'status', 'p_status', 'isbn', 'doi', 'kind', 'sort', 'ctype'];
+  const LIST_KEYS    = ['q', 'genre', 'p_status', 'isbn', 'doi', 'kind', 'sort', 'ctype'];
   const FORWARD_KEYS = LIST_KEYS.concat(['lang']);
   const PAGER_KEYS   = LIST_KEYS.concat(['f', 'lang']);
-  const RESET_KEYS   = ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
-  const GROUP_KEYS   = ['status', 'ctype'];
+  const RESET_KEYS   = ['genre', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
+  const GROUP_KEYS   = ['ctype'];
 
   function tOr(key, fallback) {
     const v = tFilter(key);
@@ -433,8 +433,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     let rs = item.readingStatus;
     if (rs && typeof rs === 'object') rs = rs.value;
-    const readingStatus = isArt ? 'none' : String(rs || 'none');
-    const statusLabel = ctx.labels[readingStatus] || '';
+    const readingStatus = String(rs || 'none');
+    const statusLabel = readingStatus === 'reading'
+      ? tOr('common.filter.reading', 'Reading')
+      : readingStatus === 'ended'
+        ? tOr('common.filter.finished', 'Finished')
+        : '';
 
     const itemUrl   = id > 0 ? (isArt ? '/articles/' : '/books/') + id : '#';
     const authorUrl = authorId > 0 ? '/users/' + authorId : '#';
@@ -481,29 +485,32 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     '</article>';
   }
 
-  // drafts: как card-draft (и как раньше в drafts-filters.js)
+  // drafts: как card-draft.php — вся карточка ведёт в редактирование,
+  // Publish / Delete живут уже на экране правки.
   function renderDraftCard(b, ctx) {
     const id    = Number(b.id) || 0;
     const type  = b.__kind || ((b.type === 'article' || b.articleId) ? 'article' : 'book');
     const cover = coverOf(b);
     const date  = b.updatedAt || b.createdAt || '';
-    const href  = id > 0 ? '/' + (type === 'article' ? 'articles' : 'books') + '/' + id : '#';
-    return '<article class="card-base card-book card-draft" data-draft-id="' + id + '" data-draft-type="' + type + '">' +
-      '<div class="card-book__cover card-draft__cover' + (cover ? '' : ' cover--empty') + '">' +
+    // Подпись «Updated» убрана: в карточке черновика показываем только дату.
+    const dateText = date
+      ? ((window.LoreI18n ? LoreI18n.formatDate(date) : '') || date)
+      : '';
+    const lang  = ctx.lang ? '&lang=' + encodeURIComponent(ctx.lang) : '';
+    const href  = id > 0
+      ? '/' + (type === 'article' ? 'articles' : 'books') + '/create?id=' + id + lang + '#step-1'
+      : '#';
+    return '<article class="card-base card-draft" data-draft-id="' + id + '" data-draft-type="' + type + '">' +
+      '<div class="card-draft__cover' + (cover ? '' : ' cover--empty') + '">' +
         (cover ? '<img src="' + escapeHtml(cover) + '" alt="' + escapeHtml(b.title) + '" loading="lazy">' : '') +
         '<span class="card-draft__badge">' + escapeHtml(ctx.draftLabel) + '</span>' +
       '</div>' +
-      '<h3 class="card-draft__title"><a class="card-draft__link" href="' + escapeHtml(href) + '">' + escapeHtml(b.title) + '</a></h3>' +
+      '<h3 class="card-draft__title"><a class="card-draft__link" href="' + escapeHtml(href) + '"' +
+        ' aria-label="' + escapeHtml(tOr('common.drafts.continue', 'Continue') + ': ' + (b.title || '')) + '">' +
+        escapeHtml(b.title) + '</a></h3>' +
       '<p class="card-draft__meta"><span>' + escapeHtml(type === 'article' ? tOr('common.drafts.type_article', 'Article') : tOr('common.drafts.type_book', 'Book')) + '</span>' +
-        (date ? '<span class="card-draft__sep">·</span><span class="card-draft__date">' + escapeHtml(date) + '</span>' : '') +
+        (dateText ? '<span class="card-draft__sep">·</span><span class="card-draft__date">' + escapeHtml(dateText) + '</span>' : '') +
       '</p>' +
-      '<div class="card-draft__manage">' +
-        '<button type="button" class="btn btn--primary btn--sm card-draft__publish" data-draft-publish data-draft-type="' + type + '" data-draft-id="' + id + '">' +
-          escapeHtml(tOr('common.drafts.publish', 'Publish')) + '</button>' +
-        '<button type="button" class="btn btn--danger btn--sm card-draft__delete" data-draft-delete data-draft-type="' + type + '" data-draft-id="' + id + '"' +
-          ' data-confirm="' + escapeHtml(tOr('common.drafts.delete_confirm', 'Delete this draft?')) + '">' +
-          escapeHtml(tOr('common.drafts.delete', 'Delete')) + '</button>' +
-      '</div>' +
     '</article>';
   }
 
@@ -750,10 +757,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     // ---------- загрузка ----------
     function sources(url) {
       if (!isDrafts) return [{ kind: isArticles ? 'article' : 'book' }];
-      const c = (url.searchParams.get('ctype') || '').toLowerCase();
-      if (c === 'book') return [{ kind: 'book' }];
-      if (c === 'article') return [{ kind: 'article' }];
-      return [{ kind: 'book' }, { kind: 'article' }];
+      // «Все» больше нет: на /books/drafts — только книги, на
+      // /articles/drafts — только статьи. Старый ?ctype= игнорируем,
+      // чтобы он не расходился с активной вкладкой.
+      return [{ kind: isArticles ? 'article' : 'book' }];
     }
 
     async function fetchSource(src, url, page, signal) {
@@ -765,6 +772,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
       api.delete('ctype');
       (src.kind === 'article' ? ['status', 'isbn'] : ['kind', 'doi']).forEach(function (k) { api.delete(k); });
       if (!api.has('lang')) api.set('lang', langOf());
+      // Библиотека/профиль/черновики рисуют автора на карточке — просим
+      // creator всегда. Раньше SSR-страница передавала include, а AJAX-фильтры
+      // нет, и после применения фильтра имя автора исчезало.
+      if (!api.has('include')) api.set('include', 'creator');
       if (mode === 'profile') { api.set(userParam, userId); api.set('include', 'creator'); }
       if (isDrafts) {
         api.set('p_status', 'draft');

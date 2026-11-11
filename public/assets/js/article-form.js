@@ -25,8 +25,11 @@
   };
   var COVER_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
   var IMAGE_MIMES = COVER_MIMES;
-  var IMAGE_UPLOAD_URL = '/api/articles/images';
-  var IMG_SRC_RE = /^\/uploads\/articles\/[A-Za-z0-9][A-Za-z0-9._\/-]*$/;
+  var IMAGE_UPLOAD_URL = '/api/files/upload';
+  // Статьи хранят картинки как /api/files/{uuid}/preview (файл грузится
+  // через общий files.upload с категорией cover). Старый формат
+  // /uploads/articles/... оставлен для уже сохранённого контента.
+  var IMG_SRC_RE = /^(?:\/uploads\/articles\/[A-Za-z0-9][A-Za-z0-9._\/-]*|\/api\/files\/[A-Za-z0-9-]+\/preview)$/;
   var DOI_RE = /^10\.\d{4,9}\/\S+$/;
   var AUTOSAVE_MS = 30000;
   var LOCAL_PREFIX = 'articleform:v1:';
@@ -141,22 +144,22 @@
   /** Метаданные статьи для POST/PATCH (ArticleForm / ArticlePatchForm). */
   function collectMeta() {
     var doi = valueOf('doi');
+    var notes = valueOf('author_note');
     return {
       title: valueOf('title'),
       description: valueOf('annotation'),
-      authorNotes: valueOf('author_note'),
+      // Заметки автора необязательны: пустые уходят пустой строкой.
+      authorNotes: notes,
       genreId: parseInt(valueOf('genre'), 10) || 0,
       typeId: parseInt(valueOf('type'), 10) || 0,
       doi: doi !== '' ? doi : null,
     };
   }
 
-  /** PATCH: бэк валидирует присланные поля (min len 1) — пустые не шлём,
-      иначе правка падала бы на пустой аннотации/заметке. */
+  /** PATCH: пустые description/authorNotes разрешены (бэк принимает '').
+      Жанр и тип без значения не шлём — для них на бэке min 1. */
   function collectPatchMeta() {
     var meta = collectMeta();
-    if (meta.description === '') delete meta.description;
-    if (meta.authorNotes === '') delete meta.authorNotes;
     if (meta.genreId < 1) delete meta.genreId;
     if (meta.typeId < 1) delete meta.typeId;
     return meta;
@@ -673,7 +676,10 @@
 
     function uploadImage(file) {
       var fd = new FormData();
-      fd.append('image', file);
+      // Роут files.upload ждёт поле `file` и категорию. Отдельного
+      // /api/articles/images в бэкенде нет — используем общий загрузчик.
+      fd.append('file', file);
+      fd.append('category', 'cover');
       return csrfFetch(IMAGE_UPLOAD_URL, {
         method: 'POST',
         body: fd,
@@ -688,8 +694,13 @@
             throw new Error('Forbidden');
           }
           if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          // files.upload отвечает { createdId: uuid }; некоторые версии —
+          // { data: { id } } или { data: { url } }.
           var payload = (data && data.data) || data || {};
+          var id = (data && data.createdId) || payload.id || '';
           var src = payload.url || payload.src || '';
+          if (!src && id) src = '/api/files/' + encodeURIComponent(String(id)) + '/preview';
           src = safeImgSrc(src);
           if (!src) throw new Error('bad url');
           return src;
@@ -772,6 +783,27 @@
     area.addEventListener('paste', function (e) {
       var cd = e.clipboardData;
       if (!cd) return;
+
+      // Вставка картинки из буфера (скриншот, копия изображения) — грузим
+      // файл тем же путём, что и кнопка «картинка» на панели.
+      var imageFiles = [];
+      Array.prototype.forEach.call(cd.items || [], function (item) {
+        if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
+          var f = item.getAsFile();
+          if (f) imageFiles.push(f);
+        }
+      });
+      if (!imageFiles.length) {
+        Array.prototype.forEach.call(cd.files || [], function (file) {
+          if (file.type.indexOf('image/') === 0) imageFiles.push(file);
+        });
+      }
+      if (imageFiles.length) {
+        e.preventDefault();
+        handleImageFiles(imageFiles);
+        return;
+      }
+
       e.preventDefault();
       var html = cd.getData('text/html');
       var out = html ? sanitizeHtml(html) : plainTextToHtml(cd.getData('text/plain'));
@@ -780,7 +812,11 @@
       markDirty();
     });
 
-    area.addEventListener('drop', function (e) { e.preventDefault(); });
+    area.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files.length) handleImageFiles(files);
+    });
 
     area.addEventListener('click', function (e) {
       var img = e.target && e.target.tagName === 'IMG' ? e.target : null;
@@ -951,12 +987,58 @@
   var pdfjsPromise = null;
   function loadPdfjs() {
     if (!pdfjsPromise) {
-      pdfjsPromise = import(PDF_BASE + 'pdf.min.js').then(function (m) {
-        m.GlobalWorkerOptions.workerSrc = PDF_BASE + 'pdf.worker.min.js';
+      // PDF.js поставляется как ES-модуль (.mjs); .js здесь нет —
+      // прежний import(pdf.min.js) давал 404, и выбор отрывка не открывался.
+      pdfjsPromise = import(PDF_BASE + 'pdf.min.mjs').then(function (m) {
+        m.GlobalWorkerOptions.workerSrc = PDF_BASE + 'pdf.worker.min.mjs';
         return m;
       });
     }
     return pdfjsPromise;
+  }
+
+  /** Кеш «id книги → URL PDF»: /api/books/{id}/file в бэкенде нет. */
+  var bookPdfUrls = {};
+
+  /**
+   * Разрешает URL PDF книги через существующий API:
+   * GET /api/books/{id}/contents → { items: File[] } → /api/files/{id}/download.
+   */
+  function resolveBookPdfUrl(bookId) {
+    bookId = String(bookId || '');
+    if (!bookId) return Promise.reject(new Error('book id is missing'));
+    if (bookPdfUrls[bookId]) return Promise.resolve(bookPdfUrls[bookId]);
+
+    return fetch('/api/books/' + encodeURIComponent(bookId) + '/contents', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    }).then(function (res) {
+      return res.text().then(function (raw) {
+        var data = null;
+        try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var items = Array.isArray(data && data.items)
+          ? data.items
+          : (Array.isArray(data && data.data) ? data.data : []);
+        var pdf = null;
+        for (var i = 0; i < items.length; i++) {
+          var item = items[i] || {};
+          var format = String(item.format || '').toLowerCase();
+          var mime = String(item.mimeType || item.mime_type || '').toLowerCase();
+          var name = String(item.originalName || item.original_name || item.name || '');
+          if (format === 'pdf' || mime === 'application/pdf' || /\.pdf$/i.test(name)) {
+            pdf = item;
+            break;
+          }
+        }
+        if (!pdf || pdf.id == null || pdf.id === '') {
+          throw new Error('no pdf content');
+        }
+        var url = '/api/files/' + encodeURIComponent(String(pdf.id)) + '/download';
+        bookPdfUrls[bookId] = url;
+        return url;
+      });
+    });
   }
 
   function initFragmentPicker() {
@@ -1014,7 +1096,7 @@
     }
 
     async function ensureDoc() {
-      var url = DEV_SRC || ('/api/books/' + state.book.id + '/file');
+      var url = DEV_SRC || await resolveBookPdfUrl(state.book.id);
       if (pdf && pdfUrl === url) return;
 
       pdfjs = await loadPdfjs();
@@ -1536,6 +1618,9 @@
       return;
     }
     window.LoreArticlePublish.open(state.articleId, {
+      // Сразу финальный экран с кнопкой Publish (как в книжной форме):
+      // черновик уже сохранён, искать Publish за «Continue» не нужно.
+      screen: 2,
       // бэк при самой публикации нашёл ошибки в статье — показываем их на форме
       onInvalid: function (errors) { renderServerErrors(errors); },
       // 409: публикация запрещена (обычно у статьи нет контента) —
