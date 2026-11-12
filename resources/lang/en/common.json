@@ -468,7 +468,6 @@
         "picker_hint": "Select text on the page, then press «Set start» or «Set end». You can move between pages.",
         "picker_set_start": "Set start",
         "picker_set_end": "Set end",
-        "picker_insert": "Insert the text into the article",
         "picker_apply": "Apply",
         "draft_saved_at": "Draft saved at :time",
         "draft_saving": "Saving…",

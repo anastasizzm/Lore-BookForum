@@ -602,6 +602,13 @@
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (_) {}
 
     var syncTimer = 0;
+    // Последнее выделение внутри редактора. Кнопки панели не должны терять
+    // его при клике (в некоторых браузерах mousedown всё-таки уводит фокус),
+    // иначе команда применялась бы к каретке/текущей строке.
+    var savedRange = null;
+    // true, пока пользователь нажимает кнопку панели: blur в этот момент
+    // не должен сбрасывать сохранённое выделение.
+    var toolbarPointer = false;
 
     function textLength() { return (area.textContent || '').replace(/\s+/g, ' ').trim().length; }
     function isEmpty() { return textLength() === 0; }
@@ -621,6 +628,56 @@
       syncTimer = setTimeout(sync, 300);
     }
 
+    function rangeInside(range) {
+      return !!range && area.contains(range.commonAncestorContainer);
+    }
+
+    /** Запоминает выделение, пока оно ещё находится в редакторе. */
+    function rememberSelection() {
+      var sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      var range = sel.getRangeAt(0);
+      if (!rangeInside(range)) return;
+      try { savedRange = range.cloneRange(); } catch (_) {}
+    }
+
+    /** Возвращает фокус и сохранённое выделение перед выполнением команды. */
+    function restoreSelection() {
+      area.focus();
+      var sel = window.getSelection();
+      if (!sel) return null;
+
+      var range = null;
+      if (savedRange && rangeInside(savedRange)) {
+        try { range = savedRange.cloneRange(); } catch (_) { range = null; }
+      }
+      if (!range) {
+        // До редактора ещё не дотрагивались — ставим каретку в конец.
+        range = document.createRange();
+        range.selectNodeContents(area);
+        range.collapse(false);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return range;
+    }
+
+    function selectionInside() {
+      var sel = window.getSelection();
+      return !!(sel && sel.rangeCount && rangeInside(sel.getRangeAt(0)));
+    }
+
+    /** Ближайший список вокруг каретки — для подсветки кнопок UL/OL. */
+    function nearestListTag() {
+      var sel = window.getSelection();
+      var node = sel && sel.anchorNode;
+      while (node && node !== area) {
+        if (node.nodeType === 1 && (node.tagName === 'UL' || node.tagName === 'OL')) return node.tagName;
+        node = node.parentNode;
+      }
+      return '';
+    }
+
     function currentBlock() {
       var sel = window.getSelection();
       var node = sel && sel.anchorNode;
@@ -631,17 +688,53 @@
       return 'P';
     }
 
-    function updateToolbar() {
+    /** Ближайший узел верхнего уровня (абзац, заголовок, список, текст). */
+    function topLevelNode(node) {
+      if (!node) return null;
+      while (node && node !== area && node.parentNode !== area) node = node.parentNode;
+      return node && node !== area && node.parentNode === area ? node : null;
+    }
+
+    function blockIsEmpty(el) {
+      if (!el || el.nodeType !== 1) return false;
+      if (el.querySelector && el.querySelector('img')) return false;
+      return !(el.textContent || '').replace(/\u200b/g, '').trim();
+    }
+
+    /** Есть ли в текущем выделении явный <b>/<strong> или <i>/<em>. */
+    function explicitInline(cmd) {
       var sel = window.getSelection();
-      if (!toolbar || !sel || !sel.rangeCount || !area.contains(sel.anchorNode)) return;
+      if (!sel || !sel.rangeCount) return false;
+      var re = cmd === 'bold' ? /^(B|STRONG)$/ : /^(I|EM)$/;
+      var range = sel.getRangeAt(0);
+
+      function walk(node) {
+        while (node && node !== area) {
+          if (node.nodeType === 1 && re.test(node.tagName)) return true;
+          node = node.parentNode;
+        }
+        return false;
+      }
+
+      return walk(range.startContainer) || walk(range.endContainer);
+    }
+
+    function updateToolbar() {
+      if (!toolbar || !selectionInside()) return;
+      var block = currentBlock();
       $$('[data-cmd]', toolbar).forEach(function (btn) {
         var cmd = btn.getAttribute('data-cmd');
         var active = false;
         try {
-          if (cmd === 'bold' || cmd === 'italic' || cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+          if (cmd === 'bold' || cmd === 'italic') {
+            // В H2/H3 браузер по умолчанию делает текст жирным, поэтому B
+            // сразу подсвечивается — так автору понятнее текущий формат.
             active = document.queryCommandState(cmd);
+          } else if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+            var listTag = nearestListTag();
+            active = cmd === 'insertUnorderedList' ? listTag === 'UL' : listTag === 'OL';
           } else if (BLOCK_TAG[cmd]) {
-            active = currentBlock() === BLOCK_TAG[cmd];
+            active = block === BLOCK_TAG[cmd];
           }
         } catch (_) {}
         btn.classList.toggle('is-active', !!active);
@@ -651,9 +744,15 @@
     function makeLink() {
       var sel = window.getSelection();
       if (sel && sel.isCollapsed) { document.execCommand('unlink'); return; }
+      var range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
       var url = window.prompt(t('articleform.link_prompt'), 'https://');
       if (url === null) return;
       url = safeHref(url);
+      // prompt() в части браузеров сбрасывает выделение — возвращаем его.
+      if (range && sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
       if (!url) { document.execCommand('unlink'); return; }
       document.execCommand('createLink', false, url);
     }
@@ -718,7 +817,7 @@
         ph.textContent = t('common.loading');
         ph.contentEditable = 'false';
 
-        area.focus();
+        restoreSelection();
         insertNodeAtCursor(ph);
         scheduleSync();
 
@@ -745,40 +844,403 @@
       imageInput.click();
     }
 
-    function exec(cmd) {
+    /**
+     * «Tx»: с выделением — убирает оформление только у выделенного текста;
+     * без выделения — не трогает уже набранное, а сбрасывает формат для
+     * следующего ввода (как в обычном редакторе).
+     */
+    function clearFormatting(collapsed) {
+      if (collapsed) {
+        ['bold', 'italic', 'underline', 'strikeThrough'].forEach(function (cmd) {
+          try {
+            // Жирность заголовка — это его собственный стиль, а не inline-bold:
+            // не превращаем её в span/font-weight при очистке формата.
+            var headingBold = cmd === 'bold' &&
+              /^(H2|H3)$/.test(currentBlock()) && !explicitInline('bold');
+            if (!headingBold && document.queryCommandState(cmd)) document.execCommand(cmd);
+          } catch (_) {}
+        });
+        try { document.execCommand('removeFormat'); } catch (_) {}
+        return;
+      }
+
+      try { document.execCommand('removeFormat'); } catch (_) {}
+      try { document.execCommand('unlink'); } catch (_) {}
+
+      // Блочное оформление снимаем только у выделенного куска и только
+      // если оно реально есть (заголовок/цитата). Обычный абзац не режем.
+      var sel = window.getSelection();
+      if (!sel || sel.isCollapsed) return;
+
+      var hasBlockFormat = ['H2', 'H3', 'BLOCKQUOTE'].some(function (tag) {
+        return !!(closestTag(sel.anchorNode, tag) || closestTag(sel.focusNode, tag));
+      });
+      if (!hasBlockFormat) return;
+
+      if (formatPartialBlock('p')) return;
+
+      try {
+        if (document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList');
+        if (document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList');
+      } catch (_) {}
+      document.execCommand('formatBlock', false, '<P>');
+    }
+
+    function isBlockCommand(cmd) {
+      return !!BLOCK_TAG[cmd] || cmd === 'insertUnorderedList' || cmd === 'insertOrderedList';
+    }
+
+    function isInlineRunNode(node) {
+      if (!node) return false;
+      if (node.nodeType === 3) return true;
+      return node.nodeType === 1 &&
+        /^(B|STRONG|I|EM|U|S|STRIKE|CODE|MARK|SPAN|A|BR|IMG|SUB|SUP|FONT)$/.test(node.tagName);
+    }
+
+    /**
+     * Непрерывная цепочка inline-узлов верхнего уровня: так contenteditable
+     * хранит первую набранную строку, пока она ещё не обёрнута в <p>.
+     */
+    function inlineRunOf(node) {
+      var top = node;
+      while (top && top.parentNode !== area) top = top.parentNode;
+      if (!top || !isInlineRunNode(top)) return null;
+
+      var run = [top];
+      var prev = top.previousSibling;
+      while (prev && isInlineRunNode(prev)) {
+        run.unshift(prev);
+        prev = prev.previousSibling;
+      }
+      var next = top.nextSibling;
+      while (next && isInlineRunNode(next)) {
+        run.push(next);
+        next = next.nextSibling;
+      }
+      return run;
+    }
+
+    /** Новый пустой блок нужного типа (заголовок/цитата/список). */
+    function newBlock(cmd) {
+      if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+        var list = document.createElement(cmd === 'insertUnorderedList' ? 'ul' : 'ol');
+        var item = document.createElement('li');
+        item.appendChild(document.createElement('br'));
+        list.appendChild(item);
+        return { root: list, caret: item };
+      }
+      var el = document.createElement((BLOCK_TAG[cmd] || 'P').toLowerCase());
+      el.appendChild(document.createElement('br'));
+      return { root: el, caret: el };
+    }
+
+    /** Блок с уже готовым содержимым (для разрезанного выделения). */
+    function blockWithContent(cmd, fragment) {
+      if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+        var list = document.createElement(cmd === 'insertUnorderedList' ? 'ul' : 'ol');
+        var item = document.createElement('li');
+        item.appendChild(fragment);
+        list.appendChild(item);
+        return { root: list, content: item };
+      }
+      var el = document.createElement((BLOCK_TAG[cmd] || 'P').toLowerCase());
+      el.appendChild(fragment);
+      return { root: el, content: el };
+    }
+
+    function fragmentHasContent(frag) {
+      if (!frag) return false;
+      var text = String(frag.textContent || '').replace(/\u200b/g, '').trim();
+      return !!(text || frag.querySelector('img,br,a'));
+    }
+
+    function closestTag(node, tagName) {
+      while (node && node !== area) {
+        if (node.nodeType === 1 && node.tagName === tagName) return node;
+        node = node.parentNode;
+      }
+      return null;
+    }
+
+    /**
+     * Выделение внутри одной строки: разрезаем её так, чтобы формат получил
+     * только выделенный кусок, а текст до/после остался как был.
+     * Работает и для обычного абзаца, и для «голой» первой строки без <p>.
+     * Возвращает true, если случай обработан здесь.
+     */
+    function formatPartialBlock(cmd) {
+      var sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return false;
+      var range = sel.getRangeAt(0);
+      if (range.collapsed) return false;
+
+      var startTop = topLevelNode(range.startContainer);
+      var endTop = topLevelNode(range.endContainer);
+      if (!startTop || !endTop) return false;
+
+      var containerEl = null;
+      var run = null;
+      var baseTag = 'P';
+
+      // Выделение внутри одного пункта списка: режем содержимое <li>,
+      // чтобы не тащить формат на весь список и не ломать вложенность.
+      var startLi = closestTag(range.startContainer, 'LI');
+      var endLi = closestTag(range.endContainer, 'LI');
+      if (startLi && startLi === endLi) {
+        containerEl = startLi;
+        baseTag = 'LI';
+      } else if (startTop === endTop && startTop.nodeType === 1 &&
+          /^(P|H2|H3|BLOCKQUOTE)$/.test(startTop.tagName)) {
+        containerEl = startTop;
+        baseTag = startTop.tagName;
+      } else {
+        // Первая набранная строка живёт прямо в корне редактора, без <p>.
+        if (!isInlineRunNode(startTop) || !isInlineRunNode(endTop)) return false;
+        run = inlineRunOf(startTop);
+        if (!run || run.indexOf(endTop) === -1) return false;
+        baseTag = 'P';
+      }
+
+      var containerRange = document.createRange();
+      if (containerEl) {
+        containerRange.selectNodeContents(containerEl);
+      } else {
+        containerRange.setStartBefore(run[0]);
+        containerRange.setEndAfter(run[run.length - 1]);
+      }
+
+      var beforeRange = containerRange.cloneRange();
+      beforeRange.setEnd(range.startContainer, range.startOffset);
+
+      var afterRange = containerRange.cloneRange();
+      afterRange.setStart(range.endContainer, range.endOffset);
+
+      var beforeFrag = beforeRange.cloneContents();
+      var afterFrag = afterRange.cloneContents();
+      var beforeHas = fragmentHasContent(beforeFrag);
+      var afterHas = fragmentHasContent(afterFrag);
+      if (!beforeHas && !afterHas) return false;
+
+      var middleFrag = range.cloneContents();
+      if (!fragmentHasContent(middleFrag)) {
+        // Выделены только пробелы — форматировать нечего.
+        return true;
+      }
+
+      // Повторный клик по уже активному блоку снимает формат у выделения.
+      var target = cmd;
+      if (containerEl && containerEl.tagName === 'LI') {
+        var parentList = containerEl.parentNode;
+        if (cmd === 'insertUnorderedList' && parentList && parentList.tagName === 'UL') target = 'p';
+        if (cmd === 'insertOrderedList' && parentList && parentList.tagName === 'OL') target = 'p';
+      } else if (BLOCK_TAG[cmd] && containerEl && containerEl.tagName === BLOCK_TAG[cmd]) {
+        target = 'p';
+      }
+
+      var middle = blockWithContent(target, middleFrag);
+      var beforeEl = null;
+      var afterEl = null;
+
+      if (!containerEl || containerEl.tagName !== 'LI') {
+        if (beforeHas) {
+          beforeEl = document.createElement(baseTag.toLowerCase());
+          beforeEl.appendChild(beforeFrag);
+        }
+        if (afterHas) {
+          afterEl = document.createElement(baseTag.toLowerCase());
+          afterEl.appendChild(afterFrag);
+        }
+      }
+
+      if (containerEl && containerEl.tagName === 'LI') {
+        // Оставляем пункт списка на месте, меняем только его содержимое:
+        // до + форматированный кусок + после.
+        while (containerEl.firstChild) containerEl.removeChild(containerEl.firstChild);
+        if (beforeHas) containerEl.appendChild(beforeFrag);
+        containerEl.appendChild(middle.root);
+        if (afterHas) containerEl.appendChild(afterFrag);
+      } else if (containerEl) {
+        var parent = containerEl.parentNode;
+        var next = containerEl.nextSibling;
+        parent.removeChild(containerEl);
+        if (beforeEl) parent.insertBefore(beforeEl, next);
+        parent.insertBefore(middle.root, next);
+        if (afterEl) parent.insertBefore(afterEl, next);
+      } else {
+        var ref = run[0];
+        if (beforeEl) area.insertBefore(beforeEl, ref);
+        area.insertBefore(middle.root, ref);
+        if (afterEl) area.insertBefore(afterEl, ref);
+        run.forEach(function (n) {
+          if (n.parentNode === area) area.removeChild(n);
+        });
+      }
+
+      var select = document.createRange();
+      select.selectNodeContents(middle.content);
+      sel.removeAllRanges();
+      sel.addRange(select);
+      return true;
+    }
+
+    function placeCaret(el) {
+      var sel = window.getSelection();
+      if (!sel) return;
+      var range = document.createRange();
+      if (el.firstChild) range.setStart(el, 0);
+      else range.selectNodeContents(el);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
       area.focus();
-      if (BLOCK_TAG[cmd]) {
-        var tag = BLOCK_TAG[cmd];
-        document.execCommand('formatBlock', false, currentBlock() === tag ? '<P>' : '<' + tag + '>');
+    }
+
+    /** Оборачивает «голую» цепочку inline-узлов в <p>, сохраняя порядок. */
+    function wrapInlineRun(top) {
+      var run = inlineRunOf(top);
+      if (!run) return null;
+      var p = document.createElement('p');
+      area.insertBefore(p, run[0]);
+      run.forEach(function (n) { p.appendChild(n); });
+      return p;
+    }
+
+    /**
+     * Блочная кнопка без выделения не меняет текущую строку: создаёт новый
+     * пустой блок нужного типа после текущего и переносит туда каретку.
+     * Всё, что автор наберёт дальше, попадёт уже в этот блок.
+     */
+    function startBlock(cmd) {
+      var sel = window.getSelection();
+      var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+      var startNode = range ? topLevelNode(range.startContainer) : null;
+      var current = startNode;
+
+      // Первая строка без <p> — сначала собираем всю inline-цепочку в абзац,
+      // иначе новый блок встанет в середину строки (например, между <b>).
+      if (startNode && isInlineRunNode(startNode)) current = wrapInlineRun(startNode);
+
+      var targetTag = BLOCK_TAG[cmd] ||
+        (cmd === 'insertUnorderedList' ? 'UL' : cmd === 'insertOrderedList' ? 'OL' : 'P');
+
+      // Повторное нажатие по уже активному блоку — снимаем формат.
+      if (current && current.nodeType === 1 && current.tagName === targetTag) {
+        if (blockIsEmpty(current)) {
+          var p = document.createElement('p');
+          p.appendChild(document.createElement('br'));
+          area.replaceChild(p, current);
+          placeCaret(p);
+        } else if (cmd === 'insertUnorderedList' || cmd === 'insertOrderedList') {
+          // Убирает маркер только у текущего пункта, остальные не трогает.
+          document.execCommand(cmd);
+        } else {
+          document.execCommand('formatBlock', false, '<P>');
+        }
+        return;
+      }
+
+      var made = newBlock(cmd);
+
+      if (current && current.nodeType === 1 && blockIsEmpty(current)) {
+        // Пустую строку можно просто перекрасить — текста в ней нет.
+        area.replaceChild(made.root, current);
+      } else if (current && current.parentNode === area) {
+        area.insertBefore(made.root, current.nextSibling);
+      } else {
+        area.appendChild(made.root);
+      }
+
+      placeCaret(made.caret);
+    }
+
+    function exec(cmd) {
+      // Сначала возвращаем выделение, сохранённое до клика по кнопке:
+      // иначе команда применялась бы к каретке/текущей строке.
+      restoreSelection();
+
+      if (isBlockCommand(cmd)) {
+        var sel = window.getSelection();
+        if (sel && !sel.isCollapsed && formatPartialBlock(cmd)) {
+          // Выделение внутри одного абзаца уже разрезано: формат получил
+          // только выделенный кусок, соседний текст не изменился.
+        } else if (sel && sel.isCollapsed) {
+          // Без выделения — формат только для последующего ввода.
+          startBlock(cmd);
+        } else if (BLOCK_TAG[cmd]) {
+          // Если выделение захватывает пункты списка, сначала снимаем список,
+          // иначе formatBlock обернёт <ul>/<ol> в заголовок — невалидный DOM.
+          if (closestTag(sel && sel.anchorNode, 'LI') || closestTag(sel && sel.focusNode, 'LI')) {
+            try {
+              if (document.queryCommandState('insertUnorderedList')) document.execCommand('insertUnorderedList');
+              if (document.queryCommandState('insertOrderedList')) document.execCommand('insertOrderedList');
+            } catch (_) {}
+          }
+          var tag = BLOCK_TAG[cmd];
+          document.execCommand('formatBlock', false, currentBlock() === tag ? '<P>' : '<' + tag + '>');
+        } else {
+          document.execCommand(cmd);
+        }
       } else if (cmd === 'link') {
         makeLink();
       } else if (cmd === 'image') {
         openImageDialog();
       } else if (cmd === 'clear') {
-        document.execCommand('removeFormat');
-        document.execCommand('formatBlock', false, '<P>');
+        var caret = window.getSelection();
+        clearFormatting(!caret || caret.isCollapsed);
       } else {
+        // inline-команды (bold/italic): при выделении меняется только
+        // выделенный текст; при свёрнутом выделении — только будущий ввод.
         document.execCommand(cmd);
       }
+
+      rememberSelection();
       sync();
       updateToolbar();
       markDirty();
     }
 
     if (toolbar) {
+      toolbar.addEventListener('pointerdown', function (e) {
+        if (!e.target.closest('[data-cmd]')) return;
+        toolbarPointer = true;
+        rememberSelection();
+      });
       toolbar.addEventListener('mousedown', function (e) {
-        if (e.target.closest('[data-cmd]')) e.preventDefault();
+        if (!e.target.closest('[data-cmd]')) return;
+        toolbarPointer = true;
+        // Сохраняем выделение ДО default action браузера.
+        rememberSelection();
+        e.preventDefault();
       });
       toolbar.addEventListener('click', function (e) {
         var btn = e.target.closest('[data-cmd]');
-        if (btn) exec(btn.getAttribute('data-cmd'));
+        if (!btn) return;
+        exec(btn.getAttribute('data-cmd'));
+        setTimeout(function () { toolbarPointer = false; }, 0);
       });
     }
 
-    document.addEventListener('selectionchange', updateToolbar);
+    // Если нажатие на кнопку прервали (отпустили вне кнопки, pointercancel),
+    // click может не прийти — флаг не должен «залипать».
+    function releaseToolbarPointer() { toolbarPointer = false; }
+    document.addEventListener('pointerup', releaseToolbarPointer, true);
+    document.addEventListener('pointercancel', releaseToolbarPointer, true);
+    document.addEventListener('mouseup', releaseToolbarPointer, true);
+
+    document.addEventListener('selectionchange', function () {
+      rememberSelection();
+      updateToolbar();
+    });
+    area.addEventListener('mouseup', rememberSelection);
+    area.addEventListener('keyup', rememberSelection);
 
     area.addEventListener('input', function () { scheduleSync(); markDirty(); });
-    area.addEventListener('blur', sync);
+    area.addEventListener('blur', function () {
+      // Ушли из редактора в другое поле — старое выделение больше не
+      // должно применяться к кнопкам панели.
+      if (!toolbarPointer) savedRange = null;
+      sync();
+    });
 
     area.addEventListener('paste', function (e) {
       var cd = e.clipboardData;
@@ -844,6 +1306,7 @@
 
     function setHtml(html) {
       area.innerHTML = sanitizeHtml(html);
+      savedRange = null;
       sync();
     }
 
@@ -1055,7 +1518,6 @@
     var startEl = $('[data-picker-start]', root);
     var endEl = $('[data-picker-end]', root);
     var applyBtn = $('[data-picker-apply]', root);
-    var insertChk = $('[data-picker-insert]', root);
     var titleEl = $('[data-picker-book]', root);
 
     var pdfjs = null;
@@ -1341,25 +1803,24 @@
         return;
       }
 
+      // Текст выбранного фрагмента всегда переносится в статью: галочки
+      // «вставить текст» в окне больше нет.
       var html = '';
-      var wantText = !!(insertChk && insertChk.checked);
-      if (wantText) {
-        setBusy(t('articleform.picker_reading'));
-        if (applyBtn) applyBtn.disabled = true;
-        try {
-          var texts = {};
-          for (var p = s.page; p <= e.page; p++) texts[p] = (await getInfo(p)).text;
-          html = Text.paragraphsToHtml(Text.toParagraphs(Text.sliceFragment(texts, s, e)));
-        } catch (err) {
-          console.error('[article-form] extract failed', err);
-          notify(t('errors.article.article_extract_failed'));
-          setBusy('');
-          paintStatus();
-          return;
-        }
+      setBusy(t('articleform.picker_reading'));
+      if (applyBtn) applyBtn.disabled = true;
+      try {
+        var texts = {};
+        for (var p = s.page; p <= e.page; p++) texts[p] = (await getInfo(p)).text;
+        html = Text.paragraphsToHtml(Text.toParagraphs(Text.sliceFragment(texts, s, e)));
+      } catch (err) {
+        console.error('[article-form] extract failed', err);
+        notify(t('errors.article.article_extract_failed'));
         setBusy('');
-        if (!html) notify(t('errors.article.article_no_text_layer'), 'warning');
+        paintStatus();
+        return;
       }
+      setBusy('');
+      if (!html) notify(t('errors.article.article_no_text_layer'), 'warning');
 
       state.start = s;
       state.end = e;

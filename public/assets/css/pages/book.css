@@ -289,6 +289,15 @@
   margin: 0 0 var(--space-3, 16px);
 }
 
+/* Заголовки статьи по умолчанию без жирности: так же, как в редакторе.
+   Жирным текст становится только при явном <strong>/<b> от автора. */
+.article-content h2,
+.article-content h3,
+.article-body h2,
+.article-body h3 {
+  font-weight: var(--fw-regular);
+}
+
 .article-content p:last-child {
   margin-bottom: 0;
 }
