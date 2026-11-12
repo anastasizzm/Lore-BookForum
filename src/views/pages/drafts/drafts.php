@@ -4,8 +4,8 @@
 <?php
 /*
  * drafts — страница черновиков пользователя (DR-02, DR-03, DR-08).
- * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts")
- * + drafts-filters.js (publish / delete).
+ * JS: filters.js (фильтры, сортировка, список и «Показать ещё» — режим data-list="drafts").
+ * Publish / Delete живут на экране редактирования: карточка ведёт туда кликом.
  */
 
 $view->setBlock('selectedTab', 'drafts');
@@ -27,15 +27,6 @@ $hasNext  = (bool) ($meta['hasNext'] ?? false);
 
 $coversBase = '/api/files/';
 $coversSuffix = '/preview';
-
-$draftDate = static function (object|array $item): string {
-    foreach (['updatedAt', 'createdAt'] as $key) {
-        $raw = is_array($item) ? ($item[$key] ?? null) : ($item->$key ?? null);
-        if ($raw instanceof \DateTimeInterface) return $raw->format('d.m.Y');
-        if (is_string($raw) && trim($raw) !== '') return trim($raw);
-    }
-    return '';
-};
 
 // The controller knows the list type (meta.type); models in draft lists may be
 // PublicationShort, so reflection alone cannot tell an article from a book.
@@ -79,7 +70,6 @@ foreach ($drafts as $one) {
         'type'  => $draftType($one, $defaultDraftType),
         'title' => $pick($one, ['title'], ''),
         'cover' => $pick($one, ['cover', 'iconUrl', 'icon', 'iconId']),
-        'date'  => $draftDate($one),
     ];
 }
 
@@ -231,5 +221,4 @@ if (!$isEmptyAll) {
 
 <?php $view->startBlock('scripts'); ?>
 <script src="<?= $view->asset('js/filters.js') ?>"></script>
-<script src="<?= $view->asset('js/drafts-filters.js') ?>"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -199,7 +199,13 @@
 
             <div class="settings-menu__divider" role="separator"></div>
 
-            <a href="<?= $view->e(rtrim($view->url('password.email'), '&')) ?>" class="settings-menu__item">
+            <?php
+              // from=sidebar — чтобы страница сброса пароля предложила
+              // вернуться в ленту, а не на экран входа.
+              $passwordResetUrl = rtrim($view->url('password.email'), '&');
+              $passwordResetUrl .= (str_contains($passwordResetUrl, '?') ? '&' : '?') . 'from=sidebar';
+            ?>
+            <a href="<?= $view->e($passwordResetUrl) ?>" class="settings-menu__item">
                 <span class="settings-menu__icon">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                         <path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>

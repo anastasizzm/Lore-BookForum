@@ -2,17 +2,18 @@
 /**
  * admin/users — таблица пользователей админки.
  *
- * Строки рисует public/assets/js/admin.js (раздел USERS LIST):
- *   GET /api/users?q=…&page=N&ps=20
- * Поиск уходит в API только по Enter (и при очистке поля крестиком),
- * «Показать ещё» подгружает следующую страницу.
+ * Строки рисует public/assets/js/admin/features/users/list.js:
+ *   GET /api/system/users?include=roles&page=N&ps=20
+ * Роли приходят в том же ответе (include=roles), без N+1 запросов.
+ * Серверного q у system users нет, поэтому поиск по Enter загружает
+ * страницы system users и фильтрует их на клиенте (так видны роли,
+ * e-mail, isBlocked и canManage). «Показать ещё» листает список дальше.
  *
  * Внутри строки — вложенный список ролей (раздел USER ROLES):
- * GET/POST /api/system/users/{id}/roles.
+ * GET/POST/DELETE /api/system/users/{id}/roles.
  *
- * Кнопка Block открывает ConfirmModal.confirm() и вызывает
- * POST /api/users/{id}/block. Роута разблокировки пока нет, поэтому у
- * заблокированного пользователя кнопка не рисуется.
+ * Кнопки Block/Unblock открывают ConfirmModal.confirm() и вызывают
+ * POST/DELETE /api/users/{id}/block; строка обновляется по ответу API.
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
  * .admin-badge, .admin-actions, .admin-user-roles).
@@ -97,7 +98,13 @@ $adminBoot = static function (string $name, mixed $data): void {
     if (!is_string($json)) return;
     echo '<script type="application/json" data-admin-data="' . $name . '">' . $json . '</script>' . "\n";
 };
-$adminBoot('users', $users ?? $items ?? null);
+// Вместе с первой страницей передаём meta.hasNext, чтобы «Показать ещё»
+// не появлялось/не пропадало из-за эвристики по размеру страницы.
+$usersBoot = $users ?? $items ?? null;
+if (is_array($usersBoot) && isset($meta) && is_array($meta)) {
+    $usersBoot = ['items' => $usersBoot, 'meta' => $meta];
+}
+$adminBoot('users', $usersBoot);
 ?>
 
 <?php $view->endBlock('content'); ?>

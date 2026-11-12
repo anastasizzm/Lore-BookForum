@@ -46,9 +46,13 @@ $filter_open = $filter_open ?? false;
                  <?php endif; ?>>
 
         <?php elseif (($control['type'] ?? '') === 'reset'): ?>
-        <button type="button" class="filter-reset" data-filter-reset>
+        <?php /* Ссылка, а не button: на страницах без list-AJAX (Saved)
+                 Reset должен работать даже без перехвата в JS. */ ?>
+        <a class="filter-reset"
+           href="<?= $view->e($control['href'] ?? '#') ?>"
+           data-filter-reset>
           &#10005; <?= $view->e($control['label'] ?? 'Reset') ?>
-        </button>
+        </a>
 
         <?php endif; ?>
 

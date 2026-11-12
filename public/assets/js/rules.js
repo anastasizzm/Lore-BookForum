@@ -24,9 +24,9 @@
  *   с признаком «это моя публикация»: автор на своей книге правит всегда.
  *
  * ВАЖНО про publish:
- *   Отдельного флага `publish` в rules нет, поэтому publish маппится на
- *   updateMeta || updateContent, а публикация новой публикации из формы
- *   создания (publish_new) — на create.
+ *   Отдельного флага `publish` в rules нет. Публикация — это смена статуса
+ *   (метаинформация), поэтому бэк требует updateMeta. Публикация новой
+ *   публикации из формы создания (publish_new) опирается на create.
  *
  * Значения canXxx():
  *   true  — право подтверждено, включаем элемент;
@@ -49,8 +49,8 @@
    * Действие -> правила, которые его разрешают (PublicationAccessRules).
    *
    * publish      — перевод УЖЕ существующего черновика в public.
-   *                Отдельного флага `publish` бэк не отдаёт, поэтому по
-   *                договорённости маппим на updateMeta || updateContent.
+   *                Отдельного флага `publish` бэк не отдаёт: операция
+   *                UpdateMetaPublicationOperation требует updateMeta.
    * publish_new  — публикация НОВОЙ публикации прямо из формы создания
    *                (POST /api/books/ + POST /api/books/{id}/publish). Здесь
    *                права на обновление ещё нет — публикация и есть создание,
@@ -61,7 +61,7 @@
     create:      ['create'],
     edit:        ['updateMeta', 'updateContent'],
     update:      ['updateMeta', 'updateContent'],
-    publish:     ['updateMeta', 'updateContent'],
+    publish:     ['updateMeta'],
     publish_new: ['create'],
     delete:      ['delete']
   };

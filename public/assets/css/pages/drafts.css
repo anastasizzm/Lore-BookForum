@@ -11,7 +11,7 @@
 .drafts-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: calc(var(--space-4) / 2);
 }
 
 /* ------------------------------------------------------------
@@ -82,22 +82,6 @@
 
 .card-draft__link:hover {
   text-decoration: underline;
-}
-
-/* Мета: тип публикации · дата изменения */
-.card-draft__meta {
-  margin: 0;
-  font-size: var(--fs-small);
-  color: var(--color-text-muted);
-  line-height: 1.3;
-}
-
-.card-draft__sep {
-  margin: 0 4px;
-}
-
-.card-draft__date {
-  white-space: nowrap;
 }
 
 /* Действия: основное — кнопка «Продолжить», рядом текстовая «Открыть» */
@@ -242,4 +226,78 @@
 /* В сетке черновиков карточки чуть плотнее, чем в библиотеке */
 .drafts-grid .card-draft__manage {
   margin-top: 10px;
+}
+
+/* ------------------------------------------------------------
+   СТАБИЛЬНЫЕ РАЗМЕРЫ КАРТОЧЕК + ЗАЩИТА ОТ ВЫХОДА ЗА ЭКРАН
+   Карточки книг и статей должны выглядеть одинаково независимо от
+   длины названия и наличия даты, а сетка не должна «вылезать» вправо.
+   ------------------------------------------------------------ */
+.drafts-panel {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.drafts-grid {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: calc(var(--space-4) / 2);
+  overflow: visible;
+}
+
+@media (min-width: 480px) {
+  .drafts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+.drafts-grid .card-draft {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  gap: var(--space-2);
+}
+
+.drafts-grid .card-draft__cover {
+  width: 100%;
+  flex: 0 0 auto;
+}
+
+/* Название — ровно две строки: карточки книг и статей не «прыгают»
+   по высоте из-за длинного заголовка. */
+.drafts-grid .card-draft__title {
+  min-height: calc(1.35em * 2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* Вся карточка кликабельна и ведёт на экран редактирования. */
+.drafts-grid .card-draft__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: var(--radius-lg);
+}
+
+.drafts-grid .card-draft__link:focus-visible {
+  outline: 2px solid var(--main-text-color, var(--color-text));
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .drafts-grid {
+    gap: var(--space-2);
+  }
+
+  .drafts-grid .card-draft {
+    padding: var(--space-3);
+  }
 }

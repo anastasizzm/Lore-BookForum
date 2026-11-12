@@ -34,8 +34,6 @@
   <link rel="stylesheet" href="<?= $view->asset('css/layout/layout.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/components/index.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/components/modal.css') ?>">
-  <!-- Плашка «Пожаловаться» (report-modal.php подключается в layouts/main.php) -->
-  <link rel="stylesheet" href="<?= $view->asset('css/components/report-modal.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/components/fab.css') ?>">
 
   <?= $view->block('head_extra') ?>

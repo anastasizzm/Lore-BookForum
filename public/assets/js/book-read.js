@@ -43,6 +43,24 @@ async function init(root) {
   root.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
   root.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
 
+  /* Браузерный zoom страницы запрещаем на всей странице читалки, а не только
+     внутри .reader. Иначе Ctrl+wheel / pinch вне книги масштабировал весь
+     документ — вместе с фиксированной панелью управления (пункт аудита 8). */
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart',  (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (['+', '=', '-', '_', '0'].indexOf(e.key) === -1) return;
+    // Собственный zoom работает через stage-обработчик; браузерный — нет.
+    e.preventDefault();
+  });
+
   const syncDock = () => {
     const r = stage.getBoundingClientRect();
     const rootStyle = root.style;
@@ -64,19 +82,44 @@ async function init(root) {
    * читателя не отвлекаем; последняя страница дублируется в localStorage. */
   const PROGRESS_URL = '/api/books/' + bookId + '/progress';
   const SAVE_DELAY   = 1000;
-  // Контракт бэка (Api\BooksController::upsert/finish -> BookProgressForm, BookFormat):
-  // format обязателен (finish читает его через QueryParser::enum), позиция PDF —
-  // pageNumber (так её хранит и отдаёт read() в $initial). Имена полей —
-  // здесь и в finishBody(); сверить с BookProgressForm.
+  // Контракт бэка (Api\Publications\PublicationsController::upsert -> ReadProgressForm):
+  // format обязателен; позиция — вложенный объект position (для PDF
+  // position.pageNumber числом); isFinished — обязательный bool.
+  // Тело отправляем JSON: ReadProgressFormValidator требует нативный int
+  // в position.pageNumber, а form-urlencoded приходит строками.
+  // finish читает только format.
   const FORMAT = root.dataset.format || 'pdf';
-  const progressBody = (page) =>
-    new URLSearchParams({ format: FORMAT, pageNumber: String(page) });
-  const finishBody = () => new URLSearchParams({ format: FORMAT });
+  const progressBody = (page) => JSON.stringify({
+    format: FORMAT,
+    position: { pageNumber: Number(page) },
+    isFinished: false,
+  });
+  const finishBody = () => JSON.stringify({ format: FORMAT });
 
   let sentPage = 0;       // страница, о которой бэк уже знает
   let finished = false;   // finish уже отправлен
   let inflight = false;
   let saveTimer = 0;
+
+  function postProgress(url, body, keepalive) {
+    const req = (window.LoreCsrf ? window.LoreCsrf.fetch : fetch)(url, {
+      method: 'POST',
+      body,
+      keepalive: !!keepalive,
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    return req.then(async (res) => {
+      const raw = await res.text();
+      // бэк иногда отвечает HTML-страницей ошибки с кодом 200 — это не успех
+      if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
+      return true;
+    });
+  }
 
   function sendProgress(num, keepalive) {
     if (!Number(bookId) || inflight) return;
@@ -85,28 +128,29 @@ async function init(root) {
     if (isLast ? finished : num === sentPage) return;
 
     inflight = true;
-    const req = (window.LoreCsrf ? window.LoreCsrf.fetch : fetch)(
-      isLast ? PROGRESS_URL + '/finish' : PROGRESS_URL,
-      {
-        method: 'POST',
-        body: isLast ? finishBody() : progressBody(num),
-        keepalive: !!keepalive,
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      }
-    );
-    req.then(async (res) => {
-      const raw = await res.text();
-      // бэк иногда отвечает HTML-страницей ошибки с кодом 200 — это не успех
-      if (!res.ok || /^\s*</.test(raw)) throw new Error('HTTP ' + res.status);
-      if (isLast) finished = true; else { sentPage = num; finished = false; }
-    }).catch((e) => {
-      console.warn('[reader] progress not saved', e);
-    }).finally(() => {
-      inflight = false;
-      // пока шёл запрос, страница могла смениться — досылаем актуальную
-      if (!keepalive && pageNum !== num) scheduleSave(pageNum);
-    });
+    const url  = isLast ? PROGRESS_URL + '/finish' : PROGRESS_URL;
+    const body = isLast ? finishBody() : progressBody(num);
+
+    // finish только помечает уже существующую запись (UPDATE), поэтому при
+    // прыжке сразу на последнюю страницу сначала сохраняем позицию обычным
+    // upsert — иначе прогресса в БД не будет вовсе.
+    const prepare = (isLast && !finished)
+      ? postProgress(PROGRESS_URL, progressBody(num), keepalive)
+      : Promise.resolve(true);
+
+    prepare
+      .then(() => postProgress(url, body, keepalive))
+      .then(() => {
+        if (isLast) finished = true; else { sentPage = num; finished = false; }
+      })
+      .catch((e) => {
+        console.warn('[reader] progress not saved', e);
+      })
+      .finally(() => {
+        inflight = false;
+        // пока шёл запрос, страница могла смениться — досылаем актуальную
+        if (!keepalive && pageNum !== num) scheduleSave(pageNum);
+      });
   }
 
   function scheduleSave(num) {
@@ -201,7 +245,13 @@ async function init(root) {
     } catch (_) {}
   }
   pageNum = clamp(fromUrl || serverPage || saved || 1, 1, pdf.numPages);
-  sentPage = clamp(serverPage, 0, pdf.numPages);   // эту страницу бэк уже знает
+  // ВАЖНО: не считаем serverPage уже сохранённой страницей. Контроллер
+  // отдаёт defaultPosition() = pageNumber 1 даже когда записи в users_read
+  // ещё нет, поэтому при sentPage = 1 первый показ страницы 1 не отправлял
+  // прогресс и книга оставалась в статусе none («Start reading»).
+  // Всегда отправляем текущую страницу при открытии; повторный upsert
+  // безопасен (ON CONFLICT обновляет позицию и last_read_at).
+  sentPage = 0;
 
   setStatus('');
   render();

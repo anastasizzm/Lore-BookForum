@@ -33,7 +33,7 @@ $param   = $param   ?? null;
     <?php foreach ($options as $opt): ?>
       <li>
         <a href="<?= $view->e($opt['href'] ?? '#') ?>"
-           class="dropdown__item"
+           class="dropdown__item<?= !empty($opt['active']) ? ' is-active' : '' ?>"
            <?= isset($opt['value']) ? 'data-filter-value="' . $view->e($opt['value']) . '"' : '' ?>>
           <?= $view->e($opt['label'] ?? '') ?>
         </a>
