@@ -1309,8 +1309,11 @@
         if (fileError) { setError(name, fileError); return false; }
         // edit-режим: у книги уже есть прикреплённые файлы (GET /contents),
         // локальный input при этом пуст — правило «минимум один файл»
-        // всё равно выполнено (attachedCount см. выше).
-        var hasAttached = name === 'files' && attachedCount > 0;
+        // всё равно выполнено (attachedCount см. выше). Пока список не
+        // загрузился (или загрузка упала), не блокируем ложно: contents/PDF
+        // проверит бэк.
+        var hasAttached = name === 'files' &&
+          (attachedCount > 0 || (!!editId && !attachedLoaded));
         if (rule.required && !(field.files && field.files.length) && !hasAttached) {
           setError(name, t(rule.msgKey));
           return false;
