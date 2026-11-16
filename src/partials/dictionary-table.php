@@ -3,19 +3,20 @@
  * dictionary-table — toolbar + таблица справочника (Genres / Categories / Types).
  *
  * Общий для трёх страниц src/views/pages/admin/{genres,categories,types}.php:
- * там остаются только шапка, мок-данные и подключение admin/main.js.
+ * там остаются шапка, серверные данные и подключение admin/main.js
+ * (он импортирует admin/features/dictionary/*).
  *
  * @param string $resource — ключ ресурса ('genres' | 'categories' | 'types').
- *                           Из него JS собирает контрактный путь
- *                           /api/admin/{resource} (dictApi в admin/main.js).
+ *                           Из него JS собирает путь /api/additional/{resource}
+ *                           (dictApi в admin/features/dictionary/api.js).
  * @param array  $items     — строки: [['id' => int,
  *                            'translations' => [['langCode' => 'en', 'title' => '...'], ...]], ...]
  * @param string $searchPh  — плейсхолдер поиска (локализован на странице)
  * @param string $addLabel  — подпись кнопки добавления (локализована на странице)
  *
  * Данные отдаются JS'у как JSON (script[type="application/json"]), чтобы
- * add/edit/delete работали с тем же мок-массивом, что и серверная отрисовка.
- * Поиск — клиентский (admin/main.js): по всем переводам через data-search.
+ * первая отрисовка не делала запрос; поиск/изменения идут в API.
+ * Поиск — серверный (admin/features/dictionary/table.js, ?q=).
  *
  * Стили — public/assets/css/admin.css (.admin-toolbar, .admin-table).
  */
@@ -27,8 +28,8 @@ $addLabel = $addLabel ?? '';
 ?>
 
 <div class="admin-toolbar">
-  <!-- Открытие модалки «Добавить» — admin/main.js (ADM-UI-3); сам fetch
-       (POST /api/admin/{resource}, при недоступности — мок) — dictApi там же -->
+  <!-- Открытие модалки «Добавить» — admin/features/dictionary/*; fetch
+       (POST /api/additional/{resource}) — dictApi там же. -->
   <button type="button" class="btn btn--primary admin-toolbar__add" data-admin-dict-add>
     <?= $view->e($addLabel) ?>
   </button>
@@ -74,8 +75,9 @@ $addLabel = $addLabel ?? '';
           </td>
           <td>
             <div class="admin-actions">
-              <!-- Модалка «Редактировать» / удаление через ConfirmModal — admin/main.js.
-                   Запросы — dictApi: PATCH/DELETE /api/admin/{resource}/{id}. -->
+              <!-- Модалка «Редактировать» / удаление через ConfirmModal —
+                   admin/features/dictionary/*. Запросы — dictApi:
+                   PUT/DELETE /api/additional/{resource}/{id}. -->
               <button type="button"
                       class="btn btn--secondary"
                       data-admin-dict-edit
@@ -93,7 +95,8 @@ $addLabel = $addLabel ?? '';
         </tr>
       <?php endforeach; ?>
 
-      <!-- Заглушка пустого состояния. Текст переключает admin/main.js:
+      <!-- Заглушка пустого состояния. Текст переключает
+           admin/features/dictionary/table.js:
            данных нет — common.admin.empty, поиск ничего не нашёл — admin.no_results -->
       <tr class="admin-table__empty" data-admin-empty<?= $items ? ' hidden' : '' ?>>
         <td colspan="3"><?= $view->e($view->t('common.admin.empty')) ?></td>
@@ -102,9 +105,8 @@ $addLabel = $addLabel ?? '';
   </table>
 </div>
 
-<!-- Мок-массив страницы: JS читает его при первом рендере строк (единый
-     источник правды, пока GET /api/admin/{resource} не отвечает — dictApi
-     в admin/main.js). Без htmlspecialchars: <script> — raw-text-элемент, сущности
+<!-- Серверные данные страницы: JS читает их при первом рендере строк.
+     Без htmlspecialchars: <script> — raw-text-элемент, сущности
      в нём НЕ декодируются. JSON_HEX_* вырезает < > & " ', поэтому </script>
      и разрыв разметки внутри данных невозможны. -->
 <script type="application/json" data-dict-data><?= json_encode(

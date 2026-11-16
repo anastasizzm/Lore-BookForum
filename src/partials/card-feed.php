@@ -93,8 +93,8 @@ $liked = (bool) ($liked ?? false);
               <div class="comment-card__text"><?= nl2br($view->e($text)) ?></div>
             </div>
 
-            <!-- Меню поста «три точки»: удаление (только автор) + жалоба
-                 (всем). Видимость пунктов гонит comments.js (syncPostMenu) -->
+            <!-- Меню поста «три точки»: только удаление автором.
+                 Пунктов жалоб нет (B-10); видимость гонит comments.js. -->
             <?php $view->include('comment-menu', ['variant' => 'post']); ?>
           </div>
 

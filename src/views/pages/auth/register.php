@@ -53,7 +53,7 @@ $withLang = static function (string $path) use ($langQuery): string {
       <label class="visually-hidden" for="registerUsername"><?= $tr('common.auth.username_label') ?></label>
       <input class="form-field__input" type="text" id="registerUsername" name="username"
              value="<?= $view->e($form['username'] ?? '') ?>"
-             placeholder="<?= $tr('common.auth.username_placeholder') ?>" autocomplete="username" maxlength="32"
+             placeholder="<?= $tr('common.auth.username_placeholder') ?>" autocomplete="username" maxlength="30"
              aria-describedby="registerUsernameError">
       <p class="form-field__error" id="registerUsernameError" aria-live="polite"></p>
       <?php foreach (($errors['username'] ?? []) as $err): ?>

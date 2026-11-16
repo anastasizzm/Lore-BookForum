@@ -143,8 +143,8 @@ if ($cuInitials === '') {
             <div class="comment-card__text" data-c-text></div>
           </div>
 
-          <!-- Меню «три точки»: удаление (только автор) + «Пожаловаться»
-               (всем). Видимость пунктов гонит comments.js -->
+          <!-- Меню «три точки»: только удаление автором. Жалоб в UI нет
+               (B-10); видимость пунктов гонит comments.js. -->
           <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
         </div>
 
@@ -200,8 +200,8 @@ if ($cuInitials === '') {
           <div class="comment-reply__author"></div>
           <div class="comment-reply__text"></div>
         </div>
-        <!-- Меню ответа «три точки»: удаление (только автор) + «Пожаловаться»
-             (всем). Видимость пунктов гонит comments.js -->
+        <!-- Меню ответа «три точки»: только удаление автором. Жалоб в UI
+             нет (B-10); видимость пунктов гонит comments.js. -->
         <?php $view->include('comment-menu', ['variant' => 'reply']); ?>
       </div>
       <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->

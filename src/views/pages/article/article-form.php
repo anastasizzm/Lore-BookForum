@@ -41,7 +41,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *     обложка    POST  /api/files/upload          (category=cover) → iconId
  *     публикация POST  /api/articles/{id}/publish (окно выбора прав, article-publish.js)
  *   Аннотация и заметка автора необязательны (пустые строки допустимы);
- *   жанр/тип проверяются при публикации.
+ *   жанр/тип обязательны всегда — и для черновика (бэк требует genreId/typeId).
+ *   Аннотация — до 4000 символов (PublicationFormValidator::DESCR_MAX_LEN).
  *   data-version — текущая версия контента для If-Match (необязательно: иначе берём из
  *   ETag ответа GET /api/articles/{id}/content).
  *        Ответ: 200/201 { data: { id, redirect: '/articles/{id}', edit_url: '/articles/{id}/edit' } }.
@@ -49,10 +50,9 @@ $langField = $langQuery !== null && $langQuery !== ''
  *        «Черновик» и кнопка «Publish» внизу.
  *
  *   POST /api/articles/{id}/publish  → api.articles.publish, AuthPolicy::Verified
- *        multipart: editor_ids[] (ID соавторов-редакторов, можно пусто). Повторно проверяет
- *        статью; успех → { data: { id, redirect } } и статья опубликована.
- *   GET  /api/articles/{id}/rights   → текущие права (для окна): { data: { editor_ids: [..] } },
- *        необязательно (404 фронт игнорирует).
+ *        пустое тело: editor_ids[] бэк не читает, людей/роли сохраняет
+ *        roles-module.js отдельными запросами. Повторно проверяет статью;
+ *        успех → { data: { id, redirect } } и статья опубликована.
  *   GET  /api/users?page=&q=         → список для окна прав: { items: [{ id, username, name,
  *        surname, email? }], meta: { hasNext } }.
  *   POST /api/articles/images → api.articles.images,  AuthPolicy::Verified
@@ -490,7 +490,7 @@ $richEditor = static function (
                     id="articleAnnotation"
                     name="annotation"
                     rows="6"
-                    maxlength="5000"
+                    maxlength="4000"
                     placeholder="<?= $tr('common.articleform.annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>

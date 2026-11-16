@@ -4,7 +4,7 @@
  * Что делает:
  *   1. превью обложки (object URL) + кнопка «убрать»;
  *   2. списки авторов (до 30) и редакторов (без лимита): поиск людей
- *      по нику через заглушку /api/users/search, добавление в список
+ *      по нику через GET /api/users?q=, добавление в список
  *      под поиском, удаление минусом, кнопка «сделать редактором»
  *      у автора (дублирует его в редакторы, автором он остаётся);
  *   3. список выбранных файлов книги (pdf/epub/mobi/fb2, ≥1 файл)
@@ -29,16 +29,17 @@
  *      (черновик) → 201 { createdId } → меню ролей (rights-modal +
  *      roles-module) — такое же, как при публикации статьи. Публикует
  *      кнопка Publish уже в меню (POST /api/books/{id}/publish).
- *   10. legacy-окно book-publish-dialog (11.3): больше не открывается
- *      (роли и людей назначают в roles-module); разметка оставлена
- *      ради hidden-полей authors[]/editors[] внутри формы.
+ *   10. legacy-окно book-publish-dialog (11.3): разметка удалена из формы,
+ *      роли и людей назначает roles-module. initPeople/initPublishDialog
+ *      оставлены как no-op (возвращают null, если разметки нет).
  *   11. режим редактирования (GET /books/new?id=N, ссылки «Изменить»
  *      и «Продолжить»): метаданные подтягиваются из JSON-блоба
  *      [data-book-payload] на странице книги (fetch /books/{N}), файлы —
  *      из GET /api/books/{id}/contents; сохранение — PATCH /api/books/{id}
  *      (JSON + CSRF, только метаданные), новые файлы прикрепляются
  *      POST /api/books/{id}/contents, удалённые — DELETE .../contents/{id}.
- *      Publish в edit-режиме не показывается.
+ *      Publish в edit-режиме показывается permissions.js при
+ *      publication.publish и требует PDF (иначе 409 content_pdf).
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
@@ -84,8 +85,8 @@
     categories: '/api/additional/categories'
   };
 
-  // Заглушка поиска людей (роут добавит бэк, см. контракт в view).
-  var PEOPLE_SEARCH_URL = '/api/users/search';
+  // Реальный поиск людей: GET /api/users?q= (api.users, AuthPolicy::Auth).
+  var PEOPLE_SEARCH_URL = '/api/users';
 
   // Локальная копия несохранённых изменений (плашка «Восстановить»).
   // 'new' — страница создания; для редактирования понадобится свой id.
@@ -719,11 +720,9 @@
   }
 
   /* ============================================================
-     ЛЮДИ: авторы и редакторы.
-     Поиск по нику → GET /api/users/search?q= (заглушка), результаты
-     кликом добавляются в список под поиском; минус убирает. У автора
-     есть кнопка «сделать редактором» — она дублирует человека в
-     список редакторов (автором он остаётся).
+     ЛЮДИ: авторы и редакторы — LEGACY (разметка book-publish-dialog
+     удалена из формы). Функция оставлена для старых кэшированных
+     страниц и сразу возвращает null, если [data-people-field] нет.
      ============================================================ */
   function initPeople(form) {
     var boxes = form.querySelectorAll('[data-people-field]');
@@ -961,10 +960,9 @@
   }
 
   /* ============================================================
-     LEGACY-ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы когда-то выбирались
-     в book-publish-dialog. Сейчас Publish сразу открывает меню ролей,
-     поэтому окно не показывается; функция оставлена для совместимости
-     и hidden-полей authors[]/editors[] внутри формы.
+     LEGACY-ОКНО ПУБЛИКАЦИИ (11.3): разметка book-publish-dialog удалена.
+     Publish сразу открывает меню ролей, поэтому функция — no-op
+     (root === null).
      ============================================================ */
   function initPublishDialog(form) {
     var root = form.querySelector('[data-book-publish-dialog]');
@@ -1052,7 +1050,8 @@
       pages:       { required: true,  min: 1,          msgKey: 'js.rule_book_pages' },
       isbn:        { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'errors.validation.isbn_shape' },
       cover:       { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
-      // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles
+      // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles.
+      // Для Publish дополнительно нужен именно PDF (BooksRepository::validatePublish).
       files:       { required: true,  file: 'files',   msgKey: 'js.rule_book_file_required' },
       // списки людей: лимит авторов (30) держит addPerson, тут только
       // рендер серверных ошибок (422 от бэка)
@@ -1076,9 +1075,8 @@
     // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
     initPeople(form);
 
-    // Окно публикации (11.3): Publish в нижней панели открывает его.
-    // Открываем ТОЛЬКО когда форма валидна — иначе ошибки полей
-    // невидны под модалкой.
+    // Legacy-окно (11.3) больше не открывается — initPublishDialog вернёт
+    // null. Publish сразу создаёт черновик и открывает roles-module.
     var publishDialog = initPublishDialog(form);
     Array.prototype.forEach.call(form.querySelectorAll('[data-publish-open]'), function (btn) {
       btn.addEventListener('click', function () {
@@ -1136,11 +1134,13 @@
     var attachedEmpty = form.querySelector('[data-attached-empty]');
     var attachedCount = 0;   // ≥1 → правило files («минимум один файл») выполнено
     var attachedBusy  = false;
+    var attachedLoaded = !editId; // в edit-режиме список грузится асинхронно
 
     function renderAttached(items) {
       if (!attachedList) return;
       attachedList.innerHTML = '';
       attachedCount = items.length;
+      attachedLoaded = true;
       if (attachedEmpty) attachedEmpty.hidden = items.length > 0;
 
       items.forEach(function (item) {
@@ -1152,6 +1152,9 @@
         var li = document.createElement('li');
         li.className = 'file-upload__item';
         li.setAttribute('data-attached-id', id);
+        var format = String(item.format || '').toLowerCase();
+        if (!format) format = bookFileExt(item.originalName || '').toLowerCase();
+        if (format) li.setAttribute('data-file-format', format);
 
         var name = document.createElement('span');
         name.className = 'file-upload__name';
@@ -1203,6 +1206,8 @@
         .then(function (items) { renderAttached(items); return items; })
         .catch(function (err) {
           console.error('[book-form] attached load failed', err);
+          // attachedLoaded остаётся false: данных нет, клиент не должен
+          // ложно блокировать Publish — финальную PDF-проверку сделает бэк.
           notify(t('book.contents_load_failed'));
           return null;
         });
@@ -1348,6 +1353,21 @@
       var ok = true;
       FIELD_KEYS.forEach(function (name) { if (!validateField(name)) ok = false; });
       return ok;
+    }
+
+    /**
+     * Publish требует PDF (BooksRepository::validatePublish), черновик —
+     * любой из pdf/epub/mobi/fb2. Учитываем и новые файлы в input, и уже
+     * прикреплённые к книге (edit-режим, GET /contents).
+     */
+    function hasPdfForPublish() {
+      var input = form.querySelector('[data-files-input]');
+      var files = input && input.files ? Array.prototype.slice.call(input.files) : [];
+      if (files.some(function (file) { return bookFileFormat(file) === 'pdf'; })) return true;
+      // Список прикреплённых ещё не пришёл — не блокируем ложно; финальную
+      // проверку PDF сделает бэк (409 content_pdf).
+      if (!attachedLoaded) return true;
+      return !!form.querySelector('[data-attached-list] [data-file-format="pdf"]');
     }
 
     function focusFirstInvalid() {
@@ -1498,6 +1518,16 @@
       // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
       // дальше пользователь перейдёт на второй сам).
       if (!validateAll()) {
+        showFieldErrors();
+        focusFirstInvalid();
+        return;
+      }
+
+      // Publish книги бэк разрешает только при наличии PDF
+      // (BooksRepository::validatePublish), иначе 409 content_pdf.
+      // Черновик по-прежнему можно сохранить с EPUB/MOBI/FB2.
+      if (wantPublish && !hasPdfForPublish()) {
+        setError('files', t('js.rule_book_publish_pdf'));
         showFieldErrors();
         focusFirstInvalid();
         return;

@@ -6,6 +6,9 @@ const LoreValidators = {
   PASSWORD_MAX_LENGTH: 64,
   LOGIN_MIN_LENGTH: 3,
   LOGIN_MAX_LENGTH: 254,
+  // users.username CHECK: ^[a-zA-Z0-9_]{3,30}$
+  USERNAME_MIN_LENGTH: 3,
+  USERNAME_MAX_LENGTH: 30,
 
   isEmail(value) {
     const email = value.trim();
@@ -13,12 +16,12 @@ const LoreValidators = {
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
   },
 
-  // username: буквы, цифры, . _ -
+  // username: буквы, цифры и подчёркивание, 3..30 (CHECK в users.username)
   isUsername(value) {
     const name = value.trim();
-    if (name.length < this.LOGIN_MIN_LENGTH) return false;
-    if (name.length > 32) return false;
-    return /^[A-Za-z0-9._-]+$/.test(name);
+    if (name.length < this.USERNAME_MIN_LENGTH) return false;
+    if (name.length > this.USERNAME_MAX_LENGTH) return false;
+    return /^[A-Za-z0-9_]+$/.test(name);
   },
 
   // login = email ИЛИ username

@@ -16,7 +16,8 @@
      ============================================================ */
   var LIMITS = {
     title: 200,
-    annotation: 5000,
+    // PublicationFormValidator::DESCR_MAX_LEN = 4000
+    annotation: 4000,
     authorNote: 2000,
     contentHtml: 300000,
     coverBytes: 5 * 1024 * 1024,
@@ -30,7 +31,10 @@
   // через общий files.upload с категорией cover). Старый формат
   // /uploads/articles/... оставлен для уже сохранённого контента.
   var IMG_SRC_RE = /^(?:\/uploads\/articles\/[A-Za-z0-9][A-Za-z0-9._\/-]*|\/api\/files\/[A-Za-z0-9-]+\/preview)$/;
-  var DOI_RE = /^10\.\d{4,9}\/\S+$/;
+  // ArticleFormValidator::DOI_REG_EX: только заглавные буквы и разрешённые
+  // символы. B-27 (расширение бэка) пока не исправлен, поэтому клиент
+  // отсекает заведомо непроходящие DOI до запроса.
+  var DOI_RE = /^10\.\d{4,9}\/[-._;()\/:A-Z0-9]+$/;
   var AUTOSAVE_MS = 30000;
   var LOCAL_PREFIX = 'articleform:v1:';
   var PDF_BASE = '/assets/js/pdfjs/';
@@ -168,6 +172,11 @@
   /** Контент статьи: отрывок из книги либо собственный текст (ArticleContentForm). */
   function collectContent() {
     if (state.mode === 'excerpt') {
+      // Черновик можно сохранить до выбора книги/фрагмента: не отправляем
+      // неполный book с нулевыми pageStart/pageEnd — бэк отвергнет такой
+      // объект (422). Пустую строку бэк тоже превращает в null
+      // (QueryParser::optionalString), поэтому шлём пустой HTML-абзац.
+      if (!state.book || !state.start || !state.end) return { content: '<p></p>' };
       return {
         book: {
           bookId: parseInt(valueOf('book'), 10) || 0,
@@ -176,7 +185,9 @@
         },
       };
     }
-    return { content: editor ? editor.getHtml() : '' };
+    // Пустой standalone-черновик: '' бэк превращает в null и требует content.
+    var html = editor ? editor.getHtml() : '';
+    return { content: html.trim() === '' ? '<p></p>' : html };
   }
 
   /* ============================================================
@@ -1926,11 +1937,13 @@
         break;
 
       case 'genre':
-        if (!isDraft && valueOf('genre') === '') { setError(name, t('errors.article.rule_article_genre')); return false; }
+        // Бэк требует genreId >= 1 и для черновика (PublicationFormValidator).
+        if (valueOf('genre') === '') { setError(name, t('errors.article.rule_article_genre')); return false; }
         break;
 
       case 'type':
-        if (!isDraft && valueOf('type') === '') { setError(name, t('errors.article.rule_article_type')); return false; }
+        // typeId обязателен и для черновика (ArticleForm/ArticleFormValidator).
+        if (valueOf('type') === '') { setError(name, t('errors.article.rule_article_type')); return false; }
         break;
 
       case 'doi':
@@ -2113,6 +2126,10 @@
       // Автосохранение: минимальные требования, чтобы не слать заведомо
       // неполный черновик и не получать ошибки сервера.
       if (valueOf('title') === '' || valueOf('title').length > LIMITS.title) {
+        return Promise.resolve(false);
+      }
+      // Жанр и тип нужны бэку и для черновика — иначе POST/PATCH вернёт 422.
+      if (valueOf('genre') === '' || valueOf('type') === '') {
         return Promise.resolve(false);
       }
       if (state.mode === 'excerpt' && !state.book) {

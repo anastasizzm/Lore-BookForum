@@ -3,8 +3,8 @@
  * (src/partials/rights-modal.php, стили rights-modal.css).
  *
  * Плашка всегда открывается в режиме модуля ролей (data-rights-view="roles"):
- * родной справочник прав и его футер скрыты, процессом управляет
- * roles-module.js. Режимы (data-rights-mode):
+ * родной справочник прав удалён, процессом управляет roles-module.js.
+ * Режимы (data-rights-mode):
  *   'after-publish' — книга УЖЕ опубликована (форма книги, POST /api/books
  *                     ответил успехом): Publish модуля ведёт на страницу
  *                     книги (data-redirect). Отмена — тоже ведёт на книгу.
@@ -17,9 +17,9 @@
  * Роли и люди сохраняются модулем отдельными запросами
  * (GET/POST/PUT/PATCH/DELETE /api/publications/{id}/roles|users).
  *
- * Справочник прав (GET /api/additional/rights) ещё грузится при открытии —
- * он больше не участвует в сохранении, но состояния загрузки/ошибки
- * оставлены для совместимости разметки.
+ * Родной справочник прав удалён: GET /api/additional/rights не существует,
+ * а сохранение целиком делает модуль ролей. В плашке остались только
+ * режимы публикации/ухода на страницу книги.
  *
  * Контракт целиком — в шапке src/partials/rights-modal.php.
  * Использование из book-form.js: window.RightsModal.open({mode, bookId, redirect}).
@@ -27,8 +27,6 @@
  */
 (function () {
   'use strict';
-
-  var RIGHTS_URL = '/api/additional/rights';
 
   function t(key, params) {
     return window.LoreI18n ? window.LoreI18n.t(key, params) : key;
@@ -40,9 +38,6 @@
 
   var state = {
     root: null,
-    items: null,          // null — ещё не грузили; [] — пусто; иначе список
-    selected: {},         // id права -> true
-    error: '',            // текст ошибки загрузки ('' — нет)
     mode: 'after-publish',
     bookId: 0,
     redirect: '',
@@ -54,7 +49,6 @@
     onPublished: null,
     screen: 1,            // стартовый экран модуля: 1 — роли | 2 — пользователи
     context: 'create',    // create — Create → Continue → Publish; edit — «Изменить…»
-    loading: false,
     saving: false,
     lastFocus: null,
   };
@@ -67,133 +61,8 @@
   function q(sel) { var r = root(); return r ? r.querySelector(sel) : null; }
   function show(node, visible) { if (node) node.hidden = !visible; }
 
-  function normalize(item) {
-    if (item === null || typeof item !== 'object') return null;
-    var id = item.id !== undefined ? item.id : (item.value !== undefined ? item.value : null);
-    if (id === null || id === '') return null;
-    return {
-      id: String(id),
-      title: String(item.title || item.name || item.label || id),
-      description: String(item.description || item.hint || ''),
-    };
-  }
-
   /* --------------------------------------------------------
-     РЕНДЕР: загрузка / ошибка / пусто / список
-     -------------------------------------------------------- */
-  function render() {
-    show(q('[data-rights-loading]'), state.loading);
-
-    if (state.loading) {
-      show(q('[data-rights-error]'), false);
-      show(q('[data-rights-list]'), false);
-      show(q('[data-rights-empty]'), false);
-      return;
-    }
-
-    if (state.error) {
-      var errText = q('[data-rights-error-text]');
-      if (errText) errText.textContent = state.error;
-      show(q('[data-rights-error]'), true);
-      show(q('[data-rights-list]'), false);
-      show(q('[data-rights-empty]'), false);
-      return;
-    }
-
-    show(q('[data-rights-error]'), false);
-
-    if (!state.items) return;
-
-    if (!state.items.length) {
-      show(q('[data-rights-list]'), false);
-      show(q('[data-rights-empty]'), true);
-      return;
-    }
-
-    var list = q('[data-rights-list]');
-    if (!list) return;
-    list.innerHTML = '';
-
-    state.items.forEach(function (item) {
-      var li = document.createElement('li');
-      li.className = 'rights-list__item';
-
-      var label = document.createElement('label');
-      label.className = 'rights-item';
-
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.className = 'rights-item__check';
-      cb.value = item.id;
-      cb.checked = !!state.selected[item.id];
-      cb.addEventListener('change', function () {
-        if (cb.checked) state.selected[item.id] = true;
-        else delete state.selected[item.id];
-      });
-
-      var text = document.createElement('span');
-      text.className = 'rights-item__text';
-
-      var title = document.createElement('span');
-      title.className = 'rights-item__title';
-      title.textContent = item.title;
-      text.appendChild(title);
-
-      if (item.description) {
-        var desc = document.createElement('span');
-        desc.className = 'rights-item__desc';
-        desc.textContent = item.description;
-        text.appendChild(desc);
-      }
-
-      label.appendChild(cb);
-      label.appendChild(text);
-      li.appendChild(label);
-      list.appendChild(li);
-    });
-
-    show(q('[data-rights-list]'), true);
-    show(q('[data-rights-empty]'), false);
-  }
-
-  /* --------------------------------------------------------
-     ЗАГРУЗКА СПРАВОЧНИКА ПРАВ (асинхронно, кэшируется)
-     -------------------------------------------------------- */
-  function load() {
-    if (state.loading) return;
-    if (state.items) { render(); return; }
-
-    state.loading = true;
-    state.error = '';
-    render();
-
-    fetch(RIGHTS_URL, {
-      method: 'GET',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        var raw = (data && (data.items || data.data)) || [];
-        if (!Array.isArray(raw)) raw = [];
-        state.items = raw.map(normalize).filter(function (one) { return one !== null; });
-        state.loading = false;
-        render();
-      })
-      .catch(function (err) {
-        console.warn('[rights-modal] load failed', err);
-        state.loading = false;
-        state.items = null;
-        state.error = t('rights.load_failed');
-        render();
-      });
-  }
-
-  /* --------------------------------------------------------
-     СОХРАНЕНИЕ: права (+ публикация в режиме 'publish')
+     ПУБЛИКАЦИЯ (родного справочника прав больше нет)
      -------------------------------------------------------- */
   function saveError(text) {
     var box = q('[data-rights-save-error]');
@@ -383,8 +252,6 @@
     var first = q('[data-rights-cancel]');
     if (first && first.focus) first.focus();
 
-    render();
-
     openRoles(r);
   }
 
@@ -451,7 +318,6 @@
       if (target.closest('[data-rights-confirm]')) { modulePublish(); return; }
       if (target.closest('[data-rights-cancel]')) { cancel(); return; }
       if (target.closest('[data-rights-dismiss]')) { cancel(); return; }
-      if (target.closest('[data-rights-retry]')) { state.items = null; load(); return; }
     });
 
     document.addEventListener('keydown', function (e) {

@@ -87,8 +87,8 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   publisher, pages, isbn, iconId — только метаданные, contentIds[] и
  *   людей бэк не принимает. Новые файлы уходят POST /api/books/{id}/contents,
  *   удалённые — DELETE /api/books/{id}/contents/{contentId}.
- *   Публикация из формы в edit-режиме не показывается (Publish остаётся
- *   со страницы книги), кнопки — «Отмена» / «Сохранить».
+ *   Publish в edit-режиме показывается permissions.js при
+ *   publication.publish и требует PDF (иначе 409 content_pdf).
  *   Локальная копия (localStorage «Восстановить») — только для создания.
  *
  *   ПУБЛИКАЦИЯ И ПРАВА: плашка rights-modal (rights-modal.php/js) подключена
@@ -104,12 +104,13 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   ГЛАВЫ КНИГИ: UI-список глав убран из формы создания — бэкенд их не
  *   принимает (контракт не согласован), а поле только путало.
  *
- *   GET  /api/users/search?q=… → роут api.users.search, AuthPolicy::Auth
- *        ЗАГЛУШКА (роут добавит бэк; в endpoints.php его пока нет):
- *        автокомплит людей по нику для списков авторов/редакторов.
- *        Ответ: { items: [ { id: int, username: string }, ... ] }
- *        (формат ResponseTemplates::list). Фронт при ошибке/404 молча
- *        показывает «поиск недоступен», форма не ломается.
+ *   GET  /api/users?q=… → api.users, AuthPolicy::Auth
+ *        автокомплит людей по нику для legacy-списков авторов/редакторов.
+ *        Ответ: { items: [ { id: int, username: string }, ... ], meta }.
+ *        Фронт при ошибке молча показывает «поиск недоступен», форма не ломается.
+ *
+ *   Publish требует PDF: BooksRepository::validatePublish проверяет наличие
+ *   файла формата pdf; EPUB/MOBI/FB2 подходят только для черновика.
  *
  *   Сохранение файлов — POST /api/files/upload (FileController::upload,
  *   категория cover | book → 201 { createdId: uuid }); бэк сам
@@ -130,13 +131,11 @@ $langField = $langQuery !== null && $langQuery !== ''
  *   POST /books/{id}/publish; при неудаче publish — черновик уже
  *   создан, редирект на страницу книги (см. book-form.js).
  *
- *   ОКНО ПУБЛИКАЦИИ (11.3): списки авторов/редакторов переехали из
- *   шага 2 в модалку book-publish-dialog (partial, внутри <form>);
- *   кнопка Publish [data-publish-open] открывает её (только когда
- *   форма валидна), отправка — кнопкой внутри окна.
+ *   ОКНО ПУБЛИКАЦИИ (11.3): legacy-модалка book-publish-dialog удалена
+ *   из формы. Publish [data-publish-open] после валидации создаёт
+ *   черновик и сразу открывает roles-module (люди/роли — там).
  *
- *   ШАГ 3 «РОЛИ» СОЗДАВАТЬСЯ НЕ БУДЕТ — пропущен по решению команды;
- *   списки людей живут в окне публикации (11.3).
+ *   ШАГ 3 «РОЛИ» НЕ СОЗДАЁТСЯ — людей и роли назначают в roles-module.
  *
  *   Переход «Далее» прогоняет валидацию полей своего шага
  *   (см. book-form.js, STEP_FIELDS): без валидных обязательных полей
@@ -199,46 +198,6 @@ $val = static function (string $key, string $default = '') use ($form): string {
     }
     return $default;
 };
-
-/**
- * Гидрация списков людей после 422: $form['authors'/'editors'] — список
- * ['id' => int|string, 'username' => string]. Пусто, если поле не пришло.
- */
-$people = static function (string $key) use ($form): array {
-    $raw = $form[$key] ?? null;
-    if (!is_array($raw)) return [];
-    $out = [];
-    foreach ($raw as $one) {
-        if (is_array($one)) {
-            $id = $one['id'] ?? null;
-            $username = (string) ($one['username'] ?? '');
-        } else {
-            $id = $one;
-            $username = (string) $one;
-        }
-        if ($id === null || $id === '') continue;
-        $out[] = ['id' => (string) $id, 'username' => $username !== '' ? $username : (string) $id];
-    }
-    return $out;
-};
-
-$authors = $people('authors');
-$editors = $people('editors');
-
-// edit-режим: списки людей из $book, если контроллер их прислал
-$bookPeople = static function (string $key) use ($get, $book): array {
-    $raw = $get($book, $key, null);
-    if (!is_array($raw)) return [];
-    $out = [];
-    foreach ($raw as $one) {
-        $id = $get($one, 'id', null);
-        if ($id === null || $id === '') continue;
-        $out[] = ['id' => (string) $id, 'username' => (string) ($get($one, 'username', '') ?: $id)];
-    }
-    return $out;
-};
-if ($authors === []) $authors = $bookPeople('authors');
-if ($editors === []) $editors = $bookPeople('editors');
 
 /** Первая ошибка поля (сервер может прислать список). */
 $err = static function (string $key) use ($errors): string {
@@ -619,6 +578,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
             <ul class="file-upload__list" data-files-list></ul>
 
             <p class="book-form__hint"><?= $tr('common.bookform.file_hint') ?></p>
+            <p class="book-form__hint"><?= $tr('common.bookform.file_publish_hint') ?></p>
           </div>
 
           <?php if ($isEdit): ?>
@@ -662,7 +622,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
            РЕДАКТИРОВАНИЕ (?id=N): «Отмена» ведёт на страницу книги,
            «Сохранить» (data-submit-save, скрыта до publication.edit от
            permissions.js) шлёт PATCH /api/books/{id} — см. шапку файла
-           и book-form.js. Публикация из формы в edit-режиме не показана.
+           и book-form.js. Publish (data-submit-publish) требует PDF.
            ============================================================ -->
       <div class="book-form__actions">
         <button type="button" class="btn btn--secondary" data-step-prev hidden>
@@ -721,18 +681,9 @@ $categoryValue = $val('categoryId', $bookCategoryId);
         </div>
       </div>
 
-      <!-- ============================================================
-           LEGACY-ОКНО ПУБЛИКАЦИИ (11.3). Publish в нижней панели больше
-           не открывает book-publish-dialog: он создаёт черновик и сразу
-           показывает меню ролей (rights-modal + roles-module), как при
-           публикации статьи. Разметка оставлена для hidden-полей
-           authors[]/editors[] (окно лежит ВНУТРИ <form>).
-           ============================================================ -->
-      <?php $view->include('book-publish-dialog', [
-          'authors'    => $authors,
-          'editors'    => $editors,
-          'errorBoxFn' => $errorBox,
-      ]); ?>
+      <?php /* LEGACY-окно book-publish-dialog (11.3) удалено из формы:
+               Publish создаёт черновик и сразу открывает roles-module.
+               Hidden-поля authors[]/editors[] бэк не читает. */ ?>
 
     </form>
 
