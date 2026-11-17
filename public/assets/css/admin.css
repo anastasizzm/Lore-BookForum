@@ -18,7 +18,6 @@
 /* pages */
 @import url("admin/pages/dashboard.css");
 @import url("admin/pages/dictionary.css");
-@import url("admin/pages/reports.css");
 @import url("admin/pages/roles.css");
 @import url("admin/pages/roles-dnd.css");
 @import url("admin/pages/role-create.css");

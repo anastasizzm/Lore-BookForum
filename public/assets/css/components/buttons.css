@@ -51,7 +51,7 @@
 }
 
 /* Busy-состояние: пока fetch не вернулся, кнопка гаснет и не принимает
-   клики (disabled ставит admin.js на Save/Delete, карусели и т.п.). */
+   клики (disabled ставит admin/main.js на Save/Delete, карусели и т.п.). */
 .btn:disabled {
   opacity: 0.55;
   cursor: default;

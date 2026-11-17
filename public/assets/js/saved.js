@@ -85,6 +85,10 @@
       counter.textContent = newCounter.textContent;
     }
 
+    // Сортировка: подпись триггера и активный пункт приходят с сервера,
+    // но сама шапка при AJAX не перерисовывается — синхронизируем вручную.
+    syncSortControls(newPage);
+
     // Пагинация
     var pager = page.querySelector('.books-panel__pager');
     if (newPager) {
@@ -102,6 +106,25 @@
     // Обновляем URL без перезагрузки
     history.replaceState(null, '', currentUrl());
     return true;
+  }
+
+  function syncSortControls(newPage) {
+    var currentDd = page.querySelector('.books-panel__head [data-dropdown][data-filter-key="sort"]');
+    var newDd = newPage.querySelector('.books-panel__head [data-dropdown][data-filter-key="sort"]');
+    if (!currentDd || !newDd) return;
+
+    var currentLabel = currentDd.querySelector('[data-dropdown-label]');
+    var newLabel = newDd.querySelector('[data-dropdown-label]');
+    if (currentLabel && newLabel) currentLabel.textContent = newLabel.textContent;
+
+    // Набор и порядок сортировок на странице фиксированы, поэтому
+    // сопоставляем пункты по индексу и переносим состояние is-active.
+    var currentItems = currentDd.querySelectorAll('[data-filter-value]');
+    var newItems = newDd.querySelectorAll('[data-filter-value]');
+    currentItems.forEach(function (item, index) {
+      var fresh = newItems[index];
+      if (fresh) item.classList.toggle('is-active', fresh.classList.contains('is-active'));
+    });
   }
 
   async function refresh(url) {
@@ -149,6 +172,24 @@
 
     var url = buildUrl({ sort: value });
     refresh(url);
+  });
+
+  // ---------- Reset фильтров ----------
+  // На Saved нет list-AJAX из filters.js, поэтому обрабатываем Reset здесь.
+  // Строим URL из текущего адреса: так сбрасываются и фильтры, применённые
+  // после AJAX-поиска/сортировки. q, f и lang сохраняются.
+  var RESET_KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
+
+  document.addEventListener('click', function (e) {
+    var reset = e.target.closest('[data-filter-panel] [data-filter-reset]');
+    if (!reset) return;
+
+    var url = new URL(location.href);
+    RESET_KEYS.forEach(function (key) { url.searchParams.delete(key); });
+    url.searchParams.delete('page');
+
+    e.preventDefault();
+    refresh(url.toString());
   });
 
   // ---------- Пагинация ----------

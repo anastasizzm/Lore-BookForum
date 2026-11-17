@@ -4,7 +4,7 @@
  *
  * Структура записи и поведение — как в admin/genres.php:
  * массив translations (расширяемый на любой язык), клиентский поиск по всем
- * переводам, add/edit/delete — через fetch-слой dictApi в admin.js
+ * переводам, add/edit/delete — через fetch-слой dictApi в admin/main.js
  * (пока роут /api/admin/types нет — режим mock, правки локальные).
  *
  * Тест: GET /pages/test?page=admin/types
@@ -79,7 +79,7 @@ $serverItems = $types ?? $items ?? null;
   </table>
 </div>
 
-<!-- Служебные данные для admin.js (ресурс; строки приходят из данных страницы / API) -->
+<!-- Служебные данные для admin/main.js (ресурс; строки приходят из данных страницы / API) -->
 <script type="application/json" data-dict-data>{"resource":"types","items":[]}</script>
 
 <?php $view->include('dictionary-form', [

@@ -265,6 +265,7 @@
 
 .info-box {
   width: 100%;
+  min-width: 0;
 }
 
 .info-box__title {
@@ -288,8 +289,49 @@
   margin: 0 0 var(--space-3, 16px);
 }
 
+/* Заголовки статьи по умолчанию без жирности: так же, как в редакторе.
+   Жирным текст становится только при явном <strong>/<b> от автора. */
+.article-content h2,
+.article-content h3,
+.article-body h2,
+.article-body h3 {
+  font-weight: var(--fw-regular);
+}
+
 .article-content p:last-child {
   margin-bottom: 0;
+}
+
+/* Текст standalone-статьи в плашке деталей: без вкладки Content/модалки.
+   Длинные слова и картинки не должны выходить за края экрана. */
+.article-body {
+  margin-top: var(--space-4, 24px);
+  padding-top: var(--space-4, 24px);
+  border-top: 1px solid var(--color-border, var(--color-border-light));
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--color-text, var(--color-text-strong));
+  line-height: var(--lh-normal, 1.6);
+  scroll-margin-top: var(--space-4, 24px);
+}
+
+.article-body img,
+.article-body video,
+.article-body iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+.article-body p {
+  margin: 0 0 var(--space-3, 16px);
+}
+
+.article-body p:last-child {
+  margin-bottom: 0;
+}
+
+.article-body__loading {
+  color: var(--color-text-muted);
 }
 
 .book-tabs-panel {
@@ -565,6 +607,19 @@ html:has(.reader) body {
   line-height: 1.4;
   white-space: nowrap;
   cursor: help;
+}
+
+/* Статус чтения статьи: Reading — зелёный, Finished — синий */
+.book-page-header__badge--reading {
+  background: rgba(47, 107, 79, 0.12);
+  border-color: rgba(47, 107, 79, 0.45);
+  color: #2f6b4f;
+}
+
+.book-page-header__badge--ended {
+  background: rgba(94, 119, 163, 0.14);
+  border-color: rgba(94, 119, 163, 0.5);
+  color: #3f5a8a;
 }
 
 /* ---------------- Меню «три точки» в шапке details (F2-09) ----------------

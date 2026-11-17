@@ -180,9 +180,8 @@
     const isSaved = !!(b.isSaved ?? b.saved);
 
     // Статус чтения (ReadingStatus: none | reading | ended).
-    // Только у книг; 'none' — без бейджа.
     const rsRaw = String(b.readingStatus?.value ?? b.readingStatus ?? 'none');
-    const rsKey = IS_ARTICLES ? 'none' : rsRaw;
+    const rsKey = rsRaw;
     const rsLabel = rsKey === 'reading' ? tr('filter.reading', 'Reading')
                   : rsKey === 'ended'   ? tr('filter.finished', 'Finished')
                   : '';

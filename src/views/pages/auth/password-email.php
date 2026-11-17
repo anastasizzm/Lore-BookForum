@@ -12,6 +12,16 @@ $withLang = static function (string $path) use ($langQuery): string {
     if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
+
+// Из сайдбара пользователь уже авторизован: возвращаем его в ленту,
+// а не на страницу входа (см. src/partials/sidebar.php).
+$fromSidebar = ($_GET['from'] ?? '') === 'sidebar';
+
+// from нужен и после POST с ошибкой валидации — сохраняем его в action.
+$formAction = $withLang($view->url('password.email.submit'));
+if ($fromSidebar) {
+    $formAction .= (str_contains($formAction, '?') ? '&' : '?') . 'from=sidebar';
+}
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.forgot_tab') ?><?php $view->endBlock('title'); ?>
@@ -54,7 +64,7 @@ $withLang = static function (string $path) use ($langQuery): string {
   <?php endif; ?>
 
   <form class="login-form" id="passwordEmailForm"
-        action="<?= $view->e($withLang($view->url('password.email.submit'))) ?>"
+        action="<?= $view->e($formAction) ?>"
         method="POST" novalidate>
     <?= $view->csrfField() ?>
 
@@ -73,7 +83,11 @@ $withLang = static function (string $path) use ($langQuery): string {
     <button class="btn btn--primary" type="submit"><?= $tr('common.auth.send_link') ?></button>
 
     <div class="login-form__links login-form__links--center">
-      <a class="link" href="<?= $view->e($withLang($view->url('login'))) ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
+      <?php if ($fromSidebar): ?>
+        <a class="link" href="<?= $view->e($withLang($view->url('home'))) ?>"><?= $tr('common.auth.changepass_back') ?></a>
+      <?php else: ?>
+        <a class="link" href="<?= $view->e($withLang($view->url('login'))) ?>"><?= $tr('common.auth.back_to_sign_in') ?></a>
+      <?php endif; ?>
     </div>
   </form>
 

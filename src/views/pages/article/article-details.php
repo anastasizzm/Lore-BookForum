@@ -82,6 +82,18 @@ $articleId     = (int) $articleRawId;
 $isSaved       = (bool) ($readerCtx?->isSaved ?? $article->isSaved ?? false);
 $savesCount    = (int)  ($article->savedCount ?? 0);
 
+// Статус чтения из контекста пользователя: none | reading | ended.
+// Показываем его в шапке статьи (Reading / Finished) — так же, как бейдж
+// на карточках в «Сохранённых».
+$readingRaw = $readerCtx?->readingStatus ?? null;
+if ($readingRaw instanceof \BackedEnum) $readingRaw = $readingRaw->value;
+$readingStatus = is_string($readingRaw) ? $readingRaw : 'none';
+$readingLabel  = match ($readingStatus) {
+    'reading' => $view->t('common.filter.reading'),
+    'ended'   => $view->t('common.filter.finished'),
+    default   => '',
+};
+
 // rating_avg в БД хранится умноженным на 10 (46 -> 4.6);0 — оценок нет.
 // Деление всегда: модель отдаёт ровно контрактные ×10 (int 0..50),
 // эвристика «> 5» ломалась на значениях 1..5 (среднее 0.1..0.5).
@@ -132,6 +144,15 @@ $isOwnerPub = $viewerId > 0 && $creatorId > 0 && $viewerId === $creatorId;
  */
 $statusRaw = $status ?? (is_array($article) ? ($article['status'] ?? null)
                                             : ($article->status ?? null));
+// Article::$status — enum PublicationStatus: приводим к строке, иначе
+// черновик не распознаётся и Publish на странице не появляется.
+if ($statusRaw instanceof \BackedEnum) {
+    $statusRaw = $statusRaw->value;
+} elseif ($statusRaw instanceof \UnitEnum) {
+    $statusRaw = $statusRaw->name;
+} elseif (is_object($statusRaw) && method_exists($statusRaw, '__toString')) {
+    $statusRaw = (string) $statusRaw;
+}
 $status    = is_string($statusRaw) ? strtolower(trim($statusRaw)) : '';
 $isDraft   = $status === 'draft';
 
@@ -162,12 +183,31 @@ $bookTitle = $str($bookData?->book ?? (is_object($article) ? ($article->book ?? 
 
 $annotation = (string) ($article->description ?? '');
 $authorNote = (string) ($article->authorNotes ?? '');
+// В старых записях пустые заметки могли сохраниться как невидимый NBSP
+// (обход уже не нужен, бэк принимает '') — на странице считаем их пустыми.
+if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
+    $authorNote = '';
+}
 $content    = (string) ($contentData?->getContent() ?? '');
 
 /* ---------- Книга-источник (для отрывка) ---------- */
 
 $pageStart = $bookData?->pageStart ?? null;
 $pageEnd   = $bookData?->pageEnd   ?? ($pageStart ?? null);
+$pageLang  = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !== ''
+    ? $_GET['lang']
+    : (method_exists($view, 'locale') ? $view->locale() : '');
+
+// Отрывок открывается сразу в читалке на первой странице фрагмента,
+// а не на странице деталей книги.
+$bookReadUrl = '#';
+if ($bookId > 0) {
+    $bookReadUrl = '/books/' . $bookId . '/read'
+        . (!empty($pageStart) ? '?page=' . (int) $pageStart : '');
+    if ($pageLang !== '') {
+        $bookReadUrl .= (str_contains($bookReadUrl, '?') ? '&' : '?') . 'lang=' . urlencode($pageLang);
+    }
+}
 
 /* ---------- Комментарии ---------- */
 /**
@@ -264,6 +304,12 @@ $articlePayload = [
       <span class="book-page-header__badge"
             title="<?= $tr('common.article.draft_hint') ?>"><?= $tr('common.article.draft_badge') ?></span>
     <?php endif; ?>
+    <?php if ($readingLabel !== ''): ?>
+      <!-- Статус чтения статьи (Reading / Finished) -->
+      <span class="book-page-header__badge book-page-header__badge--<?= $view->e($readingStatus) ?>">
+        <?= $view->e($readingLabel) ?>
+      </span>
+    <?php endif; ?>
     <!-- Меню «три точки» справа в шапке: «Редактировать» и «Удалить» —
          по образцу book-details. Пункты рендерятся скрытыми, показывает
          permissions.js по правилам /api/publications/rules, $isOwnerPub —
@@ -272,8 +318,6 @@ $articlePayload = [
         'type'    => 'article',
         'id'      => $articleId,
         'isOwner' => $isOwnerPub,
-        // Название — подпись цели в плашке «Пожаловаться» (report-modal.php)
-        'title'   => (string) ($article->title ?? ''),
     ]); ?>
   </div>
 
@@ -305,18 +349,25 @@ $articlePayload = [
           </svg>
         </button>
         <?php
-          // Отрывок из книги читается на странице книги (редирект), а
-          // standalone-статья открывается в оверлее поверх страницы.
-          $bookHref = ($isBookExcerpt && $bookId > 0)
-              ? '/books/' . $bookId
-              : '#annotation';
+          // Отрывок из книги читается на странице книги (редирект сразу
+          // в читалку на pageStart). Standalone-статья открывается в
+          // модальном оверлее поверх страницы (article-reader.php).
         ?>
         <?php if ($isBookExcerpt): ?>
-          <a class="btn btn--primary btn--pill" href="<?= $view->e($bookHref) ?>">
+          <!-- pageStart живёт в contentData, который бэк отдаёт отдельным
+               GET /api/articles/{id}/content; article-reader.js подставит
+               redirectUrl с ?page=, если в web-модели его ещё нет. -->
+          <a class="btn btn--primary btn--pill"
+             href="<?= $view->e($bookReadUrl) ?>"
+             data-article-book-read
+             data-article-id="<?= (int) $articleId ?>"
+             data-article-lang="<?= $view->e($pageLang) ?>">
             <?= $tr('common.article.open_book') ?>
           </a>
         <?php else: ?>
-          <button type="button" class="btn btn--primary btn--pill" data-article-reader-open>
+          <button type="button"
+                  class="btn btn--primary btn--pill"
+                  data-article-reader-open>
             <?= $tr('common.article.read') ?>
           </button>
         <?php endif; ?>
@@ -401,16 +452,6 @@ $articlePayload = [
       <?php endif; ?>
 
       <div class="book-tabs-panel">
-        <?php
-          $view->include('tabs', [
-              'variant' => 'outline',
-              'items'   => [
-                  ['label' => $view->t('common.book.tab_annotation'), 'href' => '#annotation', 'active' => true, 'row' => 'annotation'],
-                  ['label' => $isBookExcerpt ? $view->t('common.article.tab_excerpt') : $view->t('common.article.tab_content'), 'href' => '#content', 'active' => false, 'row' => 'content'],
-              ],
-          ]);
-        ?>
-
         <div class="card-base book-tabs-panel__content" data-row="annotation">
           <?php if ($annotation !== ''): ?>
             <p class="info-box__body" id="annotation"><?= nl2br($view->e($annotation)) ?></p>
@@ -425,42 +466,20 @@ $articlePayload = [
             </div>
           <?php endif; ?>
         </div>
-
-        <div class="card-base book-tabs-panel__content" data-row="content" hidden>
-          <?php if ($isBookExcerpt): ?>
-            <p class="info-box__body">
-              <?= $tr('common.article.excerpt_intro') ?>
-              <strong><?= $bookTitle !== '' ? $view->e($bookTitle) : $tr('common.article.untitled') ?></strong><?php
-                if (!empty($pageStart)):
-                  ?><?= $tr('common.article.excerpt_pages', ['from' => (int) $pageStart, 'to' => (int) $pageEnd]) ?><?php
-                endif;
-              ?>.
-            </p>
-            <!-- P1-6: ссылка ведёт на страницу книги -->
-            <p><a class="link" href="<?= $view->e($bookId > 0 ? '/books/' . $bookId : '#') ?>"><?= $tr('common.article.go_to_book') ?></a></p>
-          <?php elseif ($content === ''): ?>
-            <p class="info-box__body"><?= $tr('common.article.no_text') ?></p>
-          <?php else: ?>
-            <div class="info-box__body article-content">
-              <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
-                <?php if (trim($para) === '') continue; ?>
-                <p><?= nl2br($view->e(trim($para))) ?></p>
-              <?php endforeach; ?>
-            </div>
-          <?php endif; ?>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- Оверлей чтения standalone-статьи: открывается кнопкой «Читать статью».
-       Для отрывка из книги оверлея нет — кнопка ведёт на /books/{id}. -->
   <?php if (!$isBookExcerpt): ?>
+    <!-- Оверлей чтения standalone-статьи: открывается кнопкой Read article.
+         Текст подгружается article-reader.js из GET /api/articles/{id}/content. -->
     <?php $view->include('article-reader', [
-        'title'   => (string) ($article->title ?? ''),
-        'content' => $content,
+        'articleId' => (int) $articleId,
+        'title'     => (string) ($article->title ?? ''),
+        'content'   => $content,
     ]); ?>
   <?php endif; ?>
+
 
   <!-- Блок комментариев.
        data-me-* нужен book.js: автора своего комментария/ответа он берёт из
@@ -750,8 +769,15 @@ $articlePayload = [
   <!-- details-menu.js — меню «три точки» в шапке: открытие/закрытие +
        удаление статьи (DELETE /api/articles/{id}, контракт — в partial) -->
   <script src="/assets/js/details-menu.js"></script>
-  <!-- article-reader.js — оверлей чтения standalone-статьи -->
-  <script src="/assets/js/article-reader.js"></script>
+  <!-- article-reader.js — модальный оверлей чтения standalone-статьи:
+       открывает статью по кнопке и подгружает текст из GET /api/articles/{id}/content. -->
+  <?php
+  $articleReaderJsFile = dirname(__DIR__, 4) . '/public/assets/js/article-reader.js';
+  $articleReaderJsUrl  = $view->asset('js/article-reader.js');
+  $articleReaderJsUrl .= (str_contains($articleReaderJsUrl, '?') ? '&' : '?')
+      . 'v=' . (@filemtime($articleReaderJsFile) ?: '1');
+  ?>
+  <script src="<?= $view->e($articleReaderJsUrl) ?>"></script>
   <script src="/assets/js/publication-roles.js"></script>
   <!-- article-publish.js — окно выбора прав при публикации статьи
        (кнопка publish-bar у черновика, data-article-publish-open) -->

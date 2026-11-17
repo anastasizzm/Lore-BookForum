@@ -20,6 +20,32 @@
 window.LoreI18n = (function () {
   var dict = window.LORE_I18N || {};
   var locale = String(window.LORE_LOCALE || document.documentElement.lang || 'en');
+  var LANG_COOKIE = 'preferred_language';
+
+  /**
+   * Запоминаем выбранный язык в cookie, которую читает LocaleMiddleware.
+   * Иначе после перехода по ссылке без ?lang= бэк снова выбирал язык из
+   * Accept-Language (или старую cookie) — интерфейс «откатывался».
+   */
+  function rememberLang(code) {
+    if (!code || !/^[a-z]{2}(?:-[a-z]{2,})?$/i.test(String(code))) return;
+    document.cookie = LANG_COOKIE + '=' + encodeURIComponent(code) +
+      '; Path=/; Max-Age=31536000; SameSite=Lax';
+  }
+
+  (function persistLanguage() {
+    try {
+      var fromUrl = new URL(window.location.href).searchParams.get('lang');
+      if (fromUrl) rememberLang(fromUrl);
+    } catch (_) { /* location может быть недоступен */ }
+
+    document.addEventListener('click', function (e) {
+      var link = e.target && e.target.closest
+        ? e.target.closest('.lang-switch__link[hreflang]')
+        : null;
+      if (link) rememberLang(link.getAttribute('hreflang'));
+    }, true);
+  })();
 
   function lookup(key) {
     if (Object.prototype.hasOwnProperty.call(dict, key)) return dict[key];

@@ -57,7 +57,7 @@ $tx = static function (string $key, string $fallback) use ($view): string {
                     <?= $tx('common.admin.role_assign_roles', 'Roles') ?>
                 </h3>
                 <div class="admin-role__list" data-role-user-roles-list>
-                    <!-- Наполняется скриптом admin.js -->
+                    <!-- Наполняется скриптом admin/main.js -->
                 </div>
             </div>
 

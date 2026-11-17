@@ -75,10 +75,9 @@
           <?= $errorBox('description') ?>
         </div>
 
-        <!-- Заметки автора: поле BookForm authorNotes (1..2000), то же
-             имя уходит в POST /api/books/. Обязательное (бэк требует
-             непустые 1..2000) — required + клиентская проверка на пустоту
-             и длину (11.2, см. RULES в book-form.js). -->
+        <!-- Заметки автора: поле BookForm authorNotes (0..2000), то же
+             имя уходит в POST /api/books/. Поле необязательное: бэк
+             принимает пустую строку, проверяется только длина. -->
         <div class="form-field">
           <label for="bookAuthorNotes"><?= $tr('common.bookform.field_author_note') ?></label>
           <textarea class="form-field__input form-field__input--textarea"
@@ -86,7 +85,6 @@
                     name="authorNotes"
                     rows="4"
                     maxlength="2000"
-                    required
                     placeholder="<?= $tr('common.bookform.author_note_ph') ?>"><?= $view->e($val('authorNotes', $fromBook('authorNotes'))) ?></textarea>
           <?= $errorBox('authorNotes') ?>
         </div>

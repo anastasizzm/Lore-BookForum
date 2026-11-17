@@ -3,7 +3,7 @@
  * admin/genres — таблица справочника «Жанры» (каркас, мок-данные).
  *
  * Статус: каркас + fetch-слой. Строки пока мок-заглушки (список ниже),
- * add/edit/delete идут через dictApi в admin.js: роут
+ * add/edit/delete идут через dictApi в admin/main.js: роут
  * GET/POST/PATCH/DELETE /api/admin/genres ещё нет, поэтому слой сам
  * падает в режим mock и правит локальный массив; как только бэк отдаст
  * роут, тот же код уйдёт в сеть без правок этой страницы.
@@ -90,7 +90,7 @@ $serverItems = $genres ?? $items ?? null;
   </table>
 </div>
 
-<!-- Служебные данные для admin.js (ресурс; строки приходят из данных страницы / API) -->
+<!-- Служебные данные для admin/main.js (ресурс; строки приходят из данных страницы / API) -->
 <script type="application/json" data-dict-data>{"resource":"genres","items":[]}</script>
 
 <?php $view->include('dictionary-form', [
