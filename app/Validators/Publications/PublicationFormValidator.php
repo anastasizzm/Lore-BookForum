@@ -40,7 +40,7 @@ class PublicationFormValidator extends Validator
 
     protected function checkStrings(ErrorBag $bag, string $value, int $minLen, int $maxLen, string $label) : bool 
     {
-        $len = strlen($value);
+        $len = mb_strlen($value);
         if ($len < $minLen || $len > $maxLen){
             $bag->add($label, [$this->translator->t('errors.common.between_len', [':from' => $minLen, ':to' => $maxLen])]);
             return false;

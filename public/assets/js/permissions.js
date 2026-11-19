@@ -74,7 +74,7 @@
 
     // --- составные
     // Админ-панель видна, если разрешено хоть одно право из AdminAccessOperation.
-    'admin.panel': { any: ['system.manageAdditionals', 'system.managePeople', 'system.manageRoles'] }
+    'admin.panel': { any: ['system.manageAccounts', 'system.manageAdditionals', 'system.managePeople', 'system.manageRoles'] }
   };
 
   function warn(msg) {

@@ -211,6 +211,10 @@
   var idField = $('[name="id"]');
   state.articleId = idField ? (parseInt(idField.value, 10) || 0) : 0;
 
+  // articles.version из разметки: доступна сразу, не дожидаясь GET content.
+  var markupVersion = form ? parseInt(form.getAttribute('data-version'), 10) : 0;
+  if (markupVersion > 0) state.version = markupVersion;
+
   /* ============================================================
      ВЕРСИЯ СТАТЬИ (If-Match для PUT content)
      ============================================================ */
@@ -254,7 +258,8 @@
       }
 
       return readJson(response).then(function (parsed) {
-        var data = parsed.data || {};
+        var body = parsed.data || {};
+        var data = body.data || body;
         var source = data.version != null ? data.version
           : (data.article && data.article.version != null ? data.article.version : null);
         var v = parseInt(source, 10);
@@ -2231,8 +2236,9 @@
        бэк отвечает 404 (NotFoundException в updateContent), 409 или 428 —
        в этом случае перечитываем версию с сервера и повторяем PUT один раз. */
     function putContent(payload) {
+      var sentVersion = state.version;
       return sendJson(API.content(state.articleId), 'PUT', payload, {
-        'If-Match': '"' + state.version + '"',
+        'If-Match': '"' + sentVersion + '"',
       }).then(function (r) {
         if (r.ok) {
           rememberVersion(r.response);
@@ -2241,9 +2247,11 @@
         if ([404, 409, 412, 428].indexOf(r.response.status) === -1) {
           return onFailed(r.data, r.response);
         }
-        return syncVersion().then(function (updated) {
-          // Версия не изменилась — повтор дал бы тот же ответ, не дублируем запрос.
-          if (!updated) return onFailed(r.data, r.response);
+        return syncVersion().then(function () {
+          // Сравниваем с версией, ушедшей в неудачный PUT: фоновой syncVersion()
+          // мог обновить state.version, пока запрос был в полёте, и его флаг
+          // «версия изменилась» уже не отражает, нужен ли повтор.
+          if (state.version === sentVersion) return onFailed(r.data, r.response);
           return sendJson(API.content(state.articleId), 'PUT', payload, {
             'If-Match': '"' + state.version + '"',
           }).then(function (r2) {

@@ -22,8 +22,8 @@ final class RegisterFormValidator extends Validator
     {
         $ok = true;
         
-        if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $item->username)) {
-            $bag->add('username', [$this->translator->t('errors.common.format')]);
+        if (!preg_match('#^[A-Za-z0-9_]{3,30}$#', $item->username)) {
+            $bag->add('username', [$this->translator->t('errors.account.username_format')]);
             $ok = false;
         }
 

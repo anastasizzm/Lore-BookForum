@@ -57,7 +57,7 @@ final class RolesScriptDirector extends ScriptDirector
             RoleStatus::Private => 'NOT user_roles.is_public',
             RoleStatus::All => '',
         };
-        if (!empty($query)) $this->tempBuilder->addWhere($order);
+        if (!empty($query)) $this->tempBuilder->addWhere($query);
         return $this;
     }
 

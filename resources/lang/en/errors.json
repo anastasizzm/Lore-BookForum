@@ -102,6 +102,9 @@
         "email_format": "Invalid email format",
         "mail_already_verified": "You have already verified the email"
     },
+    "users": {
+        "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores"
+    },
     "files": {
         "ini_size": "File exceeds server limit",
         "form_size": "File exceeds form limit",

@@ -448,7 +448,7 @@
         "field_type": "Тип",
         "select_placeholder": "Выберите…",
         "field_doi": "DOI",
-        "doi_ph": "10.1234/example",
+        "doi_ph": "10.1234/EXAMPLE",
         "section_text": "Текст",
         "field_annotation": "Аннотация",
         "annotation_ph": "Краткое содержание статьи…",

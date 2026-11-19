@@ -448,7 +448,7 @@
         "field_type": "Type",
         "select_placeholder": "Select…",
         "field_doi": "DOI",
-        "doi_ph": "10.1234/example",
+        "doi_ph": "10.1234/EXAMPLE",
         "section_text": "Text",
         "field_annotation": "Annotation",
         "annotation_ph": "A short summary of the article…",

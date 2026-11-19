@@ -21,8 +21,8 @@ readonly class PublicationForm implements Form
     {
         return new self(
             title: QueryParser::string($input, 'title'),
-            description: QueryParser::string($input, 'description'),
-            authorNotes: QueryParser::string($input, 'authorNotes'),
+            description: QueryParser::optionalString($input, 'description') ?? '',
+            authorNotes: QueryParser::optionalString($input, 'authorNotes') ?? '',
             genreId: QueryParser::positiveInt($input, 'genreId'),
             iconId: QueryParser::optionalUuid($input, 'iconId')
         );
