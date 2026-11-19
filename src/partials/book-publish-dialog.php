@@ -1,19 +1,15 @@
 <?php
 
 /**
- * book-publish-dialog — окно выбора авторов/редакторов при публикации книги (11.3).
+ * book-publish-dialog — LEGACY-окно авторов/редакторов (11.3).
  *
- * Списки людей переехали сюда из шага 2 формы (11.3): основной экран
- * формы их больше не показывает. Открывается кнопкой Publish в нижней
- * панели .book-form__actions (кнопка [data-publish-open], book-form.js);
- * кнопка Cancel (и клик по фону, Esc) закрывает окно.
+ * НЕ ИСПОЛЬЗУЕТСЯ: Publish в book-form.js больше не открывает это окно —
+ * черновик создаётся сразу, а людей/роли назначают в roles-module.
+ * Разметка оставлена только как исторический блок; корень помечен
+ * data-legacy-unused="1" и hidden. Новые сценарии сюда не добавлять.
  *
- * ВАЖНО: окно лежит ВНУТРИ <form> — hidden inputs authors[]/editors[]
- * должны попадать в FormData при отправке (контракт UI-списков: бэк
- * поле authors/editors пока не принимает, см. шапку book-form.php).
- *
- * Кнопка Publish внутри окна — type=submit data-submit-publish:
- * book-form.js уходит на POST /api/books, затем POST /api/books/{id}/publish.
+ * ВАЖНО: если partial снова подключат внутри <form>, hidden inputs
+ * authors[]/editors[] попадут в FormData, но бэк эти поля не читает.
  *
  * Стили: каркас .modal — modal.css; размеры/скролл — book-form.css
  * (.book-publish-dialog__*).
@@ -29,8 +25,8 @@ $authors     = $authors     ?? [];
 $editors     = $editors     ?? [];
 $errorBoxFn  = $errorBoxFn  ?? null;
 ?>
-<div class="modal book-publish-dialog" data-book-publish-dialog role="dialog" aria-modal="true"
-     aria-labelledby="bookPublishDialogTitle" hidden>
+<div class="modal book-publish-dialog" data-book-publish-dialog data-legacy-unused="1"
+     role="dialog" aria-modal="true" aria-labelledby="bookPublishDialogTitle" hidden>
 
   <div class="modal__backdrop" data-publish-dialog-backdrop></div>
 
@@ -46,7 +42,7 @@ $errorBoxFn  = $errorBoxFn  ?? null;
 
     <div class="book-publish-dialog__body">
 
-      <!-- АВТОРЫ: поиск людей по нику (заглушка /api/users/search),
+      <!-- АВТОРЫ: поиск людей по нику (GET /api/users?q=),
            список до 30 человек под поиском, у каждого кнопка
            «сделать редактором» (переносит его же в список редакторов,
            остаётся автором) и минус для удаления. -->

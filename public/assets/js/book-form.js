@@ -4,7 +4,7 @@
  * Что делает:
  *   1. превью обложки (object URL) + кнопка «убрать»;
  *   2. списки авторов (до 30) и редакторов (без лимита): поиск людей
- *      по нику через заглушку /api/users/search, добавление в список
+ *      по нику через GET /api/users?q=, добавление в список
  *      под поиском, удаление минусом, кнопка «сделать редактором»
  *      у автора (дублирует его в редакторы, автором он остаётся);
  *   3. список выбранных файлов книги (pdf/epub/mobi/fb2, ≥1 файл)
@@ -21,26 +21,25 @@
  *      .book-form__actions, «Назад» скрыта на шаге 1), валидация
  *      ОБЯЗАТЕЛЬНЫХ полей своего шага перед переходом вперёд
  *      (STEP_FIELDS);
- *   8. список глав книги — только UI (input'ы без name, в POST не
- *      уходят: контракт с бэкендом уточняется);
- *   9. локальную копию несохранённых изменений (localStorage,
+ *   8. локальную копию несохранённых изменений (localStorage,
  *      ключ bookform:v2:new) + плашку «Восстановить / Отбросить»
  *      на шаге 1 — если открыть создание новой книги, не сохранив
  *      прошлые изменения. Копия стирается после успешной отправки.
- *   10. публикацию (11.4): кнопка Publish → POST /api/books/
+ *   9. публикацию (11.4): кнопка Publish → POST /api/books/
  *      (черновик) → 201 { createdId } → меню ролей (rights-modal +
  *      roles-module) — такое же, как при публикации статьи. Публикует
  *      кнопка Publish уже в меню (POST /api/books/{id}/publish).
- *   11. legacy-окно book-publish-dialog (11.3): больше не открывается
- *      (роли и людей назначают в roles-module); разметка оставлена
- *      ради hidden-полей authors[]/editors[] внутри формы.
- *   12. режим редактирования (GET /books/new?id=N, ссылки «Изменить»
+ *   10. legacy-окно book-publish-dialog (11.3): разметка удалена из формы,
+ *      роли и людей назначает roles-module. initPeople/initPublishDialog
+ *      оставлены как no-op (возвращают null, если разметки нет).
+ *   11. режим редактирования (GET /books/new?id=N, ссылки «Изменить»
  *      и «Продолжить»): метаданные подтягиваются из JSON-блоба
  *      [data-book-payload] на странице книги (fetch /books/{N}), файлы —
  *      из GET /api/books/{id}/contents; сохранение — PATCH /api/books/{id}
  *      (JSON + CSRF, только метаданные), новые файлы прикрепляются
  *      POST /api/books/{id}/contents, удалённые — DELETE .../contents/{id}.
- *      Publish в edit-режиме не показывается.
+ *      Publish в edit-режиме показывается permissions.js при
+ *      publication.publish и требует PDF (иначе 409 content_pdf).
  *
  * Поля создателя нет: создатель — всегда один, не изменяем и по умолчанию
  * редактор (определяет бэк по сессии).
@@ -86,8 +85,8 @@
     categories: '/api/additional/categories'
   };
 
-  // Заглушка поиска людей (роут добавит бэк, см. контракт в view).
-  var PEOPLE_SEARCH_URL = '/api/users/search';
+  // Реальный поиск людей: GET /api/users?q= (api.users, AuthPolicy::Auth).
+  var PEOPLE_SEARCH_URL = '/api/users';
 
   // Локальная копия несохранённых изменений (плашка «Восстановить»).
   // 'new' — страница создания; для редактирования понадобится свой id.
@@ -721,11 +720,9 @@
   }
 
   /* ============================================================
-     ЛЮДИ: авторы и редакторы.
-     Поиск по нику → GET /api/users/search?q= (заглушка), результаты
-     кликом добавляются в список под поиском; минус убирает. У автора
-     есть кнопка «сделать редактором» — она дублирует человека в
-     список редакторов (автором он остаётся).
+     ЛЮДИ: авторы и редакторы — LEGACY (разметка book-publish-dialog
+     удалена из формы). Функция оставлена для старых кэшированных
+     страниц и сразу возвращает null, если [data-people-field] нет.
      ============================================================ */
   function initPeople(form) {
     var boxes = form.querySelectorAll('[data-people-field]');
@@ -963,10 +960,9 @@
   }
 
   /* ============================================================
-     LEGACY-ОКНО ПУБЛИКАЦИИ (11.3): авторы/редакторы когда-то выбирались
-     в book-publish-dialog. Сейчас Publish сразу открывает меню ролей,
-     поэтому окно не показывается; функция оставлена для совместимости
-     и hidden-полей authors[]/editors[] внутри формы.
+     LEGACY-ОКНО ПУБЛИКАЦИИ (11.3): разметка book-publish-dialog удалена.
+     Publish сразу открывает меню ролей, поэтому функция — no-op
+     (root === null).
      ============================================================ */
   function initPublishDialog(form) {
     var root = form.querySelector('[data-book-publish-dialog]');
@@ -1042,14 +1038,11 @@
 
     var RULES = {
       title:       { required: true,  maxLength: 200,  msgKey: 'js.rule_book_title' },
-      // лимит аннотации — 4000 (PublicationFormValidator::DESCR_MAX_LEN)
-      description: { required: true,  maxLength: 4000, msgKey: 'js.rule_book_annotation' },
-      // Заметки автора (11.2): бэк требует 1..2000 (PublicationFormValidator::
-      // NOTES_MAX_LEN) — поле ОБЯЗАТЕЛЬНОЕ. Пустое и слишком длинное —
-      // разные сообщения: requiredMsgKey (пусто, включая пробелы —
-      // trim в validateField), msgKey (длина > 2000).
-      authorNotes: { required: true,  maxLength: 2000, msgKey: 'js.rule_book_author_note',
-                     requiredMsgKey: 'js.rule_book_author_note_required' },
+      // Аннотация необязательна (0..4000): бэк принимает пустую строку.
+      description: { required: false, maxLength: 4000, msgKey: 'js.rule_book_annotation' },
+      // Заметки автора (11.2): поле необязательное — пустое значение
+      // допустимо, проверяем только верхний предел 2000.
+      authorNotes: { required: false, maxLength: 2000, msgKey: 'js.rule_book_author_note' },
       genreId:     { required: true,  msgKey: 'js.rule_book_genre' },
       categoryId:  { required: true,  msgKey: 'js.rule_book_category' },
       publisher:   { required: true,  maxLength: 255,  msgKey: 'js.rule_book_publisher' },
@@ -1057,7 +1050,8 @@
       pages:       { required: true,  min: 1,          msgKey: 'js.rule_book_pages' },
       isbn:        { required: false, maxLength: 20,   custom: 'isbn', msgKey: 'errors.validation.isbn_shape' },
       cover:       { required: false, file: 'cover',   msgKey: 'js.rule_book_cover' },
-      // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles
+      // минимум один файл, форматы pdf/epub/mobi/fb2 — см. initFiles.
+      // Для Publish дополнительно нужен именно PDF (BooksRepository::validatePublish).
       files:       { required: true,  file: 'files',   msgKey: 'js.rule_book_file_required' },
       // списки людей: лимит авторов (30) держит addPerson, тут только
       // рендер серверных ошибок (422 от бэка)
@@ -1070,7 +1064,7 @@
     // Шаг 3 «Роли» пропущен — когда он появится, добавить сюда его поля.
     var STEP_FIELDS = {
       1: ['title', 'genreId', 'categoryId', 'publisher', 'pages', 'isbn', 'cover'],
-      2: ['description', 'authorNotes', 'files', 'authors', 'editors'],
+      2: ['description', 'files', 'authors', 'editors'],
     };
 
     var fileValidators = {
@@ -1081,9 +1075,8 @@
     // Списки авторов/редакторов: поиск, добавление, «сделать редактором».
     initPeople(form);
 
-    // Окно публикации (11.3): Publish в нижней панели открывает его.
-    // Открываем ТОЛЬКО когда форма валидна — иначе ошибки полей
-    // невидны под модалкой.
+    // Legacy-окно (11.3) больше не открывается — initPublishDialog вернёт
+    // null. Publish сразу создаёт черновик и открывает roles-module.
     var publishDialog = initPublishDialog(form);
     Array.prototype.forEach.call(form.querySelectorAll('[data-publish-open]'), function (btn) {
       btn.addEventListener('click', function () {
@@ -1141,11 +1134,13 @@
     var attachedEmpty = form.querySelector('[data-attached-empty]');
     var attachedCount = 0;   // ≥1 → правило files («минимум один файл») выполнено
     var attachedBusy  = false;
+    var attachedLoaded = !editId; // в edit-режиме список грузится асинхронно
 
     function renderAttached(items) {
       if (!attachedList) return;
       attachedList.innerHTML = '';
       attachedCount = items.length;
+      attachedLoaded = true;
       if (attachedEmpty) attachedEmpty.hidden = items.length > 0;
 
       items.forEach(function (item) {
@@ -1157,6 +1152,9 @@
         var li = document.createElement('li');
         li.className = 'file-upload__item';
         li.setAttribute('data-attached-id', id);
+        var format = String(item.format || '').toLowerCase();
+        if (!format) format = bookFileExt(item.originalName || '').toLowerCase();
+        if (format) li.setAttribute('data-file-format', format);
 
         var name = document.createElement('span');
         name.className = 'file-upload__name';
@@ -1208,6 +1206,8 @@
         .then(function (items) { renderAttached(items); return items; })
         .catch(function (err) {
           console.error('[book-form] attached load failed', err);
+          // attachedLoaded остаётся false: данных нет, клиент не должен
+          // ложно блокировать Publish — финальную PDF-проверку сделает бэк.
           notify(t('book.contents_load_failed'));
           return null;
         });
@@ -1309,8 +1309,11 @@
         if (fileError) { setError(name, fileError); return false; }
         // edit-режим: у книги уже есть прикреплённые файлы (GET /contents),
         // локальный input при этом пуст — правило «минимум один файл»
-        // всё равно выполнено (attachedCount см. выше).
-        var hasAttached = name === 'files' && attachedCount > 0;
+        // всё равно выполнено (attachedCount см. выше). Пока список не
+        // загрузился (или загрузка упала), не блокируем ложно: contents/PDF
+        // проверит бэк.
+        var hasAttached = name === 'files' &&
+          (attachedCount > 0 || (!!editId && !attachedLoaded));
         if (rule.required && !(field.files && field.files.length) && !hasAttached) {
           setError(name, t(rule.msgKey));
           return false;
@@ -1353,6 +1356,21 @@
       var ok = true;
       FIELD_KEYS.forEach(function (name) { if (!validateField(name)) ok = false; });
       return ok;
+    }
+
+    /**
+     * Publish требует PDF (BooksRepository::validatePublish), черновик —
+     * любой из pdf/epub/mobi/fb2. Учитываем и новые файлы в input, и уже
+     * прикреплённые к книге (edit-режим, GET /contents).
+     */
+    function hasPdfForPublish() {
+      var input = form.querySelector('[data-files-input]');
+      var files = input && input.files ? Array.prototype.slice.call(input.files) : [];
+      if (files.some(function (file) { return bookFileFormat(file) === 'pdf'; })) return true;
+      // Список прикреплённых ещё не пришёл — не блокируем ложно; финальную
+      // проверку PDF сделает бэк (409 content_pdf).
+      if (!attachedLoaded) return true;
+      return !!form.querySelector('[data-attached-list] [data-file-format="pdf"]');
     }
 
     function focusFirstInvalid() {
@@ -1495,15 +1513,24 @@
       e.preventDefault();
       clearAllErrors();
 
-      var wantPublish = !editId
-        && !!(e.submitter
-          ? e.submitter.hasAttribute('data-submit-publish')
-          : publishRequested);
+      var wantPublish = !!(e.submitter
+        ? e.submitter.hasAttribute('data-submit-publish')
+        : publishRequested);
 
       // Сначала клиентская валидация ВСЕХ полей (порядок полей в DOM:
       // если ошибки и на первом, и на втором шаге — фокус уйдёт на шаг 1,
       // дальше пользователь перейдёт на второй сам).
       if (!validateAll()) {
+        showFieldErrors();
+        focusFirstInvalid();
+        return;
+      }
+
+      // Publish книги бэк разрешает только при наличии PDF
+      // (BooksRepository::validatePublish), иначе 409 content_pdf.
+      // Черновик по-прежнему можно сохранить с EPUB/MOBI/FB2.
+      if (wantPublish && !hasPdfForPublish()) {
+        setError('files', t('js.rule_book_publish_pdf'));
         showFieldErrors();
         focusFirstInvalid();
         return;
@@ -1606,6 +1633,7 @@
         function patchBody() {
           var payload = {};
 
+          // Бэк принимает все поля создания, пустые значения — как ''.
           ['title', 'description', 'authorNotes', 'publisher'].forEach(function (name) {
             var el = getField(name);
             payload[name] = el ? String(el.value || '').trim() : '';
@@ -1731,7 +1759,23 @@
             return loadAttached().then(function () { return attachedOk; });
           })
           .then(function (attachedOk) {
-            if (attachedOk) { leaveAndRedirect('/books/' + editId); return; }
+            if (attachedOk) {
+              // Publish из режима редактирования: сохранили изменения —
+              // открываем то же меню ролей, что и при создании/публикации.
+              if (wantPublish && window.RightsModal) {
+                resetButtons();
+                window.RightsModal.open({
+                  mode: 'publish',
+                  bookId: editId,
+                  redirect: '/books/' + editId,
+                  screen: 2,
+                  cancelRedirect: '/books/' + editId,
+                });
+                return;
+              }
+              leaveAndRedirect('/books/' + editId);
+              return;
+            }
             // Метаданные сохранены, файлы прикрепить не вышло — остаёмся
             // на форме: повторный «Сохранить» доделает прикрепление.
             notify(t('book.contents_upload_failed'), 'warning');
@@ -1772,6 +1816,7 @@
       // отдельными запросами в /api/files/upload (см. uploadPhase ниже).
       var body = new FormData(form);
       body.delete('id');   // edit-режим отсечён выше; id бэк не принимает
+      // Пустые authorNotes уходят пустой строкой — бэк это принимает.
 
       // ---- Файлы: обложка (cover) и файлы книги (book) → /api/files/upload
       var coverField = getField('cover');
@@ -1932,6 +1977,9 @@
           mode: mode,
           bookId: createdId,
           redirect: redirect,
+          // Сразу финальный экран с кнопкой Publish: черновик уже создан,
+          // пользователю не нужно искать Publish за «Continue».
+          screen: mode === 'publish' ? 2 : 1,
           cancelRedirect: mode === 'publish' ? redirect : '',
         });
       }
@@ -1965,83 +2013,6 @@
     form.querySelectorAll('[data-catalog-select]').forEach(initCatalogSelect);
 
     // --------------------------------------------------------
-    // ГЛАВЫ КНИГИ — только UI (input'ы без name, в POST не уходят;
-    // контракт с бэкендом уточняется, см. шапку book-form.php)
-    // --------------------------------------------------------
-    function renumberChapters() {
-      Array.prototype.forEach.call(
-        form.querySelectorAll('[data-chapters] [data-chapter]'),
-        function (row, i) {
-          var num = row.querySelector('[data-chapter-num]');
-          if (num) num.textContent = String(i + 1);
-        }
-      );
-    }
-
-    function addChapter(value) {
-      var list = form.querySelector('[data-chapters]');
-      if (!list) return null;
-
-      var row = document.createElement('li');
-      row.className = 'chapters__item';
-      row.setAttribute('data-chapter', '');
-      row.innerHTML =
-        '<span class="chapters__num" data-chapter-num aria-hidden="true"></span>' +
-        '<input class="form-field__input chapters__input" type="text" data-chapter-title' +
-        ' maxlength="200" autocomplete="off" placeholder="' +
-        escapeHtml(t('bookform.chapter_ph')) + '">' +
-        '<button class="chapters__remove" type="button" data-chapter-remove aria-label="' +
-        escapeHtml(t('bookform.chapter_remove')) + '">−</button>';
-
-      var input = row.querySelector('[data-chapter-title]');
-      if (input && value) input.value = String(value);
-
-      list.appendChild(row);
-      renumberChapters();
-      return row;
-    }
-
-    function chapterTitles() {
-      return Array.prototype.map.call(
-        form.querySelectorAll('[data-chapters] [data-chapter-title]'),
-        function (input) { return input.value; }
-      );
-    }
-
-    function setChapters(list) {
-      var box = form.querySelector('[data-chapters]');
-      if (!box) return;
-      box.innerHTML = '';
-      (list || []).forEach(function (title) { addChapter(title); });
-      renumberChapters();
-    }
-
-    function initChapters() {
-      if (!form.querySelector('[data-chapters]')) return;
-      renumberChapters();
-
-      var addBtn = form.querySelector('[data-chapter-add]');
-      if (addBtn) {
-        addBtn.addEventListener('click', function () {
-          var row = addChapter('');
-          var input = row && row.querySelector('[data-chapter-title]');
-          if (input && input.focus) input.focus();
-          markDirty();
-        });
-      }
-
-      // Удаление делегированием: строки пересоздаются при восстановлении
-      form.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest ? e.target.closest('[data-chapter-remove]') : null;
-        if (!btn) return;
-        var row = btn.closest('[data-chapter]');
-        if (row && row.parentNode) row.parentNode.removeChild(row);
-        renumberChapters();
-        markDirty();
-      });
-    }
-
-    // --------------------------------------------------------
     // МНОГОШАГОВОСТЬ (FORM-01): «Далее» не пускает дальше, пока
     // обязательные поля шага не прошли валидацию
     // --------------------------------------------------------
@@ -2049,6 +2020,26 @@
       var steps = Array.prototype.slice.call(form.querySelectorAll('.book-step'));
       if (!steps.length) {
         return { current: function () { return 1; }, goTo: function () {}, reveal: function () {} };
+      }
+
+      // EDIT-РЕЖИМ: правка не делится на шаги. Показываем все секции сразу
+      // и убираем «Далее/Назад», чтобы клик по «Далее» не открывал вторую
+      // «страницу» формы (пункт аудита: редактирование открывало две страницы).
+      if (editId) {
+        steps.forEach(function (step) { step.hidden = false; });
+        Array.prototype.forEach.call(form.querySelectorAll('.book-step__nav'), function (el) {
+          el.hidden = true;
+        });
+        Array.prototype.forEach.call(form.querySelectorAll('.book-step__num'), function (el) {
+          el.hidden = true;
+        });
+        return {
+          current: function () { return 1; },
+          goTo: function () {},
+          reveal: function (stepEl) {
+            if (stepEl) stepEl.hidden = false;
+          },
+        };
       }
 
       var total = steps.length;
@@ -2128,7 +2119,7 @@
     }
 
     function snapshot() {
-      var snap = { savedAt: Date.now(), chapters: chapterTitles() };
+      var snap = { savedAt: Date.now() };
       BACKUP_FIELDS.forEach(function (name) {
         var el = getField(name);
         snap[name] = el ? (el.value || '') : '';
@@ -2146,7 +2137,7 @@
       if (!snap) return false;
       return BACKUP_FIELDS.some(function (name) {
         return String(snap[name] || '').trim() !== '';
-      }) || (snap.chapters || []).some(function (title) { return String(title).trim() !== ''; });
+      });
     }
 
     function writeBackup() {
@@ -2186,8 +2177,6 @@
         if (rerender) rerender(String(b[name]));
       });
 
-      if (Object.prototype.hasOwnProperty.call(b, 'chapters')) setChapters(b.chapters || []);
-
       dirty = true;
       scheduleBackup();
     }
@@ -2202,7 +2191,7 @@
       var cur = snapshot();
       var same = BACKUP_FIELDS.every(function (name) {
         return String(b[name] || '') === String(cur[name] || '');
-      }) && JSON.stringify(b.chapters || []) === JSON.stringify(cur.chapters || []);
+      });
 
       // Копия пустая или совпадает с тем, что уже в форме — плашка не нужна
       if (same || !hasContent(b)) { clearBackup(); return; }
@@ -2237,9 +2226,8 @@
     }
 
     // --------------------------------------------------------
-    // ПОДКЛЮЧЕНИЕ: шаги, главы, отметки об изменениях
+    // ПОДКЛЮЧЕНИЕ: шаги, отметки об изменениях
     // --------------------------------------------------------
-    initChapters();
     stepsApi = initSteps();
 
     // --------------------------------------------------------
@@ -2252,7 +2240,8 @@
     function setFieldValue(name, value) {
       var el = getField(name);
       if (!el) return;
-      el.value = value === null || value === undefined ? '' : String(value);
+      var next = value === null || value === undefined ? '' : String(value);
+      el.value = next;
     }
 
     function applyBookPayload(data) {
@@ -2338,7 +2327,7 @@
     form.addEventListener('input', markDirty);
     form.addEventListener('change', markDirty);
 
-    // Списки людей и глав меняются через DOM (без input/change) —
+    // Списки людей меняются через DOM (без input/change) —
     // ловим эти правки наблюдателем; лишние события отсекает
     // сравнение копии с формой в initRestore.
     if (window.MutationObserver) {

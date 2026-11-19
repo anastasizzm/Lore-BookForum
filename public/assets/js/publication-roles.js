@@ -62,7 +62,7 @@
     return null;
   }
 
-  /** JSON или нет (HTML/пусто) — как в admin.js dictApi. */
+  /** JSON или нет (HTML/пусто) — как в admin/main.js dictApi. */
   function parseJson(raw) {
     if (!raw || !/[\[{]/.test(raw)) return null;
     try { return JSON.parse(raw); } catch (_) { return null; }

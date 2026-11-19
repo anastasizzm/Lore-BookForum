@@ -40,7 +40,8 @@
   var MAP = {
     // --- system: ManageAccountOperation и AdminAccessOperation-семейство
     // Имя флага бэка - во множественном числе (manageAccounts), у операции - в единственном.
-    // BlockAccountOperation в /api/system/rules флага не имеет - ключа для неё нет.
+    // Block/Unblock (/api/users/{id}/block) идёт через ManageAccountOperation,
+    // поэтому проверяется system.manageAccounts; BlockAccountOperation тут не используется.
     'system.manageAccounts':    { kind: 'system', flags: ['manageAccounts'] },
     'system.manageAdditionals': { kind: 'system', flags: ['manageAdditionals'] },
     'system.managePeople':      { kind: 'system', flags: ['managePeople'] },
@@ -52,8 +53,9 @@
     'publication.updateMeta':    { kind: 'publication', flags: ['updateMeta'],    owner: true },
     'publication.updateContent': { kind: 'publication', flags: ['updateContent'], owner: true },
     'publication.edit':          { kind: 'publication', flags: ['updateMeta', 'updateContent'], owner: true },
-    // Отдельного флага publish бэк не отдаёт: по договорённости updateMeta || updateContent
-    'publication.publish':       { kind: 'publication', flags: ['updateMeta', 'updateContent'], owner: true },
+    // Публикация — это смена статуса (метаинформация), поэтому бэк требует
+    // только updateMeta (UpdateMetaPublicationOperation).
+    'publication.publish':       { kind: 'publication', flags: ['updateMeta'], owner: true },
     // Публикация НОВОЙ публикации из формы создания - опирается на create
     'publication.publishNew':    { kind: 'publication', flags: ['create'] },
     'publication.delete':        { kind: 'publication', flags: ['delete'],        owner: true },

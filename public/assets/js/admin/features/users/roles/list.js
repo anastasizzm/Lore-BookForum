@@ -19,6 +19,18 @@ export function urRender(userId) {
   var mainBtn = document.querySelector('[data-user-expand][data-user-id="' + userId + '"]');
   var name = mainBtn ? (mainBtn.getAttribute('data-user-name') || '') : '';
 
+  // Синхронизируем колонку Role в основной строке: при раскрытии/загрузке
+  // ролей она не должна оставаться «—», если бэк уже отдал назначения.
+  var roleCell = document.querySelector('tr[data-user-id="' + userId + '"] [data-col="role"]');
+  if (roleCell) {
+    roleCell.innerHTML = roles.length
+      ? roles.slice(0, 2).map(function (r) {
+          return '<span class="admin-badge">' + esc(r.title) + '</span>';
+        }).join(' ') +
+        (roles.length > 2 ? ' <span class="admin-badge admin-badge--muted">+' + (roles.length - 2) + '</span>' : '')
+      : '<span class="admin-badge admin-badge--muted">—</span>';
+  }
+
   var removeLabel = tx('admin.user_role_remove', 'Remove role');
   var list = roles.length
     ? '<ul class="admin-user-roles__list">' + roles.map(function (r) {

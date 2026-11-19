@@ -32,13 +32,6 @@ export var allRolesApi = (function () {
     return 'error';
   }
 
-  /**
-   * Контракт сортировки списка ролей (GET /api/additional/roles).
-   * TODO(бэк): сверить имя параметра и значения с RolesController / BasicModelSortBy.
-   *   asc  — сначала Public, desc — сначала Private.
-   */
-  var SORT = { param: 'sort', values: { asc: 'visibility', desc: '-visibility' } };
-
   function serverMessage(r) {
     var e = r && r.data && r.data.error;
     if (e && e.details && typeof e.details === 'object') {
@@ -129,32 +122,69 @@ export var allRolesApi = (function () {
     return list.map(normalize).filter(function (x) { return x !== null; });
   }
 
+  var MAX_PAGES = 20;
+
+  function hasNext(payload) {
+    var meta = payload && typeof payload === 'object' ? payload.meta : null;
+    return !!(meta && meta.hasNext);
+  }
+
+  /**
+   * Все страницы (ps=50) — фильтр Public/Private и сортировка по visibility
+   * выполняются на клиенте, поэтому неполная первая страница дала бы
+   * неверный результат.
+   */
+  function fetchPages(query, page, acc) {
+    var parts = ['ps=50', 'page=' + page];
+    if (query) parts.push('q=' + encodeURIComponent(query));
+    return request('GET', '?' + parts.join('&')).then(function (r) {
+      var kind = classify(r);
+      if (kind === 'ok') {
+        var items = fromPayload(r.data);
+        if (items === null) return null;
+        acc = acc.concat(items);
+        setStatus('live');
+        if (hasNext(r.data) && page < MAX_PAGES) return fetchPages(query, page + 1, acc);
+        return acc;
+      }
+      if (kind === 'mock') { setStatus('mock'); return null; }
+      // Поздняя страница упала — отдаём уже загруженное, а не пустой список.
+      if (acc.length) {
+        setStatus('live');
+        console.warn('[admin] all-roles: some pages failed to load');
+        return acc;
+      }
+      return null;
+    });
+  }
+
   return {
     get status() { return status; },
-    list: function (query, statusFilter, sort) {
-      // Первая загрузка без фильтров — из данных, которые отдал сервер вместе со страницей
-      if (!query && !sort && (!statusFilter || statusFilter === 'all')) {
+    list: function (query) {
+      // Первая загрузка без поиска — из данных страницы (meta с сервера).
+      if (!query) {
         var boot = takeBootstrap('all-roles');
-        var seeded = boot === null ? null : fromPayload(boot);
-        if (seeded) { setStatus('live'); return Promise.resolve(seeded); }
-      }
-      var parts = [];
-      if (query) parts.push('q=' + encodeURIComponent(query));
-      if (statusFilter && statusFilter !== 'all') parts.push('status=' + encodeURIComponent(statusFilter));
-      // Сортировку выполняет бэк: ?sort=<значение>. Имя параметра и значения — в SORT (ниже).
-      if (sort && SORT.values[sort]) parts.push(SORT.param + '=' + encodeURIComponent(SORT.values[sort]));
-      var qs = parts.length ? '?' + parts.join('&') : '';
-      return request('GET', qs).then(function (r) {
-        var kind = classify(r);
-        if (kind === 'ok') {
-          var items = fromPayload(r.data);
-          if (items === null) return null;
-          setStatus('live');
-          return items;
+        if (boot !== null) {
+          var seeded = fromPayload(boot);
+          var meta = (boot && typeof boot === 'object' && boot.meta) || {};
+          if (seeded) {
+            setStatus('live');
+            var page = Number(meta.page);
+            var pageSize = Number(meta.pageSize);
+            // Продолжать с page=2 можно только если bootstrap — это page=1
+            // с максимальным размером. Иначе перечитываем всё с ps=50
+            // (иначе пропустим строки или задвоим страницу).
+            if (!pageSize || page !== 1) return fetchPages(query, 1, []);
+            if (meta.hasNext && pageSize !== 50) return fetchPages(query, 1, []);
+            if (meta.hasNext) return fetchPages(query, 2, seeded);
+            return Promise.resolve(seeded);
+          }
         }
-        if (kind === 'mock') { setStatus('mock'); return null; }
-        return null;
-      });
+      }
+      // ?status= на бэке падает (B-24: RolesScriptDirector::addStatusTempFilter
+      // использует undefined $order), поэтому фильтр Public/Private и
+      // сортировку по visibility делаем на клиенте в page.js.
+      return fetchPages(query, 1, []);
     },
     remove: function (id) {
       return request('DELETE', '/' + id).then(function (r) {

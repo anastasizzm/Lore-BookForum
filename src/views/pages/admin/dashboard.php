@@ -15,16 +15,13 @@
  *   admin.roles       → /admin/roles
  *   admin.all-roles   → /admin/all-roles
  *
- * TODO(роуты): для «Жалоб» (admin/reports) роута в routes.php пока нет.
- * Когда бэк добавит 'admin.reports', вернуть карточку с 'route' => 'admin.reports'.
- *
- * ПРАВА: контроллер не передаёт $allowed (BACKEND-FIXES B-17), поэтому
- * карточки скрываются на клиенте через permissions.js по реальным правилам
+ * ПРАВА: права текущего пользователя приходят в сайдбар вместе с контекстом,
+ * а карточки скрываются на клиенте через permissions.js по реальным правилам
  * GET /api/system/rules. 'requires' — ключ из public/assets/js/permissions.js.
  * Если правила не загрузились, карточка остаётся скрытой (fail-closed).
  *
- * СЧЁТЧИКИ: API админки их не отдаёт (BACKEND-FIXES B-17), поэтому цифры
- * не показываем вовсе — вместо выдуманных «—».
+ * СЧЁТЧИКИ: API админки их не отдаёт, поэтому цифры не показываем вовсе —
+ * вместо выдуманных «—».
  *
  * Стили — public/assets/css/admin.css (.admin-grid, .admin-card).
  */
@@ -46,7 +43,6 @@ $cards = [
     ['route' => 'admin.genres',     'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_genres'),     'hint' => $tr('common.admin.card_genres_hint')],
     ['route' => 'admin.categories', 'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_categories'), 'hint' => $tr('common.admin.card_categories_hint')],
     ['route' => 'admin.types',      'requires' => 'system.manageAdditionals', 'title' => $tr('common.admin.card_types'),      'hint' => $tr('common.admin.card_types_hint')],
-    // «Жалобы» скрыты, пока нет раздела и API: вернуть карточку admin.reports, когда появится роут
 
     // Системные роли → admin/roles.php
     ['route' => 'admin.roles',
@@ -61,8 +57,8 @@ $cards = [
      'hint'  => $tr('common.admin.all_roles_card_text')], // "Названия ролей и их видимость"
 ];
 
-// Права: контроллер передаёт $allowed — [имя роута => bool] (AdminPanelController::dashboardAccess).
-// Карточка показывается, только если у пользователя есть доступ к разделу.
+// Необязательная серверная карта доступов [имя роута => bool]. Сейчас
+// контроллер её не передаёт: видимость карточек определяет permissions.js.
 // Нет карты $allowed (страницу отрисовали без контроллера) — показываем все карточки.
 $allowed = $allowed ?? null;
 $cards = array_values(array_filter($cards, static function (array $card) use ($allowed): bool {

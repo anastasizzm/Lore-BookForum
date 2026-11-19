@@ -23,7 +23,7 @@
  * КОНТРАКТ С БЭКОМ — в шапке src/partials/roles-module.php.
  * Недоступные роуты (404/HTML/сеть) гасятся: статус data-api у корня
  * становится 'mock' и список рисуется на встроенных данных — так же,
- * как в publication-roles.js и admin.js.
+ * как в publication-roles.js и admin/main.js.
  *
  * Каталоги модалок (GET /api/users, GET /api/additional/roles) грузятся
  * лениво при первом открытии модалки — ensureCatalogs(); open() сбрасывает
@@ -717,17 +717,16 @@ window.LoreRoles = (function () {
   }
 
   function updateGate() {
-    var hasUsers = st.users.length > 0;
     var next = q('[data-roles-next]');
     // Continue на экране 1 есть только при создании (редактирование идёт дальше
     // через экран 2 / управление ролями напрямую).
     if (next) next.hidden = st.context !== 'create';
-    // Экран 2: Publish требует хотя бы одного пользователя только когда
-    // именно он завершает публикацию. В after-publish/roles книга уже
-    // создана: Publish — это «готово», его нельзя блокировать пустым списком.
-    var needsUsers = st.mode === 'publish' && !hasUsers;
+    // Экран 2: Publish больше не блокируется пустым списком. Публикация
+    // доступна владельцу и без назначенных пользователей/ролей (владелец
+    // получает право публикации через owner-override на бэкенде).
+    var needsUsers = false;
     var pub = q('[data-roles-publish]');
-    if (pub) { pub.disabled = needsUsers; show(pub, true); }
+    if (pub) { pub.disabled = false; show(pub, true); }
     show(q('[data-roles-gate]'), needsUsers);
   }
 

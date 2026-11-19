@@ -1,5 +1,7 @@
 /**
- * Таблица пользователей: GET /api/users, поиск по Enter, «Показать ещё».
+ * Таблица пользователей: GET /api/system/users?include=roles, поиск по Enter,
+ * «Показать ещё». Роли приходят вместе с пользователями (include=roles),
+ * поэтому отдельные запросы /users/{id}/roles для отрисовки не нужны.
  */
 import { apiError, apiFetch } from '../../core/http.js';
 import { t, tx } from '../../core/i18n.js';
@@ -11,7 +13,10 @@ import { takeBootstrap } from '../../core/bootstrap.js';
 var usersList = {
   tbody: null, status: null, count: null, search: null, more: null,
   query: '', page: 1, ps: 20, total: null, hasMore: false,
-  items: [], seq: 0, loading: false
+  items: [], seq: 0, loading: false,
+  // Block/Unblock разрешает ManageAccountOperation (system.manageAccounts),
+  // а не canManage строки (это ранг/managePeople). null — правила ещё не пришли.
+  currentUserId: 0, manageAccounts: null
 };
 
 function usersParse(payload) {
@@ -30,9 +35,14 @@ function usersParse(payload) {
     });
   });
 
+  var meta = (!Array.isArray(payload) && payload && typeof payload === 'object' &&
+              payload.meta && typeof payload.meta === 'object' && !Array.isArray(payload.meta))
+    ? payload.meta : null;
+
   return {
     items: list.map(usersNormalize).filter(function (x) { return x !== null; }),
-    total: total
+    total: total,
+    hasNext: meta && typeof meta.hasNext === 'boolean' ? meta.hasNext : null
   };
 }
 
@@ -62,33 +72,58 @@ function usersNormalize(u) {
   return {
     id: id,
     username: String(u.username || u.name || u.login || u.nickname || ''),
+    name: String(u.name || ''),
+    surname: String(u.surname || ''),
     email: String(u.email || ''),
     blocked: u.blocked === true || u.isBlocked === true || u.is_blocked === true ||
       Number(u.blocked || u.isBlocked || u.is_blocked) === 1 || /block|ban/.test(statusText),
     canManage: u.canManage !== false,
+    // Бэк пока не отдаёт canBlock; если появится — используем его вместо
+    // глобального system.manageAccounts. Принимаем bool/0/1/"true"/"false".
+    canBlock: (u.canBlock === true || u.canBlock === 1 || u.canBlock === '1' || u.canBlock === 'true')
+      ? true
+      : (u.canBlock === false || u.canBlock === 0 || u.canBlock === '0' || u.canBlock === 'false')
+        ? false : null,
     roles: roles,
     roleObjs: roleObjs
   };
 }
 
+/** true/false — право известно; null — ещё не загрузилось. */
+function canBlockUser(u) {
+  if (u.id === usersList.currentUserId) return false;
+  if (u.canBlock === true || u.canBlock === false) return u.canBlock;
+  return usersList.manageAccounts;
+}
+
+function roleCellHtml(roles) {
+  return roles.length
+    ? roles.slice(0, 2).map(function (r) { return '<span class="admin-badge">' + esc(r) + '</span>'; }).join(' ') +
+      (roles.length > 2 ? ' <span class="admin-badge admin-badge--muted">+' + (roles.length - 2) + '</span>' : '')
+    : '<span class="admin-badge admin-badge--muted">—</span>';
+}
+
+function blockButtonHtml(u) {
+  // Себя блокировать нельзя — бэк вернёт 403, кнопку не рисуем.
+  if (u.id === usersList.currentUserId) return '';
+  var blocked = !!u.blocked;
+  var allowed = canBlockUser(u) === true;
+  return '<button type="button" class="btn btn--secondary"' +
+    (blocked ? ' data-admin-unblock' : ' data-admin-block') +
+    ' data-user-id="' + u.id + '" data-user-name="' + esc(u.username) + '"' +
+    (!allowed ? ' disabled' : '') + '>' +
+    esc(t(blocked ? 'admin.action_unblock' : 'admin.action_block')) +
+  '</button>';
+}
+
 function usersRowHtml(u) {
   var id = u.id;
-  var roleCell = u.roles.length
-    ? u.roles.slice(0, 2).map(function (r) { return '<span class="admin-badge">' + esc(r) + '</span>'; }).join(' ') +
-      (u.roles.length > 2 ? ' <span class="admin-badge admin-badge--muted">+' + (u.roles.length - 2) + '</span>' : '')
-    : '<span class="admin-badge admin-badge--muted">—</span>';
+  var roleCell = roleCellHtml(u.roles);
   var statusCell = u.blocked
     ? '<span class="admin-badge admin-badge--danger">' + esc(t('admin.status_blocked')) + '</span>'
     : '<span class="admin-badge admin-badge--success">' + esc(t('admin.status_active')) + '</span>';
   var rolesLabel = tx('admin.user_roles_toggle', 'Roles');
-
-  // Unblock-роута в API пока нет, поэтому заблокированному пользователю
-  // не показываем кнопку «Block» вообще (а не неактивную копию).
-  var blockBtn = u.blocked ? '' :
-    '<button type="button" class="btn btn--secondary" data-admin-block' +
-      ' data-user-id="' + id + '" data-user-name="' + esc(u.username) + '"' + (!u.canManage ? ' disabled' : '') + '>' +
-      esc(t('admin.action_block')) +
-    '</button>';
+  var blockBtn = blockButtonHtml(u);
 
   return '<tr data-user-id="' + id + '"' + (u.blocked ? ' data-user-blocked="1"' : '') + '>' +
       '<td class="admin-table__id" data-col="id">' + id + '</td>' +
@@ -145,13 +180,52 @@ function usersApply(parsed, reset) {
 
   st.items = base.concat(fresh);
   st.total = parsed.total;
-  // Страниц больше нет, если новых строк не пришло (бэк мог проигнорировать page)
-  st.hasMore = fresh.length > 0 && (parsed.total !== null ? st.items.length < parsed.total : parsed.items.length >= st.ps);
+  if (parsed.hasNext !== null && parsed.hasNext !== undefined) {
+    st.hasMore = parsed.hasNext === true && fresh.length > 0;
+  } else {
+    // Страниц больше нет, если новых строк не пришло (бэк мог проигнорировать page)
+    st.hasMore = fresh.length > 0 && (parsed.total !== null
+      ? st.items.length < parsed.total
+      : parsed.items.length >= st.ps);
+  }
   if (reset) userRoles.cache = {};
   // Роли, пришедшие вместе с пользователями, кладём в кэш — раскрытие строки обойдётся без запросов
   parsed.items.forEach(function (u) { if (u.roleObjs) userRoles.cache[u.id] = u.roleObjs; });
   setUsersStatus('');
   usersRender();
+}
+
+var SEARCH_MAX_PAGES = 20;
+
+function usersMatches(u, query) {
+  var haystack = [u.username, u.name, u.surname, u.email].join(' ').toLowerCase();
+  return haystack.indexOf(query.toLowerCase()) !== -1;
+}
+
+/**
+ * У GET /api/system/users нет серверного q, поэтому поиск идёт по всем
+ * страницам system users с include=roles и фильтруется на клиенте.
+ * Так сохраняются e-mail, роли, isBlocked и canManage (в /api/users их нет).
+ */
+function usersSearchAll(seq) {
+  var acc = [];
+
+  function loadPage(page) {
+    var url = '/api/system/users?include=roles&page=' + page + '&ps=50';
+    return apiFetch('GET', url).then(function (r) {
+      if (seq !== usersList.seq) return null;
+      if (!r.ok) return { error: r };
+      var parsed = usersParse(r.data);
+      if (!parsed) return { error: r };
+      acc = acc.concat(parsed.items);
+      var more = parsed.hasNext === true ||
+        (parsed.hasNext === null && parsed.items.length >= 50);
+      if (more && page < SEARCH_MAX_PAGES) return loadPage(page + 1);
+      return { items: acc, truncated: more };
+    });
+  }
+
+  return loadPage(1);
 }
 
 /** reset=true — новый запрос (поиск), иначе подгрузка следующей страницы. */
@@ -176,19 +250,40 @@ function usersLoad(reset) {
   if (st.more) st.more.disabled = true;
   setUsersStatus(tx('admin.users_loading', 'Loading users…'));
 
-  var qs = 'page=' + st.page + '&ps=' + st.ps + (st.query ? '&q=' + encodeURIComponent(st.query) : '');
-  return apiFetch('GET', '/api/users?' + qs).then(function (r) {
+  var done = function (parsed, error) {
     if (seq !== st.seq) return;
     st.loading = false;
     if (st.more) st.more.disabled = false;
-
-    var parsed = r.ok ? usersParse(r.data) : null;
     if (!parsed) {
-      setUsersStatus(tx('admin.users_load_error', 'Failed to load users') + ': ' + (r.ok ? tx('errors.common.server_error', 'Server error. Please try again later.') : apiError(r)));
+      setUsersStatus(tx('admin.users_load_error', 'Failed to load users') + ': ' + (error || tx('errors.common.server_error', 'Server error. Please try again later.')));
       if (reset) { st.items = []; st.total = null; st.hasMore = false; usersRender(); }
       return;
     }
     usersApply(parsed, reset);
+  };
+
+  if (reset && st.query) {
+    return usersSearchAll(seq).then(function (result) {
+      if (seq !== st.seq) return;
+      if (!result || result.error) {
+        var err = result && result.error;
+        done(null, err ? apiError(err) : '');
+        return;
+      }
+      var query = st.query;
+      var matched = result.items.filter(function (u) { return usersMatches(u, query); });
+      done({ items: matched, total: matched.length, hasNext: false }, null);
+      if (result.truncated) {
+        setUsersStatus(tx('admin.users_search_truncated',
+          'Showing the first :limit users. Refine the search.',
+          { limit: SEARCH_MAX_PAGES * 50 }));
+      }
+    });
+  }
+
+  var url = '/api/system/users?include=roles&page=' + st.page + '&ps=' + st.ps;
+  return apiFetch('GET', url).then(function (r) {
+    done(r.ok ? usersParse(r.data) : null, r.ok ? '' : apiError(r));
   });
 }
 
@@ -199,12 +294,52 @@ function usersSearch(query) {
   usersLoad(true);
 }
 
-/** Помечает пользователя заблокированным в локальном состоянии списка. */
-export function markUserBlocked(userId) {
+/** Синхронизирует статус и кнопку Block/Unblock после ответа API. */
+export function setUserBlocked(userId, blocked) {
   var id = Number(userId);
   if (!id) return;
+  var user = usersList.items.filter(function (u) { return u.id === id; })[0] || null;
+  if (user) user.blocked = !!blocked;
+
+  var row = document.querySelector('tr[data-user-id="' + id + '"]');
+  if (!row) return;
+  if (blocked) row.setAttribute('data-user-blocked', '1');
+  else row.removeAttribute('data-user-blocked');
+
+  var statusCell = row.querySelector('[data-status-cell]');
+  if (statusCell) {
+    statusCell.innerHTML = blocked
+      ? '<span class="admin-badge admin-badge--danger">' + esc(t('admin.status_blocked')) + '</span>'
+      : '<span class="admin-badge admin-badge--success">' + esc(t('admin.status_active')) + '</span>';
+  }
+
+  var oldBtn = row.querySelector('[data-admin-block], [data-admin-unblock]');
+  if (!oldBtn) return;
+  var html = blockButtonHtml({
+    id: id,
+    username: user ? user.username : (oldBtn.getAttribute('data-user-name') || ''),
+    blocked: !!blocked,
+    canBlock: user ? user.canBlock : null
+  });
+  if (html) oldBtn.outerHTML = html;
+  else oldBtn.remove();
+}
+
+/** Перерисовывает только кнопки Block/Unblock после загрузки правил. */
+function refreshBlockButtons() {
+  if (!usersList.tbody) return;
   usersList.items.forEach(function (u) {
-    if (u.id === id) u.blocked = true;
+    var row = usersList.tbody.querySelector('tr[data-user-id="' + u.id + '"]');
+    var actions = row && row.querySelector('[data-col="actions"] .admin-actions');
+    if (!actions) return;
+    var oldBtn = actions.querySelector('[data-admin-block], [data-admin-unblock]');
+    var html = blockButtonHtml(u);
+    if (oldBtn) {
+      if (html) oldBtn.outerHTML = html;
+      else oldBtn.remove();
+    } else if (html) {
+      actions.insertAdjacentHTML('beforeend', html);
+    }
   });
 }
 
@@ -212,13 +347,24 @@ export function initUsersList() {
   var tbody = document.querySelector('[data-users-rows]');
   if (!tbody) return;
   usersList.tbody = tbody;
-  tbody.addEventListener('admin:user-blocked', function (e) {
-    if (e.detail && e.detail.id) markUserBlocked(e.detail.id);
-  });
   usersList.status = document.querySelector('[data-users-status]');
   usersList.count = document.querySelector('[data-users-count]');
   usersList.search = document.querySelector('[data-users-search]');
   usersList.more = document.querySelector('[data-users-more]');
+
+  var table = document.querySelector('[data-users-table]');
+  usersList.currentUserId = Number(table && table.getAttribute('data-users-current-id')) || 0;
+
+  // Block/Unblock — отдельное право ManageAccountOperation. canManage строки
+  // для этого не подходит: он про ранг/managePeople.
+  if (window.LorePermissions && typeof window.LorePermissions.can === 'function') {
+    window.LorePermissions.can('system.manageAccounts').then(function (allowed) {
+      usersList.manageAccounts = allowed === true;
+      refreshBlockButtons();
+    });
+  } else {
+    usersList.manageAccounts = false;
+  }
 
   if (usersList.search) {
     // Запрос в API — только по Enter, не на каждый символ

@@ -12,6 +12,28 @@ $withLang = static function (string $path) use ($langQuery): string {
     if (preg_match('/(?:[?&])lang=/', $path)) return rtrim($path, '&');
     return $path . (str_contains($path, '?') ? '&' : '?') . 'lang=' . urlencode($langQuery);
 };
+
+// B-11: после сброса пароля бэк читает redirect из query. Пробрасываем
+// его в action формы, иначе всегда уходим на home.
+$redirectTarget = isset($_GET['redirect']) && is_string($_GET['redirect']) && $_GET['redirect'] !== ''
+    ? $_GET['redirect']
+    : (string) ($redirectUrl ?? '');
+
+// Не превращаем redirect в open redirect: разрешаем только внутренний
+// абсолютный путь (/feed), но не //evil.example и не http(s)://...
+if ($redirectTarget !== '' && (
+    $redirectTarget[0] !== '/' ||
+    str_starts_with($redirectTarget, '//') ||
+    str_contains($redirectTarget, '\\')
+)) {
+    $redirectTarget = '';
+}
+
+$formAction = $view->url('password.reset.submit');
+if ($redirectTarget !== '') {
+    $formAction .= (str_contains($formAction, '?') ? '&' : '?') . 'redirect=' . urlencode($redirectTarget);
+}
+$formAction = $withLang($formAction);
 ?>
 
 <?php $view->startBlock('title'); ?><?= $tr('common.auth.newpass_tab') ?><?php $view->endBlock('title'); ?>
@@ -54,7 +76,7 @@ $withLang = static function (string $path) use ($langQuery): string {
   <?php endif; ?>
 
   <form class="login-form" id="passwordResetForm"
-        action="<?= $view->e($withLang($view->url('password.reset.submit'))) ?>"
+        action="<?= $view->e($formAction) ?>"
         method="POST" novalidate>
     <?= $view->csrfField() ?>
 

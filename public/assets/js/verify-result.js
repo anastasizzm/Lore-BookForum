@@ -105,10 +105,13 @@
     event.preventDefault();
     if (sending || retryBtn.disabled) return;
 
-    var token = ensureToken();
+    // /api/mail (после регистрации) токен из письма не требует —
+    // /api/mail/resend (verify-result) требует.
+    var needsToken = form.getAttribute('data-verify-no-token') !== '1';
+    var token = needsToken ? ensureToken() : '';
     clearMessage();
 
-    if (!token) {
+    if (needsToken && !token) {
       showMessage(t('errors.verify.token_missing'), 'error');
       return;
     }

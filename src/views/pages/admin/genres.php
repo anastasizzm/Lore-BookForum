@@ -1,20 +1,20 @@
 <?php
 /**
- * admin/genres — таблица справочника «Жанры» (каркас, мок-данные).
+ * admin/genres — таблица справочника «Жанры».
  *
- * Статус: каркас + fetch-слой. Строки пока мок-заглушки (список ниже),
- * add/edit/delete идут через dictApi в admin.js: роут
- * GET/POST/PATCH/DELETE /api/admin/genres ещё нет, поэтому слой сам
- * падает в режим mock и правит локальный массив; как только бэк отдаст
- * роут, тот же код уйдёт в сеть без правок этой страницы.
- * Проверок прав здесь нет — их даст бэк (403) вместе с роутом.
+ * Данные: GET /api/additional/genres (list/retrieve), изменения —
+ * POST/PUT/DELETE /api/additional/genres[/{id}], через dictApi
+ * (public/assets/js/admin/features/dictionary/api.js). Эти же роуты
+ * существуют для categories и types. Режим mock остался только
+ * аварийным fallback на случай сетевой ошибки/HTML вместо JSON.
+ * Проверки прав — на бэке (403 при отсутствии manageAdditionals).
  *
  * Структура записи — массив переводов, а не объект с фиксированными ключами,
  * поэтому новый язык не требует изменений схемы:
  *   ['id' => 1, 'translations' => [['langCode' => 'en', 'title' => 'Fantasy'],
  *                                  ['langCode' => 'ru', 'title' => 'Фэнтези']]]
  *
- * Поиск — клиентский, по всем переводам сразу (data-search у строки).
+ * Поиск — серверный (?q=) через admin/features/dictionary/table.js.
  * Таблица и тулбар — прямо в этой странице; модалка формы — partial dictionary-form.
  *
  * Тест: GET /pages/test?page=admin/genres
@@ -26,7 +26,7 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// Данные контроллера (если он их передал) — до того, как переменную перезапишет мок ниже
+// Данные контроллера (если он их передал) — первый рендер без запроса к API
 $serverItems = $genres ?? $items ?? null;
 
 ?>
@@ -90,7 +90,7 @@ $serverItems = $genres ?? $items ?? null;
   </table>
 </div>
 
-<!-- Служебные данные для admin.js (ресурс; строки приходят из данных страницы / API) -->
+<!-- Служебные данные для admin/features/dictionary/* (ресурс; строки — из данных страницы / API) -->
 <script type="application/json" data-dict-data>{"resource":"genres","items":[]}</script>
 
 <?php $view->include('dictionary-form', [

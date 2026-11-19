@@ -105,7 +105,13 @@ if (is_array($serverRoles)) {
         return $item;
     }, $serverRoles);
 }
-$adminBoot('all-roles', $serverRoles);
+if (is_array($serverRoles)) {
+    // meta нужен фронту, чтобы дочитать страницы для локальных фильтра/сортировки.
+    $adminBoot('all-roles', [
+        'items' => $serverRoles,
+        'meta'  => is_array($meta ?? null) ? $meta : null,
+    ]);
+}
 ?>
 
 <?php $view->endBlock('content'); ?>

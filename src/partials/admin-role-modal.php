@@ -2,7 +2,7 @@
 /**
  * admin-role-modal — модалка прав системной роли (admin/roles).
  *
- * Два режима (логика — admin.js, раздел ROLES):
+ * Два режима (логика — admin/main.js, раздел ROLES):
  *   • «Permissions» в строке → правка прав роли (PUT /api/system/roles/{id});
  *   • «+» в тулбаре → виден [data-role-dropdown]: выбираем роль проекта
  *     (список отдаёт GET /api/additional/roles, без уже добавленных),

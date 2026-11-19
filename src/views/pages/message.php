@@ -1,6 +1,19 @@
 <?php $view->extends('auth'); ?>
 <?php $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p)); ?>
 
+<?php
+$messageText = (string) ($message ?? '');
+// После регистрации (и при ошибке отправки письма) пользователь уже
+// авторизован, но ещё не подтверждён. Бэк рисует эту страницу в том же
+// ответе, где выставляет cookie, поэтому currentUserId здесь ещё пуст —
+// ориентируемся на текст сообщения. POST /api/mail требует только логина.
+$isRegisterMessage = $messageText !== '' && (
+    $messageText === $view->t('common.email.confirm_msg') ||
+    $messageText === $view->t('errors.verify.send_fail')
+);
+$showResend = empty($statusCode) && $isRegisterMessage;
+?>
+
 <?php $view->startBlock('title'); ?><?= $tr('common.message.title') ?><?php $view->endBlock('title'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
@@ -18,7 +31,8 @@
     </span>
   </header>
 
-  <div class="login-message">
+  <div class="login-message"
+       <?= $showResend ? 'data-verify-result data-verify-success="0"' : '' ?>>
     <?php if (!empty($statusCode)): ?>
       <div class="login-message__status"><?= $view->e((string) $statusCode) ?></div>
     <?php endif; ?>
@@ -30,6 +44,27 @@
         <?= $view->e($actionTitle) ?>
       </a>
     <?php endif; ?>
+
+    <?php if ($showResend): ?>
+      <!-- Повторная отправка письма подтверждения: POST /api/mail
+           (api.sendmail, AuthPolicy::Auth). Токен из письма не нужен —
+           это отличает форму от auth/verify-result (data-verify-no-token). -->
+      <form class="login-message__form"
+            data-verify-resend
+            data-verify-no-token="1"
+            method="post"
+            action="<?= $view->e($view->url('api.sendmail')) ?>">
+        <?= $view->csrfField() ?>
+        <button type="submit" class="btn btn--secondary" data-verify-retry>
+          <?= $tr('common.auth.resend') ?>
+        </button>
+      </form>
+      <div class="messages" data-verify-messages hidden></div>
+    <?php endif; ?>
   </div>
 
 <?php $view->endBlock('content'); ?>
+
+<?php $view->startBlock('scripts'); ?>
+  <script src="/assets/js/verify-result.js"></script>
+<?php $view->endBlock('scripts'); ?>

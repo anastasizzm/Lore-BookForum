@@ -13,7 +13,7 @@ export var allRoles = {
   table: null, rows: null, empty: null, status: null, count: null, search: null,
   filterStatus: null,
   query: '',
-  sort: '',            // '' | 'asc' | 'desc' — по Visibility, выполняет бэк
+  sort: '',            // '' | 'asc' | 'desc' — по Visibility, сортируется на клиенте
   seq: 0,
   items: []
 };
@@ -26,7 +26,9 @@ function setAllRolesStatus(text) {
 
 function applyAllRolesFilters() {
   if (!allRoles.table) return;
-  // Текст ищет бэк (по Enter, allRoles.query); локально — только visibility
+  // Текст ищет бэк (по Enter, allRoles.query). Фильтр Public/Private и
+  // сортировку по visibility делаем локально: ?status= и ?sort=visibility
+  // бэк не поддерживает (B-24/B-24a).
   var q = allRoles.query || '';
   var statusVal = allRoles.filterStatus ? (allRoles.filterStatus.querySelector('input:checked') || {}).value : 'all';
   
@@ -35,7 +37,7 @@ function applyAllRolesFilters() {
   
   Array.prototype.forEach.call(rows, function (row) {
     var rowStatus = row.getAttribute('data-status') || '';
-    // фильтр по статусу выполняет сервер (?status=); локально прячем только строки с известным другим статусом
+    // Строки с неизвестным статусом не прячем — данных для фильтра нет.
     var hit = statusVal === 'all' || rowStatus === '' || rowStatus === statusVal;
     
     row.hidden = !hit;
@@ -53,9 +55,25 @@ function applyAllRolesFilters() {
 }
 
 /** В списке All roles убраны права и выведена кнопка Delete */
-/** Порядок строк определяет бэк (?sort=…): на фронте строки не переставляются. */
+/**
+ * Бэк не умеет сортировать по visibility (BasicModelSortBy: alpha|newest),
+ * поэтому Public/Private переставляем на клиенте. При серверной пагинации
+ * сортировка неполная — это осознанный fallback до B-24a.
+ */
 function sortedItems() {
-  return allRoles.items;
+  var items = allRoles.items.slice();
+  if (!allRoles.sort) return items;
+  var rank = function (item) {
+    if (item.visibility === 'public') return 0;
+    if (item.visibility === 'private') return 1;
+    return 2;
+  };
+  items.sort(function (a, b) {
+    var diff = rank(a) - rank(b);
+    if (allRoles.sort === 'desc') diff = -diff;
+    return diff;
+  });
+  return items;
 }
 
 function paintSortHeader() {
@@ -80,7 +98,7 @@ function initVisibilitySort() {
   var toggle = function () {
     allRoles.sort = allRoles.sort === '' ? 'asc' : allRoles.sort === 'asc' ? 'desc' : '';
     paintSortHeader();
-    runAllRolesSearch();                 // новый порядок запрашиваем у бэка
+    renderAllRoles();                    // сортируем загруженные строки на клиенте
   };
   th.addEventListener('click', toggle);
   th.addEventListener('keydown', function (e) {
@@ -133,10 +151,10 @@ export function ensureSystemRoles() {
   });
 }
 
-function loadAllRoles(query, status, sort) {
+function loadAllRoles(query) {
   // Здесь нужны только id, название и видимость (public/private) — они приходят из
   // данных страницы или GET /api/additional/roles. Права системных ролей не грузим.
-  return allRolesApi.list(query, status, sort);
+  return allRolesApi.list(query);
 }
 
 export function refreshAllRoles() {
@@ -144,7 +162,7 @@ export function refreshAllRoles() {
   // Обновляем с текущим поиском/фильтром/сортировкой, а не сбрасываем их;
   // seq отбрасывает устаревшие ответы (поздний ответ не затирает свежий поиск).
   var seq = ++allRoles.seq;
-  return loadAllRoles(allRoles.query, allRolesStatusValue(), allRoles.sort).then(function (items) {
+  return loadAllRoles(allRoles.query).then(function (items) {
     if (!items || seq !== allRoles.seq) return;
     allRoles.items = items;
     setAllRolesStatus('');
@@ -176,14 +194,9 @@ export function deleteAllRole(btn) {
   });
 }
 
-function allRolesStatusValue() {
-  var el = allRoles.filterStatus ? allRoles.filterStatus.querySelector('input:checked') : null;
-  return el ? el.value : 'all';
-}
-
 function runAllRolesSearch() {
   var seq = ++allRoles.seq;
-  return loadAllRoles(allRoles.query, allRolesStatusValue(), allRoles.sort).then(function (items) {
+  return loadAllRoles(allRoles.query).then(function (items) {
     if (seq !== allRoles.seq) return;
     if (items === null) {
       notify(tx('admin.roles_load_error', 'Failed to load roles'), 'error');
@@ -224,8 +237,9 @@ export function initAllRoles() {
     });
   }
   if (allRoles.filterStatus) {
+    // ?status= на бэке падает (B-24) — фильтруем уже загруженные строки.
     allRoles.filterStatus.addEventListener('change', function () {
-      runAllRolesSearch();
+      renderAllRoles();
     });
   }
 
@@ -233,7 +247,7 @@ export function initAllRoles() {
   // Первая загрузка может прийти позже, чем пользователь успел поискать:
   // если за это время стартовал другой запрос (seq изменился), её ответ отбрасываем.
   var initSeq = ++allRoles.seq;
-  loadAllRoles('', 'all').then(function (items) {
+  loadAllRoles('').then(function (items) {
     if (initSeq !== allRoles.seq) return;
     if (items === null) {
       setAllRolesStatus(tx('admin.roles_load_error', 'Failed to load roles'));

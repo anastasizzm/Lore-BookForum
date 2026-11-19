@@ -336,10 +336,6 @@
             </div>
 
             <div class="fragment-picker__apply">
-              <label class="fragment-picker__insert">
-                <input type="checkbox" data-picker-insert checked>
-                <span><?= $tr('common.articleform.picker_insert') ?></span>
-              </label>
               <button type="button" class="btn btn--primary" data-picker-apply disabled><?= $tr('common.articleform.picker_apply') ?></button>
             </div>
           </footer>

@@ -2,7 +2,7 @@
 /**
  * dictionary-form — модалка «Добавить / Редактировать» для справочников
  * (Genres / Categories / Types). Одна на все три ресурса: различие только
- * в data-dict-resource (путь /api/admin/{resource}) и в имени сущности.
+ * в data-dict-resource (путь /api/additional/{resource}) и в имени сущности.
  *
  * @param string $resource — 'genres' | 'categories' | 'types'
  * @param string $nameOne  — локализованное имя сущности («Genre» / «Жанр»),
@@ -11,13 +11,13 @@
  * Тело формы — блок Translations:
  *   строка [код языка] [input Title] [✕] на каждый добавленный язык,
  *   кнопка «+ Add language» открывает dropdown с доступными языками
- *   (список — GET /api/additional/languages, fallback-мок в admin.js).
+ *   (список — GET /api/additional/languages; mock — только аварийный fallback).
  *
  * Вся механика (префилл при Edit, добавление/удаление языка, валидация
- * «хотя бы один перевод») — public/assets/js/admin.js; сохранение и
- * удаление идут через fetch-слой dictApi (admin.js): если роут
- * /api/admin/{resource} ещё не завезён, операция применяется локально
- * (режим mock), если бэк ответил 403 — тост «Нет прав».
+ * «хотя бы один перевод») — admin/features/dictionary/*; сохранение и
+ * удаление идут через fetch-слой dictApi (admin/features/dictionary/api.js)
+ * на /api/additional/{resource}. Mock остался аварийным fallback при
+ * сетевой ошибке/HTML вместо JSON; 403 — тост «Нет прав».
  *
  * Стили — public/assets/css/admin.css (.admin-dict__*, каркас .modal —
  * modal.css, поля — .form-field из component.css, выбор языка —
@@ -46,7 +46,7 @@ $nameOne  = $nameOne ?? '';
                     <?= $view->e($view->t('common.admin.col_translations')) ?>
                 </span>
 
-                <!-- Строки языков рисует admin.js (столько, сколько переводов) -->
+                <!-- Строки языков рисует admin/features/dictionary/form.js -->
                 <ul class="admin-dict__langs" data-dict-langs aria-labelledby="adminDictLangsLabel"></ul>
 
                 <p class="admin-dict__langs-empty" data-dict-langs-empty hidden>
@@ -55,7 +55,7 @@ $nameOne  = $nameOne ?? '';
 
                 <!-- Выбор языка — существующий dropdown (component.css + app.js):
                      контейнер есть в исходной разметке, поэтому app.js управляет
-                     открытием/закрытием; пункты наполняет admin.js. -->
+                     открытием/закрытием; пункты наполняет admin/features/dictionary/form.js. -->
                 <div class="dropdown admin-dict__lang" data-dropdown data-dict-lang-dropdown>
                     <button type="button" class="dropdown__trigger" data-dropdown-trigger>
                         <span><?= $view->e($view->t('common.admin.dict_add_lang')) ?></span>
