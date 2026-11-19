@@ -193,14 +193,19 @@ final class SystemPermissionsService
         if(!$isValid) throw new ValidationException($errors);
 
         $sortEnum = $query->sort->hasData() 
-            ? EnumExtensions::tryResolve(UsersSortBy::class, $query->sort->sortString()) 
+            ? (EnumExtensions::tryResolve(UsersSortBy::class, $query->sort->sortString()) ?? UsersSortBy::Username)
             : UsersSortBy::Username;
 
         $page = $query->pagination->page();
         $pageSize = $query->pagination->pageSize();
 
-        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUserSystem::class);
+        $items = $this->repository->getUsers(NULL, $sortEnum, $query->roleId, $page, $pageSize, $query->properties->getProps(), RolesUserSystem::class, $query->search);
         return PaginatedList::fromArray($items, $page, $pageSize);
+    }
+
+    public function countUsers(RolesUserListQuery $query) : int
+    {
+        return $this->repository->countUsers(NULL, $query->roleId, $query->search);
     }
 
     public function getUsersWithContext(RolesUserListQuery $query, int $viewerId) : PaginatedList 
@@ -208,7 +213,8 @@ final class SystemPermissionsService
         $items = $this->getUsers($query);
         $enriched = $this->usersContextEnricher->enrich($items->getArray(), $viewerId);
 
-        return PaginatedList::fromArray($enriched, $items->getPage(), $items->getPageSize());
+        // getUsers() уже отрезал лишнюю строку и знает hasNext — не теряем это при переупаковке.
+        return new PaginatedList($enriched, $items->getPage(), $items->getPageSize(), $items->hasNext());
     }
 
     public function addUser(int $userId, RoleToUserAssignmentForm $form, int $granterId): int

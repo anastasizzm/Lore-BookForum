@@ -14,7 +14,8 @@ final readonly class RolesUserListQuery
         public PaginationQuery $pagination,
         public SortQuery $sort,
         public PropertiesQuery $properties,
-        public ?int $roleId
+        public ?int $roleId,
+        public ?string $search = null
     ) {}
 
     /** @param array<string, mixed> $q */
@@ -24,7 +25,8 @@ final readonly class RolesUserListQuery
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromInput($q),
-            roleId: QueryParser::optionalNonNegInt($q, 'role')
+            roleId: QueryParser::optionalNonNegInt($q, 'role'),
+            search: QueryParser::optionalString($q, 'q')
         );
     }
 
@@ -34,7 +36,8 @@ final readonly class RolesUserListQuery
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromInput($q),
-            roleId: $roleId
+            roleId: $roleId,
+            search: QueryParser::optionalString($q, 'q')
         );
     }
 }

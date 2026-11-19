@@ -248,6 +248,53 @@ class PermissionsRepository extends Repository
         $builder->addSelect("u.is_verified,\nu.is_blocked");
     }
 
+    /**
+     * CTE users_ids (user_id) с источниками списка пользователей.
+     * Системный список строится из users, поэтому пользователи без ролей тоже видны.
+     */
+    private function usersSource(?int $publicationId, ?int $roleId) : ScriptBuilder
+    {
+        if ($publicationId === NULL) {
+            $innerBuilder = ScriptBuilder::withTable("users", "u0");
+            $innerBuilder->addSelect("u0.id AS user_id")
+                ->addWhere("u0.is_active");
+
+            if ($roleId !== NULL) {
+                $innerBuilder->addWhere(
+                    "EXISTS (SELECT 1 FROM roles_users ru WHERE ru.user_id = u0.id AND ru.is_valid AND ru.publication_id IS NULL AND ru.role_id = :roleId)",
+                    [':roleId' => ScriptParam::asInt($roleId)]
+                );
+            }
+
+            return $innerBuilder;
+        }
+
+        $innerBuilder = ScriptBuilder::withTable("roles_users");
+        $innerBuilder->addSelect("user_id")
+            ->addWhere("is_valid")
+            ->setGroup("user_id");
+
+        $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
+
+        if($roleId !== NULL)
+            $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
+
+        return $innerBuilder;
+    }
+
+    private function addUsersSearch(ScriptBuilder $builder, ?string $search) : void
+    {
+        if ($search === NULL || $search === '') return;
+
+        // Экранируем метасимволы LIKE, чтобы q=% / q=_ / q=\ искались буквально.
+        $term = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+
+        $builder->addWhere(
+            "(u.username ILIKE :q ESCAPE '\\' OR u.email ILIKE :q ESCAPE '\\' OR COALESCE(p.name,'') ILIKE :q ESCAPE '\\' OR COALESCE(p.surname,'') ILIKE :q ESCAPE '\\' OR (COALESCE(p.name,'') || ' ' || COALESCE(p.surname,'')) ILIKE :q ESCAPE '\\')",
+            [':q' => ScriptParam::asStr('%' . $term . '%')]
+        );
+    }
+
     /** @return array<RolesUser> */
     public function getUsers(
         ?int $publicationId, 
@@ -256,26 +303,21 @@ class PermissionsRepository extends Repository
         int $page, 
         int $pageSize,
         array $includeObjects,
-        string $returnClass) : array 
+        string $returnClass,
+        ?string $search = null) : array 
     {
-        $innerBuilder = ScriptBuilder::withTable("roles_users");
-        $innerBuilder->addSelect("user_id")
-            ->addWhere("is_valid")
-            ->setGroup("user_id");
-
-        if($publicationId === NULL) $innerBuilder->addWhere("publication_id IS NULL");
-        else $innerBuilder->addWhere("publication_id = :pubId", [':pubId' => ScriptParam::asInt($publicationId)]);
-
-        if($roleId !== NULL)
-            $innerBuilder->addWhere("role_id = :roleId", [':roleId' => ScriptParam::asInt($roleId)]);
+        $innerBuilder = $this->usersSource($publicationId, $roleId);
 
         $builder = ScriptBuilder::withTable("users_ids", "ui");
         $this->addSelect($builder, $returnClass);
         $builder->addWithBuilder("users_ids", $innerBuilder)
             ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
             ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
-            ->addWhere("u.is_active")
-            ->setOrder(
+            ->addWhere("u.is_active");
+
+        $this->addUsersSearch($builder, $search);
+
+        $builder->setOrder(
                 match($sort)
                 {
                     UsersSortBy::Username => 'u.username',
@@ -301,6 +343,23 @@ class PermissionsRepository extends Repository
             $result[] = $user->withRoles($roles[$user->id] ?? []);
 
         return $result;
+    }
+
+    public function countUsers(?int $publicationId, ?int $roleId, ?string $search) : int
+    {
+        $innerBuilder = $this->usersSource($publicationId, $roleId);
+
+        $builder = ScriptBuilder::withTable("users_ids", "ui");
+        $builder->addSelect("COUNT(DISTINCT ui.user_id)")
+            ->addWithBuilder("users_ids", $innerBuilder)
+            ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
+            ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
+            ->addWhere("u.is_active");
+
+        $this->addUsersSearch($builder, $search);
+
+        $stmt = $this->execute($builder->build(), $builder->getParams());
+        return (int)$stmt->fetchColumn();
     }
 
     /** @return array<UserRole> */

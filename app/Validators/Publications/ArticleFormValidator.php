@@ -13,7 +13,7 @@ use App\Lib\Settings\Settings;
  */
 final class ArticleFormValidator extends PublicationFormValidator 
 {
-    public const string DOI_REG_EX = "#^10.\d{4,9}\/[-._;()\/:A-Z0-9]+$#";
+    public const string DOI_REG_EX = "#^10\.\d{4,9}\/[-._;()\/:A-Z0-9]+$#";
 
     public function __construct(Settings $settings, Translator $translator)
     {

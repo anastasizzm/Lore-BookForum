@@ -28,7 +28,7 @@ final class PostFormValidator extends Validator
             $ok = false;
         }
 
-        $lenStr = strlen($item->content);
+        $lenStr = mb_strlen($item->content);
         if ($lenStr < 1 || $lenStr > 2000)
         {
             $bag->add('content', [$this->translator->t('errors.common.between_len', [':from' => 1, ':to' => 2000])]);

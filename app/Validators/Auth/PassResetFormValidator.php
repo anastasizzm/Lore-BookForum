@@ -29,7 +29,7 @@ final class PassResetFormValidator extends Validator
         }
 
         if (strlen($item->password) < 8) {
-            $bag->add('password', [$this->translator->t("errors.account.common.min_len", [":value" => 8])]);
+            $bag->add('password', [$this->translator->t("errors.common.min_len", [":value" => 8])]);
             $ok = false;
         }
 

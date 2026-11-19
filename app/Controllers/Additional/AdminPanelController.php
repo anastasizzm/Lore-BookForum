@@ -194,7 +194,8 @@ final class AdminPanelController extends Controller
             pagination: PaginationQuery::fromInput($q),
             sort: SortQuery::fromInput($q),
             properties: PropertiesQuery::fromRaw("roles"),
-            roleId: QueryParser::optionalPositiveInt($q, 'role')
+            roleId: QueryParser::optionalNonNegInt($q, 'role'),
+            search: QueryParser::optionalString($q, 'q')
         );
         $paginatedList = $this->permissionsService->getUsersWithContext($query, $userId);
         return $this->render('admin/users', [
@@ -203,6 +204,7 @@ final class AdminPanelController extends Controller
                     'page' => $paginatedList->getPage(),
                     'pageSize' => $paginatedList->getPageSize(),
                     'hasNext' => $paginatedList->hasNext(),
+                    'total' => $this->permissionsService->countUsers($query),
                 ], 
                 'user' => $userContext,
             ]);

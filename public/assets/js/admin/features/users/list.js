@@ -39,6 +39,10 @@ function usersParse(payload) {
               payload.meta && typeof payload.meta === 'object' && !Array.isArray(payload.meta))
     ? payload.meta : null;
 
+  if (total === null && meta && meta.total != null && isFinite(Number(meta.total))) {
+    total = Number(meta.total);
+  }
+
   return {
     items: list.map(usersNormalize).filter(function (x) { return x !== null; }),
     total: total,
@@ -203,29 +207,55 @@ function usersMatches(u, query) {
 }
 
 /**
- * У GET /api/system/users нет серверного q, поэтому поиск идёт по всем
- * страницам system users с include=roles и фильтруется на клиенте.
- * Так сохраняются e-mail, роли, isBlocked и canManage (в /api/users их нет).
+ * Поиск по пользователям. Сначала пробуем серверный q (GET /api/system/users
+ * поддерживает его вместе с meta.total); если бэкенд старый (нет meta.total)
+ * или сервер вернул нерелевантные строки — падаем на полный обход страниц.
+ * Клиентский обход сохраняет e-mail, роли, isBlocked и canManage (в /api/users их нет).
  */
 function usersSearchAll(seq) {
+  var query = usersList.query;
+
+  function crawl() {
+    var acc = [];
+
+    function loadPage(page) {
+      var url = '/api/system/users?include=roles&page=' + page + '&ps=50';
+      return apiFetch('GET', url).then(function (r) {
+        if (seq !== usersList.seq) return null;
+        if (!r.ok) return { error: r };
+        var parsed = usersParse(r.data);
+        if (!parsed) return { error: r };
+        acc = acc.concat(parsed.items);
+        var more = parsed.hasNext === true ||
+          (parsed.hasNext === null && parsed.items.length >= 50);
+        if (more && page < SEARCH_MAX_PAGES) return loadPage(page + 1);
+        return { items: acc, truncated: more };
+      });
+    }
+
+    return loadPage(1);
+  }
+
   var acc = [];
 
-  function loadPage(page) {
-    var url = '/api/system/users?include=roles&page=' + page + '&ps=50';
+  function loadServerPage(page) {
+    var url = '/api/system/users?include=roles&q=' + encodeURIComponent(query) +
+      '&page=' + page + '&ps=50';
     return apiFetch('GET', url).then(function (r) {
       if (seq !== usersList.seq) return null;
-      if (!r.ok) return { error: r };
+      if (!r.ok) return crawl();
       var parsed = usersParse(r.data);
-      if (!parsed) return { error: r };
+      // Нет meta.total — старый бэкенд без серверного q.
+      if (!parsed || parsed.total === null) return crawl();
       acc = acc.concat(parsed.items);
-      var more = parsed.hasNext === true ||
-        (parsed.hasNext === null && parsed.items.length >= 50);
-      if (more && page < SEARCH_MAX_PAGES) return loadPage(page + 1);
-      return { items: acc, truncated: more };
+      if (parsed.hasNext === true && page < SEARCH_MAX_PAGES) return loadServerPage(page + 1);
+      var mismatch = acc.some(function (u) { return !usersMatches(u, query); });
+      if (mismatch) return crawl();
+      return { items: acc, truncated: parsed.hasNext === true };
     });
   }
 
-  return loadPage(1);
+  return loadServerPage(1);
 }
 
 /** reset=true — новый запрос (поиск), иначе подгрузка следующей страницы. */

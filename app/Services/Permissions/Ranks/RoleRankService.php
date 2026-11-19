@@ -123,7 +123,13 @@ class RoleRankService implements RankService
         if ($userId === $targetUserId) return false;
 
         $highestRole = $this->repository->getUserHighestRankRole($targetUserId, $publicationId);
-        if ($highestRole === null) return false;
+        if ($highestRole === null) {
+            $accessRules = $publicationId === null
+                ? $this->commonRuleProvider?->getRule($userId)
+                : $this->ruleProvider?->getRule($userId, $publicationId);
+
+            return $accessRules instanceof HasRolesManage ? $accessRules->hasManagePeople() : false;
+        }
 
         return $this->canManageRole($userId, $highestRole, $publicationId);
     }
@@ -150,21 +156,25 @@ class RoleRankService implements RankService
         $localRank   = $this->repository->getUserHighestRank($userId, $publicationId);
         $targetRanks = $this->repository->getUsersHighestRanksBatch($toCheck, $publicationId);
 
-        if ($localRank === null) {
-            $accessRules = $publicationId === null
-                ? $this->commonRuleProvider?->getRule($userId)
-                : $this->ruleProvider?->getRule($userId, $publicationId);
-            $canManageAny = $accessRules instanceof HasRolesManage ? $accessRules->hasManagePeople() : false;
+        $accessRules = $publicationId === null
+            ? $this->commonRuleProvider?->getRule($userId)
+            : $this->ruleProvider?->getRule($userId, $publicationId);
+        $canManageAny = $accessRules instanceof HasRolesManage ? $accessRules->hasManagePeople() : false;
+        $canManageRoles = $accessRules instanceof HasRolesManage ? $accessRules->hasManageRoles() : false;
 
+        if ($localRank === null) {
             foreach ($toCheck as $targetUserId) {
-                $result[$targetUserId] = isset($targetRanks[$targetUserId]) && $canManageAny;
+                $targetRank = $targetRanks[$targetUserId] ?? null;
+                $result[$targetUserId] = $targetRank === null ? $canManageAny : $canManageRoles;
             }
             return $result;
         }
 
         foreach ($toCheck as $targetUserId) {
             $targetRank = $targetRanks[$targetUserId] ?? null;
-            $result[$targetUserId] = $targetRank !== null && strcmp($localRank, $targetRank) > 0;
+            $result[$targetUserId] = $targetRank === null
+                ? $canManageAny
+                : strcmp($localRank, $targetRank) > 0;
         }
         return $result;
     }

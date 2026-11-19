@@ -135,7 +135,8 @@ final class SystemPermissionsController extends Controller
         return $this->jsonList($list->getArray(), [
             'page' => $list->getPage(),
             'pageSize' => $list->getPageSize(),
-            'hasNext' => $list->hasNext()
+            'hasNext' => $list->hasNext(),
+            'total' => $this->permissionsService->countUsers($query)
         ]);
     }
 

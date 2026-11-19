@@ -11,7 +11,7 @@ use RuntimeException;
 abstract class ScriptDirector
 {
     protected ScriptBuilder $builder;
-    protected ?ScriptBuilder $tempBuilder;
+    protected ?ScriptBuilder $tempBuilder = null;
 
     private readonly ?string $table;
     private readonly ?string $alias;

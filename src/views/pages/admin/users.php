@@ -5,9 +5,11 @@
  * Строки рисует public/assets/js/admin/features/users/list.js:
  *   GET /api/system/users?include=roles&page=N&ps=20
  * Роли приходят в том же ответе (include=roles), без N+1 запросов.
- * Серверного q у system users нет, поэтому поиск по Enter загружает
- * страницы system users и фильтрует их на клиенте (так видны роли,
- * e-mail, isBlocked и canManage). «Показать ещё» листает список дальше.
+ * Поиск по Enter использует серверный q (GET /api/system/users?...&q=...) и
+ * meta.total; если старый бэкенд не вернул meta.total или прислал
+ * нерелевантные строки, list.js откатывается на загрузку всех страниц
+ * system users и фильтрацию на клиенте (так видны роли, e-mail, isBlocked
+ * и canManage). «Показать ещё» листает список дальше.
  *
  * Внутри строки — вложенный список ролей (раздел USER ROLES):
  * GET/POST/DELETE /api/system/users/{id}/roles.
