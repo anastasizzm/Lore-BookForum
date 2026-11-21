@@ -16,6 +16,7 @@ use App\Validators\Publications\RateFormValidator;
 use App\Cache\Publications\PublicationDeleteCache;
 
 use App\Models\Publications\PublicationShort;
+use App\Models\Publications\UserRead;
 use App\Models\Enums\BookFormat;
 use App\Models\Uuid;
 use App\Models\Email;
