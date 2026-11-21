@@ -13,7 +13,10 @@ import { takeBootstrap } from '../../core/bootstrap.js';
 var usersList = {
   tbody: null, status: null, count: null, search: null, more: null,
   query: '', page: 1, ps: 20, total: null, hasMore: false,
-  items: [], seq: 0, loading: false
+  items: [], seq: 0, loading: false,
+  // Block/Unblock разрешает ManageAccountOperation (system.manageAccounts),
+  // а не canManage строки (это ранг/managePeople). null — правила ещё не пришли.
+  currentUserId: 0, manageAccounts: null
 };
 
 function usersParse(payload) {
@@ -75,9 +78,22 @@ function usersNormalize(u) {
     blocked: u.blocked === true || u.isBlocked === true || u.is_blocked === true ||
       Number(u.blocked || u.isBlocked || u.is_blocked) === 1 || /block|ban/.test(statusText),
     canManage: u.canManage !== false,
+    // Бэк пока не отдаёт canBlock; если появится — используем его вместо
+    // глобального system.manageAccounts. Принимаем bool/0/1/"true"/"false".
+    canBlock: (u.canBlock === true || u.canBlock === 1 || u.canBlock === '1' || u.canBlock === 'true')
+      ? true
+      : (u.canBlock === false || u.canBlock === 0 || u.canBlock === '0' || u.canBlock === 'false')
+        ? false : null,
     roles: roles,
     roleObjs: roleObjs
   };
+}
+
+/** true/false — право известно; null — ещё не загрузилось. */
+function canBlockUser(u) {
+  if (u.id === usersList.currentUserId) return false;
+  if (u.canBlock === true || u.canBlock === false) return u.canBlock;
+  return usersList.manageAccounts;
 }
 
 function roleCellHtml(roles) {
@@ -88,11 +104,14 @@ function roleCellHtml(roles) {
 }
 
 function blockButtonHtml(u) {
+  // Себя блокировать нельзя — бэк вернёт 403, кнопку не рисуем.
+  if (u.id === usersList.currentUserId) return '';
   var blocked = !!u.blocked;
+  var allowed = canBlockUser(u) === true;
   return '<button type="button" class="btn btn--secondary"' +
     (blocked ? ' data-admin-unblock' : ' data-admin-block') +
     ' data-user-id="' + u.id + '" data-user-name="' + esc(u.username) + '"' +
-    (!u.canManage ? ' disabled' : '') + '>' +
+    (!allowed ? ' disabled' : '') + '>' +
     esc(t(blocked ? 'admin.action_unblock' : 'admin.action_block')) +
   '</button>';
 }
@@ -296,11 +315,31 @@ export function setUserBlocked(userId, blocked) {
 
   var oldBtn = row.querySelector('[data-admin-block], [data-admin-unblock]');
   if (!oldBtn) return;
-  oldBtn.outerHTML = blockButtonHtml({
+  var html = blockButtonHtml({
     id: id,
     username: user ? user.username : (oldBtn.getAttribute('data-user-name') || ''),
     blocked: !!blocked,
-    canManage: user ? user.canManage : !oldBtn.disabled
+    canBlock: user ? user.canBlock : null
+  });
+  if (html) oldBtn.outerHTML = html;
+  else oldBtn.remove();
+}
+
+/** Перерисовывает только кнопки Block/Unblock после загрузки правил. */
+function refreshBlockButtons() {
+  if (!usersList.tbody) return;
+  usersList.items.forEach(function (u) {
+    var row = usersList.tbody.querySelector('tr[data-user-id="' + u.id + '"]');
+    var actions = row && row.querySelector('[data-col="actions"] .admin-actions');
+    if (!actions) return;
+    var oldBtn = actions.querySelector('[data-admin-block], [data-admin-unblock]');
+    var html = blockButtonHtml(u);
+    if (oldBtn) {
+      if (html) oldBtn.outerHTML = html;
+      else oldBtn.remove();
+    } else if (html) {
+      actions.insertAdjacentHTML('beforeend', html);
+    }
   });
 }
 
@@ -312,6 +351,20 @@ export function initUsersList() {
   usersList.count = document.querySelector('[data-users-count]');
   usersList.search = document.querySelector('[data-users-search]');
   usersList.more = document.querySelector('[data-users-more]');
+
+  var table = document.querySelector('[data-users-table]');
+  usersList.currentUserId = Number(table && table.getAttribute('data-users-current-id')) || 0;
+
+  // Block/Unblock — отдельное право ManageAccountOperation. canManage строки
+  // для этого не подходит: он про ранг/managePeople.
+  if (window.LorePermissions && typeof window.LorePermissions.can === 'function') {
+    window.LorePermissions.can('system.manageAccounts').then(function (allowed) {
+      usersList.manageAccounts = allowed === true;
+      refreshBlockButtons();
+    });
+  } else {
+    usersList.manageAccounts = false;
+  }
 
   if (usersList.search) {
     // Запрос в API — только по Enter, не на каждый символ

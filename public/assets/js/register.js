@@ -40,9 +40,11 @@ function initRegisterPage() {
     let message = "";
     if (!ok) {
       const v = username.value.trim();
-      if (v.length < LoreValidators.LOGIN_MIN_LENGTH) {
-        message = t("errors.validation.username_min", { min: LoreValidators.LOGIN_MIN_LENGTH });
-      } else if (!/^[A-Za-z0-9._-]+$/.test(v)) {
+      if (v.length < LoreValidators.USERNAME_MIN_LENGTH) {
+        message = t("errors.validation.username_min", { min: LoreValidators.USERNAME_MIN_LENGTH });
+      } else if (v.length > LoreValidators.USERNAME_MAX_LENGTH) {
+        message = t("errors.validation.username_max", { max: LoreValidators.USERNAME_MAX_LENGTH });
+      } else if (!/^[A-Za-z0-9_]+$/.test(v)) {
         message = t("errors.validation.username_chars");
       } else {
         message = t("errors.validation.invalid_username");

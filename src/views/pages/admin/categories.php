@@ -1,11 +1,12 @@
 <?php
 /**
- * admin/categories — таблица справочника «Категории» (каркас, мок-данные).
+ * admin/categories — таблица справочника «Категории».
  *
  * Структура записи и поведение — как в admin/genres.php:
- * массив translations (расширяемый на любой язык), клиентский поиск по всем
- * переводам, add/edit/delete — через fetch-слой dictApi в admin/main.js
- * (пока роут /api/admin/categories нет — режим mock, правки локальные).
+ * массив translations (расширяемый на любой язык), поиск/изменения —
+ * GET/POST/PUT/DELETE /api/additional/categories через dictApi
+ * (public/assets/js/admin/features/dictionary/api.js). Mock — только
+ * аварийный fallback при сетевой ошибке/HTML вместо JSON.
  *
  * Тест: GET /pages/test?page=admin/categories
  *
@@ -15,7 +16,7 @@
 $view->extends('main');
 $tr = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
 
-// Данные контроллера (если он их передал) — до того, как переменную перезапишет мок ниже
+// Данные контроллера (если он их передал) — первый рендер без запроса к API
 $serverItems = $categories ?? $items ?? null;
 
 ?>
@@ -79,7 +80,7 @@ $serverItems = $categories ?? $items ?? null;
   </table>
 </div>
 
-<!-- Служебные данные для admin/main.js (ресурс; строки приходят из данных страницы / API) -->
+<!-- Служебные данные для admin/features/dictionary/* (ресурс; строки — из данных страницы / API) -->
 <script type="application/json" data-dict-data>{"resource":"categories","items":[]}</script>
 
 <?php $view->include('dictionary-form', [

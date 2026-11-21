@@ -548,8 +548,8 @@ $articlePayload = [
           $cId       = (int) ($comment['id'] ?? 0);
           $cLikes    = (int) ($comment['likes'] ?? 0);
           $cLiked    = (bool) ($comment['liked'] ?? false);
-          // Автор — нужен comments.js, чтобы «Удалить» в меню «три точки»
-          // показывало только автору (само меню видно всем: там есть «Пожаловаться»)
+          // Автор — нужен comments.js, чтобы меню «три точки» с единственным
+          // пунктом «Удалить» показывалось только автору (жалоб в UI нет, B-10)
           $cAuthorId = (int) ($comment['userId'] ?? 0);
         ?>
         <div class="comment-card" data-page="1"
@@ -575,7 +575,7 @@ $articlePayload = [
                 </div>
 
                 <!-- Лайк уходит вниз (рядом с Reply); здесь — «три точки»:
-                     удаление (только автор) + «Пожаловаться» (всем) -->
+                     только удаление автором. Жалоб в UI нет (B-10). -->
                 <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
               </div>
 
@@ -635,8 +635,8 @@ $articlePayload = [
               <div class="comment-card__text" data-c-text></div>
             </div>
 
-            <!-- Меню «три точки»: удаление (только автор) + «Пожаловаться»
-                 (всем). Видимость пунктов гонит comments.js -->
+            <!-- Меню «три точки»: только удаление автором. Жалоб в UI нет
+                 (B-10); видимость пунктов гонит comments.js. -->
             <?php $view->include('comment-menu', ['variant' => 'comment']); ?>
           </div>
 
@@ -696,8 +696,8 @@ $articlePayload = [
             <div class="comment-reply__author"></div>
             <div class="comment-reply__text"></div>
           </div>
-          <!-- Меню ответа «три точки»: удаление (только автор) + «Пожаловаться»
-               (всем). Видимость пунктов гонит comments.js -->
+          <!-- Меню ответа «три точки»: только удаление автором. Жалоб в UI
+               нет (B-10); видимость пунктов гонит comments.js. -->
           <?php $view->include('comment-menu', ['variant' => 'reply']); ?>
         </div>
         <!-- Под текстом: сердечко + Reply слева, дата справа (под «тремя точками») -->

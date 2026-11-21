@@ -40,7 +40,8 @@
   var MAP = {
     // --- system: ManageAccountOperation и AdminAccessOperation-семейство
     // Имя флага бэка - во множественном числе (manageAccounts), у операции - в единственном.
-    // BlockAccountOperation в /api/system/rules флага не имеет - ключа для неё нет.
+    // Block/Unblock (/api/users/{id}/block) идёт через ManageAccountOperation,
+    // поэтому проверяется system.manageAccounts; BlockAccountOperation тут не используется.
     'system.manageAccounts':    { kind: 'system', flags: ['manageAccounts'] },
     'system.manageAdditionals': { kind: 'system', flags: ['manageAdditionals'] },
     'system.managePeople':      { kind: 'system', flags: ['managePeople'] },

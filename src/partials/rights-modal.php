@@ -16,13 +16,6 @@
  *
  * КОНТРАКТ С БЭКОМ:
  *
- *   GET  /api/additional/rights         — справочник прав (грузится АСИНХРОННО
- *        при открытии плашки; по аналогии с /api/additional/genres,
- *        формат ResponseTemplates::list):
- *        200 { items: [ { id: int, title: string, description?: string } ] }
- *        401/404/5xx → состояние ошибки + «Повторить» (плашка не ломается).
- *        В режиме модуля ролей справочник скрыт и в сохранении не участвует.
- *
  *   POST /api/books/{id}/publish        — перевод черновика в published
  *        (config/endpoints.php → BooksController::publish, пустое тело);
  *        используется ТОЛЬКО в режиме data-rights-mode="publish"
@@ -44,8 +37,8 @@
  * Стили — public/assets/css/rights-modal.css (каркас .modal — modal.css).
  *
  * МОДУЛЬ РОЛЕЙ (roles-module.php / roles-module.js): встроен в плашку и
- * управляет ею — родной контент (справочник прав) скрыт, когда у корня
- * data-rights-view="roles". Роли и людей модуль сохраняет сам, отдельными
+ * управляет ею — родной справочник прав удалён. Роли и людей модуль
+ * сохраняет сам, отдельными
  * запросами. Экран 2 «Publish» модуля зовёт onPublish хоста
  * (rights-modal.js → modulePublish(): POST /api/books/{id}/publish в режиме
  * 'publish', иначе — только уход на страницу книги). Отмена модуля
@@ -65,28 +58,9 @@
         <h2 class="modal__title" id="rightsModalTitle" data-rights-title><?= $view->e($view->t('common.rights.title')) ?></h2>
         <p class="modal__text" data-rights-hint><?= $view->e($view->t('common.rights.hint')) ?></p>
 
-        <!-- Тело: три состояния — загрузка / ошибка / список -->
+        <!-- Родной справочник прав удалён: GET /api/additional/rights нет,
+             всем управляет модуль ролей. Остаётся только ошибка публикации. -->
         <div class="rights-modal__body">
-
-            <div class="rights-modal__loading" data-rights-loading hidden>
-                <span class="rights-modal__spinner" aria-hidden="true"></span>
-                <span><?= $view->e($view->t('common.rights.loading')) ?></span>
-            </div>
-
-            <div class="rights-modal__error" data-rights-error hidden>
-                <p class="rights-modal__error-text" data-rights-error-text></p>
-                <button type="button" class="btn btn--secondary" data-rights-retry>
-                    <?= $view->e($view->t('common.rights.retry')) ?>
-                </button>
-            </div>
-
-            <ul class="rights-list" data-rights-list hidden></ul>
-
-            <p class="rights-modal__empty" data-rights-empty hidden>
-                <?= $view->e($view->t('common.rights.empty')) ?>
-            </p>
-
-            <!-- Ошибка сохранения прав (POST не прошёл) -->
             <p class="rights-modal__save-error" data-rights-save-error hidden aria-live="polite"></p>
         </div>
 

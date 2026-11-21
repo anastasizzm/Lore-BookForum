@@ -82,7 +82,7 @@
                     id="articleAnnotation"
                     name="annotation"
                     rows="6"
-                    maxlength="5000"
+                    maxlength="4000"
                     placeholder="<?= $tr('common.articleform.annotation_ph') ?>"><?= $view->e($val('annotation')) ?></textarea>
           <?= $errorBox('annotation') ?>
         </div>

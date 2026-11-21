@@ -14,6 +14,9 @@
  *
  * Кнопки Block/Unblock открывают ConfirmModal.confirm() и вызывают
  * POST/DELETE /api/users/{id}/block; строка обновляется по ответу API.
+ * Видимость кнопок определяет system.manageAccounts (ManageAccountOperation),
+ * а не canManage строки: canManage — это ранг/managePeople. Для самого себя
+ * кнопка не рисуется (бэк запрещает self-block).
  *
  * Стили — public/assets/css/admin.css (.admin-table, .admin-toolbar,
  * .admin-badge, .admin-actions, .admin-user-roles).
@@ -59,7 +62,8 @@ $tx = static function (string $key, string $fallback) use ($view): string {
 </div>
 
 <div class="admin-table-wrap">
-  <table class="admin-table" data-admin-table="users" data-users-table>
+  <table class="admin-table" data-admin-table="users" data-users-table
+         data-users-current-id="<?= (int) ($currentUserId ?? 0) ?>">
     <thead>
       <tr>
         <th scope="col"><?= $tr('common.admin.col_id') ?></th>

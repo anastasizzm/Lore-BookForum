@@ -30,7 +30,7 @@
   }
 
   var NAME_RE     = /^[\p{L}\p{M}\s'\-]+$/u;
-  var USERNAME_RE = /^[A-Za-z0-9_.\-]{3,30}$/;
+  var USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;
 
   var RULES = {
     name:     { required: true,  maxLength: 64,  pattern: NAME_RE,     msgKey: 'errors.validation.rule_name' },

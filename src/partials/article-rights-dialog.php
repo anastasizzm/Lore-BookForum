@@ -2,13 +2,12 @@
 /**
  * article-rights-dialog — всплывающее окно выбора прав при публикации статьи.
  *
- * Разметка статична; список пользователей и выбранные editor_ids
- * подгружает JS (article-publish.js) через:
- *   GET /api/users?page=&q=
- *   GET /api/articles/{id}/rights   (404 — ок без прав)
+ * Разметка статична. Людей и роли сохраняет roles-module.js отдельными
+ * запросами (/api/publications/{id}/users|roles); отдельного списка
+ * пользователей/GET /api/articles/{id}/rights нет, editor_ids[] не используется.
  *
- * Публикует статья уже кнопка в окне:
- *   POST /api/articles/{id}/publish  (multipart: editor_ids[])
+ * Публикует статью кнопка в окне:
+ *   POST /api/articles/{id}/publish  (пустое тело)
  */
 $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p));
 ?>
@@ -29,22 +28,9 @@ $tr = static fn(string $k, array $p = []): string => $view->e($view->t($k, $p));
 
     <p class="article-rights__hint"><?= $tr('common.articleform.publish_subtitle') ?></p>
 
-    <div class="article-rights__search">
-      <input type="search"
-             class="form-field__input"
-             data-rights-search
-             autocomplete="off"
-             placeholder="<?= $tr('common.articleform.publish_search_ph') ?>">
-    </div>
-
-    <div class="article-rights__list" data-rights-list>
-      <p class="article-rights__empty" data-rights-status><?= $tr('common.common.loading') ?></p>
-    </div>
-
-    <!-- Модуль «назначение ролей» (roles-module.php). Заменяет родной
-         список редакторов: управляет публикацией, экран 2 «Publish» зовёт
-         submit() хоста (article-publish.js). Активен, когда у корня
-         data-rights-view="roles" (см. article-right.css). -->
+    <!-- Модуль «назначение ролей» (roles-module.php) — единственный UI
+         людей/ролей. Экран 2 «Publish» зовёт submit() хоста
+         (article-publish.js). Активен при data-rights-view="roles". -->
     <?php $view->include('roles-module'); ?>
 
     <footer class="article-rights__foot">
