@@ -5,5 +5,4 @@ CREATE UNIQUE INDEX roles_users_valid_uq
     WHERE is_valid;
 
 -- migrate:down
-ALTER TABLE roles_users
-    DROP CONSTRAINT roles_users_valid_uq;
+DROP INDEX IF EXISTS roles_users_valid_uq;

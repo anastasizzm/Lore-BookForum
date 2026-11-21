@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Repositories\Permissions;
 
 use App\Repositories\Repository;
+use App\Exceptions\ConflictException;
+use App\Exceptions\NotFoundException;
 use App\Models\Scripts\ScriptParam;
 use App\Models\Users\UserShortData;
 use App\Models\Enums\UsersSortBy;
@@ -203,12 +205,29 @@ class PermissionsRepository extends Repository
                 [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
             );
 
-            $this->execute(
+            $stmt = $this->execute(
+                "SELECT 1 FROM roles_users
+                WHERE is_valid
+                AND role_id = :roleId
+                AND publication_id IS NOT DISTINCT FROM :pubId
+                LIMIT 1",
+                [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
+            );
+            if ($stmt->fetchColumn() !== false) throw new ConflictException($this->translator->t('errors.common.in_use'));
+
+            $stmt = $this->execute(
+                "SELECT 1 FROM user_roles WHERE id = :roleId AND is_system LIMIT 1",
+                [':roleId' => ScriptParam::asInt($roleId)]
+            );
+            if ($stmt->fetchColumn() !== false) throw new ConflictException($this->translator->t('errors.roles.system_role_delete'));
+
+            $stmt = $this->execute(
                 "DELETE FROM roles_permissions
                 WHERE role_id = :roleId
                 AND publication_id IS NOT DISTINCT FROM :pubId",
                 [':roleId' => ScriptParam::asInt($roleId), ':pubId' => ScriptParam::asInt($publicationId)]
             );
+            if ($stmt->rowCount() === 0) throw new NotFoundException($this->translator->t('errors.common.not_found'));
         });
     }
 
@@ -678,7 +697,14 @@ class PermissionsRepository extends Repository
             $params[":rank{$index}"] = ScriptParam::asStr($newRank);
         }
 
-        // 4. Perform a single bulk UPDATE using a VALUES list
+        // 4. Park current ranks outside the base36 alphabet to avoid unique index collisions
+        $this->execute(
+            "UPDATE roles_permissions SET lexorank = '~' || role_id
+             WHERE publication_id IS NOT DISTINCT FROM :pubId",
+            [':pubId' => ScriptParam::asInt($publicationId)]
+        );
+
+        // 5. Perform a single bulk UPDATE using a VALUES list
         $sql = "UPDATE roles_permissions AS rp
                 SET lexorank = v.rank
                 FROM (VALUES " . implode(', ', $values) . ") AS v(role_id, rank)

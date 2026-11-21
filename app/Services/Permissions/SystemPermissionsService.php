@@ -231,14 +231,6 @@ final class SystemPermissionsService
         }
     }
 
-    public function removeUser(int $userId): void
-    {
-        $removed = $this->repository->removeUser($userId, null, null);
-        if (!$removed) {
-            throw new NotFoundException($this->translator->t('errors.common.not_found'));
-        }
-    }
-
     public function getUserRoles(int $userId, PaginationQuery $pagination) : PaginatedList 
     {
         $page = $pagination->page();

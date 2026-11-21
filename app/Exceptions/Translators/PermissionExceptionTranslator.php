@@ -28,7 +28,6 @@ final class PermissionExceptionTranslator extends ExceptionTranslator
     private const UNIQUE = [
         'roles_permissions_pub_role_uq'      => ['role_id',        'errors.common.already_exists'],
         'roles_permissions_pub_lexorank_uq'  => ['lexorank',       'errors.common.already_exists'],
-        'roles_users_user_pub_role_valid_uq' => ['role_id',        'errors.common.already_exists'],
         'roles_users_valid_uq'               => ['role_id',        'errors.common.already_exists'],
     ];
 

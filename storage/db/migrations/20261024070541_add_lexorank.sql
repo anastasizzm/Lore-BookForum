@@ -39,3 +39,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS roles_permissions_pub_lexorank_uq
     NULLS NOT DISTINCT;
 
 -- migrate:down
+DROP INDEX IF EXISTS roles_permissions_pub_lexorank_uq;
+
+ALTER TABLE roles_permissions ADD COLUMN IF NOT EXISTS authority_rank INT;
+
+WITH ordered AS (
+    SELECT role_id, publication_id,
+           ROW_NUMBER() OVER (PARTITION BY publication_id ORDER BY lexorank COLLATE "C", role_id) - 1 AS new_rank
+    FROM roles_permissions
+)
+UPDATE roles_permissions rp
+SET authority_rank = o.new_rank
+FROM ordered o
+WHERE rp.role_id = o.role_id
+  AND rp.publication_id IS NOT DISTINCT FROM o.publication_id;
+
+ALTER TABLE roles_permissions ALTER COLUMN authority_rank SET NOT NULL;
+
+ALTER TABLE roles_permissions
+    ADD CONSTRAINT roles_permissions_pub_rank_uq
+    UNIQUE NULLS NOT DISTINCT (publication_id, authority_rank)
+    DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE roles_permissions DROP COLUMN lexorank;
