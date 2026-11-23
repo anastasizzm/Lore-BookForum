@@ -253,13 +253,9 @@
 
         var url = bookData.redirectUrl || '';
         if (!url) {
-          var bookId = parseInt(bookData.bookId, 10) || 0;
-          if (!bookId) return;
-          var params = [];
-          if (bookData.pageStart) params.push('page=' + encodeURIComponent(bookData.pageStart));
           var lang = link.getAttribute('data-article-lang') || '';
-          if (lang) params.push('lang=' + encodeURIComponent(lang));
-          url = '/books/' + bookId + '/read' + (params.length ? '?' + params.join('&') : '');
+          url = '/articles/' + encodeURIComponent(id) + '/read'
+              + (lang ? '?lang=' + encodeURIComponent(lang) : '');
         }
         link.setAttribute('href', url);
       })

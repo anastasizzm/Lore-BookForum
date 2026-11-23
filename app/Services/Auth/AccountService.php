@@ -3,9 +3,6 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
-use App\Constants;
-use App\ErrorCodes;
-
 use App\Repositories\Users\UsersRepository;
 
 use App\Services\Configuration\UnitOfWork;
@@ -41,7 +38,11 @@ final class AccountService
         private readonly AccountCreditsFormValidator $accountCreditsFormValidator
     ){}
 
-    public function changeCredits(int $userId, AccountCreditsForm $form) : void
+    /**
+     * @return string|null New access token with verified=0 when the email
+     *                     changed, otherwise null (the current token stays valid).
+     */
+    public function changeCredits(int $userId, AccountCreditsForm $form) : ?string
     {
         $errorBag = $this->accountCreditsFormValidator->validateOne($form);
         if (!$errorBag->isEmpty()) throw new ValidationException($errorBag->all());
@@ -54,12 +55,19 @@ final class AccountService
             if ($form->email !== $currentCredits->email)
             {
                 $this->usersRepo->unmarkEmailVerified($userId);
+
+                // The old cookie still contains verified=1. Mint a fresh token
+                // for the same user and let the controller replace the cookie.
+                $token = $this->jwt->access($userId, ['verified' => '0']);
                 $this->mailVerificationService->startVerification($userId, $form->email);
-                throw new HttpException($this->translator->t('errors.mail.verify_mail'), 202, ErrorCodes::ACCEPTED);
+
+                return $token;
             }
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);
         }
+
+        return null;
     }
 }

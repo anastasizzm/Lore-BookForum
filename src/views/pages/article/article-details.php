@@ -198,14 +198,13 @@ $pageLang  = isset($_GET['lang']) && is_string($_GET['lang']) && $_GET['lang'] !
     ? $_GET['lang']
     : (method_exists($view, 'locale') ? $view->locale() : '');
 
-// Отрывок открывается сразу в читалке на первой странице фрагмента,
-// а не на странице деталей книги.
+// Отрывок открывается в отдельной читалке статьи: она показывает только
+// страницы page_start..page_end и не сохраняет прогресс чтения книги.
 $bookReadUrl = '#';
 if ($bookId > 0) {
-    $bookReadUrl = '/books/' . $bookId . '/read'
-        . (!empty($pageStart) ? '?page=' . (int) $pageStart : '');
+    $bookReadUrl = '/articles/' . $articleId . '/read';
     if ($pageLang !== '') {
-        $bookReadUrl .= (str_contains($bookReadUrl, '?') ? '&' : '?') . 'lang=' . urlencode($pageLang);
+        $bookReadUrl .= '?lang=' . urlencode($pageLang);
     }
 }
 
@@ -365,14 +364,15 @@ if ($seoDescription === '') {
           </svg>
         </button>
         <?php
-          // Отрывок из книги читается на странице книги (редирект сразу
-          // в читалку на pageStart). Standalone-статья открывается в
-          // модальном оверлее поверх страницы (article-reader.php).
+          // Отрывок из книги читается в отдельной читалке статьи
+          // (/articles/{id}/read) только на страницах фрагмента.
+          // Standalone-статья открывается в модальном оверлее поверх
+          // страницы (article-reader.php).
         ?>
         <?php if ($isBookExcerpt): ?>
-          <!-- pageStart живёт в contentData, который бэк отдаёт отдельным
-               GET /api/articles/{id}/content; article-reader.js подставит
-               redirectUrl с ?page=, если в web-модели его ещё нет. -->
+          <!-- pageStart/pageEnd живут в contentData, который бэк отдаёт
+               отдельным GET /api/articles/{id}/content; отдельная читалка
+               сама берёт диапазон страниц из статьи. -->
           <a class="btn btn--primary btn--pill"
              href="<?= $view->e($bookReadUrl) ?>"
              data-article-book-read

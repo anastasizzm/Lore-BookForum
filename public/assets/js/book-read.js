@@ -28,6 +28,11 @@ async function init(root) {
   const bookId   = root.dataset.bookId || '0';
   const storeKey = 'book-' + bookId + '-page';   // ключ прогресса (см. saveProgress)
   const legacyKey = 'reader:page:' + bookId;     // старый ключ — читаем для миграции
+  const rangeStart = parseInt(root.dataset.rangeStart, 10);
+  const rangeEnd   = parseInt(root.dataset.rangeEnd, 10);
+  const hasRange   = Number.isFinite(rangeStart) && rangeStart > 0
+    && Number.isFinite(rangeEnd) && rangeEnd >= rangeStart;
+  const trackProgress = root.dataset.trackProgress !== '0';
   const DESKTOP_FACTOR = 0.5;
   const MOBILE_FACTOR  = 1;
   const MOBILE_MAX     = 767;
@@ -122,7 +127,7 @@ async function init(root) {
   }
 
   function sendProgress(num, keepalive) {
-    if (!Number(bookId) || inflight) return;
+    if (!trackProgress || !Number(bookId) || inflight) return;
     const total  = pdf ? pdf.numPages : 0;
     const isLast = total > 0 && num >= total;
     if (isLast ? finished : num === sentPage) return;
@@ -154,19 +159,21 @@ async function init(root) {
   }
 
   function scheduleSave(num) {
+    if (!trackProgress) return;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => { saveTimer = 0; sendProgress(num, false); }, SAVE_DELAY);
   }
 
   /** Хук на смену страницы: localStorage сразу, бэк — с задержкой (листают быстро). */
   function saveProgress(num) {
+    if (!trackProgress) return;
     try { localStorage.setItem(storeKey, String(num)); } catch (_) {}
     scheduleSave(num);
   }
 
   // Закрыли вкладку / ушли со страницы — дослать, не дожидаясь таймера
   const flushProgress = () => {
-    if (!saveTimer) return;
+    if (!trackProgress || !saveTimer) return;
     clearTimeout(saveTimer);
     saveTimer = 0;
     sendProgress(pageNum, true);
@@ -222,13 +229,21 @@ async function init(root) {
 
   let zoom = 1;
   let pageNum = 1;
+  let minPage = 1;
+  let maxPage = pdf.numPages;
   let rendering = false;
   let queued = false;
   let renderTask = null;
   let pendingCenter = true;
 
-  totalEl.textContent = pdf.numPages;
-  pageIn.max = pdf.numPages;
+  if (hasRange) {
+    minPage = clamp(rangeStart, 1, pdf.numPages);
+    maxPage = clamp(rangeEnd, minPage, pdf.numPages);
+  }
+
+  totalEl.textContent = maxPage;
+  pageIn.min = minPage;
+  pageIn.max = maxPage;
 
   // Откуда открывать: ?page= > страница с сервера (data-start-page) > localStorage > 1.
   // Если сервер передал data-start-page (даже 0 = «не читал / сбросил»), он главнее
@@ -237,14 +252,14 @@ async function init(root) {
   const hasServer  = root.hasAttribute('data-start-page');
   const serverPage = parseInt(root.dataset.startPage, 10) || 0;
   let saved = 0;
-  if (!hasServer) {
+  if (trackProgress && !hasServer) {
     try {
       saved = parseInt(localStorage.getItem(storeKey), 10)
            || parseInt(localStorage.getItem(legacyKey), 10)   // старый ключ reader:page:{id}
            || 0;
     } catch (_) {}
   }
-  pageNum = clamp(fromUrl || serverPage || saved || 1, 1, pdf.numPages);
+  pageNum = clamp(fromUrl || serverPage || saved || minPage, minPage, maxPage);
   // ВАЖНО: не считаем serverPage уже сохранённой страницей. Контроллер
   // отдаёт defaultPosition() = pageNumber 1 даже когда записи в users_read
   // ещё нет, поэтому при sentPage = 1 первый показ страницы 1 не отправлял
@@ -330,20 +345,23 @@ async function init(root) {
   function syncUi() {
     pageIn.value = pageNum;
     zoomLbl.textContent = Math.round(zoom * 100) + '%';
-    prevBtn.disabled = pageNum <= 1;
-    nextBtn.disabled = pageNum >= pdf.numPages;
+    prevBtn.disabled = pageNum <= minPage;
+    nextBtn.disabled = pageNum >= maxPage;
 
     // Смена страницы -> saveProgress(currentPage): вызывается здесь,
     // потому что render() завершается только после показа новой страницы.
-    saveProgress(pageNum);
+    // В режиме отрывка статьи прогресс книги не сохраняем.
+    if (trackProgress) {
+      saveProgress(pageNum);
 
-    const u = new URL(location.href);
-    u.searchParams.set('page', String(pageNum));
-    history.replaceState(null, '', u.pathname + u.search);
+      const u = new URL(location.href);
+      u.searchParams.set('page', String(pageNum));
+      history.replaceState(null, '', u.pathname + u.search);
+    }
   }
 
   function goTo(n) {
-    n = clamp(Number(n) || 1, 1, pdf.numPages);
+    n = clamp(Number(n) || minPage, minPage, maxPage);
     if (n === pageNum) { syncUi(); return; }
     pageNum = n;
     pendingCenter = true;

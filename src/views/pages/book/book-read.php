@@ -27,6 +27,9 @@ if ($bookId <= 0) {
 $title  = is_object($book)
     ? (string) ($book->title ?? '')
     : (string) ($book['title'] ?? '');
+if (isset($readerTitle) && trim((string) $readerTitle) !== '') {
+    $title = trim((string) $readerTitle);
+}
 
 // id файла: из контроллера или из книги (объект/массив); Stringable-id приводим к строке
 $fileRaw = $fileId ?? (is_object($book) ? ($book->fileId ?? null) : ($book['fileId'] ?? null));
@@ -36,7 +39,15 @@ $pdfUrl  = (string) ($pdfUrl ?? ($fileId !== '' ? '/api/files/' . rawurlencode($
 $startPage = isset($startPage)
     ? max(0, (int) $startPage)
     : (is_array($initial ?? null) && isset($initial['pageNumber']) ? max(0, (int) $initial['pageNumber']) : null);
-$backUrl = $bookId ? '/books/' . $bookId : '/books';
+$backUrl = $backUrl ?? ($bookId ? '/books/' . $bookId : '/books');
+$backLabelKey = is_string($backLabelKey ?? null) && $backLabelKey !== ''
+    ? $backLabelKey
+    : 'common.reader.back';
+
+// Article excerpt mode: only page_start..page_end, no reading progress.
+$rangeStart = isset($pageStart) ? max(1, (int) $pageStart) : null;
+$rangeEnd = isset($pageEnd) ? max($rangeStart ?? 1, (int) $pageEnd) : null;
+$trackProgress = !isset($trackProgress) || (bool) $trackProgress;
 ?>
 
 <?php $view->extends('main'); ?>
@@ -73,7 +84,10 @@ $view->setBlock('selectedTab', $selectedTab);
          data-reader
          data-book-id="<?= $bookId ?>"
          data-format="pdf"
-         data-pdf-url="<?= $view->e($pdfUrl) ?>"<?= $startPage !== null ? ' data-start-page="' . $startPage . '"' : '' ?>>
+         data-pdf-url="<?= $view->e($pdfUrl) ?>"
+         data-track-progress="<?= $trackProgress ? '1' : '0' ?>"
+         data-range-start="<?= $rangeStart ?? '' ?>"
+         data-range-end="<?= $rangeEnd ?? '' ?>"<?= $startPage !== null ? ' data-start-page="' . $startPage . '"' : '' ?>>
 
   <div class="reader__toolbar">
 
@@ -122,7 +136,7 @@ $view->setBlock('selectedTab', $selectedTab);
     </canvas>
   </div>
 
-  <p><a href="<?= $view->e($backUrl) ?>">&larr; <?= $tr('common.reader.back') ?></a></p>
+  <p><a href="<?= $view->e($backUrl) ?>">&larr; <?= $tr($backLabelKey) ?></a></p>
 
 </section>
 

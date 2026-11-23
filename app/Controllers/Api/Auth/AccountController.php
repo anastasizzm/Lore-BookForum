@@ -16,6 +16,7 @@ use App\Controllers\Controller;
 
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\AccountService;
+use App\Services\Configuration\CookieService;
 use App\Services\Users\UsersService;
 
 use App\Models\Error;
@@ -42,6 +43,7 @@ final class AccountController extends Controller
         private readonly EmailVerificationService $emailService,
         private readonly UsersService $usersService,
         private readonly AccountService $accountService,
+        private readonly CookieService $cookies,
         private readonly Translator $translator
     ){}
 
@@ -96,14 +98,21 @@ final class AccountController extends Controller
 
         try 
         {
-            $this->accountService->changeCredits($userId, AccountCreditsForm::fromInput($formData));
+            $token = $this->accountService->changeCredits($userId, AccountCreditsForm::fromInput($formData));
+
+            if ($token !== null) {
+                $response = $this->jsonObject([
+                    'message' => $this->translator->t('errors.mail.verify_mail'),
+                    'code'    => ErrorCodes::ACCEPTED,
+                ], 202);
+
+                return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
+            }
+
             return $this->jsonEmpty(201);
         }
         catch(HttpException $e)
         {
-            if ($e->getStatus() === 202)
-                return $this->jsonObject(['message' => $e->getMessage(), 'code' => $e->getErrorCode()], 202);
-            
             return $this->jsonError($e->toError(), $e->getStatus());
         }
     }

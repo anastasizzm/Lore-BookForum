@@ -412,6 +412,7 @@
         "page_aria": "Page number",
         "loading": "Loading…",
         "back": "Back to the book",
+        "back_article": "Back to the article",
         "canvas_label": "Book page",
         "canvas_fallback": "Your browser does not support the canvas element.",
         "zoom": "Zoom",

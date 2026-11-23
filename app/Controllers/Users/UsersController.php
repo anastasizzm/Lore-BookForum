@@ -7,6 +7,7 @@ use App\Controllers\Controller;
 
 use App\Services\Users\UsersService;
 use App\Services\Auth\AccountService;
+use App\Services\Configuration\CookieService;
 use App\Services\Publications\BooksService;
 use App\Services\Publications\ArticlesService;
 
@@ -43,6 +44,7 @@ final class UsersController extends Controller
         private readonly AccountService $accountService,
         private readonly BooksService $booksService,
         private readonly ArticlesService $articlesService,
+        private readonly CookieService $cookies,
         private readonly Translator $translator,
         private readonly UrlGenerator $url
     ){}
@@ -109,11 +111,21 @@ final class UsersController extends Controller
         $formData = $context->request->body();
 
         try {
-            $this->accountService->changeCredits($userId, AccountCreditsForm::fromInput($formData));
+            $token = $this->accountService->changeCredits($userId, AccountCreditsForm::fromInput($formData));
+
+            if ($token !== null) {
+                $response = $this->render('message', [
+                    'statusCode'   => 202,
+                    'message'      => $this->translator->t('errors.mail.verify_mail'),
+                    'actionUrl'    => $this->url->url('users.profile', ['userId' => $userId]),
+                    'actionTitle'  => $this->translator->t('common.profile.back_to'),
+                ], 202);
+
+                return $this->cookies->set($response, Constants::TOKEN_COOKIE, $token);
+            }
         } catch (ValidationException $e) {
             return $this->renderProfileEdit($currentUserId, $userId, $formData, $e->errors(), 422);
         } catch (HttpException $e) {
-            // 202 — email изменён и отправлено письмо подтверждения.
             return $this->render('message', [
                 'statusCode'   => $e->getStatus(),
                 'message'      => $e->getMessage(),

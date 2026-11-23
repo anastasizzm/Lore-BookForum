@@ -7,8 +7,11 @@ use App\Controllers\Controller;
 
 use App\Services\Users\UsersService;
 use App\Services\Publications\ArticlesService;
+use App\Services\Publications\BooksService;
 
 use App\Models\Publications\PublicationShort;
+use App\Models\Enums\ArticleContentMode;
+use App\Models\Enums\BookFormat;
 
 use App\Http\HttpContext;
 use App\Http\Response;
@@ -26,6 +29,9 @@ use App\Extensions\Parsers\QueryParser;
 
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
+use App\Exceptions\NotFoundException;
+use App\Lib\I18n\Translator;
+use App\ErrorCodes;
 
 use App\Constants;
 
@@ -34,6 +40,8 @@ final class ArticlesController extends Controller
     public function __construct(
         private readonly UsersService $usersService,
         private readonly ArticlesService $articlesService,
+        private readonly BooksService $booksService,
+        private readonly Translator $translator,
         private readonly UrlGenerator $url
     ){}
 
@@ -223,6 +231,63 @@ final class ArticlesController extends Controller
                 'user' => $userContext,
             ]);
         }
+    }
+
+    public function read(HttpContext $context, string $articleId): Response
+    {
+        $articleId = RouteParamParser::positiveInt(['a' => $articleId], 'a');
+
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $content = $this->articlesService->getContent($articleId);
+        $bookData = $content->getBookData();
+
+        // This reader is only for excerpts: a standalone article has its own
+        // modal/reader and must not be opened as a book file.
+        if ($content->getType() !== ArticleContentMode::Book || $bookData === null) {
+            throw new NotFoundException(
+                $this->translator->t('errors.common.not_found'),
+                ErrorCodes::NOT_FOUND,
+            );
+        }
+
+        $book = $this->booksService->retrieveShort($bookData->bookId);
+        if ($book === null) {
+            throw new NotFoundException(
+                $this->translator->t('errors.common.not_found'),
+                ErrorCodes::NOT_FOUND,
+            );
+        }
+
+        $fileId = $this->booksService->identifyReadContent($bookData->bookId, BookFormat::Pdf);
+        if ($fileId === null) {
+            throw new NotFoundException(
+                $this->translator->t('errors.files.no_file'),
+                ErrorCodes::NOT_FOUND,
+            );
+        }
+
+        $article = $this->articlesService->retrieveShort($articleId);
+        $pageStart = max(1, (int) $bookData->pageStart);
+        $pageEnd = max($pageStart, (int) $bookData->pageEnd);
+
+        $userContext = $this->usersService->loadContext($userId);
+        return $this->render('book/book-read', [
+            'book'          => $book,
+            'bookId'        => $bookData->bookId,
+            'fileId'        => $fileId->toString(),
+            'previewUrl'    => $this->url->url('files.preview', ['fileId' => $fileId->toString()]),
+            'initial'       => ['pageNumber' => $pageStart],
+            'pageStart'     => $pageStart,
+            'pageEnd'       => $pageEnd,
+            'trackProgress' => false,
+            'readerTitle'   => $article?->title ?? $book->title,
+            'backUrl'       => $this->url->url('articles.retrieve', ['articleId' => $articleId]),
+            'backLabelKey'  => 'common.reader.back_article',
+            'user'          => $userContext,
+        ]);
     }
 
     public function getCreate(HttpContext $context)

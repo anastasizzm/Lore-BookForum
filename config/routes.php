@@ -84,6 +84,7 @@ return function(Router $router)
     $router->get('/articles/create', [App\Controllers\Publications\ArticlesController::class, 'getCreate'], 'articles.create', CreatePublicationOperation::class);
     $router->post('/articles/create', [App\Controllers\Publications\ArticlesController::class, 'create'], 'articles.create.submit', CreatePublicationOperation::class);
     $router->get('/articles/{articleId}', [App\Controllers\Publications\ArticlesController::class, 'retrieve'], 'articles.retrieve', ReadPublicationOperation::class);
+    $router->get('/articles/{articleId}/read', [App\Controllers\Publications\ArticlesController::class, 'read'], 'articles.read', ReadPublicationOperation::class);
     
     
     // Profile
