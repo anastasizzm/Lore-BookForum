@@ -208,7 +208,7 @@ function renderRoleDdMenu() {
   var curId = roleState.current ? Number(roleState.current.id) : 0;
   if (!shown.length) {
     var msg = roleState.ddSearching
-      ? tx('common.common.loading', 'Loading...')
+      ? tx('common.loading', 'Loading...')
       : ((roleState.ddQuery || roleState.ddTyped)
           ? tx('admin.role_dd_nothing', 'Nothing found')
           : (roleState.ddMessage || tx('admin.role_none_available', 'No roles available')));
@@ -279,7 +279,7 @@ export function openRoleAttach() {
   roleState.ddTyped = '';
   roleState.ddSearching = false;
   roleDdSeq++;
-  roleState.ddMessage = tx('common.common.loading', 'Loading...');
+  roleState.ddMessage = tx('common.loading', 'Loading...');
   var ddSearchInput = ddEl('[data-role-dd-search]');
   if (ddSearchInput) ddSearchInput.value = '';
 

@@ -49,6 +49,7 @@
       }),
     ]);
 
+    var anyOk  = responses.some(function (r) { return r !== null; });
     var books    = extractItems(responses[0]).map(function (i) { return { item: i, type: 'book' }; });
     var articles = extractItems(responses[1]).map(function (i) { return { item: i, type: 'article' }; });
     var all = books.concat(articles);
@@ -58,7 +59,7 @@
       var db = b.item.createdAt && b.item.createdAt.date ? b.item.createdAt.date : '';
       return db.localeCompare(da);
     });
-    return all;
+    return { items: all, anyOk: anyOk };
   }
 
   function renderItem(item, type) {
@@ -101,18 +102,23 @@
       return;
     }
 
-    if (all.length === 0) {
+    if (all.items.length === 0) {
+      // Оба запроса упали — это ошибка загрузки, а не пустой профиль.
+      // Если хотя бы один ответил, пустой список означает «пока нет публикаций».
+      var emptyKey = all.anyOk
+        ? 'profile.no_publications'
+        : 'errors.common.publications_failed_short';
       el.innerHTML = '<p class="profile-sidebar-box__text profile-sidebar-box__text--muted">'
-        + escapeHtml(t('errors.common.publications_failed_short')) + '</p>';
+        + escapeHtml(t(emptyKey)) + '</p>';
       return;
     }
 
-    var shown = all.slice(0, limit);
+    var shown = all.items.slice(0, limit);
     el.innerHTML = shown.map(function (entry) {
       return renderItem(entry.item, entry.type);
     }).join('');
 
-    if (moreUrl && all.length > 0) {
+    if (moreUrl && all.items.length > 0) {
       var more = document.createElement('a');
       more.className = 'profile-publications__more';
       more.href = moreUrl;
@@ -295,7 +301,7 @@
                       ' data-feed-comment-form data-post-id="' + postId + '" novalidate hidden>' +
                   '<input type="hidden" name="_token" value="">' +
                   '<input type="hidden" name="publicationId" value="' + pubId + '">' +
-                  '<input type="text" class="comment-form__input" name="content" placeholder="' + t('comments.add_comment') + '" maxlength="500" autocomplete="off">' +
+                  '<input type="text" class="comment-form__input" name="content" placeholder="' + t('comments.add_comment') + '" maxlength="2000" autocomplete="off">' +
                   '<button type="submit" class="comment-form__submit" disabled' +
                           ' aria-label="' + t('comments.post') + '">' + CHECK_SVG + '</button>' +
                   '<p data-comment-error role="alert" hidden' +

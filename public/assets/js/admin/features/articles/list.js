@@ -50,8 +50,8 @@ function dateOf(v) {
 function typeInfo(b, raw) {
   var v = b.type != null ? b.type : raw.type;
   var code = typeof v === 'string' ? v.toLowerCase() : '';
-  if (code === 'book') return { excerpt: true, label: tx('common.admin.type_excerpt', 'Excerpt') };
-  if (code === 'content') return { excerpt: false, label: tx('common.admin.type_standalone', 'Standalone') };
+  if (code === 'book') return { excerpt: true, label: tx('admin.type_excerpt', 'Excerpt') };
+  if (code === 'content') return { excerpt: false, label: tx('admin.type_standalone', 'Standalone') };
   var label = textOf(v);
   return { excerpt: false, label: label };
 }
@@ -88,10 +88,10 @@ function renderRows() {
   if (!articles.rows) return;
   if (!articles.items.length) {
     articles.rows.innerHTML = '<tr class="admin-table__empty"><td colspan="6">' +
-      esc(tx('common.admin.empty', 'Nothing found')) + '</td></tr>';
+      esc(tx('admin.empty', 'Nothing found')) + '</td></tr>';
   } else {
-    var viewLabel = tx('common.admin.action_view', 'View');
-    var delLabel = tx('common.admin.action_delete', 'Delete');
+    var viewLabel = tx('admin.action_view', 'View');
+    var delLabel = tx('admin.action_delete', 'Delete');
     articles.rows.innerHTML = articles.items.map(function (a) {
       var badge = a.type.label
         ? '<span class="admin-badge' + (a.type.excerpt ? ' admin-badge--accent' : '') + '">' + esc(a.type.label) + '</span>'
@@ -164,7 +164,7 @@ function deleteArticle(btn) {
     text:        tx('admin.article_delete_text',
                     'The article "' + article.title + '" will be permanently deleted. This action cannot be undone.',
                     { name: article.title }),
-    confirmText: tx('common.admin.action_delete', 'Delete'),
+    confirmText: tx('admin.action_delete', 'Delete'),
     danger:      true
   }).then(function (confirmed) {
     if (!confirmed) return;

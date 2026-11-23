@@ -86,7 +86,24 @@ $items = array_map(
     },
     $items ?? []
 );
+
+// Текущий пользователь — нужен и для SSR-карточек, и для клиентского
+// рендера поиска, когда лента пуста (лента может не содержать ни одной
+// карточки, откуда раньше брались data-cu-*). Считаем один раз на страницу.
+$cu = $user ?? null;
+$cuInitials = mb_strtoupper(
+    mb_substr($cu?->name ?? '', 0, 1) . mb_substr($cu?->surname ?? '', 0, 1)
+);
+if ($cuInitials === '') {
+    $cuInitials = mb_strtoupper(mb_substr($cu?->username ?? '', 0, 1));
+}
 ?>
+
+<div hidden data-feed-cu
+     data-cu-id="<?= (int) ($cu?->id ?? 0) ?>"
+     data-cu-name="<?= $view->e($cu?->username ?? '') ?>"
+     data-cu-initials="<?= $view->e($cuInitials) ?>"
+     data-cu-avatar="<?= $view->e($cu?->avatar ?? '') ?>"></div>
 
 <?php if (empty($items)): ?>
 
@@ -124,15 +141,6 @@ $items = array_map(
           $iconStr = (is_string($iconId) || (is_object($iconId) && method_exists($iconId, '__toString')))
               ? (string) $iconId : '';
           $coverUrl = $iconStr !== '' ? '/api/files/' . rawurlencode($iconStr) . '/preview' : '';
-
-          // Текущий пользователь — для оптимистичной вставки своего комментария
-          $cu = $user ?? null;
-          $cuInitials = mb_strtoupper(
-              mb_substr($cu?->name ?? '', 0, 1) . mb_substr($cu?->surname ?? '', 0, 1)
-          );
-          if ($cuInitials === '') {
-              $cuInitials = mb_strtoupper(mb_substr($cu?->username ?? '', 0, 1));
-          }
 
           $view->include('card-feed', [
               'postId'        => $post->id ?? 0,
@@ -218,7 +226,7 @@ $items = array_map(
         <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
         <form class="comment-reply-form" data-reply-form hidden>
-          <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+          <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="2000" autocomplete="off">
           <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>

@@ -81,7 +81,7 @@
         }
         // Опубликованный черновик уходит со страницы /drafts
         removeCard(card);
-        notify(tr('common.drafts.published', 'Published.'), 'success');
+        notify(tr('drafts.published', 'Published.'), 'success');
       } catch (err) {
         console.error('[drafts] publish failed', err);
         notify(tr('errors.common.network_error', 'Network error. Try again.'));
@@ -98,7 +98,7 @@
       const id   = Number(del.dataset.draftId || card?.dataset.draftId || 0);
       if (!id) return;
 
-      const confirmText = del.dataset.confirm || tr('common.drafts.delete_confirm', 'Delete this draft?');
+      const confirmText = del.dataset.confirm || tr('drafts.delete_confirm', 'Delete this draft?');
       if (!window.confirm(confirmText)) return;
 
       setBusy(card, true);
@@ -109,7 +109,7 @@
           return;
         }
         removeCard(card);
-        notify(tr('common.drafts.deleted', 'Deleted.'), 'success');
+        notify(tr('drafts.deleted', 'Deleted.'), 'success');
       } catch (err) {
         console.error('[drafts] delete failed', err);
         notify(tr('errors.common.network_error', 'Network error. Try again.'));

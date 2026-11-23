@@ -59,7 +59,7 @@ $str = static fn(string $key): string => is_string($params[$key] ?? null) ? $par
 $status = strtolower($str('status'));
 
 $genre  = $str('genre');
-$kind   = strtolower($str('kind'));
+$typeId = strtolower($str('type'));
 $isbn   = $str('isbn');
 $doi    = $str('doi');
 
@@ -81,17 +81,18 @@ $genreDropdown = [
     'options' => [],
 ];
 
-// Type dropdown — статический, значения совпадают с enum ArticleType
+// Type dropdown — статический, значения совпадают с enum ArticleType.
+// API статей читает именно ?type= (ArticlesFilters), поэтому ключ — type.
 $typeDropdown = [
     'type'    => 'dropdown',
     'label'   => $view->t('common.filter.type'),
-    'key'     => 'kind',
+    'key'     => 'type',
     'dynamic' => 'types',
     'options' => [],
 ];
 
 // Reset clears filters but keeps search (q), panel state (f) and locale (lang)
-$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype']);
+$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype']);
 
 // Статус чтения: только для «Сохранённых» (в общей библиотеке фильтр убран).
 $statusTabs = [
@@ -153,7 +154,7 @@ if ($isDrafts) {
     $draftsIsArticles = str_contains($currentPath, '/articles');
     $draftKeep = array_intersect_key(
         $params,
-        array_flip(['f', 'q', 'genre', 'p_status', 'kind', 'doi', 'isbn', 'lang'])
+        array_flip(['f', 'q', 'genre', 'p_status', 'type', 'doi', 'isbn', 'lang'])
     );
     $draftHref = static function (string $href) use ($draftKeep): string {
         if (!$draftKeep) return $href;

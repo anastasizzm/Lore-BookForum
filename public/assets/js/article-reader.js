@@ -72,7 +72,7 @@
   function renderText(root, content) {
     var text = String(content || '').trim();
     if (text === '') {
-      root.innerHTML = '<p>' + escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
+      root.innerHTML = '<p>' + escapeHtml(t('article.no_text', 'The article text is not available yet.')) + '</p>';
       return;
     }
 
@@ -119,7 +119,7 @@
     var body = bodyOf(el);
     if (body) {
       body.innerHTML = '<p class="article-body__loading">' +
-        escapeHtml(t('common.common.loading', 'Loading…')) + '</p>';
+        escapeHtml(t('common.loading', 'Loading…')) + '</p>';
     }
   }
 
@@ -127,7 +127,7 @@
     var body = bodyOf(el);
     if (body) {
       body.innerHTML = '<p>' +
-        escapeHtml(t('common.article.no_text', 'The article text is not available yet.')) + '</p>';
+        escapeHtml(t('article.no_text', 'The article text is not available yet.')) + '</p>';
     }
   }
 

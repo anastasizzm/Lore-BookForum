@@ -86,7 +86,7 @@ function urDdRenderMenu() {
   var shown = urVisibleOptions();
   var curId = userRoles.selected ? userRoles.selected.id : null;
   if (!shown.length) {
-    var msg = userRoles.searching ? tx('common.common.loading', 'Loading...')
+    var msg = userRoles.searching ? tx('common.loading', 'Loading...')
       : (userRoles.query || userRoles.typed) ? tx('admin.role_dd_nothing', 'Nothing found')
       : tx('admin.role_none_available', 'No roles available');
     list.innerHTML = '<li class="admin-picker__note">' + esc(msg) + '</li>';

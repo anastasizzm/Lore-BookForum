@@ -124,7 +124,7 @@ $liked = (bool) ($liked ?? false);
             <?= $view->csrfField() ?>
             <input type="hidden" name="publicationId" value="<?= $publicationId ?>">
             <input type="text" class="comment-form__input" name="content"
-                   placeholder="<?= $tr('common.comments.add_comment') ?>" maxlength="500" autocomplete="off">
+                   placeholder="<?= $tr('common.comments.add_comment') ?>" maxlength="2000" autocomplete="off">
             <!-- Отправка — галочка (как у reply-формы); смысл кнопки в aria-label -->
             <button type="submit" class="comment-form__submit" disabled
                     aria-label="<?= $tr('common.comments.post') ?>">

@@ -159,7 +159,7 @@ export function openRoleUserModal(preselectedRoleId) {
   if (roleUserAssign.select) roleUserAssign.select.value = '';
   renderUserResults();
 
-  renderRolesMessage(tx('common.common.loading', 'Loading...'));
+  renderRolesMessage(tx('common.loading', 'Loading...'));
   ensureRoles().then(function (items) {
     if (!items.length) {
       var reason = rolesApi.lastError || tx('admin.roles_load_error', 'Failed to load roles');

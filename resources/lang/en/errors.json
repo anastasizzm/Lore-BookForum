@@ -64,6 +64,9 @@
         "doi_suffix_digits": "DOI suffix must be digits — :hint",
         "doi_missing_slash": "DOI is missing \"/\" after the prefix — :hint"
     },
+    "users": {
+        "username_format": "Username must be 3–30 characters and contain only letters, digits, and underscores"
+    },
     "roles": {
         "rank_mismatch": "Above element must be above below element",
         "rank_far": "The neighbours are too far",

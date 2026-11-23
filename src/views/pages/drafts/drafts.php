@@ -93,7 +93,7 @@ $shown = ($page - 1) * $pageSize + count($cards);
 
 // Есть ли активные фильтры: тогда пустой список — результат фильтра, а не «черновиков нет совсем»
 $hasFilters = false;
-foreach (['q', 'genre', 'kind', 'ctype'] as $fk) {
+foreach (['q', 'genre', 'type', 'ctype'] as $fk) {
     if (isset($_GET[$fk]) && $_GET[$fk] !== '') { $hasFilters = true; break; }
 }
 $isEmptyAll = empty($cards) && $page <= 1 && !$hasNext && !$hasFilters;

@@ -128,8 +128,10 @@
             rate.setAttribute('data-rate-current', String(value));
             current = Math.floor(value);
             paint(current);
-          } else if (initialSummary !== null) {
-            paintSummary(initialSummary);
+          } else {
+            // Оценку сняли: если изначально оценок не было (initialSummary === null),
+            // показываем «No ratings yet», а не оставшееся значение.
+            paintSummary(initialSummary !== null ? initialSummary : 0);
           }
           return;
         }

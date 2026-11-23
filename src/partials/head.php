@@ -6,6 +6,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= $view->block('title') ?></title>
+  <?php
+  // Описание страницы: вьюха может задать блок description (уже
+  // экранированный через $view->e()), иначе берём общее описание сайта.
+  $metaDescription = trim($view->block('description'));
+  ?>
+  <meta name="description" content="<?= $metaDescription !== '' ? $metaDescription : $view->e($view->t('common.seo.description')) ?>">
   <link rel="icon" type="image/svg+xml" href="<?= $view->asset('img/logo.svg') ?>">
 
   <?php /* JS-хелперы, которые нужны везде и всегда:

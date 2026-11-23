@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         var p = document.createElement('p');
         p.className = 'empty-state__text';
-        p.textContent = t('common.drafts.empty_books');
+        p.textContent = t('drafts.empty_books');
         grid.replaceWith(p);
       }
     }
@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (kind === 'delete') {
-      var msg = btn.dataset.confirm || t('common.drafts.delete_confirm', { title: '' });
+      var msg = btn.dataset.confirm || t('drafts.delete_confirm', { title: '' });
       if (!window.confirm(msg)) return;
     }
 

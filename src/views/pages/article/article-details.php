@@ -286,7 +286,23 @@ $articlePayload = [
 
 <?php $view->setBlock('selectedTab', 'library'); ?>
 
-<?php $view->startBlock('title'); ?><?= $tr('common.article.page_title') ?><?php $view->endBlock('title'); ?>
+<?php
+/* ---------- SEO: title / description ---------- */
+$seoTitle = trim((string) (is_array($article) ? ($article['title'] ?? '') : ($article->title ?? '')));
+if ($seoTitle === '') {
+    $seoTitle = $view->t('common.article.page_title');
+}
+
+$seoDescription = trim(preg_replace('/\s+/u', ' ', strip_tags($annotation)) ?? '');
+if ($seoDescription === '') {
+    $seoDescription = $view->t('common.seo.description');
+} elseif (mb_strlen($seoDescription) > 160) {
+    $seoDescription = rtrim(mb_substr($seoDescription, 0, 157)) . '…';
+}
+?>
+
+<?php $view->startBlock('title'); ?><?= $view->e($seoTitle) ?> — <?= $tr('common.common.app_name') ?><?php $view->endBlock('title'); ?>
+<?php $view->startBlock('description'); ?><?= $view->e($seoDescription) ?><?php $view->endBlock('description'); ?>
 
 <?php $view->startBlock('head_extra'); ?>
   <link rel="stylesheet" href="<?= $view->asset('css/pages/book.css') ?>">
@@ -298,7 +314,7 @@ $articlePayload = [
 <?php $view->startBlock('content'); ?>
 
   <div class="book-page-header">
-    <h1 class="book-page-title"><?= $tr('common.article.page_title') ?></h1>
+    <h1 class="book-page-title"><?= $view->e($seoTitle) ?></h1>
     <?php if ($isDraft): ?>
       <!-- Метка черновика: статья ещё не опубликована -->
       <span class="book-page-header__badge"
@@ -603,7 +619,7 @@ $articlePayload = [
               <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
               <form class="comment-reply-form" data-reply-form hidden>
-                <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+                <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="2000" autocomplete="off">
                 <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -664,7 +680,7 @@ $articlePayload = [
           <button type="button" class="comment-card__more" data-replies-toggle hidden></button>
 
           <form class="comment-reply-form" data-reply-form hidden>
-            <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="500" autocomplete="off">
+            <input type="text" class="comment-reply-form__input" placeholder="<?= $tr('common.comments.reply_placeholder') ?>" maxlength="2000" autocomplete="off">
             <button type="submit" class="comment-reply-form__submit" disabled aria-label="<?= $tr('common.comments.reply_send') ?>">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M5 12.5L9.5 17L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>

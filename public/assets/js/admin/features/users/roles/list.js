@@ -71,7 +71,7 @@ export function urToggle(btn) {
   if (userRoles.cache[id]) { urRender(id); return; }
 
   var body = urBody(id);
-  if (body) body.innerHTML = '<p class="admin-user-roles__note">' + esc(tx('common.common.loading', 'Loading...')) + '</p>';
+  if (body) body.innerHTML = '<p class="admin-user-roles__note">' + esc(tx('common.loading', 'Loading...')) + '</p>';
   urLoad(id).then(function (roles) {
     if (roles === null) {
       if (body) body.innerHTML = '<p class="admin-user-roles__note">' + esc(tx('admin.roles_load_error', 'Failed to load roles')) + '</p>';

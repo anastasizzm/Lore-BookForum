@@ -71,7 +71,7 @@ $current_sort  = $currentSort ?? 'newest';
 if (!isset($sort_options[$current_sort])) $current_sort = 'newest';
 $current_label = $sort_options[$current_sort];
 
-$preservedKeys = ['q', 'genre', 'p_status', 'isbn', 'doi', 'kind', 'f', 'lang'];
+$preservedKeys = ['q', 'genre', 'p_status', 'isbn', 'doi', 'type', 'f', 'lang'];
 $preserved = array_filter(
     $_GET,
     static fn($k) => in_array($k, $preservedKeys, true),

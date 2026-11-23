@@ -8,7 +8,7 @@
  * @param string|null $key     - filter parameter name (for fetch filtering)
  * @param string|null $param   - имя query-параметра для ссылок динамического
  *                               списка (по умолчанию берётся из SOURCES в
- *                               filters.js: genres → ?genre=, types → ?kind=);
+ *                               filters.js: genres → ?genre=, types → ?type=);
  *                               нужен страницам с серверным рендером, где бэк
  *                               читает другое имя (черновики статей: ?type=)
  */

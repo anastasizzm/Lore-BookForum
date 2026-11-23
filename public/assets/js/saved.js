@@ -178,7 +178,7 @@
   // На Saved нет list-AJAX из filters.js, поэтому обрабатываем Reset здесь.
   // Строим URL из текущего адреса: так сбрасываются и фильтры, применённые
   // после AJAX-поиска/сортировки. q, f и lang сохраняются.
-  var RESET_KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
+  var RESET_KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype'];
 
   document.addEventListener('click', function (e) {
     var reset = e.target.closest('[data-filter-panel] [data-filter-reset]');

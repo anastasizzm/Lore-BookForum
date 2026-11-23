@@ -7,7 +7,7 @@
     "common": {
         "loading": "Loading…",
         "back": "Back",
-        "app_name": "Lore Book",
+        "app_name": "Lore Book Forum",
         "cancel": "Cancel",
         "filters": "Filters",
         "items": "items",
@@ -17,6 +17,9 @@
         "pagination": "Pagination",
         "close": "Close",
         "show_more": "Show more"
+    },
+    "seo": {
+        "description": "Lore Book Forum is a community for readers and authors: publish books and articles, build a personal library and discuss what you read."
     },
     "sidebar": {
         "profile": "Profile",
@@ -99,7 +102,8 @@
         "contents_remove_failed": "Failed to remove the file",
         "pdf_only": "The built-in reader supports PDF only. Download the book file instead.",
         "download_file": "Download file",
-        "options": "Book options"
+        "options": "Book options",
+        "open_author_aria": "Open author profile: :name"
     },
     "bookform": {
         "title": "Create book",
@@ -262,7 +266,10 @@
         "no_books": "No books yet.",
         "no_articles": "No articles yet.",
         "search_books": "Search books",
-        "search_articles": "Search articles"
+        "search_articles": "Search articles",
+        "prev": "Previous",
+        "next": "Next",
+        "pagination": "Pagination"
     },
     "sort": {
         "label": "Sort: :value",
@@ -287,6 +294,7 @@
         "email": "Email",
         "posts": "Posts",
         "no_posts": "No posts yet.",
+        "no_publications": "No publications yet.",
         "no_bio": "No biography yet.",
         "publications": "Publications",
         "publications_of": "Publications of :name",
@@ -323,6 +331,7 @@
         "continue": "Continue",
         "open": "Open",
         "empty": "You have no drafts yet.",
+        "empty_books": "No drafts yet.",
         "empty_hint": "Unfinished books and articles will appear here.",
         "empty_link": "Create a book",
         "empty_link_article": "Create an article",
@@ -333,7 +342,8 @@
         "publish": "Publish",
         "delete": "Delete",
         "delete_confirm": "Delete draft «:title»?",
-        "deleted": "Draft deleted."
+        "deleted": "Draft deleted.",
+        "published": "Draft published."
     },
     "rights": {
         "title": "Publication rights",
@@ -726,6 +736,20 @@
         "action_edit": "Edit",
         "action_delete": "Delete",
         "action_add": "Add",
+        "books_loading": "Loading books…",
+        "articles_loading": "Loading articles…",
+        "books_load_error": "Failed to load books",
+        "articles_load_error": "Failed to load articles",
+        "users_loading": "Loading users…",
+        "users_load_error": "Failed to load users",
+        "user_roles_toggle": "Roles",
+        "users_load_more": "Show more",
+        "book_delete_title": "Delete book?",
+        "book_delete_text": "The book \":name\" will be permanently deleted. This action cannot be undone.",
+        "book_deleted": "Book deleted",
+        "article_delete_title": "Delete article?",
+        "article_delete_text": "The article \":name\" will be permanently deleted. This action cannot be undone.",
+        "article_deleted": "Article deleted",
         "search_users_ph": "Search by username or email…",
         "users_search_truncated": "Showing the first :limit users. Refine the search.",
         "search_books_ph": "Search by title…",

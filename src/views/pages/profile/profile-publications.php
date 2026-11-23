@@ -63,8 +63,10 @@ $link = static function (?int $pageN) use ($q, $userId, $isArticles, $withLang):
 };
 
 // Имя параметра, которым API (/api/books, /api/articles) фильтрует публикации по автору.
-// Если здесь неверное имя, filters.js заметит чужие публикации в ответе и просто загрузит страницу обычным способом.
-$apiUserParam = 'creatorId';
+// API читает именно ?creator=<id>; при неверном имени filters.js увидит чужие
+// публикации в ответе. Полную перезагрузку страницы в этом случае не делаем —
+// это раньше приводило к бесконечному циклу.
+$apiUserParam = 'creator';
 
 $view->setBlock('selectedTab', 'profile');
 ?>

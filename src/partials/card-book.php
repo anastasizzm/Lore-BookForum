@@ -84,7 +84,11 @@ $saveType  = $isArticles ? 'article' : 'book';
 $isArticle = $isArticles;
 $saveAttr  = $isArticle ? 'data-save-article' : 'data-save-book';
 $idAttr    = $isArticle ? 'data-article-id'   : 'data-book-id';
-$saveLabel = $saved ? 'Remove from saved' : 'Save ' . $saveType;
+$saveLabel = $saved
+    ? $view->t('common.book.unsave')
+    : $view->t($isArticle ? 'common.article.save' : 'common.book.save');
+$openLabel = $view->t($isArticle ? 'common.drafts.open' : 'common.article.open_book') . ': ' . $title;
+$openAuthorLabel = $view->t('common.book.open_author_aria', ['name' => $authorName]);
 
 $hasCover = $cover !== '';
 
@@ -136,7 +140,7 @@ $isDraft = (string) $pubStatus === 'draft';
   <h3 class="card-book__title">
     <a class="card-book__link"
        href="<?= $view->e($bookUrl) ?>"
-       aria-label="Open <?= $view->e($saveType) ?>: <?= $view->e($title) ?>">
+       aria-label="<?= $view->e($openLabel) ?>">
       <?= $view->e($title) ?>
     </a>
   </h3>
@@ -145,7 +149,7 @@ $isDraft = (string) $pubStatus === 'draft';
     <p class="card-book__author">
       <a class="card-book__author-link"
          href="<?= $view->e($authorUrl) ?>"
-         aria-label="Open author profile: <?= $view->e($authorName) ?>">
+         aria-label="<?= $view->e($openAuthorLabel) ?>">
         <?= $view->e($authorName) ?>
       </a>
     </p>

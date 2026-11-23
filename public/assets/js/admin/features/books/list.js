@@ -77,10 +77,10 @@ function renderRows() {
   if (!books.rows) return;
   if (!books.items.length) {
     books.rows.innerHTML = '<tr class="admin-table__empty"><td colspan="6">' +
-      esc(tx('common.admin.empty', 'Nothing found')) + '</td></tr>';
+      esc(tx('admin.empty', 'Nothing found')) + '</td></tr>';
   } else {
-    var viewLabel = tx('common.admin.action_view', 'View');
-    var delLabel = tx('common.admin.action_delete', 'Delete');
+    var viewLabel = tx('admin.action_view', 'View');
+    var delLabel = tx('admin.action_delete', 'Delete');
     books.rows.innerHTML = books.items.map(function (b) {
       return '<tr data-book-id="' + b.id + '">' +
         '<td class="admin-table__id">' + b.id + '</td>' +
@@ -150,7 +150,7 @@ function deleteBook(btn) {
     text:        tx('admin.book_delete_text',
                     'The book "' + book.title + '" will be permanently deleted. This action cannot be undone.',
                     { name: book.title }),
-    confirmText: tx('common.admin.action_delete', 'Delete'),
+    confirmText: tx('admin.action_delete', 'Delete'),
     danger:      true
   }).then(function (confirmed) {
     if (!confirmed) return;

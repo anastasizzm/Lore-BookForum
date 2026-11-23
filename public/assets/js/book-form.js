@@ -1078,8 +1078,14 @@
     // Legacy-окно (11.3) больше не открывается — initPublishDialog вернёт
     // null. Publish сразу создаёт черновик и открывает roles-module.
     var publishDialog = initPublishDialog(form);
+
+    // Защита от двойной отправки: пока запрос (создание/патч/загрузка файлов)
+    // выполняется, повторный submit и клик по Publish игнорируются.
+    var submitting = false;
+
     Array.prototype.forEach.call(form.querySelectorAll('[data-publish-open]'), function (btn) {
       btn.addEventListener('click', function () {
+        if (submitting) return;
         if (!validateAll()) {
           showFieldErrors();
           focusFirstInvalid();
@@ -1511,6 +1517,8 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (submitting) return;
+      submitting = true;
       clearAllErrors();
 
       var wantPublish = !!(e.submitter
@@ -1523,6 +1531,7 @@
       if (!validateAll()) {
         showFieldErrors();
         focusFirstInvalid();
+        submitting = false;
         return;
       }
 
@@ -1533,6 +1542,7 @@
         setError('files', t('js.rule_book_publish_pdf'));
         showFieldErrors();
         focusFirstInvalid();
+        submitting = false;
         return;
       }
 
@@ -1562,9 +1572,11 @@
       if (!activeBtn) activeBtn = submitBtns[0] || null;
 
       function resetButtons() {
+        submitting = false;
         // Ошибка отправки — закрываем окно: ошибки полей видны только
         // на форме (люди их не перекрывают).
         if (publishDialog) publishDialog.close();
+        form.querySelectorAll('[data-publish-open]').forEach(function (b) { b.disabled = false; });
         submitBtns.forEach(function (b, i) {
           b.disabled = false;
           if (labels[i] !== undefined) b.textContent = labels[i];
@@ -1591,6 +1603,7 @@
           : [];
 
         submitBtns.forEach(function (b) { b.disabled = true; });
+        form.querySelectorAll('[data-publish-open]').forEach(function (b) { b.disabled = true; });
         if (activeBtn) {
           activeBtn.textContent = t((coverFile || bookFiles.length)
             ? 'js.bookform_uploading'
@@ -1773,6 +1786,7 @@
                 });
                 return;
               }
+              resetButtons();
               leaveAndRedirect('/books/' + editId);
               return;
             }
@@ -1829,6 +1843,7 @@
         : [];
 
       submitBtns.forEach(function (b) { b.disabled = true; });
+      form.querySelectorAll('[data-publish-open]').forEach(function (b) { b.disabled = true; });
       if (activeBtn) {
         activeBtn.textContent = t((coverFile || bookFiles.length)
           ? 'js.bookform_uploading'
@@ -1914,6 +1929,7 @@
                 }
 
                 notify(t('js.book_draft_created'), 'success');
+                resetButtons();
                 window.location.href = redirect;
                 return;
               }
@@ -1931,7 +1947,7 @@
                 return;
               }
 
-              if (response.status === 401) { if (publishDialog) publishDialog.close(); notify(t('errors.common.unauthorized')); return; }
+              if (response.status === 401) { resetButtons(); notify(t('errors.common.unauthorized')); return; }
               if (response.status === 419) { notify(t('errors.common.csrf_fail')); resetButtons(); return; }
 
               var fallback = t('errors.common.save_failed', { status: response.status });

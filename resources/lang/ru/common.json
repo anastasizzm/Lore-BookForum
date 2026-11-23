@@ -18,6 +18,9 @@
         "close": "Закрыть",
         "show_more": "Показать ещё"
     },
+    "seo": {
+        "description": "Lore Book Forum — сообщество читателей и авторов: публикуйте книги и статьи, собирайте личную библиотеку и обсуждайте прочитанное."
+    },
     "sidebar": {
         "profile": "Профиль",
         "feed": "Лента",
@@ -99,7 +102,8 @@
         "contents_remove_failed": "Не удалось удалить файл",
         "pdf_only": "Встроенная читалка поддерживает только PDF. Скачайте файл книги.",
         "download_file": "Скачать файл",
-        "options": "Действия с книгой"
+        "options": "Действия с книгой",
+        "open_author_aria": "Открыть профиль автора: :name"
     },
     "bookform": {
         "title": "Новая книга",
@@ -262,7 +266,10 @@
         "no_books": "Книг пока нет.",
         "no_articles": "Статей пока нет.",
         "search_books": "Поиск книг",
-        "search_articles": "Поиск статей"
+        "search_articles": "Поиск статей",
+        "prev": "Назад",
+        "next": "Вперёд",
+        "pagination": "Постраничная навигация"
     },
     "sort": {
         "label": "Сортировка: :value",
@@ -287,6 +294,7 @@
         "email": "Email",
         "posts": "Посты",
         "no_posts": "Постов пока нет.",
+        "no_publications": "Пока нет публикаций.",
         "no_bio": "Пока ничего не рассказано.",
         "publications": "Публикации",
         "publications_of": "Публикации: :name",
@@ -323,6 +331,7 @@
         "continue": "Продолжить",
         "open": "Открыть",
         "empty": "У вас пока нет черновиков.",
+        "empty_books": "Черновиков пока нет.",
         "empty_hint": "Незавершённые книги и статьи появятся здесь.",
         "empty_link": "Создать книгу",
         "empty_link_article": "Создать статью",
@@ -333,7 +342,8 @@
         "publish": "Опубликовать",
         "delete": "Удалить",
         "delete_confirm": "Удалить черновик «:title»?",
-        "deleted": "Черновик удалён."
+        "deleted": "Черновик удалён.",
+        "published": "Черновик опубликован."
     },
     "rights": {
         "title": "Права публикации",
@@ -728,6 +738,20 @@
         "action_edit": "Изменить",
         "action_delete": "Удалить",
         "action_add": "Добавить",
+        "books_loading": "Загрузка книг…",
+        "articles_loading": "Загрузка статей…",
+        "books_load_error": "Не удалось загрузить книги",
+        "articles_load_error": "Не удалось загрузить статьи",
+        "users_loading": "Загрузка пользователей…",
+        "users_load_error": "Не удалось загрузить пользователей",
+        "user_roles_toggle": "Роли",
+        "users_load_more": "Показать ещё",
+        "book_delete_title": "Удалить книгу?",
+        "book_delete_text": "Книга «:name» будет удалена безвозвратно. Это действие нельзя отменить.",
+        "book_deleted": "Книга удалена",
+        "article_delete_title": "Удалить статью?",
+        "article_delete_text": "Статья «:name» будет удалена безвозвратно. Это действие нельзя отменить.",
+        "article_deleted": "Статья удалена",
         "search_users_ph": "Поиск по логину или email…",
         "users_search_truncated": "Показаны первые :limit пользователей. Уточните запрос.",
         "search_books_ph": "Поиск по названию…",

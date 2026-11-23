@@ -44,7 +44,7 @@
   // 'f' намеренно отсутствует: им управляет app.js
   // 'doi' обязателен: без него значение из ?doi= не восстанавливается
   // после перезагрузки, а поле стирается в syncUi()
-  const KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'sort', 'kind', 'q'];
+  const KEYS = ['genre', 'status', 'p_status', 'isbn', 'doi', 'sort', 'type', 'q'];
   const DEFAULTS = { sort: 'newest', p_status: 'all' }; // как на сервере по умолчанию
   const state = {};
   let page = Number(new URLSearchParams(location.search).get('page') || 1);
@@ -81,7 +81,7 @@
     // Публикация: шлём всегда, иначе «Все» (all) не доедет до бэка.
     p.set(PARAM.pStatus, PSTATUS_VALUES[state.p_status ?? 'all'] ?? 'any');
     if (IS_ARTICLES) {
-      if (state.kind) p.set(PARAM.type, state.kind);
+      if (state.type) p.set(PARAM.type, state.type);
       if (state.doi)  p.set(PARAM.doi, state.doi);
     } else if (state.isbn) {
       p.set(PARAM.isbn, state.isbn);
@@ -150,6 +150,10 @@
     const v = window.LoreI18n ? window.LoreI18n.t(key) : key;
     return v && v !== key ? v : fallback;
   };
+  const trp = (key, params, fallback) => {
+    const v = window.LoreI18n ? window.LoreI18n.t(key, params) : key;
+    return v && v !== key ? v : fallback;
+  };
 
   function cardHtml(b) {
     const cover = resolveCover(b);
@@ -162,9 +166,11 @@
     if (authorId > 0 && c && c.username && window.LoreUsers) {
       window.LoreUsers.remember(authorId, c.username);
     }
+    const authorLabel = trp('book.open_author_aria', { name: authorName }, 'Open author profile: ' + authorName);
     const author = authorName
       ? `<p class="card-book__author"><a class="card-book__author-link"
-           href="${authorId > 0 ? '/users/' + authorId : '#'}">${esc(authorName)}</a></p>`
+           href="${authorId > 0 ? '/users/' + authorId : '#'}"
+           aria-label="${esc(authorLabel)}">${esc(authorName)}</a></p>`
       : '';
     const id = Number(b.id);
     // P1-6: карточка ведёт на страницу книги/статьи
@@ -173,11 +179,15 @@
     // На странице статей кнопка помечается как article — app.js по этому
     // атрибуту выбирает тип и событие (data-save-url дублирует эндпоинт).
     const saveAttr = IS_ARTICLES ? 'data-save-article data-article-id' : 'data-save-book data-book-id';
-    const saveKind = IS_ARTICLES ? 'article' : 'book';
 
     // API отдаёт состояние закладки в контексте юзера как isSaved
     // (поле saved оставлено для старых ответов).
     const isSaved = !!(b.isSaved ?? b.saved);
+
+    const saveLabel = isSaved
+      ? tr('js.unsave', 'Remove from saved')
+      : (IS_ARTICLES ? tr('js.save_article', 'Save article') : tr('js.save_book', 'Save book'));
+    const openLabel = (IS_ARTICLES ? tr('drafts.open', 'Open') : tr('article.open_book', 'Open book')) + ': ' + b.title;
 
     // Статус чтения (ReadingStatus: none | reading | ended).
     const rsRaw = String(b.readingStatus?.value ?? b.readingStatus ?? 'none');
@@ -204,12 +214,12 @@
           ${saveAttr}="${id}"
           data-save-url="${esc(API + '/' + id + '/save')}"
           aria-pressed="${isSaved ? 'true' : 'false'}"
-          aria-label="${isSaved ? 'Remove from saved' : 'Save ' + saveKind}">
+          aria-label="${esc(saveLabel)}">
     <svg width="14" height="18" viewBox="0 0 14 18" fill="none" aria-hidden="true">
       <path d="M1 2C1 1.44772 1.44772 1 2 1H12C12.5523 1 13 1.44772 13 2V16.5273C13 16.928 12.5574 17.1704 12.2039 16.9631L7 13.9114L1.79612 16.9631C1.44265 17.1704 1 16.928 1 16.5273V2Z" stroke="currentColor" stroke-width="1.5"/>
     </svg>
   </button>
-  <h3 class="card-book__title"><a class="card-book__link" href="${esc(href)}">${esc(b.title)}</a></h3>
+  <h3 class="card-book__title"><a class="card-book__link" href="${esc(href)}" aria-label="${esc(openLabel)}">${esc(b.title)}</a></h3>
   ${author}
 </article>`;
   }
@@ -299,7 +309,7 @@
     }
 
     if (e.target.closest('[data-filter-reset]')) {
-      ['genre', 'status', 'p_status', 'isbn', 'doi', 'kind'].forEach(k => delete state[k]);
+      ['genre', 'status', 'p_status', 'isbn', 'doi', 'type'].forEach(k => delete state[k]);
       syncUi(); pushUrl(); load();
       return;
     }

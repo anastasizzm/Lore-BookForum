@@ -67,7 +67,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
   const SOURCES = {
     genres: { url: '/api/additional/genres', param: 'genre', allLabelKey: 'js.all_genres' },
-    types:  { url: '/api/additional/types',  param: 'kind',  allLabelKey: 'js.all_types' },
+    types:  { url: '/api/additional/types',  param: 'type',  allLabelKey: 'js.all_types' },
   };
 
   const STRICT_ISBN_CHECKSUM = false;
@@ -136,10 +136,8 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     return data;
   }
 
-  // param — переопределение query-параметра с самого dropdown (data-param):
-  // страницы с серверным рендером читают в бэке другое имя, чем ссылки
-  // библиотеки (?kind= → ?type= на черновиках статей). Без переопределения
-  // берём src.param.
+  // param — переопределение query-параметра с самого dropdown (data-param).
+  // Без переопределения берём src.param.
   function renderItemHtml(entry, src, current, param) {
     const id = String(entry.id ?? entry.value ?? '');
     const title = String(entry.title ?? entry.label ?? entry.id ?? '');
@@ -380,10 +378,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // Данные уже показанной выборки (в т.ч. SSR) кладутся в кэш —
   // возврат на неё идёт без запроса.
   // ============================================
-  const LIST_KEYS    = ['q', 'genre', 'p_status', 'isbn', 'doi', 'kind', 'sort', 'ctype'];
+  const LIST_KEYS    = ['q', 'genre', 'p_status', 'isbn', 'doi', 'type', 'sort', 'ctype'];
   const FORWARD_KEYS = LIST_KEYS.concat(['lang']);
   const PAGER_KEYS   = LIST_KEYS.concat(['f', 'lang']);
-  const RESET_KEYS   = ['genre', 'p_status', 'isbn', 'doi', 'series', 'kind', 'sort', 'ctype'];
+  const RESET_KEYS   = ['genre', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype'];
   const GROUP_KEYS   = ['ctype'];
 
   function tOr(key, fallback) {
@@ -435,14 +433,18 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     if (rs && typeof rs === 'object') rs = rs.value;
     const readingStatus = String(rs || 'none');
     const statusLabel = readingStatus === 'reading'
-      ? tOr('common.filter.reading', 'Reading')
+      ? tOr('filter.reading', 'Reading')
       : readingStatus === 'ended'
-        ? tOr('common.filter.finished', 'Finished')
+        ? tOr('filter.finished', 'Finished')
         : '';
 
     const itemUrl   = id > 0 ? (isArt ? '/articles/' : '/books/') + id : '#';
     const authorUrl = authorId > 0 ? '/users/' + authorId : '#';
-    const saveLabel = saved ? 'Remove from saved' : 'Save ' + kind;
+    const saveLabel = saved
+      ? tFilter('js.unsave')
+      : tFilter(isArt ? 'js.save_article' : 'js.save_book');
+    const openLabel = tFilter(isArt ? 'drafts.open' : 'article.open_book') + ': ' + title;
+    const authorLabel = tFilter('book.open_author_aria', { name: authorName });
 
     return '<article class="card-base card-book">' +
       '<div class="card-book__cover' + (cover ? '' : ' cover--empty') + '">' +
@@ -456,13 +458,13 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         ' aria-pressed="' + (saved ? 'true' : 'false') + '"' +
         ' aria-label="' + escapeHtml(saveLabel) + '">' + SAVE_ICON + '</button>' +
       '<h3 class="card-book__title">' +
-        '<a class="card-book__link" href="' + escapeHtml(itemUrl) + '" aria-label="' + escapeHtml('Open ' + kind + ': ' + title) + '">' +
+        '<a class="card-book__link" href="' + escapeHtml(itemUrl) + '" aria-label="' + escapeHtml(openLabel) + '">' +
           escapeHtml(title) +
         '</a>' +
       '</h3>' +
       (authorName
         ? '<p class="card-book__author"><a class="card-book__author-link" href="' + escapeHtml(authorUrl) + '"' +
-          ' aria-label="' + escapeHtml('Open author profile: ' + authorName) + '">' + escapeHtml(authorName) + '</a></p>'
+          ' aria-label="' + escapeHtml(authorLabel) + '">' + escapeHtml(authorName) + '</a></p>'
         : '') +
     '</article>';
   }
@@ -501,7 +503,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         '<span class="card-draft__badge">' + escapeHtml(ctx.draftLabel) + '</span>' +
       '</div>' +
       '<h3 class="card-draft__title"><a class="card-draft__link" href="' + escapeHtml(href) + '"' +
-        ' aria-label="' + escapeHtml(tOr('common.drafts.continue', 'Continue') + ': ' + (b.title || '')) + '">' +
+        ' aria-label="' + escapeHtml(tOr('drafts.continue', 'Continue') + ': ' + (b.title || '')) + '">' +
         escapeHtml(b.title) + '</a></h3>' +
     '</article>';
   }
@@ -519,9 +521,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // Пагинация остаётся обычными <a href> (как в library-list.php / profile-publications.php)
   function buildPager(url, page, hasNext) {
     if (page <= 1 && !hasNext) return '';
-    const prev = tOr('common.library.prev', tOr('common.common.prev', 'Previous'));
-    const next = tOr('common.library.next', tOr('common.common.next', 'Next'));
-    const aria = tOr('common.library.pagination', tOr('common.common.pagination', 'Pagination'));
+    const prev = tOr('library.prev', tOr('common.prev', 'Previous'));
+    const next = tOr('library.next', tOr('common.next', 'Next'));
+    const aria = tOr('library.pagination', tOr('common.pagination', 'Pagination'));
     let html = '<nav class="books-panel__pager" aria-label="' + escapeHtml(aria) + '">';
     if (page > 1)  html += '<a class="btn btn--secondary" href="' + escapeHtml(pagerHref(url, page - 1)) + '">' + escapeHtml(prev) + '</a>';
     if (hasNext)   html += '<a class="btn btn--secondary" href="' + escapeHtml(pagerHref(url, page + 1)) + '">' + escapeHtml(next) + '</a>';
@@ -550,7 +552,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     // профиль: чьи публикации + как называется параметр в API
     const userId    = root.dataset.listUser || '';
-    const userParam = root.dataset.listUserParam || 'creatorId';
+    const userParam = root.dataset.listUserParam || 'creator';
     const userName  = root.dataset.listName || '';
     if (mode === 'profile' && !userId) return;
 
@@ -762,7 +764,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         if (v) api.set(k, v);
       });
       api.delete('ctype');
-      (src.kind === 'article' ? ['status', 'isbn'] : ['kind', 'doi']).forEach(function (k) { api.delete(k); });
+      (src.kind === 'article' ? ['status', 'isbn'] : ['type', 'doi']).forEach(function (k) { api.delete(k); });
       if (!api.has('lang')) api.set('lang', langOf());
       // Библиотека/профиль/черновики рисуют автора на карточке — просим
       // creator всегда. Раньше SSR-страница передавала include, а AJAX-фильтры
@@ -820,7 +822,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
           const c = it.creator || it.author;
           return c && c.id !== undefined && c.id !== null && String(c.id) !== String(userId);
         });
-        if (foreign) { const err = new Error('foreign items'); err.fallback = true; throw err; }
+        if (foreign) { const err = new Error('foreign items'); err.foreign = true; throw err; }
       }
 
       // Два источника склеены — упорядочиваем внутри страницы
@@ -830,7 +832,7 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         else if (s === 'newest') items.sort(function (a, b) { return dateOf(b) - dateOf(a); });
       }
 
-      const draftLabel = tOr('common.drafts.badge', 'Draft');
+      const draftLabel = tOr('drafts.badge', 'Draft');
       const ctx = {
         isArticles: isArticles,
         labels: labels,
@@ -884,7 +886,15 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         } catch (e) {
           if (myTicket !== ticket || (e && e.name === 'AbortError')) return; // запустили более новый
           setBusy(false);
-          if (e && e.fallback) { window.location.href = targetUrl.toString(); return; }
+          if (e && e.foreign) {
+            // API не понял параметр автора и вернул чужие публикации.
+            // Раньше здесь была полная навигация — при неверном параметре она
+            // зацикливалась (SSR рендерил ту же страницу снова и снова).
+            console.error('[filters] profile list returned foreign publications', e);
+            notify(tFilter('errors.common.list_load_failed'));
+            applyControls(shownUrl);
+            return;
+          }
           console.error('[filters] list load failed', e);
           notify(e && e.fromServer ? e.message : tFilter('errors.common.network_error'));
           applyControls(shownUrl);
