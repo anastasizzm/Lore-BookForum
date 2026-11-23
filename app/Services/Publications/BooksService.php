@@ -18,7 +18,6 @@ use App\Validators\Publications\ReadProgressFormValidator;
 use App\Validators\Publications\RateFormValidator;
 
 use App\Models\PaginatedList;
-use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
 use App\Models\Publications\BookModel;
 use App\Models\Publications\BookPatchModel;
@@ -89,10 +88,10 @@ final class BooksService extends PublicationsService
     private function getRawList(BooksListQuery $query)
     {
         $errors = [];
-        $isValid = $query->properties->validateForType(Publication::class, $errors);
+        $isValid = $query->properties->validateForType(Book::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
-        $criteria = CriteriasFactory::buildBookFromQuery($query, Publication::class);
+        $criteria = CriteriasFactory::buildBookFromQuery($query, Book::class);
         return $this->repository->getList(
             $criteria,
             $query->properties->getProps()

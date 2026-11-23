@@ -21,7 +21,6 @@ use App\Models\Queries\Publications\ArticlesListQuery;
 use App\Models\Queries\PropertiesQuery;
 
 use App\Models\PaginatedList;
-use App\Models\Publications\Publication;
 use App\Models\Publications\Article;
 use App\Models\Publications\ArticleModel;
 use App\Models\Publications\ContentData;
@@ -92,7 +91,7 @@ final class ArticlesService extends PublicationsService
         $isValid = $query->properties->validateForType(Article::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
-        $criteria = CriteriasFactory::buildArticleFromQuery($query, Publication::class);
+        $criteria = CriteriasFactory::buildArticleFromQuery($query, Article::class);
         return $this->repository->getList(
             $criteria,
             $query->properties->getProps()
