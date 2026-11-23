@@ -90,6 +90,9 @@ return function(Router $router)
     $router->get('/users', fn(HttpContext $ctx) => Response::html(View::render('message', ['message' => 'Page not found', 'statusCode' => 404]), 404), 'users', AuthPolicy::Auth);
     $router->get('/users/{userId}', [App\Controllers\Users\UsersController::class, 'retrieve'], 'users.profile', AuthPolicy::Auth);
     $router->get('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'getEdit'], 'users.profile.edit', ManageAccountOperation::class);
+    $router->post('/users/{userId}/edit', [App\Controllers\Users\UsersController::class, 'postEdit'], 'users.profile.edit.submit', ManageAccountOperation::class);
+    $router->post('/users/{userId}/credits/edit', [App\Controllers\Users\UsersController::class, 'postCredits'], 'users.profile.credits.edit.submit', ManageAccountOperation::class);
+    $router->put('/users/{userId}/credits/edit', [App\Controllers\Users\UsersController::class, 'postCredits'], 'users.profile.credits.edit.submit.put', ManageAccountOperation::class);
 
     $router->get('/users/{userId}/books', [App\Controllers\Users\UsersController::class, 'getBooks'], 'users.profile.books', AuthPolicy::Auth);
     $router->get('/users/{userId}/articles', [App\Controllers\Users\UsersController::class, 'getArticles'], 'users.profile.articles', AuthPolicy::Auth);

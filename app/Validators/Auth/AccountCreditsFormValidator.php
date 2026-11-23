@@ -24,13 +24,13 @@ final class AccountCreditsFormValidator extends Validator
         
         if (!preg_match('#^[A-Za-z0-9_\.-]{3,}$#', $item->username))
         {
-            $bad->add('username', [$this->translator->t("errors.account.username_format")]);
+            $bag->add('username', [$this->translator->t("errors.account.username_format")]);
             $ok = false;
         }
 
         if (!filter_var($item->email, FILTER_VALIDATE_EMAIL))
         {
-            $bad->add('email', [$this->translator->t("errors.account.email_format")]);
+            $bag->add('email', [$this->translator->t("errors.account.email_format")]);
             $ok = false;
         }
 

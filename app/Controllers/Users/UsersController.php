@@ -6,12 +6,16 @@ namespace App\Controllers\Users;
 use App\Controllers\Controller;
 
 use App\Services\Users\UsersService;
+use App\Services\Auth\AccountService;
 use App\Services\Publications\BooksService;
 use App\Services\Publications\ArticlesService;
 
 use App\Http\HttpContext;
+use App\Http\HttpException;
 use App\Http\Response;
 use App\Http\UrlGenerator;
+
+use App\Lib\I18n\Translator;
 
 use App\Models\Queries\Publications\BooksListQuery;
 use App\Models\Queries\Publications\ArticlesListQuery;
@@ -27,14 +31,19 @@ use App\Extensions\Parsers\QueryParser;
 use App\Exceptions\ValidationException;
 use App\Exceptions\UnauthorizedException;
 
+use App\Forms\Auth\AccountCreditsForm;
+use App\Forms\Users\ProfileForm;
+
 use App\Constants;
 
 final class UsersController extends Controller
 {
     public function __construct(
         private readonly UsersService $usersService,
+        private readonly AccountService $accountService,
         private readonly BooksService $booksService,
         private readonly ArticlesService $articlesService,
+        private readonly Translator $translator,
         private readonly UrlGenerator $url
     ){}
 
@@ -68,6 +77,72 @@ final class UsersController extends Controller
             return $this->renderNotFound();
 
         return $this->render('profile/profile-edit', ['user' => $userContext, 'userData' => $userData]);
+    }
+
+    public function postEdit(HttpContext $context, string $userId)
+    {
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $formData = $context->request->body();
+
+        try {
+            $this->usersService->editProfile($userId, ProfileForm::fromInput($formData));
+        } catch (ValidationException $e) {
+            return $this->renderProfileEdit($currentUserId, $userId, $formData, $e->errors(), 422);
+        }
+
+        return Response::redirect($this->url->url('users.profile', ['userId' => $userId]));
+    }
+
+    public function postCredits(HttpContext $context, string $userId)
+    {
+        $userId = RouteParamParser::positiveInt(['u' => $userId], 'u');
+
+        $currentUserId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($currentUserId))
+            return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
+
+        $formData = $context->request->body();
+
+        try {
+            $this->accountService->changeCredits($userId, AccountCreditsForm::fromInput($formData));
+        } catch (ValidationException $e) {
+            return $this->renderProfileEdit($currentUserId, $userId, $formData, $e->errors(), 422);
+        } catch (HttpException $e) {
+            // 202 — email изменён и отправлено письмо подтверждения.
+            return $this->render('message', [
+                'statusCode'   => $e->getStatus(),
+                'message'      => $e->getMessage(),
+                'actionUrl'    => $this->url->url('users.profile', ['userId' => $userId]),
+                'actionTitle'  => $this->translator->t('common.profile.back_to'),
+            ], $e->getStatus());
+        }
+
+        return Response::redirect($this->url->url('users.profile', ['userId' => $userId]));
+    }
+
+    private function renderProfileEdit(
+        int $currentUserId,
+        int $userId,
+        array $form,
+        array $errors,
+        int $statusCode
+    ): Response {
+        $userContext = $this->usersService->loadContext($currentUserId);
+        $userData = $this->usersService->retrieve($userId);
+        if ($userData === null)
+            return $this->renderNotFound();
+
+        return $this->render('profile/profile-edit', [
+            'user'     => $userContext,
+            'userData' => $userData,
+            'form'     => $form,
+            'errors'   => $errors,
+        ], $statusCode);
     }
 
     public function getBooks(HttpContext $context, string $userId)

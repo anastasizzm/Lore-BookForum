@@ -89,7 +89,7 @@ final class ArticlesService extends PublicationsService
     private function getRawList(ArticlesListQuery $query) : array
     {
         $errors = [];
-        $isValid = $query->properties->validateForType(Publication::class, $errors);
+        $isValid = $query->properties->validateForType(Article::class, $errors);
         if(!$isValid) throw new ValidationException($errors);
         
         $criteria = CriteriasFactory::buildArticleFromQuery($query, Publication::class);
