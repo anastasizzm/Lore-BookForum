@@ -18,6 +18,8 @@ use App\Models\Errors\Error;
 use App\Exceptions\ValidationException;
 use App\Extensions\ResponseTemplates;
 
+use Throwable;
+
 final class ExceptionMiddleware implements Middleware
 {
     public function __construct(
@@ -44,5 +46,24 @@ final class ExceptionMiddleware implements Middleware
                 'innerMessages' => $e->toMessages()
             ]));
         }
+        // Production safety net. Keep commented out during development so
+        // real errors stay visible; uncomment before deploying to production.
+        // catch(Throwable $e) {
+        //     error_log('[unhandled] ' . $e::class . ': ' . $e->getMessage()
+        //         . "\n" . $e->getTraceAsString());
+        //
+        //     if ($ctx->isApi())
+        //         return Response::json(
+        //             ResponseTemplates::error(new Error(ErrorCodes::UNHANDLED_EX, 'Internal Server Error')),
+        //             500
+        //         );
+        //
+        //     return Response::html(View::render('message', [
+        //         'statusCode' => 500,
+        //         'message' => 'Internal Server Error',
+        //         'actionUrl' => $this->url->url('home'),
+        //         'actionTitle' => 'To Home',
+        //     ]), 500);
+        // }
     }
 }

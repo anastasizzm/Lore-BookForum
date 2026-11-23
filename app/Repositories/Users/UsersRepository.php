@@ -31,7 +31,8 @@ final class UsersRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addActiveTempFilter();
-        $this->addSelect($criteria->classType)->addBlockTempFilter(false);
+        $this->addSelect($criteria->classType);
+        $this->director->addBlockTempFilter(false);
 
         if (!empty($criteria->search))
             $this->director->addSearchTempFilter($criteria->search);
@@ -68,7 +69,7 @@ final class UsersRepository extends Repository
         $stmt = $this->pdo()->prepare(
             'SELECT id, pass_hash, is_blocked, is_verified, username
             FROM users
-            WHERE (email = :email OR username = :username)
+            WHERE (email = :email OR LOWER(username) = :username)
             AND is_active
             LIMIT 1'
         );
@@ -92,7 +93,7 @@ final class UsersRepository extends Repository
     public function identifyByLogin(string $login) : ?int 
     {
         $stmt = $this->pdo()->prepare(
-            'SELECT id FROM users WHERE (email = :email OR username = :username) AND is_active LIMIT 1'
+            'SELECT id FROM users WHERE (email = :email OR LOWER(username) = :username) AND is_active LIMIT 1'
         );
         $stmt->execute([':email' => $login, ':username' => $login]);
 
@@ -185,6 +186,15 @@ final class UsersRepository extends Repository
         $stmt->execute([':id' => $id]);
 
         return $stmt->fetchColumn() !== false;
+    }
+
+    public function unmarkEmailVerified(int $id): void
+    {
+        $stmt = $this->pdo()->prepare(
+            'UPDATE users SET is_verified = false
+            WHERE id = :id AND is_active'
+        );
+        $stmt->execute([':id' => $id]);
     }
 
     public function loadContext(int $userId) : ?UserContext

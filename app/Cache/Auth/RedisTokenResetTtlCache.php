@@ -8,6 +8,7 @@ use App\Lib\Data\RedisClient;
 final class RedisTokenResetTtlCache implements TokenResetTtlCache
 {
     private const string PREFIX = 'token_reset:';
+    private const string JTI_PREFIX = 'token_reset_jti:';
 
     public function __construct(private readonly RedisClient $redis) {}
 
@@ -27,5 +28,15 @@ final class RedisTokenResetTtlCache implements TokenResetTtlCache
     public function forget(int $userId): void
     {
         $this->redis->del(self::PREFIX . $userId);
+    }
+
+    public function isTokenBlocked(string $jti): bool
+    {
+        return $this->redis->get(self::JTI_PREFIX . $jti) !== null;
+    }
+
+    public function blockToken(string $jti, int $ttl = 300): void
+    {
+        $this->redis->setex(self::JTI_PREFIX . $jti, max(1, $ttl), '1');
     }
 }

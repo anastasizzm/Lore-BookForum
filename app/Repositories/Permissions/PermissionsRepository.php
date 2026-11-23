@@ -11,6 +11,7 @@ use App\Models\Users\UserShortData;
 use App\Models\Enums\UsersSortBy;
 use App\Models\Additional\UserRole;
 use App\Models\Access\Rules\PublicationAccessRules;
+use App\Models\Access\Rules\SystemPublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Assignment\RolesUser;
@@ -39,6 +40,28 @@ class PermissionsRepository extends Repository
         parent::__construct($db);
     }
 
+    /**
+     * create/delete come only from system rules, read only from
+     * publication-based rules; everything else is shared by both models.
+     */
+    private static function pubFlag(
+        SystemPublicationAccessRules|PublicationAccessRules|null $rules,
+        string $flag
+    ): bool {
+        if ($rules === null) return false;
+
+        return match ($flag) {
+            'create' => $rules instanceof SystemPublicationAccessRules ? $rules->create : false,
+            'delete' => $rules instanceof SystemPublicationAccessRules ? $rules->delete : false,
+            'read' => $rules instanceof PublicationAccessRules ? $rules->read : false,
+            'updateMeta' => $rules->updateMeta,
+            'updateContent' => $rules->updateContent,
+            'managePeople' => $rules->managePeople,
+            'manageRoles' => $rules->manageRoles,
+            default => false,
+        };
+    }
+
     // --- Role
 
     public function getRolesVersions(array $roles, ?int $publicationId) : array
@@ -65,7 +88,7 @@ class PermissionsRepository extends Repository
         int $roleId,
         ?int $publicationId,
         string $lexorank,
-        ?PublicationAccessRules $pubRules = null,
+        SystemPublicationAccessRules|PublicationAccessRules|null $pubRules = null,
         ?PostAccessRules $postRules = null,
         ?SystemAccessRules $sysRules = null,
     ): int {
@@ -86,13 +109,13 @@ class PermissionsRepository extends Repository
         $params = [
             ":roleId"           => ScriptParam::asInt($roleId),
             ":pubId"            => ScriptParam::asInt($publicationId),
-            ":pubCreate"        => ScriptParam::asBool($pubRules?->create ?? false),
-            ":pubUpdateMeta"    => ScriptParam::asBool($pubRules?->updateMeta ?? false),
-            ":pubUpdateContent" => ScriptParam::asBool($pubRules?->updateContent ?? false),
-            ":pubDelete"        => ScriptParam::asBool($pubRules?->delete ?? false),
-            ":pubRead"          => ScriptParam::asBool($pubRules?->read ?? false),
-            ":pubManageP"       => ScriptParam::asBool($pubRules?->managePeople ?? false),
-            ":pubManageR"       => ScriptParam::asBool($pubRules?->manageRoles ?? false),
+            ":pubCreate"        => ScriptParam::asBool(self::pubFlag($pubRules, 'create')),
+            ":pubUpdateMeta"    => ScriptParam::asBool(self::pubFlag($pubRules, 'updateMeta')),
+            ":pubUpdateContent" => ScriptParam::asBool(self::pubFlag($pubRules, 'updateContent')),
+            ":pubDelete"        => ScriptParam::asBool(self::pubFlag($pubRules, 'delete')),
+            ":pubRead"          => ScriptParam::asBool(self::pubFlag($pubRules, 'read')),
+            ":pubManageP"       => ScriptParam::asBool(self::pubFlag($pubRules, 'managePeople')),
+            ":pubManageR"       => ScriptParam::asBool(self::pubFlag($pubRules, 'manageRoles')),
             ":postCreate"       => ScriptParam::asBool($postRules?->create ?? false),
             ":postUpdate"       => ScriptParam::asBool($postRules?->update ?? false),
             ":postDelete"       => ScriptParam::asBool($postRules?->delete ?? false),
@@ -111,7 +134,7 @@ class PermissionsRepository extends Repository
         int $roleId,
         ?int $publicationId,
         int $expectedVersion,
-        ?PublicationAccessRules $pubRules = null,
+        SystemPublicationAccessRules|PublicationAccessRules|null $pubRules = null,
         ?PostAccessRules $postRules = null,
         ?SystemAccessRules $sysRules = null,
     ): ?int {
@@ -146,13 +169,13 @@ class PermissionsRepository extends Repository
             ':roleId'           => ScriptParam::asInt($roleId),
             ':pubId'            => ScriptParam::asInt($publicationId),
             ':expectedVersion'  => ScriptParam::asInt($expectedVersion),
-            ':pubCreate'        => ScriptParam::asBool($pubRules?->create ?? false),
-            ':pubUpdateMeta'    => ScriptParam::asBool($pubRules?->updateMeta ?? false),
-            ':pubUpdateContent' => ScriptParam::asBool($pubRules?->updateContent ?? false),
-            ':pubDelete'        => ScriptParam::asBool($pubRules?->delete ?? false),
-            ':pubRead'          => ScriptParam::asBool($pubRules?->read ?? false),
-            ':pubManageP'       => ScriptParam::asBool($pubRules?->managePeople ?? false),
-            ':pubManageR'       => ScriptParam::asBool($pubRules?->manageRoles ?? false),
+            ':pubCreate'        => ScriptParam::asBool(self::pubFlag($pubRules, 'create')),
+            ':pubUpdateMeta'    => ScriptParam::asBool(self::pubFlag($pubRules, 'updateMeta')),
+            ':pubUpdateContent' => ScriptParam::asBool(self::pubFlag($pubRules, 'updateContent')),
+            ':pubDelete'        => ScriptParam::asBool(self::pubFlag($pubRules, 'delete')),
+            ':pubRead'          => ScriptParam::asBool(self::pubFlag($pubRules, 'read')),
+            ':pubManageP'       => ScriptParam::asBool(self::pubFlag($pubRules, 'managePeople')),
+            ':pubManageR'       => ScriptParam::asBool(self::pubFlag($pubRules, 'manageRoles')),
             ':postCreate'       => ScriptParam::asBool($postRules?->create ?? false),
             ':postUpdate'       => ScriptParam::asBool($postRules?->update ?? false),
             ':postDelete'       => ScriptParam::asBool($postRules?->delete ?? false),

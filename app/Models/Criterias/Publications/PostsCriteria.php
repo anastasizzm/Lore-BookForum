@@ -13,6 +13,7 @@ final readonly class PostsCriteria
         public int $page,
         public int $pageSize,
         public PostsSortBy $sortBy,
-        public PostsFilters $filters
+        public PostsFilters $filters,
+        public int $viewerId = 0
     ) {}
 }

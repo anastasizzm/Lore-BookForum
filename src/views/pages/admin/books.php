@@ -3,7 +3,7 @@
  * admin/books — таблица книг админки.
  *
  * Строки рисует public/assets/js/admin/features/books/list.js:
- *   GET    /api/books?include=creator&page=N&q=…
+ *   GET    /api/books?include=creator%2Bgenre&page=N&q=…
  *   DELETE /api/books/{id}
  * Поиск уходит в API только по Enter (и при очистке поля крестиком),
  * «Показать ещё» подгружает следующую страницу.

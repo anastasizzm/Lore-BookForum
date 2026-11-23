@@ -35,10 +35,14 @@ final class TokenBlockerMiddleware implements Middleware
     {
         $userId = $ctx->attribute(Constants::USER_ID_ATTR);
         $tokenIat = $ctx->attribute(Constants::TOKEN_IAT);
-        if (empty($userId) || empty($tokenIat))
+        $jti = $ctx->attribute(Constants::TOKEN_JTI);
+        if (empty($userId))
             return $next($ctx);
 
-        if ($this->service->isValid($userId, $tokenIat))
+        $jtiBlocked = is_string($jti) && $jti !== '' && $this->service->isBlocked($jti);
+        $iatBlocked = !empty($tokenIat) && !$this->service->isValid((int)$userId, (int)$tokenIat);
+
+        if (!$jtiBlocked && !$iatBlocked)
             return $next($ctx);
 
         $response = $ctx->isApi()

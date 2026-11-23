@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Models\Access\Permissions;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
-use App\Models\Access\Rules\PublicationAccessRules;
+use App\Models\Access\Rules\SystemPublicationAccessRules;
 use App\Models\Additional\UserRole;
 use App\Models\Dto;
 
@@ -15,7 +15,7 @@ readonly class SystemPermissions extends Dto
         public int $roleId,
         public SystemAccessRules $systemPermissions,
         public PostAccessRules $postPermissions,
-        public PublicationAccessRules $pubPermissions
+        public SystemPublicationAccessRules $pubPermissions
     ){}
 
     public function id() : mixed { return $this->roleId; }
@@ -29,7 +29,7 @@ readonly class SystemPermissions extends Dto
                 ? UserRole::fromRow($row, $prefix . $r) : NULL,
             systemPermissions: SystemAccessRules::fromRow($row, $prefix . 'sys_'),
             postPermissions: PostAccessRules::fromRow($row, $prefix . 'post_'),
-            pubPermissions: PublicationAccessRules::fromRow($row, $prefix . 'pub_'),
+            pubPermissions: SystemPublicationAccessRules::fromRow($row, $prefix . 'pub_'),
         );
     }
 

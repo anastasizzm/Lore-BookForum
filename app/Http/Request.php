@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use JsonException;
-use HttpException;
+use App\Http\HttpException;
 use App\ErrorCodes;
 
 final class Request

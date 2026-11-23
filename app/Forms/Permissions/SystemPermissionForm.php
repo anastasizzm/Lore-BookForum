@@ -2,10 +2,9 @@
 declare(strict_types=1);
 
 namespace App\Forms\Permissions;
-use App\Extensions\Parsers\QueryParser;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
-use App\Models\Access\Rules\PublicationAccessRules;
+use App\Models\Access\Rules\SystemPublicationAccessRules;
 
 final readonly class SystemPermissionForm extends PermissionForm
 {
@@ -15,12 +14,12 @@ final readonly class SystemPermissionForm extends PermissionForm
         ?int $aboveId,
         public SystemAccessRules $systemPermissions,
         public PostAccessRules $postPermissions,
-        public PublicationAccessRules $pubPermissions
+        public SystemPublicationAccessRules $pubPermissions
     ){
         parent::__construct($roleId, $belowId, $aboveId);
     }
 
-    public static function fromInput(array $form) : self 
+    public static function fromInput(array $form) : self
     {
        $parent = parent::fromInput($form);
         return new self(
@@ -29,7 +28,7 @@ final readonly class SystemPermissionForm extends PermissionForm
             aboveId: $parent->aboveId,
             systemPermissions: SystemAccessRules::fromInput($form['systemPermissions'] ?? []),
             postPermissions: PostAccessRules::fromInput($form['postPermissions'] ?? []),
-            pubPermissions: PublicationAccessRules::fromInput($form['pubPermissions'] ?? [])
+            pubPermissions: SystemPublicationAccessRules::fromInput($form['pubPermissions'] ?? [])
         );
     }
 }

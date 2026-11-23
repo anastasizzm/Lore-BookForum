@@ -130,7 +130,7 @@ $ruleProvidersArray = [
         'publication' => [
             'accessKey' => ServiceType::Publication,
             'providerClass' => CommonPublicationRuleProvider::class,
-            'checkerClass' => App\Models\Access\Rules\PublicationAccessRules::class
+            'checkerClass' => App\Models\Access\Rules\SystemPublicationAccessRules::class
         ],
         'post' => [
             'accessKey' => ServiceType::Post,

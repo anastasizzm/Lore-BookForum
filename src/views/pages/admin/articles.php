@@ -3,7 +3,7 @@
  * admin/articles — таблица статей админки.
  *
  * Строки рисует public/assets/js/admin/features/articles/list.js:
- *   GET    /api/articles?include=creator&page=N&q=…
+ *   GET    /api/articles?include=creator%2Btype&page=N&q=…
  *   DELETE /api/articles/{id}
  * Поиск уходит в API только по Enter (и при очистке поля крестиком),
  * «Показать ещё» подгружает следующую страницу.

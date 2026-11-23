@@ -53,6 +53,7 @@ final class AccountService
             $this->usersRepo->changeCredits($userId, $form->email, $form->username);
             if ($form->email !== $currentCredits->email)
             {
+                $this->usersRepo->unmarkEmailVerified($userId);
                 $this->mailVerificationService->startVerification($userId, $form->email);
                 throw new HttpException($this->translator->t('errors.mail.verify_mail'), 202, ErrorCodes::ACCEPTED);
             }

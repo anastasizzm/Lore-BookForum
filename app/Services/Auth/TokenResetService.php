@@ -18,6 +18,16 @@ final class TokenResetService
         $this->tokenCache->set($userId, time(), $this->resetTtl());
     }
 
+    public function resetFromToken(string $jti, ?int $ttl = null)
+    {
+        $this->tokenCache->blockToken($jti, $ttl ?? max(60, $this->settings->jwt->accessTtl));
+    }
+
+    public function isBlocked(string $jti) : bool
+    {
+        return $this->tokenCache->isTokenBlocked($jti);
+    }
+
     public function isValid(int $userId, int $tokenIat) : bool
     {
         $ttl = $this->tokenCache->get($userId);

@@ -6,7 +6,6 @@ namespace App\Repositories\Permissions;
 use App\Repositories\Repository;
 use App\Models\Scripts\ScriptParam;
 use App\Models\Access\Permissions\SystemPermissions;
-use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Rules\PostAccessRules;
 use App\Models\Access\Rules\SystemAccessRules;
 use App\Models\Access\Assignment\RolesUsersAssignment;
@@ -44,7 +43,6 @@ final class SystemPermissionsRepository extends PermissionsRepository
                 \nbool_or(rp.pub_update_meta) as pub_update_meta,
                 \nbool_or(rp.pub_update_content) as pub_update_content,
                 \nbool_or(rp.pub_delete) as pub_delete,
-                \nbool_or(rp.pub_read) as pub_read,
                 \nbool_or(rp.pub_manage_ppl) as pub_manage_ppl,
                 \nbool_or(rp.pub_manage_roles) as pub_manage_roles,
                 \nbool_or(rp.post_create) as post_create,

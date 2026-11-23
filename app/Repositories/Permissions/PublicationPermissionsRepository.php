@@ -5,10 +5,7 @@ namespace App\Repositories\Permissions;
 
 use App\Repositories\Repository;
 use App\Models\Scripts\ScriptParam;
-use App\Models\Access\Rules\PublicationAccessRules;
 use App\Models\Access\Permissions\PublicationPermissions;
-use App\Models\Access\Rules\PostAccessRules;
-use App\Models\Access\Rules\SystemAccessRules;
 use App\Lib\I18n\Translator;
 use App\Lib\Data\Database;
 use App\Services\Configuration\UnitOfWork;
@@ -39,10 +36,8 @@ final class PublicationPermissionsRepository extends PermissionsRepository
                         MAX(CASE WHEN urt.code = :currentCulture THEN urt.title END),
                         MAX(CASE WHEN urt.code = :fallbackCulture THEN urt.title END)
                     ) as r_title", [':currentCulture' => ScriptParam::asStr($this->translator->locale()), ':fallbackCulture' => ScriptParam::asStr($this->translator->fallback())])
-            ->addSelect("bool_or(rp.pub_create) as pub_create,
-                \nbool_or(rp.pub_update_meta) as pub_update_meta,
+            ->addSelect("bool_or(rp.pub_update_meta) as pub_update_meta,
                 \nbool_or(rp.pub_update_content) as pub_update_content,
-                \nbool_or(rp.pub_delete) as pub_delete,
                 \nbool_or(rp.pub_read) as pub_read,
                 \nbool_or(rp.pub_manage_ppl) as pub_manage_ppl,
                 \nbool_or(rp.pub_manage_roles) as pub_manage_roles")

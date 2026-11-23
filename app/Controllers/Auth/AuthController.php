@@ -14,9 +14,9 @@ use App\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use App\Services\Configuration\CookieService;
 use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\TokenResetService;
 
 use App\Exceptions\ValidationException;
-use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
 use App\Exceptions\MailException;
 use App\Exceptions\ForbiddenException;
@@ -24,7 +24,6 @@ use App\Constants;
 
 use App\Forms\Auth\RegisterForm;
 use App\Forms\Auth\LoginForm;
-use App\Forms\Auth\PassResetMailForm;
 use App\Forms\Auth\PassResetForm;
 
 use App\Models\Errors\InnerMessage;
@@ -37,11 +36,13 @@ final class AuthController extends Controller
         private readonly EmailVerificationService $mailVerify,
         private readonly Translator $translator,
         private readonly CookieService $cookies,
-        private readonly UrlGenerator $url
+        private readonly UrlGenerator $url,
+        private readonly TokenResetService $tokenResetService
     ){}
 
     public function getLogin(HttpContext $c) : Response {
-        $redirectUrl = $c->query('redirect');
+        $redirect = $c->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
         return $this->render('auth/login', ['redirectUrl' => $redirectUrl]);
     }
 
@@ -73,7 +74,8 @@ final class AuthController extends Controller
 
     public function login(HttpContext $ctx) : Response {
         $formData = $ctx->request->body();
-        $redirectUrl = $ctx->query('redirect') ?? $this->url->url('home');
+        $redirect = $ctx->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
 
         try{
             $token = $this->service->login(LoginForm::fromInput($formData));
@@ -84,7 +86,7 @@ final class AuthController extends Controller
             return $this->render('auth/login', ['form' => $formData, 'innerMessages' => [InnerMessage::asError("Authentication failed", $e->getMessage())]]);
         }
         catch(ForbiddenException $e){
-            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login') . "?redirect=" . $redirectUrl, 'actionTitle' => $this->translator->t("common.drafts.continue")]);
+            return $this->render('message', ['statusCode' => $e->getStatus(), 'message' => $e->getMessage(), 'actionUrl' => $this->url->url('login') . "?redirect=" . rawurlencode($redirectUrl), 'actionTitle' => $this->translator->t("common.drafts.continue")]);
         }
         catch(ValidationException $e){
             return $this->render('auth/login', ['form' => $formData, 'errors' => $e->errors()]);
@@ -92,6 +94,13 @@ final class AuthController extends Controller
     }
 
     public function logout(HttpContext $c) : Response{
+        $jti = $c->attribute(Constants::TOKEN_JTI);
+        if (is_string($jti) && $jti !== '') {
+            $exp = $c->attribute(Constants::TOKEN_EXP);
+            $ttl = is_int($exp) && $exp > time() ? $exp - time() : null;
+            $this->tokenResetService->resetFromToken($jti, $ttl);
+        }
+
         $response = Response::redirect($this->url->url('login'));
         return $this->cookies->clear($this->cookies->clear($response, Constants::CSRF_COOKIE, false), Constants::TOKEN_COOKIE);
     }

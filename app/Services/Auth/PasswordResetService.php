@@ -27,6 +27,7 @@ use App\Models\Email;
 use App\Exceptions\GoneException;
 use App\Exceptions\ForbiddenException;
 use App\Exceptions\BadRequestException;
+use App\Exceptions\MailException;
 use App\Exceptions\ValidationException;
 
 final class PasswordResetService
@@ -65,17 +66,31 @@ final class PasswordResetService
         }
 
         $userId = $this->getId($form->email);
+        if ($userId === null) {
+            // Same neutral response as for an existing account: do not reveal
+            // whether an email is registered.
+            error_log('[password-reset] reset requested for unknown account');
+            return;
+        }
 
         $token = $this->issueResetToken($userId);
         $this->cache->set($userId, $this->fingerprint($token), self::RESET_TOKEN_TTL);
 
-        $this->mailer->send(Email::to(
-            $form->email,
-            'Lore profile password reset',
-            View::render('email/reset-password', [
-                'resetUrl' => $this->url->fullUrl('password.reset', ['token' => $token], ['redirect' => $redirectUrl]),
-            ]),
-        ));
+        try {
+            $this->mailer->send(Email::to(
+                $form->email,
+                'Lore profile password reset',
+                View::render('email/reset-password', [
+                    'resetUrl' => $this->url->fullUrl('password.reset', ['token' => $token], ['redirect' => $redirectUrl]),
+                ]),
+            ));
+        } catch (MailException $e) {
+            error_log('[password-reset] mail send failed for user ' . $userId . ': ' . $e->getMessage());
+
+            throw new MailException(
+                $this->translator->t('errors.verify.send_fail')
+            );
+        }
     }
 
     public function completeReset(PassResetForm $form): void
@@ -98,19 +113,9 @@ final class PasswordResetService
 
     // ---- service-specific
 
-    private function getId(string $email): int
+    private function getId(string $email): ?int
     {
-        $id = $this->usersRepo->identifyByLogin($email);
-        if ($id === null) {
-            throw new ValidationException([
-                'email' => [
-                    $this->translator->t('item_based.not_found.m', [
-                        ':item' => $this->translator->t('display_names.account'),
-                    ]),
-                ],
-            ]);
-        }
-        return $id;
+        return $this->usersRepo->identifyByLogin($email);
     }
 
     private function issueResetToken(int $userId): string

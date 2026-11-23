@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 namespace App\Models\Access\Rules;
+
 use App\Models\Access\Operations\AccessOperation;
-use App\Extensions\Parsers\QueryParser;
 
 use App\Models\Access\Operations\Publications\PublicationAccessOperation;
 use App\Models\Access\Operations\Publications\CreatePublicationOperation;
@@ -17,38 +17,51 @@ use App\Models\Access\Operations\Publications\AnyPublicationOperation;
 use App\Models\Access\Operations\Publications\ControlPublicationOperation;
 use App\Models\Access\Operations\Publications\ControlRPPublicationOperation;
 
+use App\Extensions\Parsers\QueryParser;
 use App\Forms\Form;
 use App\Models\RowModel;
 
-readonly class ShortPublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
+/**
+ * System (global) publication rules.
+ *
+ * Unlike the publication-based rules these may grant create and delete.
+ * Reading drafts is deliberately not part of this model: draft access is
+ * controlled by the publication-based `read` flag only.
+ */
+readonly class SystemPublicationAccessRules extends RowModel implements OperationChecker, Form, HasRolesManage
 {
     public function __construct(
+        public bool $create,
         public bool $updateMeta,
         public bool $updateContent,
-        public bool $read,
+        public bool $delete,
         public bool $managePeople,
-        public bool $manageRoles
+        public bool $manageRoles,
     ){}
 
-    public function hasAny() : bool 
+    public function hasAny() : bool
     {
-        return $this->updateMeta 
-            || $this->updateContent || $this->updateMeta
-            || $this->read
-            || $this->managePeople || $this->manageRoles;
+        return $this->create
+            || $this->updateMeta
+            || $this->updateContent
+            || $this->delete
+            || $this->managePeople
+            || $this->manageRoles;
     }
 
     public function allows(AccessOperation $operation) : bool
     {
         return match(true) {
             !($operation instanceof PublicationAccessOperation) => false,
+            $operation instanceof CreatePublicationOperation => $this->create,
             $operation instanceof UpdateMetaPublicationOperation => $this->updateMeta,
             $operation instanceof UpdateContentPublicationOperation => $this->updateContent,
-            $operation instanceof ReadPublicationOperation => $this->read,
+            $operation instanceof DeletePublicationOperation => $this->delete,
+            $operation instanceof ReadPublicationOperation => false,
             $operation instanceof ManagePeoplePublicationOperation => $this->managePeople,
             $operation instanceof ManageRolesPublicationOperation => $this->manageRoles,
             $operation instanceof AnyPublicationOperation => $this->hasAny(),
-            $operation instanceof ControlPublicationOperation => $this->updateMeta || $this->updateContent || $this->read,
+            $operation instanceof ControlPublicationOperation => $this->updateMeta || $this->updateContent || $this->delete,
             $operation instanceof ControlRPPublicationOperation => $this->manageRoles || $this->managePeople,
             default => false,
         };
@@ -57,30 +70,32 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public function hasManagePeople() : bool { return $this->managePeople; }
     public function hasManageRoles() : bool { return $this->manageRoles; }
 
-    public static function fromEmpty() : self 
+    public static function fromEmpty() : self
     {
         return new self(
-            false, false , false, false, false
+            false, false, false, false, false, false
         );
     }
 
-    public static function fromRow(array $row, string $prefix = '') : self 
+    public static function fromRow(array $row, string $prefix = '') : self
     {
         return new self(
+            create: self::bool($row, $prefix . 'create'),
             updateMeta: self::bool($row, $prefix . 'update_meta'),
             updateContent: self::bool($row, $prefix . 'update_content'),
-            read: self::bool($row, $prefix . 'read'),
+            delete: self::bool($row, $prefix . 'delete'),
             managePeople: self::bool($row, $prefix . 'manage_ppl'),
             manageRoles: self::bool($row, $prefix . 'manage_roles'),
         );
     }
 
-    public static function fromInput(array $form) : self 
+    public static function fromInput(array $form) : self
     {
         return new self(
+            create: QueryParser::optionalBool($form, 'create') ?? false,
             updateMeta: QueryParser::optionalBool($form, 'updateMeta') ?? false,
             updateContent: QueryParser::optionalBool($form, 'updateContent') ?? false,
-            read: QueryParser::optionalBool($form, 'read') ?? false,
+            delete: QueryParser::optionalBool($form, 'delete') ?? false,
             manageRoles: QueryParser::optionalBool($form, 'manageRoles') ?? false,
             managePeople: QueryParser::optionalBool($form, 'managePeople') ?? false,
         );
@@ -89,22 +104,24 @@ readonly class ShortPublicationAccessRules extends RowModel implements Operation
     public function toArray(): array
     {
         return [
+            'create' => $this->create,
             'updateMeta' => $this->updateMeta,
             'updateContent' => $this->updateContent,
-            'read' => $this->read,
+            'delete' => $this->delete,
             'managePeople' => $this->managePeople,
-            'manageRoles' => $this->manageRoles
+            'manageRoles' => $this->manageRoles,
         ];
     }
 
     public static function fromArray(array $data): self
     {
         return new self (
+            create: (bool)($data['create'] ?? false),
             updateMeta: (bool)($data['updateMeta'] ?? false),
             updateContent: (bool)($data['updateContent'] ?? false),
-            read: (bool)($data['read'] ?? false),
+            delete: (bool)($data['delete'] ?? false),
             managePeople: (bool)($data['managePeople'] ?? false),
-            manageRoles: (bool)($data['manageRoles'] ?? false)
+            manageRoles: (bool)($data['manageRoles'] ?? false),
         );
     }
 }

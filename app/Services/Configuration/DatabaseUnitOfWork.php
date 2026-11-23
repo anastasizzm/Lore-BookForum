@@ -5,7 +5,7 @@ namespace App\Services\Configuration;
 
 use App\Services\Configuration\UnitOfWork;
 use App\Lib\Data\Database;
-use Trowable;
+use Throwable;
 
 final class DatabaseUnitOfWork implements UnitOfWork
 {

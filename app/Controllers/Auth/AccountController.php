@@ -18,7 +18,6 @@ use App\Services\Auth\PasswordResetService;
 use App\Services\Auth\AccountService;
 
 use App\Exceptions\ValidationException;
-use App\Exceptions\OperationFailedException;
 use App\Exceptions\UnauthorizedException;
 use App\Exceptions\MailException;
 use App\Exceptions\ForbiddenException;
@@ -63,14 +62,16 @@ final class AccountController extends Controller
 
     public function getPasswordMail(HttpContext $context) : Response 
     {
-        $redirectUrl = $context->query('redirect');
+        $redirect = $context->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
         return $this->render('auth/password-email', ['redirectUrl' => $redirectUrl]);
     }
 
     public function passwordMail(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
-        $redirectUrl = $context->query('redirect') ?? $this->url->url('home');
+        $redirect = $context->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
         try{
             $this->passResetService->startReset(MailOnlyForm::fromInput($formData), $redirectUrl);
             return $this->render('message', ['message' => $this->translator->t("common.email.pass_msg")]);
@@ -79,18 +80,30 @@ final class AccountController extends Controller
         {
             return $this->render('auth/password-email', ['form' => $formData, 'errors' => $e->errors(), 'redirectUrl' => $redirectUrl]);
         }
+        catch(MailException $e)
+        {
+            // Keep the response neutral: revealing mail-server failures (or an
+            // unknown account) allows account enumeration.
+            error_log('[password-reset] ' . $e->getMessage());
+
+            return $this->render('message', [
+                'message' => $this->translator->t('common.email.pass_msg'),
+            ]);
+        }
     }
 
     public function getPasswordReset(HttpContext $context, string $token) : Response 
     {
-        $redirectUrl = $context->query('redirect');
+        $redirect = $context->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
         return $this->render('auth/password-reset', ['token' => $token, 'redirectUrl' => $redirectUrl]);
     }
 
     public function passwordReset(HttpContext $context) : Response 
     {
         $formData = $context->request->body();
-        $redirectUrl = $context->query('redirect') ?? $this->url->url('home');
+        $redirect = $context->query('redirect');
+        $redirectUrl = $this->internalRedirect(is_string($redirect) ? $redirect : null, $this->url->url('home'));
 
         try{
             $this->passResetService->completeReset(PassResetForm::fromInput($formData));

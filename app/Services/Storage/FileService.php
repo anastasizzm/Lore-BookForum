@@ -6,6 +6,8 @@ namespace App\Services\Storage;
 use App\Repositories\Storage\FilesRepository;
 use App\Exceptions\ValidationException;
 use App\Exceptions\ConflictException;
+use App\Exceptions\ForbiddenException;
+use App\Exceptions\NotFoundException;
 use App\Exceptions\Translators\FileExceptionTranslator;
 use App\Storage\FileStorage;
 use App\Lib\Settings\StorageSettings;
@@ -52,7 +54,7 @@ final class FileService
         $tmpPath = $upload->tmpPath;
         
         $hash = hash_file('sha256', $tmpPath);
-        $existingFile = $this->files->findByHash($hash);
+        $existingFile = $this->files->findByHash($hash, $creatorId, $category);
         
         if ($existingFile !== null) {
             return $existingFile; 
@@ -103,8 +105,8 @@ final class FileService
         } catch (\PDOException $e) {
             $this->storage->delete($stored->path);
 
-            if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'files_hash_uq')) {
-                $existingFile = $this->files->findByHash($hash);
+            if ($e->getCode() === '23505' && str_contains($e->getMessage(), 'files_hash_')) {
+                $existingFile = $this->files->findByHash($hash, $creatorId, $category);
                 if ($existingFile !== null) {
                     return $existingFile;
                 }
@@ -131,6 +133,48 @@ final class FileService
     public function retrieve(Uuid $fileId): ?File 
     {
         return $this->files->findById($fileId);
+    }
+
+    public function isOwnedBy(Uuid $fileId, int $userId): bool
+    {
+        return $this->files->isOwnedBy($fileId, $userId);
+    }
+
+    public function isReadablePublicationFile(Uuid $fileId, int $userId): bool
+    {
+        return $this->files->isReadablePublicationFile($fileId, $userId);
+    }
+
+    /**
+     * Authorize a batch of file ids in a single query.
+     *
+     * A file is allowed when its category is public or when it was uploaded
+     * by the current user. Missing ids are treated as not found. When a
+     * required category is given, every file must have exactly that category.
+     *
+     * @param array<Uuid> $fileIds
+     */
+    public function authorizeBatch(array $fileIds, int $userId, ?FileCategory $requiredCategory = null): void
+    {
+        if ($fileIds === []) return;
+
+        $files = $this->files->findByIds($fileIds);
+
+        foreach ($fileIds as $fileId) {
+            $file = $files[$fileId->toString()] ?? null;
+
+            if ($file === null) {
+                throw new NotFoundException($this->translator->t('errors.common.not_found'));
+            }
+
+            if ($requiredCategory !== null && $file->category !== $requiredCategory) {
+                throw new ForbiddenException($this->translator->t('errors.common.forbidden'));
+            }
+
+            if (!$this->settings->fileIsPublic($file->category) && $file->uploadedBy !== $userId) {
+                throw new ForbiddenException($this->translator->t('errors.common.forbidden'));
+            }
+        }
     }
 
     public function delete(Uuid $id): void

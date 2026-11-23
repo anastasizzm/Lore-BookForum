@@ -7,12 +7,10 @@ use App\Services\Permissions\PublicationPermissionsService;
 use App\Services\Publications\BooksService;
 
 use App\Models\Queries\Publications\BooksListQuery;
-use App\Models\Publications\BookFiles;
 use App\Forms\Publications\BookForm;
 use App\Forms\Publications\BookContentForm;
 use App\Forms\Publications\RateForm;
 use App\Forms\Publications\BookPatchForm;
-use App\Forms\Publications\BookProgressForm;
 use App\Models\Enums\BookFormat;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Extensions\Parsers\QueryParser;
@@ -24,6 +22,7 @@ use App\Controllers\Controller;
 
 use App\Http\HttpContext;
 use App\Exceptions\ValidationException;
+use App\Models\Errors\Error;
 
 use App\ErrorCodes;
 use App\Constants;
@@ -87,9 +86,12 @@ final class BooksController extends PublicationsController
     public function addContent(HttpContext $context, string $id)
     {
         $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $formData = $context->request->body();
-        $this->service->addContent($bookId, BookContentForm::fromInput($formData));
+        $this->service->addContent($bookId, BookContentForm::fromInput($formData), $userId);
         return $this->jsonEmpty();
     }
 
@@ -97,8 +99,11 @@ final class BooksController extends PublicationsController
     {
         $bookId = RouteParamParser::positiveInt(['id' => $id], 'id');
         $contentId = RouteParamParser::uuid(['id' => $contentId], 'id');
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if (empty($userId))
+            return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
-        $this->service->removeContent($bookId, $contentId);
+        $this->service->removeContent($bookId, $contentId, $userId);
         return $this->jsonEmpty(204);
     }
 }

@@ -20,7 +20,6 @@ use App\Validators\Publications\RateFormValidator;
 use App\Models\PaginatedList;
 use App\Models\Publications\Publication;
 use App\Models\Publications\Book;
-use App\Models\Publications\BookFiles;
 use App\Models\Publications\BookModel;
 use App\Models\Publications\BookPatchModel;
 use App\Models\Enums\PublicationsSortBy;
@@ -132,7 +131,11 @@ final class BooksService extends PublicationsService
     {
         $bag = $this->validator->validateOne($form);
         if (!$bag->isEmpty()) throw new ValidationException($bag->all());
-        
+
+        // Validate every requested content id in one batch before writing
+        // anything: each file must be a book file uploaded by the creator.
+        $this->fileService->authorizeBatch($form->contentIds, $creatorId, FileCategory::Book);
+
         try{
             return $this->uow->transactional(function () use ($form, $creatorId) :int {
                 $model = BookModel::fromForm($form);
@@ -167,8 +170,10 @@ final class BooksService extends PublicationsService
         }
     }
 
-    public function addContent(int $bookId, BookContentForm $form) : void 
+    public function addContent(int $bookId, BookContentForm $form, int $userId) : void
     {
+        $this->fileService->authorizeBatch([$form->contentId], $userId, FileCategory::Book);
+
         try{
             $this->repository->addContent($bookId, $form->contentId);
         }
@@ -177,12 +182,18 @@ final class BooksService extends PublicationsService
         }
     }
 
-    public function removeContent(int $bookId, Uuid $contentId) : void 
+    public function removeContent(int $bookId, Uuid $contentId, int $userId) : void
     {
         try{
             $removed = $this->repository->removeContent($bookId, $contentId);
-            if ($removed) try{$this->fileService->delete($contentId);}catch(ConflictException $e) {}
-            else throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+            if (!$removed)
+                throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+
+            // Detaching a file from a book must never delete a file the acting
+            // user does not own (e.g. a public cover added by another user).
+            if ($this->fileService->isOwnedBy($contentId, $userId)) {
+                try { $this->fileService->delete($contentId); } catch (ConflictException $e) {}
+            }
         }
         catch(\PDOException $e){
             throw $this->exceptionTranslator->translate($e);

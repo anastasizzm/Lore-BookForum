@@ -18,8 +18,9 @@ final class FileExceptionTranslator extends ExceptionTranslator
 
     /** UNIQUE: constraint → [поле, сообщение] */
     private const UNIQUE = [
-        'files_pkey'    => ['id',   'errors.common.already_exists'],
-        'files_hash_uq' => ['hash', 'errors.files.duplicate'],
+        'files_pkey'                   => ['id',   'errors.common.already_exists'],
+        'files_hash_uq'                => ['hash', 'errors.files.duplicate'],
+        'files_hash_owner_category_uq' => ['hash', 'errors.files.duplicate'],
     ];
 
     /** CHECK: constraint → [поле, сообщение] */

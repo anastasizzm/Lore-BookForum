@@ -15,7 +15,7 @@ final readonly class AccountCreditsForm implements Form
     public static function fromInput(array $input): self
     {
         return new self(
-            username: trim($input['username'] ?? ''),
+            username: mb_strtolower(trim($input['username'] ?? '')),
             email: mb_strtolower(trim($input['email'] ?? '')),
         );
     }

@@ -23,6 +23,7 @@ final class PostsRepository extends Repository
     {
         $this->director->startTempFilter()
             ->addPostSelectTemp()
+            ->addViewerTemp($criteria->viewerId)
             ->addActiveTempFilter();
             
         $filters = $criteria->filters;
@@ -62,7 +63,7 @@ final class PostsRepository extends Repository
             'INSERT INTO comments_likes (user_id, comment_id)
             SELECT :userId::bigint, id FROM comments
             WHERE id = :commentId and is_active
-            RETURNING comment_id'
+            ON CONFLICT DO NOTHING'
         );
         $stmt->execute([':userId' => $userId, ':commentId' => $commentId]);
     }
@@ -79,6 +80,39 @@ final class PostsRepository extends Repository
             AND EXISTS (SELECT 1 FROM comments WHERE id = :commentIdInner AND is_active)'
         );
         $stmt->execute([':userId' => $userId, ':commentIdOuter' => $commentId, ':commentIdInner' => $commentId]);
+    }
+
+    public function canReadPublication(int $publicationId, int $userId) : bool
+    {
+        $stmt = $this->pdo()->prepare(
+            "SELECT 1
+             FROM publications p
+             WHERE p.id = :pubId
+               AND p.is_active
+               AND (
+                   p.status = 'public'
+                   OR p.owner_id = :ownerId
+                   OR EXISTS (
+                       SELECT 1
+                       FROM roles_users ru
+                       INNER JOIN roles_permissions rp
+                               ON rp.role_id = ru.role_id
+                               AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id
+                       WHERE ru.user_id = :roleUserId
+                         AND ru.is_valid
+                         AND ru.publication_id = p.id
+                         AND rp.pub_read
+                   )
+               )
+             LIMIT 1"
+        );
+        $stmt->execute([
+            ':pubId' => $publicationId,
+            ':ownerId' => $userId,
+            ':roleUserId' => $userId,
+        ]);
+
+        return $stmt->fetchColumn() !== false;
     }
 
     public function addComment(int $creatorId, int $publicationId, string $content, ?int $parentId = null) : ?int

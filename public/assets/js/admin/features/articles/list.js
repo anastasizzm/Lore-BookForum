@@ -1,6 +1,6 @@
 /**
  * Таблица статей админки: загрузка, поиск (по Enter), «Показать ещё», удаление.
- *   GET    /api/articles?include=creator&page=N&q=…
+ *   GET    /api/articles?include=creator%2Btype&page=N&q=…
  *   DELETE /api/articles/{id}
  */
 import { apiError, apiFetch } from '../../core/http.js';
@@ -123,7 +123,7 @@ function load(reset) {
   setStatus(tx('admin.articles_loading', 'Loading articles…'));
   if (articles.more) articles.more.disabled = true;
 
-  var url = LIST_URL + '?include=creator&page=' + articles.page +
+  var url = LIST_URL + '?include=creator%2Btype&page=' + articles.page +
     (articles.query ? '&q=' + encodeURIComponent(articles.query) : '');
 
   return apiFetch('GET', url).then(function (r) {

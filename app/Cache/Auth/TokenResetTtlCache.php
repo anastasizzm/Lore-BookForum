@@ -10,4 +10,8 @@ interface TokenResetTtlCache
     public function set(int $userId, int $timeStamp, int $ttl = 300): void;
 
     public function forget(int $userId): void;
+
+    public function isTokenBlocked(string $jti): bool;
+
+    public function blockToken(string $jti, int $ttl = 300): void;
 }

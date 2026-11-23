@@ -5,7 +5,7 @@
 export var ROLE_GROUPS = {
   system: ['manageAccounts', 'manageAdditionals', 'managePeople', 'manageRoles'],
   posts:  ['create', 'update', 'delete'],
-  pubs:   ['create', 'updateMeta', 'updateContent', 'delete', 'read', 'managePeople', 'manageRoles']
+  pubs:   ['create', 'updateMeta', 'updateContent', 'delete', 'managePeople', 'manageRoles']
 };
 
 export var GRIP = '\u283F';

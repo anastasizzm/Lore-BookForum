@@ -84,6 +84,28 @@ final class PostsScriptDirector extends ScriptDirector
         return $this;
     }
 
+    public function addViewerTemp(int $viewerId) : self
+    {
+        if (!$this->isTempStarted()) $this->startTempFilter();
+        $this->tempBuilder->addWhere(
+            "(publications.status = 'public'
+                OR publications.owner_id = :vs_userId
+                OR EXISTS (
+                    SELECT 1
+                    FROM roles_users ru
+                    INNER JOIN roles_permissions rp
+                            ON rp.role_id = ru.role_id
+                            AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id
+                    WHERE ru.user_id = :vs_userId
+                    AND ru.is_valid
+                    AND ru.publication_id = publications.id
+                    AND rp.pub_read
+                ))",
+            [':vs_userId' => ScriptParam::asInt($viewerId)],
+        );
+        return $this;
+    }
+
     public function addOrderTemp(PostsSortBy $sort)
     {
         if (!$this->isTempStarted()) $this->startTempFilter();

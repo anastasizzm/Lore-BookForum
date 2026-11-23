@@ -97,7 +97,7 @@ abstract class PublicationsScriptDirector extends ScriptDirector
                             AND rp.publication_id IS NOT DISTINCT FROM ru.publication_id
                     WHERE ru.user_id = :vs_userId
                     AND ru.is_valid
-                    AND (ru.publication_id IS NULL OR ru.publication_id = publications.id)
+                    AND ru.publication_id = publications.id
                     AND rp.pub_read
                 ))",
             [':vs_userId' => ScriptParam::asInt($viewerId)],

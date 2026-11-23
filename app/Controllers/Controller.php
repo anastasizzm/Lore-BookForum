@@ -7,6 +7,7 @@ use App\Http\Response;
 use App\Lib\View;
 
 use App\Models\Errors\Error;
+use App\Models\UserContext\WithContext;
 use JsonSerializable;
 
 use App\Extensions\ResponseTemplates;
@@ -32,6 +33,25 @@ abstract class Controller
     protected function renderUnauthorized(?string $actionUrl = null, ?string $actionTitle = null)
     {
         return $this->render('message', ['statusCode' => 401, 'message' => 'Please authenticate first', 'actionUrl' => $actionUrl, 'actionTitle' => $actionTitle], 401);
+    }
+
+    /**
+     * Accept only an internal absolute path ("/books/1"), never a full URL,
+     * protocol-relative URL ("//evil"), backslashes or CR/LF.
+     */
+    protected function internalRedirect(?string $redirect, string $fallback): string
+    {
+        if ($redirect === null) return $fallback;
+
+        $redirect = trim($redirect);
+
+        if ($redirect === '' || $redirect[0] !== '/') return $fallback;
+        if (str_starts_with($redirect, '//')) return $fallback;
+        if (str_contains($redirect, '\\') || str_contains($redirect, "\r") || str_contains($redirect, "\n")) {
+            return $fallback;
+        }
+
+        return $redirect;
     }
 
 

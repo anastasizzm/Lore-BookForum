@@ -26,6 +26,20 @@ final readonly class File extends Dto
 
     public function id() : mixed { return $this->id; }
 
+    public function toArray() : array
+    {
+        return [
+            'id' => $this->id->toString(),
+            'category' => $this->category->value,
+            'status' => $this->status->value,
+            'originalName' => $this->originalName,
+            'format' => $this->format,
+            'mimeType' => $this->mimeType,
+            'size' => $this->size,
+            'createdAt' => $this->createdAt->format(DATE_ATOM),
+        ];
+    }
+
     public static function fromRow(array $row, string $prefix = '') : self 
     {
         return new self(

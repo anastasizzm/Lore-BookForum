@@ -1,6 +1,6 @@
 /**
  * Таблица книг админки: загрузка, поиск (по Enter), «Показать ещё», удаление.
- *   GET    /api/books?include=creator&page=N&q=…
+ *   GET    /api/books?include=creator%2Bgenre&page=N&q=…
  *   DELETE /api/books/{id}
  */
 import { apiError, apiFetch } from '../../core/http.js';
@@ -109,7 +109,7 @@ function load(reset) {
   setStatus(tx('admin.books_loading', 'Loading books…'));
   if (books.more) books.more.disabled = true;
 
-  var url = LIST_URL + '?include=creator&page=' + books.page +
+  var url = LIST_URL + '?include=creator%2Bgenre&page=' + books.page +
     (books.query ? '&q=' + encodeURIComponent(books.query) : '');
 
   return apiFetch('GET', url).then(function (r) {

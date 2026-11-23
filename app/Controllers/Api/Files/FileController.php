@@ -11,6 +11,8 @@ use App\Http\Response;
 use App\Extensions\UploadedFiles;
 use App\Extensions\EnumExtensions;
 use App\Exceptions\NotFoundException;
+use App\Exceptions\UnauthorizedException;
+use App\Exceptions\ForbiddenException;
 
 use App\Models\Files\File;
 use App\Models\Errors\Error;
@@ -44,7 +46,7 @@ final class FileController extends Controller
             return $this->jsonError(new Error(ErrorCodes::UNAUTHORIZED, "Authorize first"), 401);
 
         $body = $context->request->body();
-        $category = EnumExtensions::tryResolve(FileCategory::class, $body['category']);
+        $category = EnumExtensions::tryResolve(FileCategory::class, $body['category'] ?? null);
         if ($category === null)
             return $this->jsonError(new ValidationError(['category' => [$this->translator->t('errors.common.required')]]), 422);
 
@@ -69,7 +71,21 @@ final class FileController extends Controller
     public function delete(HttpContext $context, string $fileId)
     {
         $uuid = RouteParamParser::uuid(['u' => $fileId], 'u');
-        
+
+        $userId = $context->attribute(Constants::USER_ID_ATTR);
+        if ($userId === null) {
+            throw new UnauthorizedException($this->translator->t("errors.common.unauthorized"));
+        }
+
+        $file = $this->service->retrieve($uuid);
+        if ($file === null) {
+            throw new NotFoundException($this->translator->t("errors.common.not_found"), ErrorCodes::NOT_FOUND);
+        }
+
+        if (!$this->service->isOwnedBy($uuid, (int)$userId)) {
+            throw new ForbiddenException($this->translator->t("errors.common.forbidden"));
+        }
+
         $this->service->delete($uuid);
         return $this->jsonEmpty(204);
     }
@@ -112,8 +128,16 @@ final class FileController extends Controller
             return;
         }
 
-        if ($ctx->attribute(Constants::USER_ID_ATTR) === null) {
+        $userId = $ctx->attribute(Constants::USER_ID_ATTR);
+        if ($userId === null) {
             throw new UnauthorizedException($this->translator->t("errors.common.unauthorized"));
+        }
+
+        $userId = (int)$userId;
+        if (!$this->service->isOwnedBy($file->id, $userId)
+            && !$this->service->isReadablePublicationFile($file->id, $userId)
+        ) {
+            throw new ForbiddenException($this->translator->t("errors.common.forbidden"));
         }
     }
 

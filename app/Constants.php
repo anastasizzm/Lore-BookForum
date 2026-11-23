@@ -21,6 +21,8 @@ final class Constants
     public const CSRF_FIELD = '_token';
     
     public const TOKEN_IAT = 'token_iat';
+    public const TOKEN_JTI = 'token_jti';
+    public const TOKEN_EXP = 'token_exp';
     public const USER_ID_ATTR = 'user_id';
     public const VERIFIED_ATTR = 'is_verified';
     public const LANG_ATTR = 'lang';

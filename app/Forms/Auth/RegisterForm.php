@@ -18,7 +18,7 @@ final readonly class RegisterForm implements Form
     public static function fromInput(array $input): self
     {
         return new self(
-            username: trim((string) ($input['username'] ?? '')),
+            username: mb_strtolower(trim((string) ($input['username'] ?? ''))),
             email:    mb_strtolower(trim((string) ($input['email'] ?? ''))),
             name:     trim((string) ($input['name'] ?? '')),
             surname:  trim((string) ($input['surname'] ?? '')),
