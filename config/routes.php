@@ -30,24 +30,24 @@ use App\Models\Access\Operations\System\AnySystemOperation;
 
 return function(Router $router)
 {
-    $router->get('/pages/test', function (HttpContext $context){
-        $page = $context->query('page');
-        if (!is_string($page)) return Response::html("<p>Provide page name in ?page query</p>");
+    // $router->get('/pages/test', function (HttpContext $context){
+    //     $page = $context->query('page');
+    //     if (!is_string($page)) return Response::html("<p>Provide page name in ?page query</p>");
 
-        return Response::html(View::render($page, $context->request->query));
-    }, 'test_pages');
+    //     return Response::html(View::render($page, $context->request->query));
+    // }, 'test_pages');
 
-    $router->get('/tests/verified', function (HttpContext $context) {
-        return Response::html("<h1>You are verified</h1>");
-    }, 'test.verified', AuthPolicy::Verified);
+    // $router->get('/tests/verified', function (HttpContext $context) {
+    //     return Response::html("<h1>You are verified</h1>");
+    // }, 'test.verified', AuthPolicy::Verified);
 
-    $router->get('/tests/auth', function (HttpContext $context) {
-        return Response::html("<h1>You are authenticated</h1>");
-    }, 'test.auth', AuthPolicy::Auth);
+    // $router->get('/tests/auth', function (HttpContext $context) {
+    //     return Response::html("<h1>You are authenticated</h1>");
+    // }, 'test.auth', AuthPolicy::Auth);
 
-    $router->get('/tests', function (HttpContext $context) {
-        return Response::html("<h1>Test completed successfully</h1>");
-    }, 'test', AuthPolicy::Auth);
+    // $router->get('/tests', function (HttpContext $context) {
+    //     return Response::html("<h1>Test completed successfully</h1>");
+    // }, 'test', AuthPolicy::Auth);
 
     // Auth
     $router->get('/auth/login', [App\Controllers\Auth\AuthController::class, 'getLogin'], 'login', AuthPolicy::Public);
