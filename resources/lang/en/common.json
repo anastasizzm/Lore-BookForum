@@ -192,6 +192,8 @@
         "login_placeholder": "Enter login or email",
         "password_label": "Password",
         "password_placeholder": "Enter password",
+        "show_password": "Show password",
+        "hide_password": "Hide password",
         "sign_in": "Sign in",
         "forgot": "Forgot password?",
         "no_account": "Don't have account?",

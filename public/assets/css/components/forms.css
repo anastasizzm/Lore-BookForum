@@ -40,6 +40,65 @@ textarea.form-field__input {
   color: var(--color-error);
 }
 
+/* ============================================
+   PASSWORD FIELD WITH SHOW/HIDE TOGGLE
+   ============================================ */
+.form-field--password {
+  position: relative;
+}
+
+.form-field--password .form-field__input {
+  /* Освобождаем место справа под кнопку «глаз», чтобы текст не уезжал под неё. */
+  padding-right: calc(var(--space-3) + 36px);
+}
+
+.form-field__toggle {
+  position: absolute;
+  top: 0;
+  right: var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 44px; /* = min-height поля ввода */
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.form-field__toggle:hover {
+  color: var(--color-text);
+}
+
+.form-field__toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.form-field__toggle-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+/* Показываем «перечёркнутый глаз», когда пароль раскрыт (aria-pressed="true"). */
+.form-field__toggle-icon--hide {
+  display: none;
+}
+
+.form-field__toggle[aria-pressed="true"] .form-field__toggle-icon--show {
+  display: none;
+}
+
+.form-field__toggle[aria-pressed="true"] .form-field__toggle-icon--hide {
+  display: block;
+}
+
 /* Required marker next to a field label. */
 .form-field__required {
   margin-left: 0.15em;

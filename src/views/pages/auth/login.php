@@ -51,11 +51,32 @@ $withLang = static function (string $path) use ($langQuery): string {
       <?php endforeach; ?>
     </div>
 
-    <div class="form-field">
+    <div class="form-field form-field--password">
       <label class="visually-hidden" for="loginPassword"><?= $tr('common.auth.password_label') ?></label>
       <input class="form-field__input" type="password" id="loginPassword" name="password"
              placeholder="<?= $tr('common.auth.password_placeholder') ?>" autocomplete="current-password" maxlength="64"
              aria-describedby="loginPasswordError">
+      <button class="form-field__toggle" type="button"
+              data-password-toggle="loginPassword"
+              data-label-show="<?= $tr('common.auth.show_password') ?>"
+              data-label-hide="<?= $tr('common.auth.hide_password') ?>"
+              aria-label="<?= $tr('common.auth.show_password') ?>"
+              title="<?= $tr('common.auth.show_password') ?>">
+        <svg class="form-field__toggle-icon form-field__toggle-icon--show" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" focusable="false">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <svg class="form-field__toggle-icon form-field__toggle-icon--hide" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true" focusable="false">
+          <path d="M9.9 4.24A9.9 9.9 0 0 1 12 4c6.5 0 10 8 10 8a17.7 17.7 0 0 1-2.16 3.19"/>
+          <path d="M6.61 6.61A17.7 17.7 0 0 0 2 12s3.5 8 10 8a9.9 9.9 0 0 0 5.39-1.61"/>
+          <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+          <path d="m2 2 20 20"/>
+        </svg>
+      </button>
       <p class="form-field__error" id="loginPasswordError" aria-live="polite"></p>
       <?php foreach (($errors['password'] ?? []) as $err): ?>
         <p class="form-field__error"><?= $view->e($err) ?></p>
@@ -74,5 +95,6 @@ $withLang = static function (string $path) use ($langQuery): string {
 
 <?php $view->startBlock('scripts'); ?>
   <script src="/assets/js/validators.js"></script>
+  <script src="/assets/js/password-toggle.js"></script>
   <script src="/assets/js/login.js"></script>
 <?php $view->endBlock('scripts'); ?>

@@ -192,6 +192,8 @@
         "login_placeholder": "Введите логин или email",
         "password_label": "Пароль",
         "password_placeholder": "Введите пароль",
+        "show_password": "Показать пароль",
+        "hide_password": "Скрыть пароль",
         "sign_in": "Войти",
         "forgot": "Забыли пароль?",
         "no_account": "Нет аккаунта?",
