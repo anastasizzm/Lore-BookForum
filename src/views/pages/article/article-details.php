@@ -158,25 +158,45 @@ $isDraft   = $status === 'draft';
 
 /* ---------- Жанр / DOI ---------- */
 
-$genreTitle = $str($article->genre ?? null);
+$genreTitle = $str(is_array($article) ? ($article['genre'] ?? null) : ($article->genre ?? null));
+// Тип статьи (справочник types; не путать со структурным contentMode).
+$typeTitle  = $str(is_array($article) ? ($article['type'] ?? null) : ($article->type ?? null));
 // DOI — колонка articles.doi (ArticlesScriptDirector выбирает её явно);
 // объект (прод) или query-массив (тест-роут).
 $doi        = $str(is_array($article) ? ($article['doi'] ?? null) : ($article->doi ?? null));
 
 /* ---------- Тип статьи / книга-источник ---------- */
 /**
- * Структурный тип лежит в contentData, а не в ->type (->type — это «жанр» статьи
- * из таблицы types: Article / Review / …). Отрывок из книги = contentData
- * содержит bookData — отсюда же берём id книги для ссылки «Open book» (P1-6).
+ * Структурный тип лежит в contentData (ContentData — отдельная модель,
+ * контроллер передаёт её как $contentData), а не в ->type (->type — «тип»
+ * статьи из таблицы types: Article / Review / …). Отрывок из книги =
+ * contentData содержит bookData — отсюда id книги и диапазон страниц.
+ * contentMode читаем из модели как fallback: у легаси-записей без
+ * contentData он всё равно позволяет распознать отрывок.
  */
-$contentData = $article->contentData ?? null;
+$contentData = $contentData ?? null;
 $bookData    = $contentData?->getBookData();
-$contentMode = is_object($article) ? ($article->contentMode ?? null) : null;
+$contentModeRaw = is_array($article) ? ($article['contentMode'] ?? null) : ($article->contentMode ?? null);
+$contentMode = $contentModeRaw instanceof \App\Models\Enums\ArticleContentMode ? $contentModeRaw : null;
+if ($contentMode === null && is_string($contentModeRaw)) {
+    $contentMode = \App\Models\Enums\ArticleContentMode::tryFrom($contentModeRaw);
+}
 $isBookExcerpt = $bookData !== null
-    || ($contentMode instanceof \App\Models\Enums\ArticleContentMode
-        && $contentMode->value === 'book');
-$bookId    = (int) ($bookData?->bookId ?? (is_object($article) ? ($article->bookId ?? 0) : 0));
-$bookTitle = $str($bookData?->book ?? (is_object($article) ? ($article->book ?? null) : null));
+    || ($contentMode !== null && $contentMode->value === 'book');
+// Книга-источник: PublicationShort из include `book` (retrieve), иначе
+// id/заголовок, переданные плоскими полями (тест-роут /pages/test).
+$bookObj = is_array($article) ? ($article['book'] ?? null) : ($article->book ?? null);
+$bookTitle = $str($bookObj);
+if ($bookTitle === '' && is_array($article)) {
+    $bookTitle = $str($article['bookTitle'] ?? null);
+}
+$bookId = (int) ($bookData?->bookId ?? 0);
+if ($bookId <= 0) {
+    $bookId = (int) (is_array($article) ? ($article['bookId'] ?? 0) : ($article->bookId ?? 0));
+}
+if ($bookId <= 0 && is_object($bookObj)) {
+    $bookId = (int) ($bookObj->id ?? 0);
+}
 
 /* ---------- Аннотация / заметка / контент ---------- */
 // В модели поля называются description / authorNotes (не annotation / authorNote).
@@ -188,7 +208,8 @@ $authorNote = (string) ($article->authorNotes ?? '');
 if (preg_replace('/[\s\x{00A0}\x{200B}]+/u', '', $authorNote) === '') {
     $authorNote = '';
 }
-$content    = (string) ($contentData?->getContent() ?? '');
+// Текст статьи намеренно НЕ префиллим в article-reader: partial экранирует
+// HTML, а читалка лениво подгружает уже санитизированный контент из API.
 
 /* ---------- Книга-источник (для отрывка) ---------- */
 
@@ -448,11 +469,24 @@ if ($seoDescription === '') {
         <p class="info-box__meta"><?= $tr('common.book.genre', ['value' => $genreTitle]) ?></p>
       <?php endif; ?>
 
+      <?php /* Тип статьи из справочника types (Article / Review / …) */ ?>
+      <?php if ($typeTitle !== ''): ?>
+        <p class="info-box__meta"><?= $tr('common.article.type_line', ['value' => $typeTitle]) ?></p>
+      <?php endif; ?>
+
       <?php if ($isBookExcerpt): ?>
         <p class="info-box__meta"><?= $tr('common.article.type_excerpt') ?></p>
-        <?php if ($bookTitle !== ''): ?>
+        <?php /* Источник отрывка: ссылка на книгу + диапазон страниц.
+                 Показываем и при одном только bookId; скрываем, если нет
+                 ни заголовка, ни id. */ ?>
+        <?php if ($bookTitle !== '' || $bookId > 0): ?>
           <p class="info-box__meta">
-            <?= $tr('common.article.book_line', ['value' => $bookTitle]) ?>
+            <?php if ($bookId > 0): ?>
+              <?= $tr('common.article.book_line', ['value' => '']) ?><a class="link"
+                 href="/books/<?= (int) $bookId ?><?= $pageLang !== '' ? '?lang=' . urlencode($pageLang) : '' ?>"><?= $view->e($bookTitle !== '' ? $bookTitle : (string) $bookId) ?></a>
+            <?php else: ?>
+              <?= $tr('common.article.book_line', ['value' => $bookTitle]) ?>
+            <?php endif; ?>
             <?php if (!empty($pageStart)): ?>
               <?= $tr('common.article.pages_short', ['from' => (int) $pageStart, 'to' => (int) $pageEnd]) ?>
             <?php endif; ?>
@@ -492,7 +526,7 @@ if ($seoDescription === '') {
     <?php $view->include('article-reader', [
         'articleId' => (int) $articleId,
         'title'     => (string) ($article->title ?? ''),
-        'content'   => $content,
+        'content'   => '',
     ]); ?>
   <?php endif; ?>
 

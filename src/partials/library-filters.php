@@ -48,7 +48,7 @@ $link = static function (array $set = [], array $drop = []) use ($params, $baseP
 
 // When switching Books/Articles keep only shared params — ВАЖНО: lang тоже сохраняем,
 // иначе при переходе на /articles бэк сбросит локаль на фолбэк.
-$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'status', 'p_status', 'lang']));
+$keep = array_intersect_key($params, array_flip(['f', 'q', 'genre', 'category', 'status', 'p_status', 'lang']));
 $tabHref = static function (string $href) use ($keep): string {
     if (!$keep) return $href;
     return $href . (str_contains($href, '?') ? '&' : '?') . http_build_query($keep);
@@ -91,8 +91,18 @@ $typeDropdown = [
     'options' => [],
 ];
 
+// Category dropdown — для КНИГ: справочник категорий читается из
+// /api/additional/categories, API книг фильтрует по ?category=.
+$categoryDropdown = [
+    'type'    => 'dropdown',
+    'label'   => $view->t('common.filter.category'),
+    'key'     => 'category',
+    'dynamic' => 'categories',
+    'options' => [],
+];
+
 // Reset clears filters but keeps search (q), panel state (f) and locale (lang)
-$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype']);
+$resetHref = $link([], ['genre', 'status', 'p_status', 'isbn', 'doi', 'series', 'type', 'category', 'sort', 'ctype']);
 
 // Статус чтения: только для «Сохранённых» (в общей библиотеке фильтр убран).
 $statusTabs = [
@@ -112,6 +122,7 @@ $filter_rows = [
         'controls' => array_values(array_filter([
             $switcher,
             $genreDropdown,
+            $categoryDropdown,
             $showReadingStatus ? $statusTabs : null,
             [
                 'type'        => 'input',
@@ -154,7 +165,7 @@ if ($isDrafts) {
     $draftsIsArticles = str_contains($currentPath, '/articles');
     $draftKeep = array_intersect_key(
         $params,
-        array_flip(['f', 'q', 'genre', 'p_status', 'type', 'doi', 'isbn', 'lang'])
+        array_flip(['f', 'q', 'genre', 'p_status', 'type', 'category', 'doi', 'isbn', 'lang'])
     );
     $draftHref = static function (string $href) use ($draftKeep): string {
         if (!$draftKeep) return $href;
@@ -177,7 +188,9 @@ if ($isDrafts) {
             'controls' => [
                 $draftsSwitcher,
                 $genreDropdown,
-                $typeDropdown,
+                // На черновиках фильтр типа зависит от роута: у книг —
+                // категория, у статей — тип статьи.
+                $draftsIsArticles ? $typeDropdown : $categoryDropdown,
                 ['type' => 'reset', 'href' => $resetHref, 'label' => $view->t('common.filter.reset')],
             ],
         ],

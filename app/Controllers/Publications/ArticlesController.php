@@ -57,7 +57,7 @@ final class ArticlesController extends Controller
             $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+type"),
                 filters: ArticlesFilters::fromPublic($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId),
                 viewerId: $userId
@@ -135,7 +135,7 @@ final class ArticlesController extends Controller
             $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+type"),
                 filters: ArticlesFilters::fromDraft($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId),
                 viewerId: $userId
@@ -176,7 +176,7 @@ final class ArticlesController extends Controller
             $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+type"),
                 filters: ArticlesFilters::fromInput($q),
                 userFilters: UserRelationFilters::fromSaved($q, $userId),
                 viewerId: $userId
@@ -212,16 +212,27 @@ final class ArticlesController extends Controller
         if (empty($userId))
             return Response::redirect($this->url->url('login', query: ['redirect' => $context->request->path]));
 
-        $propsQ = PropertiesQuery::fromRaw("creator+genre+type");
+        $propsQ = PropertiesQuery::fromRaw("creator+genre+type+book");
 
         $userContext = $this->usersService->loadContext($userId);
         try{
             $item = $this->articlesService->retrieveWithContext($articleId, $propsQ, $userId);
             if ($item === null)
                 return $this->renderNotFound();
-            
+
+            // ContentData (book source + page range + text) is a separate model
+            // from Article and is not loaded by the retrieve query. Load it once
+            // here; legacy rows may have no content record at all, so a missing
+            // row must not turn the details page into a 500.
+            try {
+                $contentData = $this->articlesService->getContent($articleId);
+            } catch (NotFoundException) {
+                $contentData = null;
+            }
+
             return $this->render('article/article-details', [
                 'wrapper' => $item,
+                'contentData' => $contentData,
                 'user' => $userContext
             ]);
         }

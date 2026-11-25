@@ -88,6 +88,7 @@ $editLabel = $isBook ? $view->t('common.book.edit') : $view->t('common.roles.edi
     <button type="button"
             class="details-menu__item"
             data-roles-open
+            data-roles-screen="1"
             data-requires="publication.manageRoles"
             data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
             data-requires-owner="<?= $isOwner ? '1' : '0' ?>"
@@ -102,6 +103,7 @@ $editLabel = $isBook ? $view->t('common.book.edit') : $view->t('common.roles.edi
     <button type="button"
             class="details-menu__item"
             data-roles-open-users
+            data-roles-screen="2"
             data-requires="publication.managePeople"
             data-requires-kind="<?= $isBook ? 'book' : 'article' ?>"
             data-requires-owner="<?= $isOwner ? '1' : '0' ?>"

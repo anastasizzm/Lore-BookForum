@@ -334,6 +334,15 @@
   color: var(--color-text-muted);
 }
 
+/* Ошибка загрузки текста статьи в оверлее читалки: заметный inline-блок. */
+.article-body__error {
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  color: var(--color-danger, #b42318);
+  background: var(--color-danger-soft, #fef3f2);
+  border: 1px solid var(--color-danger-border, #fecdca);
+  border-radius: var(--radius-sm, 8px);
+}
+
 .book-tabs-panel {
   margin-top: var(--space-4, 24px);
 }

@@ -54,7 +54,7 @@ final class BooksController extends Controller
             $query = new BooksListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+category"),
                 filters: BooksFilters::fromPublic($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId),
                 viewerId: $userId
@@ -132,7 +132,7 @@ final class BooksController extends Controller
             $query = new BooksListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+category"),
                 filters: BooksFilters::fromDraft($q),
                 userFilters: UserRelationFilters::fromAll($q, $userId),
                 viewerId: $userId
@@ -172,7 +172,7 @@ final class BooksController extends Controller
             $query = new BooksListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+category"),
                 filters: BooksFilters::fromInput($q),
                 userFilters: UserRelationFilters::fromSaved($q, $userId),
                 viewerId: $userId
@@ -305,18 +305,9 @@ final class BooksController extends Controller
             'book'  => $publication,
             'fileId' => $fileId->toString(),
             'previewUrl' => $this->url->url('files.preview', ['fileId' => $fileId->toString()]),
-            'initial' => $progress?->position ?? $this->defaultPosition($format),
+            'initial' => $progress?->position,
             'user' => $userContext
         ]);
-    }
-
-    private function defaultPosition(BookFormat $format): array
-    {
-        return match ($format) {
-            BookFormat::Pdf  => ['pageNumber' => 1],
-            BookFormat::Epub => ['chapterIndex' => 0],
-            default          => ['pageNumber' => 1],
-        };
     }
 
     public function getDelete(HttpContext $context, string $id, string $token) 

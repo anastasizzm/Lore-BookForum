@@ -340,6 +340,37 @@ $richEditor = static function (
           <div class="form-field">
             <span class="form-field__label" id="articleFragmentLabel"><?= $tr('common.articleform.field_fragment') ?></span>
 
+            <!-- Бэку достаточно диапазона страниц: выделение текста в PDF
+                 не обязательно. Окно просмотра книги — необязательный помощник
+                 (подставляет страницы и текст фрагмента). -->
+            <div class="form-row--two-cols">
+              <div class="form-field">
+                <label for="articlePageStart"><?= $tr('common.articleform.field_page_start') ?></label>
+                <input class="form-field__input"
+                       type="number"
+                       min="1"
+                       step="1"
+                       inputmode="numeric"
+                       id="articlePageStart"
+                       name="page_start"
+                       value="<?= $view->e($val('page_start')) ?>"
+                       data-excerpt-field>
+              </div>
+
+              <div class="form-field">
+                <label for="articlePageEnd"><?= $tr('common.articleform.field_page_end') ?></label>
+                <input class="form-field__input"
+                       type="number"
+                       min="1"
+                       step="1"
+                       inputmode="numeric"
+                       id="articlePageEnd"
+                       name="page_end"
+                       value="<?= $view->e($val('page_end')) ?>"
+                       data-excerpt-field>
+              </div>
+            </div>
+
             <div class="fragment-box">
               <p class="fragment-box__summary" data-fragment-summary aria-labelledby="articleFragmentLabel"
                  aria-live="polite"><?= $tr('common.articleform.fragment_empty') ?></p>
@@ -350,8 +381,8 @@ $richEditor = static function (
             <p class="article-form__hint"><?= $tr('common.articleform.fragment_hint') ?></p>
             <?= $errorBox('fragment') ?>
 
-            <?php foreach (['page_start', 'start_offset', 'start_line', 'start_char', 'start_quote',
-                            'page_end', 'end_offset', 'end_line', 'end_char', 'end_quote'] as $anchorKey): ?>
+            <?php foreach (['start_offset', 'start_line', 'start_char', 'start_quote',
+                            'end_offset', 'end_line', 'end_char', 'end_quote'] as $anchorKey): ?>
               <input type="hidden" name="<?= $anchorKey ?>" value="<?= $view->e($val($anchorKey)) ?>" data-excerpt-field>
             <?php endforeach; ?>
             <input type="hidden" name="anchor_version" value="<?= $view->e($val('anchor_version', '1')) ?>" data-excerpt-field>
@@ -377,12 +408,19 @@ $richEditor = static function (
               </div>
 
               <div class="cover-upload__controls">
-                <input class="form-field__input form-field__input--file"
+                <!-- Нативная строка браузера («Choose file») не переводится:
+                     input спрятан, клик ведёт локализованная кнопка-лейбл.
+                     Файл грузится отдельным POST /api/files/upload, поэтому
+                     name у input не нужен. -->
+                <input class="file-input-hidden"
                        type="file"
                        id="articleCover"
-                       name="cover"
                        accept="image/jpeg,image/png,image/webp"
                        data-cover-input>
+                <label class="btn btn--secondary file-upload__button" for="articleCover">
+                  <span data-file-button-text><?= $tr('common.articleform.cover_choose') ?></span>
+                  <span class="file-upload__button-state" data-file-button-state><?= $tr('common.articleform.cover_none') ?></span>
+                </label>
                 <p class="article-form__hint"><?= $tr('common.articleform.cover_hint') ?></p>
                 <button class="btn btn--secondary"
                         type="button"
@@ -419,7 +457,7 @@ $richEditor = static function (
                         data-selected="<?= $view->e($genreValue) ?>"
                         data-placeholder="<?= $tr('common.articleform.select_placeholder') ?>">
                   <?php if ($genreValue !== ''): ?>
-                    <option value="<?= $view->e($genreValue) ?>" selected><?= $view->e($genreValue) ?></option>
+                    <option value="<?= $view->e($genreValue) ?>" selected><?= $tr('common.articleform.select_placeholder') ?></option>
                   <?php else: ?>
                     <option value="" selected disabled><?= $tr('common.articleform.select_placeholder') ?></option>
                   <?php endif; ?>
@@ -436,7 +474,7 @@ $richEditor = static function (
                         data-selected="<?= $view->e($typeValue) ?>"
                         data-placeholder="<?= $tr('common.articleform.select_placeholder') ?>">
                   <?php if ($typeValue !== ''): ?>
-                    <option value="<?= $view->e($typeValue) ?>" selected><?= $view->e($typeValue) ?></option>
+                    <option value="<?= $view->e($typeValue) ?>" selected><?= $tr('common.articleform.select_placeholder') ?></option>
                   <?php else: ?>
                     <option value="" selected disabled><?= $tr('common.articleform.select_placeholder') ?></option>
                   <?php endif; ?>

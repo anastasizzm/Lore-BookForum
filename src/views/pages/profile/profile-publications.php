@@ -169,6 +169,12 @@ $view->include('library-filters', [
           // Обложка: если у item есть coverUrl/cover — используем; иначе сразу cover--empty
           $coverUrl = $item->coverUrl ?? ($item->cover ?? null);
           $hasCover = !empty($coverUrl);
+
+          // Тип публикации: у статьи — type, у книги — category (BasicModel).
+          $metaModel = $isArticles ? ($item->type ?? null) : ($item->category ?? null);
+          $metaTitle = is_object($metaModel)
+            ? (string) ($metaModel->title ?? $metaModel->name ?? '')
+            : (string) ($metaModel ?? '');
         ?>
         <article class="card-base card-book">
           <a class="card-book__link" href="<?= $view->e($itemUrl) ?>">
@@ -186,6 +192,9 @@ $view->include('library-filters', [
             <h3 class="card-book__title"><?= $view->e($item->title) ?></h3>
           </a>
           <p class="card-book__author"><?= $view->e($userName) ?></p>
+          <?php if ($metaTitle !== ''): ?>
+            <p class="card-book__author card-book__meta"><?= $view->e($metaTitle) ?></p>
+          <?php endif; ?>
         </article>
       <?php endforeach; ?>
     </div>

@@ -176,12 +176,17 @@
       // неполный book с нулевыми pageStart/pageEnd — бэк отвергнет такой
       // объект (422). Пустую строку бэк тоже превращает в null
       // (QueryParser::optionalString), поэтому шлём пустой HTML-абзац.
-      if (!state.book || !state.start || !state.end) return { content: '<p></p>' };
+      // Без книги/страниц НЕ подменяем отрывок пустым текстом: иначе бэк
+      // переводил статью в content_mode='text' и терял book_id/page_start.
+      // Валидация в save() не даёт отправить такой запрос, а пустой объект
+      // на всякий случай означает «контент не меняем».
+      var pages = readPages();
+      if (!state.book || !pages) return {};
       return {
         book: {
           bookId: parseInt(valueOf('book'), 10) || 0,
-          pageStart: parseInt(valueOf('page_start'), 10) || 0,
-          pageEnd: parseInt(valueOf('page_end'), 10) || 0,
+          pageStart: pages.from,
+          pageEnd: pages.to,
         },
       };
     }
@@ -279,14 +284,74 @@
 
   function fieldByName(name) { return $('[name="' + name + '"]'); }
 
+  function pageValue(name) {
+    var v = parseInt(valueOf(name), 10);
+    return v > 0 ? v : 0;
+  }
+
+  /** Диапазон страниц из видимых полей: { from, to } либо null. */
+  function readPages() {
+    var from = pageValue('page_start');
+    var to = pageValue('page_end');
+    if (!(from > 0) || !(to > 0) || from > to) return null;
+    return { from: from, to: to };
+  }
+
+  /** Обе страницы заданы, но конец раньше начала (для точного текста ошибки). */
+  function pageOrderInvalid() {
+    var from = pageValue('page_start');
+    var to = pageValue('page_end');
+    return from > 0 && to > 0 && from > to;
+  }
+
+  /**
+   * Проверка отрывка перед сохранением (в т.ч. черновика и автосохранения).
+   * Возвращает текст ошибки либо null. Без неё «Create draft» без страниц
+   * раньше молча создавал текстовую статью вместо отрывка.
+   */
+  function excerptRangeError() {
+    if (state.mode !== 'excerpt') return null;
+    if (!state.book) return t('errors.article.rule_article_book');
+    if (pageOrderInvalid()) return t('errors.article.rule_article_fragment_order');
+    var pages = readPages();
+    if (!pages) return t('errors.article.rule_article_fragment');
+    if (pages.to - pages.from + 1 > LIMITS.excerptPages) {
+      return t('errors.article.rule_article_fragment_long', { max: LIMITS.excerptPages });
+    }
+    return null;
+  }
+
+  /** Записывает значения в видимые поля страниц (без события change). */
+  function setPageInputs(from, to) {
+    var startEl = fieldByName('page_start');
+    var endEl = fieldByName('page_end');
+    if (startEl) startEl.value = from ? String(from) : '';
+    if (endEl) endEl.value = to ? String(to) : '';
+  }
+
+  /** Видимые страницы → state/скрытые якоря (offset = 0, если не задан). */
+  function syncPagesToState() {
+    var from = pageValue('page_start');
+    var to = pageValue('page_end');
+    state.start = from > 0 ? { page: from, offset: 0, line: 0, char: 0, quote: '' } : null;
+    state.end = to > 0 ? { page: to, offset: 0, line: 0, char: 0, quote: '' } : null;
+    writeAnchor('start');
+    writeAnchor('end');
+    renderSummary();
+    clearErrorFor('fragment');
+    markDirty();
+  }
+
   function readAnchor(side) {
     var map = ANCHOR_FIELDS[side];
     var page = parseInt((fieldByName(map.page) || {}).value, 10);
     var offset = parseInt((fieldByName(map.offset) || {}).value, 10);
-    if (!(page > 0) || !(offset >= 0)) return null;
+    // Якорь может быть задан только страницей: offset/line/char необязательны
+    // (бэк сохраняет отрывок по pageStart/pageEnd).
+    if (!(page > 0)) return null;
     return {
       page: page,
-      offset: offset,
+      offset: offset >= 0 ? offset : 0,
       line: parseInt((fieldByName(map.line) || {}).value, 10) || 0,
       char: parseInt((fieldByName(map.char) || {}).value, 10) || 0,
       quote: (fieldByName(map.quote) || {}).value || '',
@@ -305,7 +370,12 @@
   function renderSummary() {
     var box = $('[data-fragment-summary]');
     if (!box) return;
-    if (state.start && state.end) {
+    var pages = readPages();
+    if (pages) {
+      box.textContent = t('articleform.fragment_summary_pages', { from: pages.from, to: pages.to });
+      box.title = '';
+      box.classList.add('is-filled');
+    } else if (state.start && state.end) {
       box.textContent = t('articleform.fragment_summary', {
         sp: state.start.page, sl: state.start.line, sc: state.start.char,
         ep: state.end.page, el: state.end.line, ec: state.end.char,
@@ -435,8 +505,21 @@
     var preview = $('[data-cover-preview]');
     var placeholder = $('[data-cover-placeholder]');
     var removeBtn = $('[data-cover-remove]');
+    var stateEl = $('[data-cover-upload] [data-file-button-state]');
     if (!input || !preview) return null;
     var objectUrl = null;
+
+    /** Текст рядом с кнопкой: имя файла, «текущая обложка» или «не выбран». */
+    function syncState() {
+      if (!stateEl) return;
+      var file = input.files && input.files[0];
+      if (file) stateEl.textContent = file.name || '';
+      else if (preview.getAttribute('src')) stateEl.textContent = t('articleform.cover_current');
+      else stateEl.textContent = t('articleform.cover_none');
+    }
+
+    // При редактировании обложка уже показана сервером — подписываем её.
+    if (preview.getAttribute('src')) syncState();
 
     function clearPreview() {
       if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
@@ -444,6 +527,7 @@
       preview.hidden = true;
       if (placeholder) placeholder.hidden = false;
       if (removeBtn) removeBtn.hidden = true;
+      syncState();
     }
 
     return function () {
@@ -463,6 +547,7 @@
       preview.hidden = false;
       if (placeholder) placeholder.hidden = true;
       if (removeBtn) removeBtn.hidden = false;
+      syncState();
       return null;
     };
   }
@@ -1374,6 +1459,7 @@
         state.end = null;
         writeAnchor('start');
         writeAnchor('end');
+        setPageInputs(0, 0);
         renderSummary();
       }
       showChip();
@@ -1386,6 +1472,7 @@
       field.value = '';
       state.start = null; state.end = null;
       writeAnchor('start'); writeAnchor('end');
+      setPageInputs(0, 0);
       renderSummary();
       showChip();
       search.value = '';
@@ -1769,7 +1856,11 @@
       try {
         await ensureDoc();
         zoom = 1;
-        await showPage(draft.start ? draft.start.page : 1);
+        // Без сохранённых якорей открываем страницу из видимых полей.
+        var initialPage = draft.start && draft.start.page
+          ? draft.start.page
+          : (pageValue('page_start') || 1);
+        await showPage(initialPage);
         setBusy('');
         var closeBtn = $('[data-picker-close]', root);
         if (closeBtn) closeBtn.focus();
@@ -1835,6 +1926,9 @@
 
       state.start = s;
       state.end = e;
+      // Видимые поля страниц — основной источник для сохранения; якоря
+      // остаются для подсветки и точного извлечения текста.
+      setPageInputs(s.page, e.page);
       writeAnchor('start');
       writeAnchor('end');
       renderSummary();
@@ -1984,9 +2078,10 @@
 
       case 'fragment':
         if (state.mode !== 'excerpt' || isDraft) break;
-        if (!state.start || !state.end) { setError(name, t('errors.article.rule_article_fragment')); return false; }
-        if (Text && Text.compareAnchors(state.start, state.end) >= 0) { setError(name, t('errors.article.rule_article_fragment_order')); return false; }
-        if (state.end.page - state.start.page + 1 > LIMITS.excerptPages) {
+        if (pageOrderInvalid()) { setError(name, t('errors.article.rule_article_fragment_order')); return false; }
+        var pages = readPages();
+        if (!pages) { setError(name, t('errors.article.rule_article_fragment')); return false; }
+        if (pages.to - pages.from + 1 > LIMITS.excerptPages) {
           setError(name, t('errors.article.rule_article_fragment_long', { max: LIMITS.excerptPages }));
           return false;
         }
@@ -2092,9 +2187,8 @@
       return;
     }
     window.LoreArticlePublish.open(state.articleId, {
-      // Сразу финальный экран с кнопкой Publish (как в книжной форме):
-      // черновик уже сохранён, искать Publish за «Continue» не нужно.
-      screen: 2,
+      // Полный поток: роли → «Продолжить» → пользователи → публикация.
+      screen: 1,
       // бэк при самой публикации нашёл ошибки в статье — показываем их на форме
       onInvalid: function (errors) { renderServerErrors(errors); },
       // 409: публикация запрещена (обычно у статьи нет контента) —
@@ -2132,9 +2226,24 @@
       if (valueOf('genre') === '' || valueOf('type') === '') {
         return Promise.resolve(false);
       }
-      if (state.mode === 'excerpt' && !state.book) {
+    }
+
+    // Страховка для всех видов сохранения (включая черновик и автосохранение):
+    // не отправляем отрывок без валидного диапазона страниц — иначе бэк
+    // перевёл бы статью в текстовый режим и потерял книгу/страницы.
+    var excerptError = excerptRangeError();
+    if (excerptError) {
+      if (silent) {
+        // Не оставляем «Сохранено в …» от прошлого автосохранения: текущая
+        // правка страниц не сохранена. Данные при этом не теряются.
+        setDraftStatus(excerptError);
         return Promise.resolve(false);
       }
+      setError(state.mode === 'excerpt' && !state.book ? 'book' : 'fragment', excerptError);
+      showFieldErrors();
+      revealInvalidStep();
+      focusFirstInvalid();
+      return Promise.resolve(false);
     }
 
     state.saving = true;
@@ -2281,9 +2390,13 @@
         });
       }
 
-      // правка: PATCH метаданных, затем PUT content с текущей версией
+      // правка: PATCH метаданных, затем PUT content с текущей версией.
+      // Пустой content — защита на будущее: если контент не собран, не шлём
+      // пустой PUT и не затираем книгу/страницы (сейчас save() блокирует
+      // такие сохранения ещё до collectContent).
       return sendJson(API.article(state.articleId), 'PATCH', patchMeta).then(function (r) {
         if (!r.ok) return onFailed(r.data, r.response);
+        if (!Object.keys(content).length) return onSaved(r.data, r.response);
         return putContent(content);
       });
     }).catch(function (err) {
@@ -2342,6 +2455,7 @@
     }
     state.start = b.start || null;
     state.end = b.end || null;
+    setPageInputs(state.start && state.start.page, state.end && state.end.page);
     writeAnchor('start'); writeAnchor('end'); renderSummary();
 
     if (editor) editor.setHtml(b.content || '');
@@ -2416,6 +2530,9 @@
         }
         if (placeholder) placeholder.hidden = true;
         if (removeBtn) removeBtn.hidden = false;
+        // Подпись у кнопки выбора файла: обложка пришла из payload.
+        var coverState = $('[data-cover-upload] [data-file-button-state]');
+        if (coverState) coverState.textContent = t('articleform.cover_current');
       }
     }
 
@@ -2433,20 +2550,18 @@
         state.book = { id: bd.bookId, title: (state.book && state.book.title) || '' };
         var bookField = fieldByName('book');
         if (bookField) bookField.value = String(bd.bookId);
-        state.start = {
-          page: parseInt(bd.pageStart, 10) || 0,
-          offset: parseInt(bd.startOffset, 10) || 0,
-          line: parseInt(bd.startLine, 10) || 0,
-          char: parseInt(bd.startChar, 10) || 0,
-          quote: bd.startQuote || '',
-        };
-        state.end = {
-          page: parseInt(bd.pageEnd, 10) || 0,
-          offset: parseInt(bd.endOffset, 10) || 0,
-          line: parseInt(bd.endLine, 10) || 0,
-          char: parseInt(bd.endChar, 10) || 0,
-          quote: bd.endQuote || '',
-        };
+        // Отрывок описывается страницами; offset/line/char необязательны.
+        // Сбрасываем якоря в page-only, чтобы сохранение не зависело
+        // от «нулевых» смещений из старого ответа.
+        var startPage = parseInt(bd.pageStart, 10) || 0;
+        var endPage = parseInt(bd.pageEnd, 10) || 0;
+        setPageInputs(startPage, endPage);
+        state.start = startPage > 0
+          ? { page: startPage, offset: 0, line: 0, char: 0, quote: '' }
+          : null;
+        state.end = endPage > 0
+          ? { page: endPage, offset: 0, line: 0, char: 0, quote: '' }
+          : null;
         writeAnchor('start');
         writeAnchor('end');
         renderSummary();
@@ -2518,7 +2633,11 @@
       if (window.history && history.replaceState) {
         history.replaceState(null, '', '#step-' + n);
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // На мобильных клавиатура закрывается перед прокруткой и не перекрывает
+      // начало шага; на десктопе оставляем плавную прокрутку.
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      var small = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+      window.scrollTo({ top: 0, behavior: small ? 'auto' : 'smooth' });
     }
 
     function validateStep(n) {
@@ -2533,7 +2652,13 @@
         if (state.mode === 'excerpt') {
           if (!state.book) { setError('book', t('errors.article.rule_article_book')); return false; }
           clearErrorFor('book');
-          if (!state.start || !state.end) { setError('fragment', t('errors.article.rule_article_fragment')); return false; }
+          if (pageOrderInvalid()) { setError('fragment', t('errors.article.rule_article_fragment_order')); return false; }
+          var pages = readPages();
+          if (!pages) { setError('fragment', t('errors.article.rule_article_fragment')); return false; }
+          if (pages.to - pages.from + 1 > LIMITS.excerptPages) {
+            setError('fragment', t('errors.article.rule_article_fragment_long', { max: LIMITS.excerptPages }));
+            return false;
+          }
           clearErrorFor('fragment');
         }
         return true;
@@ -2582,10 +2707,14 @@
      ИНИЦИАЛИЗАЦИЯ
      ============================================================ */
   function init() {
-    form.classList.add('is-enhanced');
+    // Шаги должны работать и без article-text.js: иначе при сбое этого
+    // скрипта форма получала бы .is-enhanced, textarea скрывалась бы,
+    // а второй шаг оставался недоступным — пустой экран.
+    stepsApi = initSteps();
+
     if (!Text) return;
 
-    stepsApi = initSteps();
+    form.classList.add('is-enhanced');
 
     // Правка существующей статьи: серверную версию контента читаем заранее,
     // чтобы первый PUT content ушёл с корректным If-Match (см. syncVersion).
@@ -2601,6 +2730,12 @@
 
     state.start = readAnchor('start');
     state.end = readAnchor('end');
+    ['page_start', 'page_end'].forEach(function (name) {
+      var el = fieldByName(name);
+      if (!el) return;
+      el.addEventListener('input', syncPagesToState);
+      el.addEventListener('change', syncPagesToState);
+    });
     initBookPicker();
     initFragmentPicker();
     renderSummary();

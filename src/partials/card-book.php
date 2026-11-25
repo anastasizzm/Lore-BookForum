@@ -57,6 +57,18 @@ if ($item !== null) {
 
     $saved = (bool) ($passedSaved ?? $get($item, 'isSaved') ?? $get($item, 'saved') ?? false);
 
+    // Тип публикации: у книг — category (справочник категорий), у статей —
+    // type (справочник типов). Оба приходят как BasicModel {id, title}.
+    $metaRaw   = $isArticles ? $get($item, 'type') : $get($item, 'category');
+    $metaTitle = '';
+    if (is_object($metaRaw)) {
+        $metaTitle = (string) ($metaRaw->title ?? $metaRaw->name ?? '');
+    } elseif (is_array($metaRaw)) {
+        $metaTitle = (string) ($metaRaw['title'] ?? $metaRaw['name'] ?? '');
+    } elseif (is_scalar($metaRaw)) {
+        $metaTitle = (string) $metaRaw;
+    }
+
     // Статус чтения. Контекст пользователя есть у книг и статей
     // (PublicationContext.readingStatus: none | reading | ended).
     $rsRaw = $passedReadingStatus ?? $get($item, 'readingStatus');
@@ -77,6 +89,16 @@ if ($item !== null) {
     $saved         = (bool)   ($saved         ?? false);
     $readingStatus = (string) ($readingStatus ?? 'none');
     $pubStatus     = (string) ($pubStatus     ?? '');
+    // Плоский интерфейс: тип/категорию может передать вызывающая вьюха.
+    $metaRaw   = $metaTitle ?? ($isArticles ? ($type ?? null) : ($category ?? null));
+    $metaTitle = '';
+    if (is_object($metaRaw)) {
+        $metaTitle = (string) ($metaRaw->title ?? $metaRaw->name ?? '');
+    } elseif (is_array($metaRaw)) {
+        $metaTitle = (string) ($metaRaw['title'] ?? $metaRaw['name'] ?? '');
+    } elseif (is_scalar($metaRaw)) {
+        $metaTitle = (string) $metaRaw;
+    }
 }
 
 // --- Тип публикации для Save ---
@@ -153,6 +175,10 @@ $isDraft = (string) $pubStatus === 'draft';
         <?= $view->e($authorName) ?>
       </a>
     </p>
+  <?php endif; ?>
+
+  <?php if ($metaTitle !== ''): ?>
+    <p class="card-book__author card-book__meta"><?= $view->e($metaTitle) ?></p>
   <?php endif; ?>
 
 </article>

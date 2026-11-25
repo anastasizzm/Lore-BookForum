@@ -44,6 +44,21 @@ final class ArticleFormValidator extends PublicationFormValidator
                 $bag->add('pageEnd', [$this->translator->t("errors.common.required")]);
                 $ok = false;
             }
+
+            // Диапазон отрывка: конец не раньше начала, не длиннее лимита.
+            if ($book->pageStart > 0 && $book->pageEnd > 0)
+            {
+                if ($book->pageEnd < $book->pageStart)
+                {
+                    $bag->add('pageEnd', [$this->translator->t("errors.article.rule_article_fragment_order")]);
+                    $ok = false;
+                }
+                elseif ($book->pageEnd - $book->pageStart + 1 > ArticleContentFormValidator::MAX_EXCERPT_PAGES)
+                {
+                    $bag->add('pageEnd', [$this->translator->t("errors.article.rule_article_fragment_long", ['max' => ArticleContentFormValidator::MAX_EXCERPT_PAGES])]);
+                    $ok = false;
+                }
+            }
         }
         else if ($item->content !== NULL)
         {

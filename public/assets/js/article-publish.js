@@ -261,7 +261,9 @@ window.LoreArticlePublish = (function () {
     if (!opener) return;
     e.preventDefault();
     var id = parseInt(opener.getAttribute('data-article-id'), 10) || 0;
-    if (id) open(id, { screen: 2 });
+    // Полный поток публикации: роли → «Продолжить» → пользователи → Publish.
+    // Раньше окно открывалось сразу на пользователях и шаг ролей пропускался.
+    if (id) open(id, { screen: 1 });
   });
 
   return { open: open, close: close };

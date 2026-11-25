@@ -84,6 +84,9 @@ foreach ($items as $p) {
         'title'    => (string) $p->title,
         'authorId' => (int) ($creator->id ?? $p->getCreatorId()),
         'author'   => $author,
+        // Тип публикации: у статьи — type, у книги — category (BasicModel).
+        'type'     => $p->type ?? null,
+        'category' => $p->category ?? null,
         'readingStatus' => $readingStatus,
         // Бейдж «Draft» — по активному фильтру страницы (не по полю модели:
         // API статус не отдаёт).

@@ -461,6 +461,18 @@ window.LoreRoles = (function () {
     load();
   }
 
+  /**
+   * После успешной правки перечитываем роли/пользователей с сервера, чтобы
+   * списки показывали сохранённое состояние, а не только оптимистичные
+   * локальные догадки. В мок-режиме сети нет — хватает render().
+   * Тост об успехе живёт в глобальном Messages (document.body), поэтому
+   * перерисовка модуля его не теряет.
+   */
+  function syncAfterSave() {
+    if (st.api === 'mock') { render(); return; }
+    reload();
+  }
+
   /* ============================================================
      RENDER: состояния + экран 1
      ============================================================ */
@@ -625,9 +637,10 @@ window.LoreRoles = (function () {
 
     // Порядок по рангу: чем выше роль в списке rank'ов, тем раньше пользователь;
     // люди без ролей — в конец, при равенстве — по алфавиту.
-    // Поиск (по добавленным пользователям) — фильтрация по add.q.
+    // NB: поиск из модалки добавления (add.q) сюда НЕ применяется — это
+    // отдельное состояние экрана 3, иначе только что добавленный человек
+    // «прятал» остальных пользователей публикации.
     var users = st.users
-      .filter(function (user) { return matchQuery(user, st.add.q); })
       .slice()
       .sort(function (a, b) {
         var diff = topRankIndex(a) - topRankIndex(b);
@@ -745,7 +758,9 @@ window.LoreRoles = (function () {
     }
 
     if (st.screen === 1) {
-      // Экран 1 — страница ролей публикации.
+      // Экран 1 — страница ролей публикации. Тело пользователей (экран 2)
+      // прячем явно: его состояние не должно «протекать» между экранами.
+      show(q('[data-roles-users-body]'), false);
       renderRoles();
     } else {
       // Экран 2 — страница пользователей публикации.
@@ -878,6 +893,10 @@ window.LoreRoles = (function () {
     st.add.open = false;
     st.add.userOpen = false;
     st.add.roleOpen = false;
+    // Поиск модалки не должен переживать её закрытие и влиять на списки
+    // экранов (раньше add.q применялся к списку пользователей экрана 2).
+    st.add.q = '';
+    st.add.roleQ = '';
     if (st.perms.source === 'create') {
       st.perms.open = false;
       // черновик прав новой роли не должен переживать закрытие окна:
@@ -970,8 +989,8 @@ window.LoreRoles = (function () {
       addLocalRole('', picked, perms.draft);
       perms.saving = false;
       closeCreateModals();
-      render();
       notify(t('roles.saved'), 'success');
+      syncAfterSave();
       return;
     }
 
@@ -993,8 +1012,8 @@ window.LoreRoles = (function () {
         }
         perms.saving = false;
         closeCreateModals();
-        render();
         notify(t('roles.saved'), 'success');
+        syncAfterSave();
       } else {
         perms.saving = false;
         notify(describe(res, t('roles.save_failed', { status: res.status })));
@@ -1531,7 +1550,6 @@ window.LoreRoles = (function () {
       }
 
       notify(t('roles.saved'), 'success');
-      render();
 
       if (andMore && add.mode === 'add') {
         add.users = [];
@@ -1541,14 +1559,18 @@ window.LoreRoles = (function () {
         add.roleQ = '';
         add.status = '';
         add.userOpen = false;
+        syncAfterSave();
         renderAdd();
         var search = q('[data-roles-create-user-user-search]');
         focusWithoutDropdownOpen(search);
         return;
       }
 
-      // Сохранение из модалки (create / edit) завершено — закрываем окно.
+      // Сохранение из модалки (create / edit) завершено — закрываем окно
+      // (closeCreateModals сбрасывает поиск модалки) и перечитываем
+      // пользователей/роли с сервера: список показывает сохранённое.
       closeCreateModals();
+      syncAfterSave();
     });
   }
 
@@ -1998,8 +2020,8 @@ window.LoreRoles = (function () {
         if (at > st.roles.length) at = st.roles.length;
         st.roles.splice(at, 0, entry);
         closeInsert();
-        render();
         notify(t('roles.saved'), 'success');
+        syncAfterSave();
         return;
       }
 
@@ -2127,8 +2149,8 @@ window.LoreRoles = (function () {
         request('DELETE', base() + '/users/' + user.id + '/roles/' + role.id).then(function (res) {
           if (okKind(res)) {
             localRemoveRoleFromUser(user.id, role.id);
-            render();
             notify(t('roles.saved'), 'success');
+            syncAfterSave();
             return;
           }
           notify(describe(res, t('roles.save_failed', { status: res.status })));
@@ -2146,8 +2168,8 @@ window.LoreRoles = (function () {
         request('DELETE', base() + '/roles/' + role.id).then(function (res) {
           if (res.kind === 'ok' || res.kind === 'missing') {
             st.roles = st.roles.filter(function (one) { return one.id !== role.id; });
-            render();
             notify(t('roles.saved'), 'success');
+            syncAfterSave();
             return;
           }
           notify(describe(res, t('roles.save_failed', { status: res.status })));
@@ -2181,7 +2203,10 @@ window.LoreRoles = (function () {
       var back = target.closest('[data-roles-screen-back]');
       if (back) {
         st.screen = parseInt(back.getAttribute('data-roles-screen-back'), 10) || 1;
-        renderScreen();
+        // Полный render(), а не только renderScreen(): при старте сразу
+        // с экрана пользователей список ролей ещё ни разу не рисовался,
+        // и «назад» показывал пустой экран.
+        render();
         return;
       }
 

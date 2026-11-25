@@ -66,8 +66,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   window.__loreFiltersInitialized = true;
 
   const SOURCES = {
-    genres: { url: '/api/additional/genres', param: 'genre', allLabelKey: 'js.all_genres' },
-    types:  { url: '/api/additional/types',  param: 'type',  allLabelKey: 'js.all_types' },
+    genres:     { url: '/api/additional/genres',     param: 'genre',    allLabelKey: 'js.all_genres' },
+    types:      { url: '/api/additional/types',      param: 'type',     allLabelKey: 'js.all_types' },
+    categories: { url: '/api/additional/categories', param: 'category', allLabelKey: 'js.all_categories' },
   };
 
   const STRICT_ISBN_CHECKSUM = false;
@@ -378,10 +379,10 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
   // Данные уже показанной выборки (в т.ч. SSR) кладутся в кэш —
   // возврат на неё идёт без запроса.
   // ============================================
-  const LIST_KEYS    = ['q', 'genre', 'p_status', 'isbn', 'doi', 'type', 'sort', 'ctype'];
+  const LIST_KEYS    = ['q', 'genre', 'category', 'p_status', 'isbn', 'doi', 'type', 'sort', 'ctype'];
   const FORWARD_KEYS = LIST_KEYS.concat(['lang']);
   const PAGER_KEYS   = LIST_KEYS.concat(['f', 'lang']);
-  const RESET_KEYS   = ['genre', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype'];
+  const RESET_KEYS   = ['genre', 'category', 'p_status', 'isbn', 'doi', 'series', 'type', 'sort', 'ctype'];
   const GROUP_KEYS   = ['ctype'];
 
   function tOr(key, fallback) {
@@ -429,6 +430,12 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
 
     const saved = !!(item.isSaved ?? item.saved ?? false);
 
+    // Тип публикации: у книг — category, у статей — type (BasicModel {id,title}).
+    let metaRaw = isArt ? item.type : item.category;
+    let metaTitle = '';
+    if (metaRaw && typeof metaRaw === 'object') metaTitle = String(metaRaw.title ?? metaRaw.name ?? '');
+    else if (metaRaw !== undefined && metaRaw !== null) metaTitle = String(metaRaw);
+
     let rs = item.readingStatus;
     if (rs && typeof rs === 'object') rs = rs.value;
     const readingStatus = String(rs || 'none');
@@ -466,6 +473,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         ? '<p class="card-book__author"><a class="card-book__author-link" href="' + escapeHtml(authorUrl) + '"' +
           ' aria-label="' + escapeHtml(authorLabel) + '">' + escapeHtml(authorName) + '</a></p>'
         : '') +
+      (metaTitle
+        ? '<p class="card-book__author card-book__meta">' + escapeHtml(metaTitle) + '</p>'
+        : '') +
     '</article>';
   }
 
@@ -475,6 +485,13 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
     const base  = ctx.isArticles ? '/articles/' : '/books/';
     const href  = base + id + (ctx.lang ? '?lang=' + encodeURIComponent(ctx.lang) : '');
     const cover = coverOf(item);
+
+    // Тип публикации: у статьи — type, у книги — category (как в SSR-профиле).
+    const metaRaw = ctx.isArticles ? item.type : item.category;
+    const metaTitle = (metaRaw && typeof metaRaw === 'object')
+      ? String(metaRaw.title ?? metaRaw.name ?? '')
+      : (metaRaw !== undefined && metaRaw !== null ? String(metaRaw) : '');
+
     return '<article class="card-base card-book">' +
       '<a class="card-book__link" href="' + escapeHtml(href) + '">' +
         '<div class="card-book__cover ' + (cover ? '' : 'cover--empty') + '">' +
@@ -484,6 +501,9 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         '<h3 class="card-book__title">' + escapeHtml(item.title ?? '') + '</h3>' +
       '</a>' +
       '<p class="card-book__author">' + escapeHtml(ctx.userName) + '</p>' +
+      (metaTitle
+        ? '<p class="card-book__author card-book__meta">' + escapeHtml(metaTitle) + '</p>'
+        : '') +
     '</article>';
   }
 
@@ -764,16 +784,18 @@ document.querySelectorAll('[data-filter-panel] .tab').forEach(tab => {
         if (v) api.set(k, v);
       });
       api.delete('ctype');
-      (src.kind === 'article' ? ['status', 'isbn'] : ['type', 'doi']).forEach(function (k) { api.delete(k); });
+      (src.kind === 'article' ? ['status', 'isbn', 'category'] : ['type', 'doi']).forEach(function (k) { api.delete(k); });
       if (!api.has('lang')) api.set('lang', langOf());
-      // Библиотека/профиль/черновики рисуют автора на карточке — просим
-      // creator всегда. Раньше SSR-страница передавала include, а AJAX-фильтры
-      // нет, и после применения фильтра имя автора исчезало.
-      if (!api.has('include')) api.set('include', 'creator');
-      if (mode === 'profile') { api.set(userParam, userId); api.set('include', 'creator'); }
+      // Библиотека/профиль/черновики рисуют автора и тип публикации на
+      // карточке (type у статей, category у книг) — просим их всегда.
+      // Раньше SSR-страница передавала include, а AJAX-фильтры нет, и после
+      // применения фильтра метаданные карточки исчезали.
+      const cardProps = isArticles ? 'creator+type' : 'creator+category';
+      if (!api.has('include')) api.set('include', cardProps);
+      if (mode === 'profile') { api.set(userParam, userId); api.set('include', cardProps); }
       if (isDrafts) {
         api.set('p_status', 'draft');
-        api.set('include', 'creator');
+        api.set('include', cardProps);
         if (!api.has('sort')) api.set('sort', 'newest');
       }
       api.set('page', String(page));

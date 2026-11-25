@@ -195,8 +195,11 @@ async function init(root) {
   if (src && src.startsWith('/') && !src.startsWith('//')) url = src;
 
   if (!url) {
-    setStatus('');
-    toast(t('errors.reader.book_file_missing'));
+    // Статус оставляем видимым: пустой canvas без объяснения выглядел как
+    // вечная «Загрузка…». Тост дублирует текст для тех, кто его заметит.
+    const msg = t('errors.reader.book_file_missing');
+    setStatus(msg);
+    toast(msg);
     return;
   }
 
@@ -207,8 +210,10 @@ async function init(root) {
       headers: { Accept: 'application/pdf, application/json' },
     });
     if (!res.ok) {
-      setStatus('');
-      await window.Messages?.fail(res, t('errors.reader.book_file_load_failed'));
+      const msg = t('errors.reader.book_file_load_failed');
+      setStatus(msg);
+      if (window.Messages?.fail) await window.Messages.fail(res, msg);
+      else toast(msg);
       return;
     }
     const data = await res.arrayBuffer();
@@ -220,10 +225,11 @@ async function init(root) {
     }).promise;
   } catch (e) {
     console.error('[reader] load failed', e);
-    setStatus('');
-    toast(e && e.name === 'InvalidPDFException'
+    const msg = e && e.name === 'InvalidPDFException'
       ? t('errors.reader.pdf_invalid')
-      : t('errors.reader.book_open_failed'));
+      : t('errors.reader.book_open_failed');
+    setStatus(msg);
+    toast(msg);
     return;
   }
 
@@ -260,15 +266,15 @@ async function init(root) {
     } catch (_) {}
   }
   pageNum = clamp(fromUrl || serverPage || saved || minPage, minPage, maxPage);
-  // ВАЖНО: не считаем serverPage уже сохранённой страницей. Контроллер
-  // отдаёт defaultPosition() = pageNumber 1 даже когда записи в users_read
-  // ещё нет, поэтому при sentPage = 1 первый показ страницы 1 не отправлял
-  // прогресс и книга оставалась в статусе none («Start reading»).
-  // Всегда отправляем текущую страницу при открытии; повторный upsert
-  // безопасен (ON CONFLICT обновляет позицию и last_read_at).
+  // serverPage приходит только при реальной записи прогресса: контроллер
+  // передаёт initial = null, если строки в users_read ещё нет, и тогда
+  // data-start-page в разметке отсутствует (читаем localStorage).
+  // sentPage = 0: всегда отправляем текущую страницу при открытии; повторный
+  // upsert безопасен (ON CONFLICT обновляет позицию и last_read_at).
   sentPage = 0;
 
-  setStatus('');
+  // Статус «Загрузка…» из разметки не гасим: он снимется только после
+  // успешного рендера (см. render()), иначе при сбое оставался пустой canvas.
   render();
 
   async function render() {
@@ -315,7 +321,9 @@ async function init(root) {
           if (!e || e.name !== 'RenderingCancelledException') {
             failed = true;
             console.error('[reader] render failed', e);
-            toast(t('errors.reader.page_render_failed'));
+            const msg = t('errors.reader.page_render_failed');
+            setStatus(msg);
+            toast(msg);
           }
         } finally {
           renderTask = null;
@@ -329,11 +337,15 @@ async function init(root) {
         ctx.drawImage(buf, 0, 0);
         canvas.style.width  = Math.floor(viewport.width) + 'px';
         canvas.style.height = Math.floor(viewport.height) + 'px';
+        // Успешный рендер — единственное место, где снимаем статус.
+        setStatus('');
         break;
       }
     } catch (e) {
       console.error('[reader] getPage failed', e);
-      toast(t('errors.reader.page_render_failed'));
+      const msg = t('errors.reader.page_render_failed');
+      setStatus(msg);
+      toast(msg);
     } finally {
       rendering = false;
     }

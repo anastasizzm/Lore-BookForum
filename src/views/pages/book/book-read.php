@@ -10,8 +10,9 @@
  *   $book   — объект книги (title и т.п.), если контроллер его передаст,
  *   $fileId  — id файла книги (строка; Publications\BooksController::read);
  *              читалка берёт PDF из GET /api/files/{fileId}/download
- *   $initial — позиция чтения из read(): ['pageNumber' => N] (без прогресса — 1).
- *              Уходит в data-start-page; $startPage — прямой запасной вариант
+ *   $initial — позиция чтения из read(): ['pageNumber' => N] либо null, если
+ *              прогресса ещё нет. null => data-start-page не выводится, и
+ *              читалка берёт страницу из localStorage. $startPage — запасной вариант
  *   $pdfUrl  — можно задать адрес PDF напрямую (приоритетнее $fileId)
  *
  * Логика — public/assets/js/book-read.js (модуль, PDF.js лежит в js/pdfjs/).

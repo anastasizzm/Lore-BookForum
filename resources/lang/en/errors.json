@@ -186,7 +186,7 @@
         "rule_article_cover": "The cover must be a JPEG, PNG or WebP image.",
         "rule_article_cover_size": "The cover must be up to 5 MB.",
         "rule_article_book": "Select a book.",
-        "rule_article_fragment": "Select the start and the end of the fragment.",
+        "rule_article_fragment": "Specify the start and end pages (a range of up to 30 pages).",
         "rule_article_fragment_order": "The end of the fragment must come after its start.",
         "rule_article_fragment_long": "The fragment is too long (up to :max pages).",
         "article_pdf_failed": "Could not open the book file.",

@@ -15,11 +15,19 @@ $articleId = (int) ($articleId ?? 0);
 $title     = (string) ($title   ?? '');
 $content   = (string) ($content ?? '');
 $tr        = static fn(string $key, array $p = []): string => $view->e($view->t($key, $p));
+
+// Серверный HTML редактора нельзя выводить через $view->e(): теги стали бы
+// видимым текстом. Такой контент не рендерим вовсе — article-reader.js
+// лениво загрузит его из GET /api/articles/{id}/content и очистит sanitizeHtml().
+// (Текущий article-details.php передаёт пустой $content, поведение не меняется.)
+$contentTrim  = trim($content);
+$contentIsHtml = $contentTrim !== '' && preg_match('/<\/?[a-z][^>]*>/i', $contentTrim) === 1;
+$hasServerContent = $contentTrim !== '' && !$contentIsHtml;
 ?>
 <div class="modal article-reader"
      data-article-reader
      data-article-id="<?= $articleId ?>"
-     <?= trim($content) !== '' ? 'data-article-loaded="1"' : '' ?>
+     <?= $hasServerContent ? 'data-article-loaded="1"' : '' ?>
      hidden>
   <div class="modal__backdrop" data-article-reader-dismiss></div>
 
@@ -34,7 +42,7 @@ $tr        = static fn(string $key, array $p = []): string => $view->e($view->t(
       <button type="button"
               class="btn-icon article-reader__close"
               data-article-reader-close
-              aria-label="<?= $tr('common.common.close') ?>">
+              aria-label="<?= $tr('common.close') ?>">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
@@ -42,10 +50,10 @@ $tr        = static fn(string $key, array $p = []): string => $view->e($view->t(
     </div>
 
     <div class="article-reader__body article-content" data-article-reader-body>
-      <?php if (trim($content) === ''): ?>
-        <p class="article-body__loading"><?= $tr('common.common.loading') ?></p>
+      <?php if (!$hasServerContent): ?>
+        <p class="article-body__loading"><?= $tr('common.loading') ?></p>
       <?php else: ?>
-        <?php foreach (preg_split('/\R{2,}/u', trim($content)) as $para): ?>
+        <?php foreach (preg_split('/\R{2,}/u', $contentTrim) as $para): ?>
           <?php if (trim($para) === '') continue; ?>
           <p><?= nl2br($view->e(trim($para))) ?></p>
         <?php endforeach; ?>
@@ -54,7 +62,7 @@ $tr        = static fn(string $key, array $p = []): string => $view->e($view->t(
 
     <div class="modal__actions">
       <button type="button" class="btn btn--secondary" data-article-reader-close>
-        <?= $tr('common.common.close') ?>
+        <?= $tr('common.close') ?>
       </button>
     </div>
   </div>

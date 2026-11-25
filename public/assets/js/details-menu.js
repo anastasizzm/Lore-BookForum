@@ -71,7 +71,13 @@
 
     closeAll();
 
-    var screen = btn.getAttribute('data-roles-open-users') ? 2 : 1;
+    // Экран модуля: явный data-roles-screen="1|2" (см. details-menu.php),
+    // иначе — наличие data-roles-open-users. getAttribute для пустого
+    // атрибута возвращает '', поэтому раньше проверка была всегда ложной
+    // и оба пункта открывали экран 1; используем hasAttribute.
+    var screenAttr = btn.getAttribute('data-roles-screen');
+    var screen = (screenAttr === '2' ||
+      (!screenAttr && btn.hasAttribute('data-roles-open-users'))) ? 2 : 1;
 
     if (kind === 'article') {
       if (window.LoreArticlePublish && typeof window.LoreArticlePublish.open === 'function') {

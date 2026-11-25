@@ -186,7 +186,7 @@
         "rule_article_cover": "Обложка должна быть изображением JPEG, PNG или WebP.",
         "rule_article_cover_size": "Обложка должна быть не больше 5 МБ.",
         "rule_article_book": "Выберите книгу.",
-        "rule_article_fragment": "Выберите начало и конец фрагмента.",
+        "rule_article_fragment": "Укажите начальную и конечную страницы (диапазон до 30 страниц).",
         "rule_article_fragment_order": "Конец фрагмента должен идти после начала.",
         "rule_article_fragment_long": "Фрагмент слишком длинный (до :max стр.).",
         "article_pdf_failed": "Не удалось открыть файл книги.",

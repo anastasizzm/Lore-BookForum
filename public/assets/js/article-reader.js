@@ -131,6 +131,15 @@
     }
   }
 
+  /** Ошибка загрузки текста: заметный inline-блок, а не «текста нет». */
+  function showError(el, message) {
+    var body = bodyOf(el);
+    if (body) {
+      body.innerHTML = '<p class="article-body__error" role="alert">' +
+        escapeHtml(message) + '</p>';
+    }
+  }
+
   function loadContent(el) {
     if (!el || state.loading) return;
     if (el.getAttribute('data-article-loaded') === '1') {
@@ -165,7 +174,7 @@
         // Не помечаем как загруженное: при повторном открытии попробуем снова.
         el.removeAttribute('data-article-loaded');
         state.loaded = false;
-        showNoText(el);
+        showError(el, t('errors.common.network_error', 'Could not load the article text. Try again.'));
       })
       .finally(function () {
         state.loading = false;

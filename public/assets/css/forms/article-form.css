@@ -332,6 +332,45 @@
   background: var(--color-overlay);
 }
 
+/* Нативный file input прикрыт локализованной кнопкой-лейблом
+   (кнопка браузера «Choose file» не переводится). */
+.article-form .file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.article-form .file-upload__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  cursor: pointer;
+}
+
+/* Фокус на скрытом input подсвечивает кнопку-лейбл */
+.article-form .file-input-hidden:focus-visible + .file-upload__button {
+  outline: 2px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+/* Невыбранный файл — приглушённый текст состояния рядом с кнопкой */
+.article-form .file-upload__button-state {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fw-regular);
+  color: var(--color-text-muted);
+}
+
 /* ============================================
    5. РЕДАКТОРЫ С ФОРМАТИРОВАНИЕМ
    Без JS виден обычный textarea; с JS (.is-enhanced у формы)
@@ -971,11 +1010,37 @@
   }
 
   .cover-upload__frame {
-    max-width: 200px;
+    margin-inline: auto;
+    max-width: min(200px, 100%);
   }
 
   .mode-switch {
     grid-template-columns: 1fr;
+  }
+
+  /* Панель действий на мобильных не «прилипает» высоким столбцом:
+     кнопки идут компактной сеткой 2×N, не перекрывая контент. */
+  .article-form__actions {
+    position: static;
+    flex-wrap: wrap;
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .article-form__buttons {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .article-form__buttons .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  .rich-editor--lg .rich-editor__area {
+    min-height: 180px;
+    max-height: 50dvh;
   }
 
   .fragment-picker {
@@ -1010,8 +1075,8 @@
   }
 
   .rich-editor--lg .rich-editor__area {
-    min-height: 280px;
-    max-height: 60vh;
+    min-height: 180px;
+    max-height: 50dvh;
   }
 
   .rich-editor__btn {
@@ -1027,12 +1092,15 @@
   }
 
   .article-form__buttons {
-    flex-direction: column-reverse;
+    flex-direction: row;
+    flex-wrap: wrap;
     margin-left: 0;
   }
 
   .article-form__buttons .btn {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
   }
 
   .fragment-picker__foot {

@@ -400,7 +400,7 @@ $categoryValue = $val('categoryId', $bookCategoryId);
                     data-catalog-select="categories"
                     data-placeholder="<?= $tr('common.bookform.select_placeholder') ?>">
               <?php if ((string) $categoryValue !== ''): ?>
-                <option value="<?= $view->e($categoryValue) ?>" selected><?= $view->e($categoryValue) ?></option>
+                <option value="<?= $view->e($categoryValue) ?>" selected data-selected="1"><?= $tr('common.bookform.select_placeholder') ?></option>
               <?php else: ?>
                 <option value="" selected disabled><?= $tr('common.bookform.select_placeholder') ?></option>
               <?php endif; ?>

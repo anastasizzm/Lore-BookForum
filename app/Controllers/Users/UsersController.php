@@ -172,7 +172,7 @@ final class UsersController extends Controller
             $query = new BooksListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+category"),
                 filters: BooksFilters::fromCreator($q, $userId),
                 userFilters: UserRelationFilters::fromInput($q, $currentUserId),
                 viewerId: $currentUserId
@@ -215,7 +215,7 @@ final class UsersController extends Controller
             $query = new ArticlesListQuery(
                 pagination: PaginationQuery::fromInput($q),
                 sort: SortQuery::fromInput($q),
-                properties: PropertiesQuery::fromRaw("creator"),
+                properties: PropertiesQuery::fromRaw("creator+type"),
                 filters: ArticlesFilters::fromCreator($q, $userId),
                 userFilters: UserRelationFilters::fromInput($q, $currentUserId),
                 viewerId: $currentUserId

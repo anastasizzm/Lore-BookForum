@@ -274,14 +274,17 @@ class PermissionsRepository extends Repository
 
     private function addRolesUserSelect(ScriptBuilder $builder) : void 
     {
+        // Профиль может отсутствовать (юзер без строки в profiles), поэтому
+        // getUsers использует LEFT JOIN, а текстовые поля профиля берём через
+        // COALESCE: DTO (UserMediumData::fromRow → RowModel::str) не терпит null.
         $builder->addSelect("u.id,
             \nu.username,
             \nu.email,
             \nu.created_at,
             \nu.deleted_at,
-            \np.name,
-            \np.surname,
-            \np.avatar");
+            \nCOALESCE(p.name, '') AS name,
+            \nCOALESCE(p.surname, '') AS surname,
+            \nCOALESCE(p.avatar, '') AS avatar");
     }
 
     private function addRolesUserSystemSelect(ScriptBuilder $builder) : void 
@@ -315,7 +318,9 @@ class PermissionsRepository extends Repository
         $this->addSelect($builder, $returnClass);
         $builder->addWithBuilder("users_ids", $innerBuilder)
             ->addJoin("INNER JOIN users u ON u.id = ui.user_id")
-            ->addJoin("INNER JOIN profiles p ON p.user_id = u.id")
+            // LEFT JOIN: пользователь публикации может быть без профиля,
+            // INNER JOIN молча выкидывал его из списка (см. addRolesUserSelect).
+            ->addJoin("LEFT JOIN profiles p ON p.user_id = u.id")
             ->addWhere("u.is_active")
             ->setOrder(
                 match($sort)
