@@ -533,6 +533,10 @@
         "article": "Create article",
         "book": "Create book"
     },
+    "verify_banner": {
+        "text": "Verify your email to get full access to the site.",
+        "button": "Resend link"
+    },
     "js": {
         "toast_error": "Error",
         "toast_warning": "Warning",

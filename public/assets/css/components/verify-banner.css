@@ -1,0 +1,40 @@
+/* ============================================
+   Verify banner — плашка «подтвердите почту» (src/partials/verify-banner.php, js/verify-banner.js)
+   ============================================ */
+.verify-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 12px);
+  margin-bottom: var(--space-4, 16px);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  background: var(--color-warning-bg, #fdf5e6);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md, 8px);
+}
+
+.verify-banner__text {
+  margin: 0;
+  color: var(--color-text, inherit);
+}
+
+.verify-banner__btn {
+  padding: 6px 14px;
+  color: var(--color-white);
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+
+.verify-banner__btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.verify-banner__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

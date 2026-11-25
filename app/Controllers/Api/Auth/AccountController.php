@@ -26,6 +26,7 @@ use App\Constants;
 use App\ErrorCodes;
 use App\Extensions\Parsers\RouteParamParser;
 use App\Forms\Auth\AccountCreditsForm;
+use App\Exceptions\MailException;
 
 
 final class AccountController extends Controller
@@ -77,7 +78,13 @@ final class AccountController extends Controller
         if($userData === NULL)
             return $this->jsonError(new Error(ErrorCodes::NOT_FOUND, "Not found"), 404);
 
-        $this->emailService->startVerification($userId, $userData->email);
+        try {
+            $this->emailService->startVerification($userId, $userData->email);
+        } catch (MailException $e) {
+            error_log('[mail-verify] ' . $e->getMessage());
+            return $this->jsonError(new Error(ErrorCodes::UNHANDLED_EX, $this->translator->t('errors.verify.send_fail')), 503);
+        }
+
         return $this->jsonEmpty();
     }
 

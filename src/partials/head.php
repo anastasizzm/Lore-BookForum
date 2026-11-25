@@ -41,6 +41,7 @@
   <link rel="stylesheet" href="<?= $view->asset('css/components/index.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/components/modal.css') ?>">
   <link rel="stylesheet" href="<?= $view->asset('css/components/fab.css') ?>">
+  <link rel="stylesheet" href="<?= $view->asset('css/components/verify-banner.css') ?>">
 
   <?= $view->block('head_extra') ?>
 </head>

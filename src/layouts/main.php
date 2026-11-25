@@ -29,6 +29,9 @@
   <?php $view->include('fab'); ?>
 
   <main class="content">
+    <?php /* Плашка «подтвердите почту» — поверх всех страниц авторизованным без подтверждения */ ?>
+    <?php $view->include('verify-banner'); ?>
+
     <div class="content__inner">
 
       <?php if (!empty($innerMessages)): ?>
@@ -52,6 +55,7 @@
   <script src="<?= $view->asset('js/permissions.js') ?>"></script>
   <script src="<?= $view->asset('js/app.js') ?>"></script>
   <script src="<?= $view->asset('js/fab.js') ?>"></script>
+  <script src="<?= $view->asset('js/verify-banner.js') ?>"></script>
   <script src="<?= $view->asset('js/filters.js') ?>"></script>
   <?= $view->block('scripts') ?>
 </body>
