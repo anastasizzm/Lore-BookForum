@@ -1626,7 +1626,6 @@
     var zoom = 1;
     var token = 0;
     var curTask = null;
-    var curTextLayer = null;
     var cur = null;
     var draft = { start: null, end: null };
     var lastFocus = null;
@@ -1642,15 +1641,13 @@
       var e = draft.end;
       if (startEl) {
         startEl.textContent = s
-          ? t('articleform.picker_start_state', { page: s.page, line: s.line, char: s.char })
+          ? t('articleform.picker_start_state', { page: s.page })
           : t('articleform.picker_start_unset');
-        startEl.title = s && s.quote ? '«' + s.quote + '…»' : '';
       }
       if (endEl) {
         endEl.textContent = e
-          ? t('articleform.picker_end_state', { page: e.page, line: e.line, char: e.char })
+          ? t('articleform.picker_end_state', { page: e.page })
           : t('articleform.picker_end_unset');
-        endEl.title = e && e.quote ? '«…' + e.quote + '»' : '';
       }
       if (applyBtn) applyBtn.disabled = !(s && e);
     }
@@ -1695,7 +1692,6 @@
       n = clamp(n, 1, pdf.numPages);
       var my = ++token;
       if (curTask) { try { curTask.cancel(); } catch (_) {} }
-      if (curTextLayer) { try { curTextLayer.cancel(); } catch (_) {} }
 
       var page = await pdf.getPage(n);
       var info = await getInfo(n);
@@ -1711,16 +1707,11 @@
       canvas.style.width = Math.floor(viewport.width) + 'px';
       canvas.style.height = Math.floor(viewport.height) + 'px';
 
-      var tdiv = document.createElement('div');
-      tdiv.className = 'textLayer';
-
       var sheet = document.createElement('div');
       sheet.className = 'fragment-picker__sheet';
       sheet.style.width = Math.floor(viewport.width) + 'px';
       sheet.style.height = Math.floor(viewport.height) + 'px';
-      sheet.style.setProperty('--scale-factor', String(viewport.scale));
       sheet.appendChild(canvas);
-      sheet.appendChild(tdiv);
 
       var task = page.render({
         canvasContext: canvas.getContext('2d'),
@@ -1728,15 +1719,9 @@
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null,
       });
       curTask = task;
-      var textLayer = new pdfjs.TextLayer({
-        textContentSource: info.content,
-        container: tdiv,
-        viewport: viewport,
-      });
-      curTextLayer = textLayer;
 
       try {
-        await Promise.all([task.promise, textLayer.render()]);
+        await task.promise;
       } catch (e) {
         if (my !== token) return;
         if (e && (e.name === 'RenderingCancelledException' || e.name === 'AbortException')) return;
@@ -1745,94 +1730,22 @@
       if (my !== token) return;
 
       pageBox.replaceChildren(sheet);
-      var spans = textLayer.textDivs || [];
-      var spanIndex = new Map();
-      for (var i = 0; i < spans.length; i++) spanIndex.set(spans[i], i);
-      cur = { page: n, spans: spans, starts: info.starts, text: info.text, spanIndex: spanIndex };
+      cur = { page: n, text: info.text };
 
       pageNum = n;
       if (pageInput) pageInput.value = String(n);
       if (zoomLbl) zoomLbl.textContent = Math.round(zoom * 100) + '%';
-      paintHighlight();
       stage.scrollTop = 0;
 
       if (!info.text.trim()) notify(t('errors.article.article_no_text_layer'), 'warning');
     }
 
-    function spanOf(node) {
-      while (node && node !== pageBox) {
-        if (cur.spanIndex.has(node)) return node;
-        node = node.parentNode;
-      }
-      return null;
-    }
-
-    function offsetFromPoint(node, off) {
-      var span = null;
-      var within = 0;
-
-      if (node.nodeType === 3) {
-        span = spanOf(node);
-        within = off;
-      } else if (node.nodeType === 1) {
-        span = spanOf(node);
-        if (span) {
-          within = off === 0 ? 0 : (span.textContent || '').length;
-        } else {
-          var child = node.childNodes[off] || null;
-          if (child) {
-            span = spanOf(child);
-            if (!span && child.querySelector) {
-              var inner = child.querySelector('span');
-              span = inner && cur.spanIndex.has(inner) ? inner : null;
-            }
-            within = 0;
-          } else {
-            var spans = cur.spans;
-            span = spans.length ? spans[spans.length - 1] : null;
-            within = span ? (span.textContent || '').length : 0;
-          }
-        }
-      }
-      if (!span) return null;
-      var idx = cur.spanIndex.get(span);
-      return cur.starts[idx] + clamp(within, 0, (span.textContent || '').length);
-    }
-
-    function selectionOffset(which) {
-      var sel = window.getSelection();
-      if (!cur || !sel || sel.rangeCount === 0) return null;
-      var range = sel.getRangeAt(0);
-      if (!pageBox.contains(range.commonAncestorContainer)) return null;
-      return which === 'start'
-        ? offsetFromPoint(range.startContainer, range.startOffset)
-        : offsetFromPoint(range.endContainer, range.endOffset);
-    }
-
+    /* Без выделения: «Поставить начало/конец» берёт текущую страницу целиком. */
     function setPoint(which) {
       if (!cur) return;
-      var off = selectionOffset(which);
-      if (off === null) { notify(t('errors.article.article_selection_missing')); return; }
+      var off = which === 'start' ? 0 : cur.text.length;
       draft[which] = Text.makeAnchor(cur.text, off, cur.page, which);
       paintStatus();
-      paintHighlight();
-    }
-
-    function paintHighlight() {
-      if (!cur) return;
-      var s = draft.start;
-      var e = draft.end;
-      var from = -1;
-      var to = -1;
-      if (s && e && Text.compareAnchors(s, e) < 0 && cur.page >= s.page && cur.page <= e.page) {
-        from = cur.page === s.page ? s.offset : 0;
-        to = cur.page === e.page ? e.offset : cur.text.length;
-      }
-      for (var i = 0; i < cur.spans.length; i++) {
-        var a = cur.starts[i];
-        var b = a + (cur.spans[i].textContent || '').length;
-        cur.spans[i].classList.toggle('is-picked', from >= 0 && b > from && a < to);
-      }
     }
 
     function onKey(e) {
