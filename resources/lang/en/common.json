@@ -339,6 +339,7 @@
         "empty_hint": "Unfinished books and articles will appear here.",
         "empty_link": "Create a book",
         "empty_link_article": "Create an article",
+        "none": "There are no drafts.",
         "none_page": "There are no drafts on this page.",
         "pagination": "Drafts pagination",
         "prev": "Previous",

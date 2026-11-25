@@ -113,26 +113,23 @@ $searchQuery = isset($_GET['q']) && is_string($_GET['q']) ? $_GET['q'] : '';
 <?php $view->startBlock('content'); ?>
 
 <?php
-// Поиск и кнопка фильтров нужны, только когда есть что фильтровать
-$pageActions = '';
-if (!$isEmptyAll) {
-    ob_start();
-    $view->include('input', [
-        'type'        => 'search',
-        'name'        => 'q',
-        'placeholder' => $view->t('common.feed.search'),
-        'value'       => $searchQuery,
-    ]);
-    ?>
-    <button type="button"
-            class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
-            data-filter-toggle
-            aria-label="<?= $tr('common.common.filters') ?>">
-      <span>&#9776;</span>
-    </button>
-    <?php
-    $pageActions = ob_get_clean();
-}
+// Поиск и кнопка фильтров показываются всегда
+ob_start();
+$view->include('input', [
+    'type'        => 'search',
+    'name'        => 'q',
+    'placeholder' => $view->t('common.feed.search'),
+    'value'       => $searchQuery,
+]);
+?>
+<button type="button"
+        class="btn-icon filter-toggle <?= $filter_open ? 'is-active' : '' ?>"
+        data-filter-toggle
+        aria-label="<?= $tr('common.common.filters') ?>">
+  <span>&#9776;</span>
+</button>
+<?php
+$pageActions = ob_get_clean();
 
 $view->include('page-header', [
     'title'    => $view->t('common.drafts.title'),
@@ -140,33 +137,8 @@ $view->include('page-header', [
     'actions'  => $pageActions,
 ]);
 
-if (!$isEmptyAll) {
-    $view->include('library-filters', ['mode' => 'drafts']);
-}
+$view->include('library-filters', ['mode' => 'drafts']);
 ?>
-
-<?php if ($isEmptyAll): ?>
-
-  <section class="books-panel drafts-panel">
-    <div class="empty-state drafts-empty">
-      <div class="drafts-empty__icon" aria-hidden="true">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 20h9"/>
-          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-        </svg>
-      </div>
-      <p class="empty-state__text drafts-empty__text"><?= $tr('common.drafts.empty') ?></p>
-      <p class="empty-state__text drafts-empty__hint"><?= $tr('common.drafts.empty_hint') ?></p>
-      <a class="btn btn--primary drafts-empty__cta"
-         href="<?= $view->e(($isArticlesDrafts ? '/articles/create' : '/books/create')
-             . (($currentLang !== null && $currentLang !== '') ? '?lang=' . urlencode((string) $currentLang) : '')) ?>">
-        <?= $tr($isArticlesDrafts ? 'common.drafts.empty_link_article' : 'common.drafts.empty_link') ?>
-      </a>
-    </div>
-  </section>
-
-<?php else: ?>
 
   <section class="books-panel drafts-panel"
            data-drafts
@@ -199,7 +171,7 @@ if (!$isEmptyAll) {
     </header>
 
     <?php /* Пустое сообщение, сетка и «Показать ещё» рендерятся всегда: filters.js переключает их без перезагрузки */ ?>
-    <p class="empty-state__text" data-drafts-empty <?= empty($cards) ? '' : 'hidden' ?>><?= $tr('common.drafts.none_page') ?></p>
+    <p class="empty-state__text" data-drafts-empty <?= empty($cards) ? '' : 'hidden' ?>><?= $tr($isEmptyAll ? 'common.drafts.none' : 'common.drafts.none_page') ?></p>
 
     <div class="grid-books drafts-grid" data-drafts-grid <?= empty($cards) ? 'hidden' : '' ?>>
       <?php foreach ($cards as $card): ?>
@@ -214,8 +186,6 @@ if (!$isEmptyAll) {
     </div>
 
   </section>
-
-<?php endif; ?>
 
 <?php $view->endBlock('content'); ?>
 
